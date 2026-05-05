@@ -106,6 +106,20 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [reserving, setReserving] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Change Unit panel
+  const [showChangeUnit, setShowChangeUnit]             = useState(false);
+  const [changeUnitProjectId, setChangeUnitProjectId]   = useState("");
+  const [changeUnitId, setChangeUnitId]                 = useState("");
+  const [projects, setProjects]                         = useState<{ id: string; name: string }[]>([]);
+  const [changeUnitList, setChangeUnitList]             = useState<{ id: string; unitNumber: string; type: string; price: number; floor: number }[]>([]);
+  const [loadingChangeUnits, setLoadingChangeUnits]     = useState(false);
+  const [assigningUnit, setAssigningUnit]               = useState(false);
+
+  // Notes inline editing
+  const [notesValue, setNotesValue]   = useState<string | null>(null);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved]   = useState(false);
+
   // Waive payment
   const [waiveId, setWaiveId] = useState<string | null>(null);
   const [waiveReason, setWaiveReason] = useState("");
@@ -175,6 +189,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   };
 
   useEffect(() => { loadDeal(); }, [loadDeal]);
+  useEffect(() => { if (deal && notesValue === null) setNotesValue((deal as any).notes ?? ""); }, [deal]);
   useEffect(() => { if (activeTab === "activity") loadActivities(); }, [activeTab, loadActivities]);
 
   const loadDealTasks = useCallback(() => {
@@ -440,6 +455,65 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     }
   };
 
+  // Load projects once when Change Unit panel opens
+  const openChangeUnit = async () => {
+    setShowChangeUnit(true);
+    setChangeUnitId("");
+    setChangeUnitProjectId("");
+    setChangeUnitList([]);
+    if (projects.length === 0) {
+      const r = await axios.get("/api/projects").catch(() => ({ data: [] }));
+      setProjects((r.data?.data ?? r.data ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+    }
+  };
+
+  const handleChangeUnitProject = async (projectId: string) => {
+    setChangeUnitProjectId(projectId);
+    setChangeUnitId("");
+    setChangeUnitList([]);
+    if (!projectId) return;
+    setLoadingChangeUnits(true);
+    try {
+      const r = await axios.get("/api/units", { params: { projectId, status: "AVAILABLE", limit: 300 } });
+      setChangeUnitList((r.data?.data ?? r.data ?? []).map((u: any) => ({
+        id: u.id, unitNumber: u.unitNumber, type: u.type, price: u.price, floor: u.floor,
+      })));
+    } catch {
+      toast.error("Failed to load units");
+    } finally {
+      setLoadingChangeUnits(false);
+    }
+  };
+
+  const handleAssignUnit = async () => {
+    if (!changeUnitId) { toast.error("Select a unit first"); return; }
+    setAssigningUnit(true);
+    try {
+      await axios.patch(`/api/deals/${dealId}/unit`, { unitId: changeUnitId });
+      toast.success("Unit assigned");
+      setShowChangeUnit(false);
+      loadDeal();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to assign unit");
+    } finally {
+      setAssigningUnit(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (notesValue === null) return;
+    setSavingNotes(true);
+    try {
+      await axios.patch(`/api/deals/${dealId}`, { notes: notesValue });
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2500);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to save notes");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -573,12 +647,131 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main: unit + financials + payments */}
+        {/* Main: control sections + unit + financials + payments */}
         <div className="lg:col-span-2 space-y-4">
+
+          {/* ── Buyer Info ──────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Buyer</h3>
+            <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
+              {[
+                ["Name",  `${deal.lead.firstName} ${deal.lead.lastName}`],
+                ["Phone", deal.lead.phone],
+                ["Email", deal.lead.email ?? "—"],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+                  <p className="font-medium text-slate-800">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Unit Selection ──────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit</h3>
+              {deal.stage === "RESERVATION_PENDING" && (
+                <button
+                  onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
+                  className="text-xs text-blue-600 font-semibold hover:underline"
+                >
+                  {showChangeUnit ? "Cancel" : "Change Unit"}
+                </button>
+              )}
+            </div>
+
+            {/* Current unit summary */}
+            <div className="flex items-center gap-4 mb-3">
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{deal.unit.unitNumber}</p>
+                <p className="text-sm text-slate-500">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-lg font-bold text-blue-700">AED {deal.salePrice.toLocaleString()}</p>
+                <p className="text-xs text-slate-400">Sale Price</p>
+              </div>
+            </div>
+
+            {/* Change Unit panel */}
+            {showChangeUnit && (
+              <div className="border-t border-slate-100 pt-4 space-y-3">
+                <p className="text-xs text-slate-500">Select a new unit to replace the current assignment. Only AVAILABLE units are shown.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Project</label>
+                    <select
+                      value={changeUnitProjectId}
+                      onChange={(e) => handleChangeUnitProject(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                    >
+                      <option value="">— Select project —</option>
+                      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Unit</label>
+                    {loadingChangeUnits ? (
+                      <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
+                        <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                        Loading…
+                      </div>
+                    ) : (
+                      <select
+                        value={changeUnitId}
+                        onChange={(e) => setChangeUnitId(e.target.value)}
+                        disabled={!changeUnitProjectId || changeUnitList.length === 0}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 disabled:opacity-50"
+                      >
+                        <option value="">
+                          {!changeUnitProjectId ? "Select a project first" : changeUnitList.length === 0 ? "No available units" : "— Select unit —"}
+                        </option>
+                        {changeUnitList.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            Unit {u.unitNumber} · {u.type.replace(/_/g, " ")} · Floor {u.floor} · AED {u.price.toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={handleAssignUnit}
+                  disabled={!changeUnitId || assigningUnit}
+                  className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {assigningUnit ? "Assigning…" : "Assign Unit"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Notes ───────────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
+              {notesSaved && <span className="text-xs text-emerald-600 font-medium">Saved</span>}
+            </div>
+            <textarea
+              rows={3}
+              value={notesValue ?? ""}
+              onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
+              placeholder="Add deal notes…"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
+            />
+            <button
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+              className="mt-2 px-4 py-1.5 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50"
+            >
+              {savingNotes ? "Saving…" : "Save Notes"}
+            </button>
+          </div>
+
           {/* Unit + financials */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Unit</h3>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Unit Details</h3>
               <p className="text-2xl font-bold text-slate-900 mb-1">{deal.unit.unitNumber}</p>
               <div className="space-y-1.5 text-sm">
                 {[["Type", deal.unit.type], ["Floor", `Floor ${deal.unit.floor}`], ["Area", formatArea(deal.unit.area)]].map(([l, v]) => (
@@ -984,8 +1177,66 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
 
-        {/* Sidebar: Oqood + Commission */}
+        {/* Sidebar: Deal Status + Oqood + Commission */}
         <div className="space-y-4">
+
+          {/* ── Deal Status ─────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Deal Status</h3>
+
+            {/* Current stage */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
+                {deal.stage.replace(/_/g, " ")}
+              </span>
+            </div>
+
+            {/* Reserve Unit primary action */}
+            {deal.stage === "RESERVATION_PENDING" && (
+              <button
+                onClick={handleReserveUnit}
+                disabled={reserving}
+                className="w-full py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors mb-3"
+              >
+                {reserving ? "Reserving…" : "Reserve Unit"}
+              </button>
+            )}
+
+            {/* Valid next stages */}
+            {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-400 font-medium mb-2">Next stage:</p>
+                {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED").map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStageChange(s)}
+                    disabled={updatingStage}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm border border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 transition-all"
+                  >
+                    → {s.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Stage requirements checklist */}
+            {stageRequirements.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-400 font-medium mb-2">Requirements for next stage:</p>
+                {stageRequirements.map((r) => (
+                  <div key={r.documentType} className="flex items-center gap-2 text-xs py-1">
+                    <span className={r.uploaded ? "text-emerald-500" : "text-slate-300"}>
+                      {r.uploaded ? "✓" : "○"}
+                    </span>
+                    <span className={r.uploaded ? "text-emerald-700" : r.required ? "text-slate-600" : "text-slate-400"}>
+                      {r.label}{!r.required && " (optional)"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Oqood countdown */}
           <div className={`rounded-xl border p-4 ${oqoodStyle}`}>
             <h3 className="text-xs font-semibold uppercase tracking-wide mb-3 opacity-70">Oqood Deadline</h3>

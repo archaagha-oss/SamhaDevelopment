@@ -256,9 +256,116 @@ router.patch("/:id", async (req, res) => {
     if (oqoodRegisteredDate !== undefined) data.oqoodRegisteredDate = oqoodRegisteredDate ? new Date(oqoodRegisteredDate) : null;
     if (notes !== undefined) data.notes = notes;
     const deal = await prisma.deal.update({ where: { id: req.params.id }, data });
+
+    // Log notes change as an activity
+    if (notes !== undefined) {
+      await prisma.activity.create({
+        data: {
+          dealId:    req.params.id,
+          type:      "NOTE",
+          summary:   "Deal notes updated",
+          createdBy: req.auth.userId,
+        },
+      }).catch(() => {});
+    }
+
     res.json(deal);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update deal", code: "DEAL_UPDATE_ERROR", statusCode: 400 });
+  }
+});
+
+// Change the unit assigned to a deal (only when deal is still RESERVATION_PENDING)
+// Releases old unit → AVAILABLE, puts new unit → ON_HOLD, updates deal + logs audit
+router.patch("/:id/unit", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const { unitId } = req.body;
+    if (!unitId) {
+      return res.status(400).json({ error: "unitId is required", code: "MISSING_UNIT", statusCode: 400 });
+    }
+
+    const deal = await prisma.deal.findUnique({
+      where: { id: req.params.id },
+      include: { unit: true },
+    });
+    if (!deal) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    if (deal.stage !== "RESERVATION_PENDING") {
+      return res.status(400).json({
+        error: "Unit can only be changed while the deal is in RESERVATION_PENDING stage.",
+        code: "WRONG_STAGE",
+        statusCode: 400,
+      });
+    }
+    if (deal.unitId === unitId) {
+      return res.json(deal);
+    }
+
+    const newUnit = await prisma.unit.findUnique({ where: { id: unitId } });
+    if (!newUnit) {
+      return res.status(404).json({ error: "Unit not found", code: "UNIT_NOT_FOUND", statusCode: 404 });
+    }
+    if (newUnit.status !== "AVAILABLE") {
+      return res.status(400).json({
+        error: `Unit ${newUnit.unitNumber} is ${newUnit.status}. Only AVAILABLE units can be assigned.`,
+        code: "UNIT_NOT_AVAILABLE",
+        statusCode: 400,
+      });
+    }
+
+    // Atomic swap: release old unit, hold new unit, update deal
+    const updated = await prisma.$transaction(async (tx) => {
+      // Release old unit back to AVAILABLE
+      await tx.unit.update({ where: { id: deal.unitId }, data: { status: "AVAILABLE", holdExpiresAt: null } });
+      await tx.unitStatusHistory.create({
+        data: {
+          unitId:    deal.unitId,
+          oldStatus: "ON_HOLD",
+          newStatus: "AVAILABLE",
+          changedBy: req.auth!.userId,
+          reason:    `Replaced by Unit ${newUnit.unitNumber} on Deal ${deal.dealNumber}`,
+        },
+      });
+
+      // Put new unit ON_HOLD
+      const holdExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await tx.unit.update({ where: { id: unitId }, data: { status: "ON_HOLD", holdExpiresAt } });
+      await tx.unitStatusHistory.create({
+        data: {
+          unitId:    unitId,
+          oldStatus: "AVAILABLE",
+          newStatus: "ON_HOLD",
+          changedBy: req.auth!.userId,
+          reason:    `Assigned to Deal ${deal.dealNumber} (unit change)`,
+        },
+      });
+
+      // Update deal: new unit + price from the new unit
+      return tx.deal.update({
+        where: { id: req.params.id },
+        data:  { unitId, salePrice: newUnit.price },
+        include: { lead: true, unit: true },
+      });
+    });
+
+    // Audit activity
+    await prisma.activity.create({
+      data: {
+        dealId:    req.params.id,
+        type:      "NOTE",
+        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}`,
+        createdBy: req.auth.userId,
+      },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to change unit", code: "CHANGE_UNIT_ERROR", statusCode: 400 });
   }
 });
 
