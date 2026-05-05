@@ -363,7 +363,48 @@ router.post("/:id/restructure", async (req, res) => {
   }
 });
 
-// Generate a system document (RESERVATION_FORM or SPA) for a deal
+// POST /:id/reserve — lock unit as RESERVED and confirm the reservation
+// Transitions: deal RESERVATION_PENDING → RESERVATION_CONFIRMED, unit ON_HOLD → RESERVED
+router.post("/:id/reserve", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const deal = await prisma.deal.findUnique({
+      where: { id: req.params.id },
+      include: { unit: true },
+    });
+    if (!deal) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    if (deal.stage !== "RESERVATION_PENDING") {
+      return res.status(400).json({
+        error: `Deal is already in ${deal.stage}. Reservation can only be confirmed from RESERVATION_PENDING.`,
+        code: "INVALID_DEAL_STAGE",
+        statusCode: 400,
+      });
+    }
+    if (!["AVAILABLE", "ON_HOLD"].includes(deal.unit.status)) {
+      return res.status(400).json({
+        error: `Unit is ${deal.unit.status}. Can only reserve an AVAILABLE or ON_HOLD unit.`,
+        code: "UNIT_NOT_AVAILABLE",
+        statusCode: 400,
+      });
+    }
+
+    const updated = await updateDealStage(deal.id, "RESERVATION_CONFIRMED", req.auth.userId);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({
+      error:      error.message || "Failed to reserve unit",
+      code:       "RESERVE_ERROR",
+      statusCode: 400,
+    });
+  }
+});
+
+// Generate a system document (RESERVATION_FORM, SPA, or SALES_OFFER) for a deal
 // POST /api/deals/:id/generate-document
 router.post("/:id/generate-document", async (req, res) => {
   try {
@@ -372,9 +413,9 @@ router.post("/:id/generate-document", async (req, res) => {
     }
 
     const { type } = req.body;
-    if (!["RESERVATION_FORM", "SPA"].includes(type)) {
+    if (!["RESERVATION_FORM", "SPA", "SALES_OFFER"].includes(type)) {
       return res.status(400).json({
-        error: "type must be RESERVATION_FORM or SPA",
+        error: "type must be RESERVATION_FORM, SPA, or SALES_OFFER",
         code: "INVALID_DOC_TYPE",
         statusCode: 400,
       });
@@ -425,11 +466,12 @@ router.post("/:id/generate-document", async (req, res) => {
 
     const labelMap: Record<string, string> = {
       RESERVATION_FORM: "Reservation Form",
-      SPA: "SPA Draft",
+      SPA:              "SPA Draft",
+      SALES_OFFER:      "Sales Offer",
     };
 
     const doc = await createGeneratedDocument({
-      type:        type as "RESERVATION_FORM" | "SPA",
+      type:        type as "RESERVATION_FORM" | "SPA" | "SALES_OFFER",
       name:        `${labelMap[type]} — ${deal.dealNumber}`,
       dealId:      deal.id,
       leadId:      deal.leadId,

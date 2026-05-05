@@ -103,6 +103,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
   const [documentKey, setDocumentKey] = useState(0);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
+  const [reserving, setReserving] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Waive payment
@@ -401,18 +402,41 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     }
   };
 
-  const handleGenerateDocument = async (type: "RESERVATION_FORM" | "SPA") => {
+  const handleGenerateDocument = async (type: "RESERVATION_FORM" | "SPA" | "SALES_OFFER") => {
     setGeneratingDoc(type);
     try {
       await axios.post(`/api/deals/${dealId}/generate-document`, { type });
-      toast.success(`${type === "RESERVATION_FORM" ? "Reservation Form" : "SPA Draft"} generated`);
+      const labelMap = {
+        RESERVATION_FORM: "reservation-form",
+        SPA:              "spa-draft",
+        SALES_OFFER:      "sales-offer",
+      };
+      const nameMap = {
+        RESERVATION_FORM: "Reservation Form",
+        SPA:              "SPA Draft",
+        SALES_OFFER:      "Sales Offer",
+      };
+      toast.success(`${nameMap[type]} generated`);
       setDocumentKey((k) => k + 1);
-      const labelMap = { RESERVATION_FORM: "reservation-form", SPA: "spa-draft" };
       window.open(`/deals/${dealId}/print/${labelMap[type]}`, "_blank");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to generate document");
     } finally {
       setGeneratingDoc(null);
+    }
+  };
+
+  const handleReserveUnit = async () => {
+    if (!deal) return;
+    setReserving(true);
+    try {
+      await axios.post(`/api/deals/${dealId}/reserve`);
+      toast.success("Unit reserved — deal confirmed");
+      loadDeal();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to reserve unit");
+    } finally {
+      setReserving(false);
     }
   };
 
@@ -488,10 +512,24 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
 
           {/* Stage badge + change */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
               {deal.stage.replace(/_/g, " ")}
             </span>
+            {deal.stage === "RESERVATION_PENDING" && (
+              <button
+                onClick={handleReserveUnit}
+                disabled={reserving}
+                className="px-4 py-1 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {reserving ? "Reserving…" : "Reserve Unit"}
+              </button>
+            )}
+            {deal.stage === "RESERVATION_CONFIRMED" && (
+              <span className="px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                Reserved
+              </span>
+            )}
             <div className="relative flex items-center gap-2">
               {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                 <button
@@ -567,8 +605,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Generate document actions */}
           <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Generate Documents</h3>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents</h3>
             <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => handleGenerateDocument("SALES_OFFER")}
+                disabled={!!generatingDoc}
+                className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}
+              </button>
               <button
                 onClick={() => handleGenerateDocument("RESERVATION_FORM")}
                 disabled={!!generatingDoc}

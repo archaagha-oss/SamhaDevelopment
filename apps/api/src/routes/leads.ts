@@ -3,6 +3,7 @@ import { validate } from "../middleware/validation";
 import { createLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
+import { createDeal as createDealService } from "../services/dealService";
 
 const router = Router();
 
@@ -379,6 +380,99 @@ router.patch("/:id", async (req, res) => {
     res.json(lead);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update lead", code: "LEAD_UPDATE_ERROR", statusCode: 400 });
+  }
+});
+
+// ─── Convert lead to deal in one action ──────────────────────────────────────
+// Auto-fills: contact (leadId), agent (from lead), unit (primary interest),
+// sale price (from unit.price), payment plan (first active plan).
+
+router.post("/:id/create-deal", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const lead = await prisma.lead.findUnique({
+      where: { id: req.params.id },
+      include: {
+        interests: {
+          include: { unit: true },
+          orderBy: { isPrimary: "desc" },
+        },
+      },
+    });
+    if (!lead) {
+      return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+
+    // Reject if an active deal already exists for this lead
+    const existingDeal = await prisma.deal.findFirst({
+      where: { leadId: lead.id, isActive: true },
+      select: { id: true, dealNumber: true },
+    });
+    if (existingDeal) {
+      return res.status(409).json({
+        error: `Lead already has an active deal: ${existingDeal.dealNumber}`,
+        code: "DEAL_ALREADY_EXISTS",
+        existingDealId: existingDeal.id,
+        statusCode: 409,
+      });
+    }
+
+    // Pick primary interested unit that is still AVAILABLE or ON_HOLD
+    const interest =
+      lead.interests.find((i) => i.isPrimary && ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status)) ??
+      lead.interests.find((i) => ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status));
+
+    if (!interest) {
+      return res.status(400).json({
+        error: "No available unit interest found. Add an interested unit to the lead first.",
+        code: "NO_AVAILABLE_UNIT",
+        statusCode: 400,
+      });
+    }
+
+    // Use first active payment plan as default
+    const paymentPlan = await prisma.paymentPlan.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!paymentPlan) {
+      return res.status(400).json({
+        error: "No active payment plan found. Create a payment plan first.",
+        code: "NO_PAYMENT_PLAN",
+        statusCode: 400,
+      });
+    }
+
+    const deal = await createDealService({
+      leadId:          lead.id,
+      unitId:          interest.unitId,
+      salePrice:       (interest.unit as any).price,
+      createdBy:       req.auth.userId,
+      paymentPlanId:   paymentPlan.id,
+      brokerCompanyId: lead.brokerCompanyId ?? undefined,
+      brokerAgentId:   lead.brokerAgentId   ?? undefined,
+    });
+
+    await prisma.activity.create({
+      data: {
+        leadId:    lead.id,
+        dealId:    deal.id,
+        type:      "NOTE",
+        summary:   `Deal created — Unit ${(interest.unit as any).unitNumber}`,
+        createdBy: req.auth.userId,
+      },
+    });
+
+    res.status(201).json(deal);
+  } catch (error: any) {
+    res.status(400).json({
+      error:      error.message || "Failed to create deal",
+      code:       "DEAL_CREATE_ERROR",
+      statusCode: 400,
+    });
   }
 });
 

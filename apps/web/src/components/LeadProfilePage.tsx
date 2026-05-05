@@ -172,6 +172,9 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Quick one-click deal creation
+  const [creatingDealQuick, setCreatingDealQuick] = useState(false);
+
   // Create reservation (deal)
   const [showDealForm, setShowDealForm] = useState(false);
   const [dealForm, setDealForm] = useState({
@@ -539,6 +542,25 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     }
   };
 
+  const handleQuickCreateDeal = async () => {
+    if (!lead) return;
+    setCreatingDealQuick(true);
+    try {
+      const res = await axios.post(`/api/leads/${lead.id}/create-deal`);
+      navigate(`/deals/${res.data.id}`);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || "Failed to create deal";
+      const existingId = err.response?.data?.existingDealId;
+      if (existingId) {
+        navigate(`/deals/${existingId}`);
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setCreatingDealQuick(false);
+    }
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   if (loading || !lead) return (
@@ -615,8 +637,16 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             <button onClick={() => setShowEditForm(true)} className="px-3 py-1.5 text-sm text-slate-600 font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
               Edit
             </button>
-            <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700">
-              + Create Reservation
+            <button
+              onClick={handleQuickCreateDeal}
+              disabled={creatingDealQuick}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+              title="Create a deal from this lead's primary unit interest"
+            >
+              {creatingDealQuick ? "Creating…" : "Create Deal"}
+            </button>
+            <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 text-sm text-slate-500 font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
+              Advanced
             </button>
             <button onClick={handleDelete} disabled={deleting} className="px-3 py-1.5 text-sm text-red-500 font-medium border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50">
               {deleting ? "Deleting…" : "Delete"}
