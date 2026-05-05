@@ -74,6 +74,36 @@ const OQOOD_COLOR: Record<string, string> = {
 };
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
 
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60)     return "Just now";
+  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
+  return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function activityIcon(type: string, summary: string): string {
+  if (type === "CALL")       return "📞";
+  if (type === "EMAIL")      return "✉️";
+  if (type === "WHATSAPP")   return "💬";
+  if (type === "MEETING")    return "🤝";
+  if (type === "SITE_VISIT") return "🏢";
+  const s = summary.toLowerCase();
+  if (s.includes("reserved"))                   return "🔒";
+  if (s.includes("generated") || s.includes("document")) return "📄";
+  if (s.includes("stage changed") || s.includes("→"))    return "🔄";
+  if (s.includes("created"))                    return "✅";
+  if (s.includes("unit") && (s.includes("assign") || s.includes("changed"))) return "🏠";
+  return "📝";
+}
+
+const SYSTEM_PATTERNS = ["generated for", "reserved for", "stage changed", "deal created", "unit assigned", "unit changed", "notes updated"];
+function isSystemActivity(summary: string): boolean {
+  const s = summary.toLowerCase();
+  return SYSTEM_PATTERNS.some((p) => s.includes(p));
+}
+
 export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const params = useParams<{ dealId: string }>();
   const navigate = useNavigate();
@@ -1126,75 +1156,124 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
             {/* Activity tab */}
             {activeTab === "activity" && (
-              <div className="divide-y divide-slate-50">
-                <div className="px-5 py-3">
-                  <button
-                    onClick={() => setShowActivityForm(!showActivityForm)}
-                    className="text-xs font-semibold text-blue-600 hover:underline"
-                  >
-                    {showActivityForm ? "− Cancel" : "+ Log Activity"}
-                  </button>
+              <div>
+                {/* Quick-log bar */}
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+                  {([
+                    { type: "NOTE",    label: "Note",    icon: "📝" },
+                    { type: "CALL",    label: "Call",    icon: "📞" },
+                    { type: "MEETING", label: "Meeting", icon: "🤝" },
+                    { type: "SITE_VISIT", label: "Site Visit", icon: "🏢" },
+                  ] as const).map(({ type, label, icon }) => (
+                    <button
+                      key={type}
+                      onClick={() => { setActivityForm((f) => ({ ...f, type })); setShowActivityForm(true); }}
+                      className={`px-3 py-1.5 text-xs font-semibold border rounded-lg flex items-center gap-1.5 transition-colors ${
+                        showActivityForm && activityForm.type === type
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{icon}</span>{label}
+                    </button>
+                  ))}
                   {showActivityForm && (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex gap-2 flex-wrap">
-                        {(["CALL","WHATSAPP","EMAIL","MEETING","SITE_VISIT","NOTE"] as const).map((t) => (
-                          <button key={t} onClick={() => setActivityForm((f) => ({ ...f, type: t }))}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${activityForm.type === t ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 text-slate-600 hover:border-blue-400"}`}>
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={activityForm.summary}
-                        onChange={(e) => setActivityForm((f) => ({ ...f, summary: e.target.value }))}
-                        placeholder="Summary *"
-                        rows={2}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1">Activity Date</label>
-                          <input type="datetime-local" value={activityForm.activityDate}
-                            onChange={(e) => setActivityForm((f) => ({ ...f, activityDate: e.target.value }))}
-                            className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-slate-50 focus:outline-none focus:border-blue-400" />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1">Follow-up Date</label>
-                          <input type="datetime-local" value={activityForm.followUpDate}
-                            onChange={(e) => setActivityForm((f) => ({ ...f, followUpDate: e.target.value }))}
-                            className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-slate-50 focus:outline-none focus:border-blue-400" />
-                        </div>
-                      </div>
-                      <button
-                        onClick={submitActivity}
-                        disabled={!activityForm.summary.trim() || submittingActivity}
-                        className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                      >
-                        {submittingActivity ? "Saving…" : "Log Activity"}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setShowActivityForm(false)}
+                      className="ml-auto text-xs text-slate-400 hover:text-slate-600"
+                    >✕ Cancel</button>
                   )}
                 </div>
+
+                {/* Inline log form */}
+                {showActivityForm && (
+                  <div className="px-5 py-4 bg-blue-50 border-b border-blue-100 space-y-3">
+                    <div className="flex gap-2 flex-wrap">
+                      {(["NOTE","CALL","WHATSAPP","EMAIL","MEETING","SITE_VISIT"] as const).map((t) => (
+                        <button key={t} onClick={() => setActivityForm((f) => ({ ...f, type: t }))}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                            activityForm.type === t ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 bg-white text-slate-600 hover:border-blue-400"
+                          }`}
+                        >{t.replace("_", " ")}</button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={activityForm.summary}
+                      onChange={(e) => setActivityForm((f) => ({ ...f, summary: e.target.value }))}
+                      placeholder="Summary *"
+                      rows={2}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 resize-none"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Activity Date</label>
+                        <input type="datetime-local" value={activityForm.activityDate}
+                          onChange={(e) => setActivityForm((f) => ({ ...f, activityDate: e.target.value }))}
+                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Follow-up Date</label>
+                        <input type="datetime-local" value={activityForm.followUpDate}
+                          onChange={(e) => setActivityForm((f) => ({ ...f, followUpDate: e.target.value }))}
+                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400" />
+                      </div>
+                    </div>
+                    <button
+                      onClick={submitActivity}
+                      disabled={!activityForm.summary.trim() || submittingActivity}
+                      className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {submittingActivity ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Timeline */}
                 {activityLoading ? (
                   <div className="flex items-center justify-center h-24">
                     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : activities.length === 0 ? (
-                  <p className="px-5 py-8 text-center text-sm text-slate-400">No activities logged</p>
-                ) : activities.map((a: any) => (
-                  <div key={a.id} className="px-5 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{a.type}</span>
-                        <p className="text-sm text-slate-700">{a.summary}</p>
-                      </div>
-                      <span className="text-xs text-slate-400 flex-shrink-0">{fmtDate(a.activityDate || a.createdAt)}</span>
-                    </div>
-                    {a.outcome && <p className="text-xs text-slate-500 italic mt-1">{a.outcome}</p>}
-                    {a.followUpDate && <p className="text-xs text-amber-600 mt-0.5">Follow-up: {fmtDate(a.followUpDate)}</p>}
-                    <p className="text-xs text-slate-400 mt-1">by {a.createdBy}</p>
+                  <p className="px-5 py-10 text-center text-sm text-slate-400">No activities yet — log the first one above</p>
+                ) : (
+                  <div className="px-5 pt-3 pb-2">
+                    {activities.map((a: any, i: number) => {
+                      const icon   = activityIcon(a.type, a.summary);
+                      const isSystem = a.type === "NOTE" && isSystemActivity(a.summary);
+                      return (
+                        <div key={a.id} className="flex gap-3">
+                          {/* Left connector */}
+                          <div className="flex flex-col items-center flex-shrink-0 w-8">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 ${isSystem ? "bg-slate-100" : "bg-blue-50"}`}>
+                              {icon}
+                            </div>
+                            {i < activities.length - 1 && (
+                              <div className="w-0.5 bg-slate-100 flex-1 my-1" style={{ minHeight: "1.25rem" }} />
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0 pb-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{a.type.replace("_", " ")}</span>
+                                {isSystem && (
+                                  <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">auto</span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-400 flex-shrink-0">{timeAgo(a.activityDate || a.createdAt)}</span>
+                            </div>
+                            <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{a.summary}</p>
+                            {a.outcome && <p className="text-xs text-slate-500 mt-1 italic">{a.outcome}</p>}
+                            {a.followUpDate && (
+                              <p className="text-xs text-amber-600 mt-0.5">Follow-up: {fmtDate(a.followUpDate)}</p>
+                            )}
+                            <p className="text-xs text-slate-400 mt-1">{a.createdBy}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                )}
               </div>
             )}
 

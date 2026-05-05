@@ -81,6 +81,15 @@ const fmtDate = (d: string) =>
 const fmtTime = (d: string) =>
   new Date(d).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" });
 
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60)     return "Just now";
+  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
+  return `${new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short" })} ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -1021,7 +1030,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         <div className="flex items-center justify-between gap-2 mb-0.5">
                           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{act.type}</span>
                           <span className="text-xs text-slate-400 flex-shrink-0">
-                            {fmtDate(act.createdAt)} {fmtTime(act.createdAt)}
+                            {timeAgo(act.activityDate || act.createdAt)}
                           </span>
                         </div>
                         <p className="text-sm text-slate-700 leading-relaxed">{act.summary}</p>
