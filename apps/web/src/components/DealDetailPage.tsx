@@ -162,6 +162,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   // Regenerate Sales Offer confirmation
   const [showRegenSalesOffer, setShowRegenSalesOffer] = useState(false);
 
+  // Copy deal ID feedback
+  const [copiedDealId, setCopiedDealId] = useState(false);
+  const copyDealId = () => {
+    if (!deal) return;
+    navigator.clipboard.writeText(deal.dealNumber);
+    setCopiedDealId(true);
+    setTimeout(() => setCopiedDealId(false), 1500);
+  };
+
   // Add custom milestone
   const [showAddMilestone, setShowAddMilestone] = useState(false);
   const [milestoneForm, setMilestoneForm] = useState({ label: "", amount: "", dueDate: "", notes: "" });
@@ -568,6 +577,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
   const netPrice      = deal.salePrice - deal.discount;
   const totalWithFees = netPrice + deal.dldFee + deal.adminFee;
+
+  // Document state — hoisted so header CTA and Documents section share the same values
+  const salesOfferDocs = deal.documents
+    .filter((d) => d.type === "SALES_OFFER" && !d.softDeleted)
+    .sort((a, b) => b.version - a.version);
+  const canGenerateSalesOffer = !["RESERVATION_PENDING", "CANCELLED"].includes(deal.stage) && !!deal.lead.firstName;
   const paidAmount    = deal.payments.filter((p: any) => p.status === "PAID").reduce((s: number, p: any) => s + p.amount, 0);
   const partialPaid   = deal.payments.filter((p: any) => p.status === "PARTIAL").reduce((s: number, p: any) => s + (p.partialPayments?.reduce((ps: number, pp: any) => ps + pp.amount, 0) ?? 0), 0);
   const totalPaid     = paidAmount + partialPaid;
@@ -601,7 +616,16 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               </button>
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <span className="font-mono text-xs text-slate-400">{deal.dealNumber}</span>
+              <button
+                onClick={copyDealId}
+                className="flex items-center gap-1 font-mono text-xs text-slate-400 hover:text-slate-700 transition-colors group"
+                title="Copy deal ID"
+              >
+                {deal.dealNumber}
+                <span className="text-slate-300 group-hover:text-slate-500 transition-colors">
+                  {copiedDealId ? "✓" : "⎘"}
+                </span>
+              </button>
               <span className="text-slate-300">·</span>
               <span className="text-sm text-slate-500">{deal.lead.phone}</span>
               {deal.lead.email && <span className="text-sm text-slate-400">{deal.lead.email}</span>}
@@ -622,11 +646,34 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           </div>
 
-          {/* Stage badge + header actions */}
+          {/* Stage badge + dynamic primary CTA + secondary actions */}
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
               {deal.stage.replace(/_/g, " ")}
             </span>
+
+            {/* Dynamic primary action — one clear next step per stage */}
+            {deal.stage === "RESERVATION_PENDING" && (
+              <button
+                onClick={handleReserveUnit}
+                disabled={reserving}
+                className="px-4 py-1.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {reserving
+                  ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
+                  : "🔒 Reserve Unit"}
+              </button>
+            )}
+            {deal.stage === "RESERVATION_CONFIRMED" && salesOfferDocs.length === 0 && canGenerateSalesOffer && (
+              <button
+                onClick={() => handleGenerateDocument("SALES_OFFER")}
+                disabled={!!generatingDoc}
+                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer"}
+              </button>
+            )}
+
             <div className="relative flex items-center gap-2">
               {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                 <button
@@ -781,71 +828,18 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             )}
           </div>
 
-          {/* ── Notes ───────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
-              {notesSaved && <span className="text-xs text-emerald-600 font-medium">Saved</span>}
-            </div>
-            <textarea
-              rows={3}
-              value={notesValue ?? ""}
-              onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
-              placeholder="Add deal notes…"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
-            />
-            <button
-              onClick={handleSaveNotes}
-              disabled={savingNotes}
-              className="mt-2 px-4 py-1.5 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50"
-            >
-              {savingNotes ? "Saving…" : "Save Notes"}
-            </button>
-          </div>
-
-          {/* Unit + financials */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Unit Details</h3>
-              <p className="text-2xl font-bold text-slate-900 mb-1">{deal.unit.unitNumber}</p>
-              <div className="space-y-1.5 text-sm">
-                {[["Type", deal.unit.type], ["Floor", `Floor ${deal.unit.floor}`], ["Area", formatArea(deal.unit.area)]].map(([l, v]) => (
-                  <div key={l} className="flex justify-between">
-                    <span className="text-slate-500">{l}</span>
-                    <span className="font-medium text-slate-700">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Financials</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-slate-500">Sale Price</span><span className="font-semibold">AED {deal.salePrice.toLocaleString()}</span></div>
-                {deal.discount > 0 && <div className="flex justify-between"><span className="text-slate-500">Discount</span><span className="text-emerald-600 font-semibold">-AED {deal.discount.toLocaleString()}</span></div>}
-                <div className="flex justify-between border-t border-slate-100 pt-2"><span className="font-semibold text-slate-700">Net Price</span><span className="font-bold text-slate-900">AED {netPrice.toLocaleString()}</span></div>
-                <div className="flex justify-between text-xs text-slate-400"><span>DLD Fee (4%)</span><span>AED {deal.dldFee.toLocaleString()}</span></div>
-                <div className="flex justify-between text-xs text-slate-400"><span>Admin Fee</span><span>AED {deal.adminFee.toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-slate-100 pt-2 text-xs"><span className="text-slate-500">Total inc. Fees</span><span className="font-bold text-slate-700">AED {totalWithFees.toLocaleString()}</span></div>
-              </div>
-            </div>
-          </div>
-
           {/* Documents — versioned Sales Offer list + supporting docs */}
+          {/* Section order: Buyer → Unit → Documents → Notes → Tabs (per spec 8.3) */}
           {(() => {
-            const salesOfferDocs = deal.documents
-              .filter((d) => d.type === "SALES_OFFER" && !d.softDeleted)
-              .sort((a, b) => b.version - a.version);
             const latestVersion = salesOfferDocs[0]?.version ?? 0;
-            const canGenerate = !["RESERVATION_PENDING", "CANCELLED"].includes(deal.stage) && !!deal.lead.firstName;
-            const hasExisting  = salesOfferDocs.length > 0;
+            const hasExisting   = salesOfferDocs.length > 0;
 
             return (
               <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
                 {/* Header row */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Documents</h3>
-                  {canGenerate && (
+                  {canGenerateSalesOffer && (
                     <button
                       onClick={() => hasExisting ? setShowRegenSalesOffer(true) : handleGenerateDocument("SALES_OFFER")}
                       disabled={!!generatingDoc}
@@ -856,12 +850,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                         : hasExisting ? "Generate New Version" : "Generate Sales Offer"}
                     </button>
                   )}
-                  {!canGenerate && (
-                    <span className="text-xs text-slate-400 italic">Reserve unit first</span>
+                  {!canGenerateSalesOffer && deal.stage !== "CANCELLED" && (
+                    <span
+                      className="text-xs text-slate-400 italic cursor-default"
+                      title="Reserve the unit first to unlock document generation"
+                    >
+                      Reserve unit first
+                    </span>
                   )}
                 </div>
 
-                {/* Sales Offer version table */}
+                {/* Sales Offer version table — or actionable empty state */}
                 {hasExisting ? (
                   <div className="rounded-lg border border-slate-100 overflow-hidden">
                     <table className="w-full text-xs">
@@ -912,7 +911,24 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">No Sales Offer generated yet.</p>
+                  /* Actionable empty state */
+                  <div className="rounded-lg bg-slate-50 border border-dashed border-slate-200 px-4 py-5 text-center">
+                    <p className="text-sm text-slate-500 mb-3">
+                      No Sales Offer generated yet.
+                      {canGenerateSalesOffer
+                        ? " Generate one to send to the buyer."
+                        : " Reserve the unit first to unlock document generation."}
+                    </p>
+                    {canGenerateSalesOffer && (
+                      <button
+                        onClick={() => handleGenerateDocument("SALES_OFFER")}
+                        disabled={!!generatingDoc}
+                        className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Other document quick-actions */}
@@ -964,7 +980,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* Documents */}
+          {/* ── Notes ───────────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
+              {notesSaved && <span className="text-xs text-emerald-600 font-medium">Saved ✓</span>}
+            </div>
+            <textarea
+              rows={3}
+              value={notesValue ?? ""}
+              onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
+              placeholder="Internal deal notes…"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
+            />
+            <button
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+              className="mt-2 px-4 py-1.5 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50"
+            >
+              {savingNotes ? "Saving…" : "Save Notes"}
+            </button>
+          </div>
+
+          {/* Uploaded documents browser */}
           <DocumentBrowser
             key={documentKey}
             dealId={dealId}
@@ -1417,21 +1455,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             )}
 
             {/* Stage requirements checklist */}
-            {stageRequirements.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-slate-100">
-                <p className="text-xs text-slate-400 font-medium mb-2">Requirements for next stage:</p>
-                {stageRequirements.map((r) => (
-                  <div key={r.documentType} className="flex items-center gap-2 text-xs py-1">
-                    <span className={r.uploaded ? "text-emerald-500" : "text-slate-300"}>
-                      {r.uploaded ? "✓" : "○"}
-                    </span>
-                    <span className={r.uploaded ? "text-emerald-700" : r.required ? "text-slate-600" : "text-slate-400"}>
-                      {r.label}{!r.required && " (optional)"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Oqood countdown */}
