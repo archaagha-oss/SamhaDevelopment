@@ -172,8 +172,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Quick one-click deal creation
-  const [creatingDealQuick, setCreatingDealQuick] = useState(false);
+  // Create Deal modal
+  const [showCreateDealModal, setShowCreateDealModal]   = useState(false);
+  const [createDealForm, setCreateDealForm]             = useState({ unitId: "", notes: "" });
+  const [createDealUnits, setCreateDealUnits]           = useState<UnitOption[]>([]);
+  const [loadingDealUnits, setLoadingDealUnits]         = useState(false);
+  const [creatingDealQuick, setCreatingDealQuick]       = useState(false);
 
   // Create reservation (deal)
   const [showDealForm, setShowDealForm] = useState(false);
@@ -542,19 +546,56 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     }
   };
 
-  const handleQuickCreateDeal = async () => {
+  const openCreateDealModal = async () => {
+    if (!lead) return;
+    setCreateDealForm({ unitId: "", notes: "" });
+    setShowCreateDealModal(true);
+    if (createDealUnits.length === 0) {
+      setLoadingDealUnits(true);
+      try {
+        const r = await axios.get("/api/units", { params: { limit: 300 } });
+        const all: UnitOption[] = r.data.data ?? r.data ?? [];
+        const selectable = all.filter((u) => u.status === "AVAILABLE" || u.status === "ON_HOLD");
+        setCreateDealUnits(selectable);
+        // Pre-select from lead's primary interest
+        const primary = lead.interests.find((i) => i.isPrimary) ?? lead.interests[0];
+        if (primary) {
+          const match = selectable.find((u) => u.id === primary.unitId);
+          if (match) setCreateDealForm((p) => ({ ...p, unitId: match.id }));
+        }
+      } catch {
+        // silently ignore — user can still type or pick
+      } finally {
+        setLoadingDealUnits(false);
+      }
+    } else {
+      // Pre-select even if units already loaded
+      const primary = lead.interests.find((i) => i.isPrimary) ?? lead.interests[0];
+      if (primary) {
+        const match = createDealUnits.find((u) => u.id === primary.unitId);
+        if (match) setCreateDealForm((p) => ({ ...p, unitId: match.id }));
+      }
+    }
+  };
+
+  const handleCreateDealSubmit = async () => {
     if (!lead) return;
     setCreatingDealQuick(true);
     try {
-      const res = await axios.post(`/api/leads/${lead.id}/create-deal`);
+      const res = await axios.post(`/api/leads/${lead.id}/create-deal`, {
+        unitId: createDealForm.unitId || undefined,
+        notes:  createDealForm.notes  || undefined,
+      });
+      setShowCreateDealModal(false);
       navigate(`/deals/${res.data.id}`);
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Failed to create deal";
       const existingId = err.response?.data?.existingDealId;
       if (existingId) {
+        toast.error("Active deal already exists for this lead — opening it now.");
+        setShowCreateDealModal(false);
         navigate(`/deals/${existingId}`);
       } else {
-        toast.error(msg);
+        toast.error(err.response?.data?.error || "Unable to create deal. Try again.");
       }
     } finally {
       setCreatingDealQuick(false);
@@ -638,12 +679,10 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               Edit
             </button>
             <button
-              onClick={handleQuickCreateDeal}
-              disabled={creatingDealQuick}
-              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
-              title="Create a deal from this lead's primary unit interest"
+              onClick={openCreateDealModal}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
             >
-              {creatingDealQuick ? "Creating…" : "Create Deal"}
+              Create Deal
             </button>
             <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 text-sm text-slate-500 font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
               Advanced
@@ -1132,6 +1171,90 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             await handleUnitsChange(selected, primary);
           }}
         />
+      )}
+
+      {/* ── Create Deal Modal ───────────────────────────────────────────────────── */}
+      {showCreateDealModal && (
+        <Modal title="Create Deal" onClose={() => setShowCreateDealModal(false)}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              A deal will be created and linked to this lead. Agent and contact are carried forward automatically.
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Unit (optional)</label>
+              {loadingDealUnits ? (
+                <div className="flex items-center gap-2 text-xs text-slate-400 py-2">
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  Loading units…
+                </div>
+              ) : (
+                <select
+                  value={createDealForm.unitId}
+                  onChange={(e) => setCreateDealForm((p) => ({ ...p, unitId: e.target.value }))}
+                  className={inputCls}
+                >
+                  <option value="">— Auto-select from lead interests —</option>
+                  {(() => {
+                    const interestIds = new Set(lead.interests.map((i) => i.unitId));
+                    const interested  = createDealUnits.filter((u) => interestIds.has(u.id));
+                    const others      = createDealUnits.filter((u) => !interestIds.has(u.id));
+                    return (
+                      <>
+                        {interested.length > 0 && (
+                          <optgroup label="Lead's Interested Units">
+                            {interested.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — AED {u.price.toLocaleString()}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {others.length > 0 && (
+                          <optgroup label="Other Available Units">
+                            {others.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — AED {u.price.toLocaleString()}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    );
+                  })()}
+                </select>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Notes (optional)</label>
+              <textarea
+                rows={3}
+                value={createDealForm.notes}
+                onChange={(e) => setCreateDealForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Any notes to carry into the deal…"
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleCreateDealSubmit}
+                disabled={creatingDealQuick || loadingDealUnits}
+                className={`${primaryBtn} flex-1`}
+              >
+                {creatingDealQuick ? "Creating Deal…" : "Confirm — Create Deal"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateDealModal(false)}
+                className={cancelBtn}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* ── Create Reservation Modal ────────────────────────────────────────────── */}

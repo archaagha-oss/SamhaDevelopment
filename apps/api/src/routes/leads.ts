@@ -384,8 +384,10 @@ router.patch("/:id", async (req, res) => {
 });
 
 // ─── Convert lead to deal in one action ──────────────────────────────────────
-// Auto-fills: contact (leadId), agent (from lead), unit (primary interest),
-// sale price (from unit.price), payment plan (first active plan).
+// Body: { unitId?: string, notes?: string }
+// Auto-fills: contact (leadId), agent, broker from lead.
+// If unitId omitted, falls back to lead's primary unit interest.
+// Sets lead stage → NEGOTIATING and logs audit activity.
 
 router.post("/:id/create-deal", async (req, res) => {
   try {
@@ -406,31 +408,60 @@ router.post("/:id/create-deal", async (req, res) => {
       return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
     }
 
-    // Reject if an active deal already exists for this lead
+    // Block already-closed leads
+    if (["CLOSED_WON", "CLOSED_LOST"].includes(lead.stage)) {
+      return res.status(400).json({
+        error: `Cannot create a deal for a lead that is ${lead.stage.replace(/_/g, " ").toLowerCase()}.`,
+        code: "LEAD_ALREADY_CLOSED",
+        statusCode: 400,
+      });
+    }
+
+    // Block if an active deal already exists
     const existingDeal = await prisma.deal.findFirst({
       where: { leadId: lead.id, isActive: true },
       select: { id: true, dealNumber: true },
     });
     if (existingDeal) {
       return res.status(409).json({
-        error: `Lead already has an active deal: ${existingDeal.dealNumber}`,
+        error: `Active deal already exists for this lead: ${existingDeal.dealNumber}`,
         code: "DEAL_ALREADY_EXISTS",
         existingDealId: existingDeal.id,
         statusCode: 409,
       });
     }
 
-    // Pick primary interested unit that is still AVAILABLE or ON_HOLD
-    const interest =
-      lead.interests.find((i) => i.isPrimary && ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status)) ??
-      lead.interests.find((i) => ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status));
+    // Resolve unit: prefer explicitly supplied unitId, then primary interest, then first interest
+    const { unitId: requestedUnitId, notes } = req.body;
 
-    if (!interest) {
-      return res.status(400).json({
-        error: "No available unit interest found. Add an interested unit to the lead first.",
-        code: "NO_AVAILABLE_UNIT",
-        statusCode: 400,
-      });
+    let resolvedUnit: any = null;
+
+    if (requestedUnitId) {
+      const unit = await prisma.unit.findUnique({ where: { id: requestedUnitId } });
+      if (!unit) {
+        return res.status(404).json({ error: "Unit not found", code: "UNIT_NOT_FOUND", statusCode: 404 });
+      }
+      if (!["AVAILABLE", "ON_HOLD"].includes(unit.status)) {
+        return res.status(400).json({
+          error: `Unit ${unit.unitNumber} is ${unit.status} and cannot be reserved.`,
+          code: "UNIT_NOT_AVAILABLE",
+          statusCode: 400,
+        });
+      }
+      resolvedUnit = unit;
+    } else {
+      const interest =
+        lead.interests.find((i) => i.isPrimary && ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status)) ??
+        lead.interests.find((i) => ["AVAILABLE", "ON_HOLD"].includes((i.unit as any).status));
+
+      if (!interest) {
+        return res.status(400).json({
+          error: "No available unit selected. Please choose a unit or add an interested unit to the lead first.",
+          code: "NO_AVAILABLE_UNIT",
+          statusCode: 400,
+        });
+      }
+      resolvedUnit = interest.unit;
     }
 
     // Use first active payment plan as default
@@ -448,20 +479,41 @@ router.post("/:id/create-deal", async (req, res) => {
 
     const deal = await createDealService({
       leadId:          lead.id,
-      unitId:          interest.unitId,
-      salePrice:       (interest.unit as any).price,
+      unitId:          resolvedUnit.id,
+      salePrice:       resolvedUnit.price,
       createdBy:       req.auth.userId,
       paymentPlanId:   paymentPlan.id,
       brokerCompanyId: lead.brokerCompanyId ?? undefined,
       brokerAgentId:   lead.brokerAgentId   ?? undefined,
     });
 
+    // If notes provided, save them on the deal
+    if (notes?.trim()) {
+      await prisma.deal.update({ where: { id: deal.id }, data: { notes: notes.trim() } });
+    }
+
+    // Advance lead to NEGOTIATING if not already past that stage
+    const NEGOTIATING_ALLOWED_FROM = ["NEW", "CONTACTED", "QUALIFIED", "OFFER_SENT", "SITE_VISIT"];
+    if (NEGOTIATING_ALLOWED_FROM.includes(lead.stage)) {
+      await prisma.lead.update({ where: { id: lead.id }, data: { stage: "NEGOTIATING" } });
+      await prisma.leadStageHistory.create({
+        data: {
+          leadId:    lead.id,
+          oldStage:  lead.stage as any,
+          newStage:  "NEGOTIATING",
+          changedBy: req.auth.userId,
+          reason:    `Deal ${deal.dealNumber} created`,
+        },
+      });
+    }
+
+    // Audit log
     await prisma.activity.create({
       data: {
         leadId:    lead.id,
         dealId:    deal.id,
         type:      "NOTE",
-        summary:   `Deal created — Unit ${(interest.unit as any).unitNumber}`,
+        summary:   `Deal created from lead — Unit ${resolvedUnit.unitNumber}`,
         createdBy: req.auth.userId,
       },
     });
