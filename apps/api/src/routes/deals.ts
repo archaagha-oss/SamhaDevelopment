@@ -470,43 +470,125 @@ router.post("/:id/restructure", async (req, res) => {
   }
 });
 
-// POST /:id/reserve — lock unit as RESERVED and confirm the reservation
-// Transitions: deal RESERVATION_PENDING → RESERVATION_CONFIRMED, unit ON_HOLD → RESERVED
+// POST /:id/reserve — atomically lock the unit and confirm the reservation.
+//
+// Everything runs inside a single Serializable transaction so that two agents
+// racing to reserve the same unit cannot both succeed.
+//
+// Flow (all in one transaction):
+//   1. Re-fetch deal + unit with latest DB state
+//   2. Validate deal stage == RESERVATION_PENDING
+//   3. Validate unit status is ON_HOLD or AVAILABLE (not already RESERVED/SOLD)
+//   4. unit: ON_HOLD → RESERVED  (writes UnitStatusHistory)
+//   5. deal: RESERVATION_PENDING → RESERVATION_CONFIRMED (writes DealStageHistory)
+//   6. lead: auto-advance to CLOSED_WON (writes LeadStageHistory)
+// After commit: write Activity audit row (fire-and-forget).
 router.post("/:id/reserve", async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
-    const deal = await prisma.deal.findUnique({
-      where: { id: req.params.id },
-      include: { unit: true },
-    });
-    if (!deal) {
-      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
-    }
-    if (deal.stage !== "RESERVATION_PENDING") {
-      return res.status(400).json({
-        error: `Deal is already in ${deal.stage}. Reservation can only be confirmed from RESERVATION_PENDING.`,
-        code: "INVALID_DEAL_STAGE",
-        statusCode: 400,
-      });
-    }
-    if (!["AVAILABLE", "ON_HOLD"].includes(deal.unit.status)) {
-      return res.status(400).json({
-        error: `Unit is ${deal.unit.status}. Can only reserve an AVAILABLE or ON_HOLD unit.`,
-        code: "UNIT_NOT_AVAILABLE",
-        statusCode: 400,
-      });
-    }
+    const dealId   = req.params.id;
+    const userId   = req.auth.userId;
 
-    const updated = await updateDealStage(deal.id, "RESERVATION_CONFIRMED", req.auth.userId);
-    res.json(updated);
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch deal + unit with latest committed data
+      const deal = await tx.deal.findUnique({
+        where:   { id: dealId },
+        include: { unit: true, lead: true },
+      });
+      if (!deal) {
+        const err: any = new Error("Deal not found"); err.status = 404; throw err;
+      }
+
+      // 2. Validate deal stage
+      if (deal.stage !== "RESERVATION_PENDING") {
+        const err: any = new Error(
+          deal.stage === "RESERVATION_CONFIRMED"
+            ? "Unit has already been reserved on this deal."
+            : `Deal is not ready for reservation — current stage is ${deal.stage.replace(/_/g, " ")}.`
+        );
+        err.status = 400; err.code = "INVALID_DEAL_STAGE"; throw err;
+      }
+
+      // 3. Re-fetch unit inside the transaction to get the latest status
+      const unit = await tx.unit.findUnique({ where: { id: deal.unitId } });
+      if (!unit) {
+        const err: any = new Error("Unit not found"); err.status = 404; throw err;
+      }
+      if (!["AVAILABLE", "ON_HOLD"].includes(unit.status)) {
+        const err: any = new Error(
+          `This unit has already been reserved or sold by another deal (status: ${unit.status}).`
+        );
+        err.status = 409; err.code = "UNIT_ALREADY_TAKEN"; throw err;
+      }
+
+      // 4. Lock unit → RESERVED
+      await tx.unit.update({
+        where: { id: unit.id },
+        data:  { status: "RESERVED", holdExpiresAt: null },
+      });
+      await tx.unitStatusHistory.create({
+        data: {
+          unitId:    unit.id,
+          oldStatus: unit.status,
+          newStatus: "RESERVED",
+          changedBy: userId,
+          reason:    `Reservation confirmed — Deal ${deal.dealNumber}`,
+        },
+      });
+
+      // 5. Advance deal → RESERVATION_CONFIRMED
+      const updatedDeal = await tx.deal.update({
+        where:   { id: dealId },
+        data:    { stage: "RESERVATION_CONFIRMED" },
+        include: { lead: true, unit: true },
+      });
+      await tx.dealStageHistory.create({
+        data: {
+          dealId,
+          oldStage:  "RESERVATION_PENDING",
+          newStage:  "RESERVATION_CONFIRMED",
+          changedBy: userId,
+        },
+      });
+
+      // 6. Auto-close lead as CLOSED_WON (if not already closed)
+      if (!["CLOSED_WON", "CLOSED_LOST"].includes(deal.lead.stage)) {
+        await tx.lead.update({ where: { id: deal.leadId }, data: { stage: "CLOSED_WON" } });
+        await tx.leadStageHistory.create({
+          data: {
+            leadId:    deal.leadId,
+            oldStage:  deal.lead.stage as any,
+            newStage:  "CLOSED_WON",
+            changedBy: userId,
+            reason:    `Unit reserved — Deal ${deal.dealNumber}`,
+          },
+        });
+      }
+
+      return updatedDeal;
+    }, { isolationLevel: "Serializable" });
+
+    // Audit activity (outside transaction — non-critical)
+    prisma.activity.create({
+      data: {
+        dealId,
+        leadId:    result.leadId,
+        type:      "NOTE",
+        summary:   `Unit ${result.unit.unitNumber} reserved — deal confirmed`,
+        createdBy: userId,
+      },
+    }).catch(() => {});
+
+    res.json(result);
   } catch (error: any) {
-    res.status(400).json({
+    const status = error.status ?? 400;
+    res.status(status).json({
       error:      error.message || "Failed to reserve unit",
-      code:       "RESERVE_ERROR",
-      statusCode: 400,
+      code:       error.code   || "RESERVE_ERROR",
+      statusCode: status,
     });
   }
 });

@@ -20,7 +20,7 @@ interface Deal {
   reservationDate: string; oqoodDeadline: string;
   oqood: { deadline: string; daysRemaining: number; status: "green"|"yellow"|"red"|"overdue"; isOverdue: boolean; };
   lead: { id: string; firstName: string; lastName: string; phone: string; email?: string; };
-  unit: { id: string; unitNumber: string; type: string; floor: number; area: number; price: number; };
+  unit: { id: string; unitNumber: string; type: string; floor: number; area: number; price: number; status: string; };
   paymentPlan: { id: string; name: string; milestones: any[]; };
   payments: any[];
   commission?: { id: string; amount: number; rate: number; status: string; spaSignedMet: boolean; oqoodRegisteredMet: boolean; conditions?: { spaSignedMet: boolean; oqoodRegisteredMet: boolean; bothMet: boolean; }; };
@@ -104,6 +104,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [documentKey, setDocumentKey] = useState(0);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
+  const [showReserveConfirm, setShowReserveConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Change Unit panel
@@ -441,8 +442,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     }
   };
 
-  const handleReserveUnit = async () => {
-    if (!deal) return;
+  const handleReserveUnit = () => setShowReserveConfirm(true);
+
+  const confirmReserveUnit = async () => {
+    setShowReserveConfirm(false);
     setReserving(true);
     try {
       await axios.post(`/api/deals/${dealId}/reserve`);
@@ -585,25 +588,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           </div>
 
-          {/* Stage badge + change */}
+          {/* Stage badge + header actions */}
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
               {deal.stage.replace(/_/g, " ")}
             </span>
-            {deal.stage === "RESERVATION_PENDING" && (
-              <button
-                onClick={handleReserveUnit}
-                disabled={reserving}
-                className="px-4 py-1 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-              >
-                {reserving ? "Reserving…" : "Reserve Unit"}
-              </button>
-            )}
-            {deal.stage === "RESERVATION_CONFIRMED" && (
-              <span className="px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
-                Reserved
-              </span>
-            )}
             <div className="relative flex items-center gap-2">
               {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                 <button
@@ -671,20 +660,32 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit</h3>
-              {deal.stage === "RESERVATION_PENDING" && (
+              {deal.stage === "RESERVATION_PENDING" ? (
                 <button
                   onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
                   className="text-xs text-blue-600 font-semibold hover:underline"
                 >
                   {showChangeUnit ? "Cancel" : "Change Unit"}
                 </button>
-              )}
+              ) : deal.unit.status === "RESERVED" ? (
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Reserved (This Deal)
+                </span>
+              ) : null}
             </div>
 
             {/* Current unit summary */}
             <div className="flex items-center gap-4 mb-3">
               <div>
-                <p className="text-2xl font-bold text-slate-900">{deal.unit.unitNumber}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold text-slate-900">{deal.unit.unitNumber}</p>
+                  {deal.unit.status === "RESERVED" && (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">RESERVED</span>
+                  )}
+                  {deal.unit.status === "ON_HOLD" && (
+                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">ON HOLD</span>
+                  )}
+                </div>
                 <p className="text-sm text-slate-500">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
               </div>
               <div className="ml-auto text-right">
@@ -1196,10 +1197,18 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={handleReserveUnit}
                 disabled={reserving}
-                className="w-full py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors mb-3"
+                className="w-full py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors mb-3 flex items-center justify-center gap-2"
               >
-                {reserving ? "Reserving…" : "Reserve Unit"}
+                {reserving ? (
+                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
+                ) : "Reserve Unit"}
               </button>
+            )}
+            {deal.stage === "RESERVATION_CONFIRMED" && (
+              <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 mb-3">
+                <span className="text-base">✓</span>
+                <span className="text-sm font-bold">Unit Reserved</span>
+              </div>
             )}
 
             {/* Valid next stages */}
@@ -1335,6 +1344,54 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       </div>
+
+      {/* ── Reserve Unit Confirmation Modal ───────────────────────────────────── */}
+      {showReserveConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+            <div className="px-6 py-5 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-lg">Confirm Reservation</h3>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-sm text-amber-800 font-medium">
+                  This will lock Unit <span className="font-bold">{deal?.unit.unitNumber}</span> and prevent any other deal from booking it.
+                </p>
+                <p className="text-xs text-amber-600 mt-1.5">This action cannot be undone by agents. Only an Admin can release a reserved unit.</p>
+              </div>
+              <div className="text-sm text-slate-600 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Buyer</span>
+                  <span className="font-medium">{deal?.lead.firstName} {deal?.lead.lastName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Unit</span>
+                  <span className="font-medium">{deal?.unit.unitNumber} · {deal?.unit.type.replace(/_/g, " ")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Price</span>
+                  <span className="font-bold text-blue-700">AED {deal?.salePrice.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={confirmReserveUnit}
+                  disabled={reserving}
+                  className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                >
+                  {reserving ? "Reserving…" : "Confirm — Reserve Unit"}
+                </button>
+                <button
+                  onClick={() => setShowReserveConfirm(false)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Deal Modal */}
       {showCancelModal && (
