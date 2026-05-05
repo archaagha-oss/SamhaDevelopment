@@ -53,6 +53,15 @@ export default function SalesOfferPrintPage() {
       .finally(() => setLoading(false));
   }, [dealId]);
 
+  // Auto-trigger print dialog when opened with ?auto=print
+  useEffect(() => {
+    if (!deal) return;
+    if (new URLSearchParams(window.location.search).get("auto") === "print") {
+      const t = setTimeout(() => window.print(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [deal]);
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-white">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />

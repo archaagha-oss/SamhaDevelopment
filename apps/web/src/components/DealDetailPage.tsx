@@ -24,7 +24,7 @@ interface Deal {
   paymentPlan: { id: string; name: string; milestones: any[]; };
   payments: any[];
   commission?: { id: string; amount: number; rate: number; status: string; spaSignedMet: boolean; oqoodRegisteredMet: boolean; conditions?: { spaSignedMet: boolean; oqoodRegisteredMet: boolean; bothMet: boolean; }; };
-  documents: any[];
+  documents: Array<{ id: string; type: string; version: number; name: string; uploadedAt: string; softDeleted: boolean }>;
   stageHistory?: StageHistoryEntry[];
   brokerCompany?: { id: string; name: string } | null;
   brokerAgent?: { id: string; name: string } | null;
@@ -434,6 +434,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       };
       toast.success(`${nameMap[type]} generated`);
       setDocumentKey((k) => k + 1);
+      loadDeal();
       window.open(`/deals/${dealId}/print/${labelMap[type]}`, "_blank");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to generate document");
@@ -797,33 +798,84 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           </div>
 
-          {/* Generate document actions */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents</h3>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => handleGenerateDocument("SALES_OFFER")}
-                disabled={!!generatingDoc}
-                className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}
-              </button>
-              <button
-                onClick={() => handleGenerateDocument("RESERVATION_FORM")}
-                disabled={!!generatingDoc}
-                className="px-4 py-2 text-sm font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
-              >
-                {generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}
-              </button>
-              <button
-                onClick={() => handleGenerateDocument("SPA")}
-                disabled={!!generatingDoc}
-                className="px-4 py-2 text-sm font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
-              >
-                {generatingDoc === "SPA" ? "Generating…" : "SPA Draft"}
-              </button>
-            </div>
-          </div>
+          {/* Documents — Sales Offer + supporting docs */}
+          {(() => {
+            const salesOfferDoc = deal.documents
+              .filter((d) => d.type === "SALES_OFFER" && !d.softDeleted)
+              .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0] ?? null;
+            const canGenerate =
+              !["RESERVATION_PENDING", "CANCELLED"].includes(deal.stage) && !!deal.lead.firstName;
+            return (
+              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Documents</h3>
+
+                {/* Sales Offer row */}
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-800">Sales Offer</span>
+                      {salesOfferDoc ? (
+                        <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Generated</span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs font-semibold bg-slate-200 text-slate-500 rounded-full">Not Generated</span>
+                      )}
+                    </div>
+                    {salesOfferDoc && (
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        v{salesOfferDoc.version} · Generated {fmtDate(salesOfferDoc.uploadedAt)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {salesOfferDoc ? (
+                      <>
+                        <button
+                          onClick={() => window.open(`/deals/${dealId}/print/sales-offer`, "_blank")}
+                          className="px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+                        >
+                          Preview
+                        </button>
+                        <button
+                          onClick={() => window.open(`/deals/${dealId}/print/sales-offer?auto=print`, "_blank")}
+                          className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Download PDF
+                        </button>
+                      </>
+                    ) : canGenerate ? (
+                      <button
+                        onClick={() => handleGenerateDocument("SALES_OFFER")}
+                        disabled={!!generatingDoc}
+                        className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Reserve unit first</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Other document actions */}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleGenerateDocument("RESERVATION_FORM")}
+                    disabled={!!generatingDoc}
+                    className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}
+                  </button>
+                  <button
+                    onClick={() => handleGenerateDocument("SPA")}
+                    disabled={!!generatingDoc}
+                    className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                  >
+                    {generatingDoc === "SPA" ? "Generating…" : "SPA Draft"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Documents */}
           <DocumentBrowser

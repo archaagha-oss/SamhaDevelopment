@@ -622,6 +622,35 @@ router.post("/:id/generate-document", async (req, res) => {
       return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
     }
 
+    // SALES_OFFER-specific guards
+    if (type === "SALES_OFFER") {
+      const reservedStages = [
+        "RESERVATION_CONFIRMED", "SPA_PENDING", "SPA_SENT", "SPA_SIGNED",
+        "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED",
+      ];
+      if (!reservedStages.includes(deal.stage)) {
+        return res.status(400).json({
+          error: "Sales offer can only be generated after reservation is confirmed",
+          code: "DEAL_NOT_RESERVED",
+          statusCode: 400,
+        });
+      }
+      if (!deal.lead.firstName) {
+        return res.status(400).json({
+          error: "Missing buyer details — lead must have a name",
+          code: "MISSING_BUYER_DATA",
+          statusCode: 400,
+        });
+      }
+      if (!deal.unitId) {
+        return res.status(400).json({
+          error: "Missing unit — assign a unit to the deal before generating a sales offer",
+          code: "MISSING_UNIT",
+          statusCode: 400,
+        });
+      }
+    }
+
     const dataSnapshot = {
       dealId:           deal.id,
       dealNumber:       deal.dealNumber,
@@ -679,7 +708,15 @@ router.post("/:id/generate-document", async (req, res) => {
       },
     });
 
-    res.status(201).json(doc);
+    const printPathMap: Record<string, string> = {
+      RESERVATION_FORM: "reservation-form",
+      SPA:              "spa-draft",
+      SALES_OFFER:      "sales-offer",
+    };
+    res.status(201).json({
+      ...doc,
+      previewUrl: `/deals/${deal.id}/print/${printPathMap[type]}`,
+    });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to generate document", code: "GENERATE_DOC_ERROR", statusCode: 400 });
   }
