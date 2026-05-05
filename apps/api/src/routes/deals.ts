@@ -690,20 +690,20 @@ router.post("/:id/generate-document", async (req, res) => {
 
     const doc = await createGeneratedDocument({
       type:        type as "RESERVATION_FORM" | "SPA" | "SALES_OFFER",
-      name:        `${labelMap[type]} — ${deal.dealNumber}`,
+      name:        `${deal.dealNumber}_${type.toLowerCase().replace("_", "-")}_v`,
       dealId:      deal.id,
       leadId:      deal.leadId,
       dataSnapshot,
       createdBy:   req.auth.userId,
     });
 
-    // Log activity
+    // Log activity with version
     await prisma.activity.create({
       data: {
         dealId:    deal.id,
         leadId:    deal.leadId,
         type:      "NOTE",
-        summary:   `${labelMap[type]} generated`,
+        summary:   `${labelMap[type]} v${doc.version} generated for ${deal.dealNumber}`,
         createdBy: req.auth.userId,
       },
     });
@@ -715,10 +715,40 @@ router.post("/:id/generate-document", async (req, res) => {
     };
     res.status(201).json({
       ...doc,
-      previewUrl: `/deals/${deal.id}/print/${printPathMap[type]}`,
+      previewUrl: `/deals/${deal.id}/print/${printPathMap[type]}?docId=${doc.id}`,
     });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to generate document", code: "GENERATE_DOC_ERROR", statusCode: 400 });
+  }
+});
+
+// List all documents for a deal, sorted by version DESC
+// GET /api/deals/:id/documents
+router.get("/:id/documents", async (req, res) => {
+  try {
+    const docs = await prisma.document.findMany({
+      where: { dealId: req.params.id, softDeleted: false },
+      orderBy: [{ type: "asc" }, { version: "desc" }],
+    });
+    res.json(docs);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch documents", code: "FETCH_DOCS_ERROR", statusCode: 500 });
+  }
+});
+
+// Get a single document with its dataSnapshot (used by print pages for historical versions)
+// GET /api/deals/:id/documents/:docId
+router.get("/:id/documents/:docId", async (req, res) => {
+  try {
+    const doc = await prisma.document.findFirst({
+      where: { id: req.params.docId, dealId: req.params.id, softDeleted: false },
+    });
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.json(doc);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch document", code: "FETCH_DOC_ERROR", statusCode: 500 });
   }
 });
 

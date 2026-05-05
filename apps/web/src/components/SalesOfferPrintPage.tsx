@@ -39,28 +39,85 @@ const Row = ({ label, value, bold }: { label: string; value: string; bold?: bool
   </div>
 );
 
+// Map a stored dataSnapshot (immutable) back to the DealDetail render interface.
+function snapshotToDeal(snap: any): DealDetail {
+  const buyerName: string = snap.buyerDetails?.name ?? "";
+  const spaceIdx = buyerName.indexOf(" ");
+  const firstName = spaceIdx === -1 ? buyerName : buyerName.slice(0, spaceIdx);
+  const lastName  = spaceIdx === -1 ? ""         : buyerName.slice(spaceIdx + 1);
+  return {
+    id:              snap.dealId ?? "",
+    dealNumber:      snap.dealNumber ?? "",
+    salePrice:       snap.salePrice  ?? 0,
+    discount:        snap.discount   ?? 0,
+    dldFee:          snap.dldFee     ?? 0,
+    adminFee:        snap.adminFee   ?? 0,
+    reservationDate: snap.reservationDate ?? "",
+    stage:           "RESERVATION_CONFIRMED",
+    lead: {
+      firstName,
+      lastName,
+      phone:       snap.buyerDetails?.phone       ?? "",
+      email:       snap.buyerDetails?.email,
+      nationality: snap.buyerDetails?.nationality,
+    },
+    unit: {
+      unitNumber:   snap.unitDetails?.unitNumber   ?? "",
+      type:         snap.unitDetails?.type         ?? "",
+      floor:        snap.unitDetails?.floor        ?? 0,
+      area:         snap.unitDetails?.area         ?? 0,
+      view:         snap.unitDetails?.view,
+      bathrooms:    snap.unitDetails?.bathrooms,
+      parkingSpaces: snap.unitDetails?.parkingSpaces,
+      project: {
+        name:         snap.projectDetails?.name     ?? "",
+        location:     snap.projectDetails?.location ?? "",
+        handoverDate: snap.projectDetails?.handoverDate,
+      },
+    },
+    paymentPlan: snap.paymentPlan?.name ? { name: snap.paymentPlan.name } : null,
+  };
+}
+
 export default function SalesOfferPrintPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  const [deal, setDeal]     = useState<DealDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
+  const [deal, setDeal]         = useState<DealDetail | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [docVersion, setDocVersion] = useState<number | null>(null);
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const docId  = searchParams.get("docId");
+  const autoPrint = searchParams.get("auto") === "print";
 
   useEffect(() => {
     if (!dealId) return;
-    axios.get(`/api/deals/${dealId}`)
-      .then((r) => setDeal(r.data))
-      .catch((e) => setError(e.response?.data?.error || "Failed to load deal"))
-      .finally(() => setLoading(false));
-  }, [dealId]);
+
+    if (docId) {
+      // Historical version — render from the immutable dataSnapshot
+      axios.get(`/api/deals/${dealId}/documents/${docId}`)
+        .then((r) => {
+          const doc = r.data;
+          setDocVersion(doc.version ?? null);
+          setDeal(snapshotToDeal(doc.dataSnapshot ?? {}));
+        })
+        .catch((e) => setError(e.response?.data?.error || "Document not found"))
+        .finally(() => setLoading(false));
+    } else {
+      // Latest — fetch current deal state
+      axios.get(`/api/deals/${dealId}`)
+        .then((r) => setDeal(r.data))
+        .catch((e) => setError(e.response?.data?.error || "Failed to load deal"))
+        .finally(() => setLoading(false));
+    }
+  }, [dealId, docId]);
 
   // Auto-trigger print dialog when opened with ?auto=print
   useEffect(() => {
-    if (!deal) return;
-    if (new URLSearchParams(window.location.search).get("auto") === "print") {
-      const t = setTimeout(() => window.print(), 400);
-      return () => clearTimeout(t);
-    }
-  }, [deal]);
+    if (!deal || !autoPrint) return;
+    const t = setTimeout(() => window.print(), 400);
+    return () => clearTimeout(t);
+  }, [deal, autoPrint]);
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-white">
@@ -79,7 +136,7 @@ export default function SalesOfferPrintPage() {
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Print button — hidden when printing */}
+      {/* Toolbar — hidden when printing */}
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
         <button
           onClick={() => window.print()}
@@ -95,6 +152,15 @@ export default function SalesOfferPrintPage() {
         </button>
       </div>
 
+      {/* Historical version notice */}
+      {docVersion !== null && (
+        <div className="print:hidden fixed top-4 left-4 z-50">
+          <span className="px-3 py-1.5 text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-300 rounded-lg shadow">
+            Viewing v{docVersion} — data frozen at generation time
+          </span>
+        </div>
+      )}
+
       {/* Page */}
       <div className="max-w-2xl mx-auto px-8 py-12 print:py-8 print:px-6">
 
@@ -107,6 +173,9 @@ export default function SalesOfferPrintPage() {
           <div className="text-right text-sm text-slate-500 space-y-1">
             <p className="font-semibold text-slate-700">Date: {today()}</p>
             <p className="font-mono text-xs text-slate-400">{deal.dealNumber}</p>
+            {docVersion !== null && (
+              <p className="text-xs font-semibold text-amber-600">Version {docVersion}</p>
+            )}
           </div>
         </div>
 
@@ -129,9 +198,9 @@ export default function SalesOfferPrintPage() {
             <Row label="Property Type"  value={TYPE_LABEL[unit.type] ?? unit.type} />
             <Row label="Floor"          value={`Floor ${unit.floor}`} />
             <Row label="Total Area"     value={`${unit.area.toLocaleString()} sq.ft`} />
-            {unit.view         && <Row label="View"          value={unit.view} />}
-            {unit.bathrooms    && <Row label="Bathrooms"     value={String(unit.bathrooms)} />}
-            {unit.parkingSpaces && <Row label="Parking"      value={String(unit.parkingSpaces)} />}
+            {unit.view          && <Row label="View"      value={unit.view} />}
+            {unit.bathrooms     && <Row label="Bathrooms" value={String(unit.bathrooms)} />}
+            {unit.parkingSpaces && <Row label="Parking"   value={String(unit.parkingSpaces)} />}
             {unit.project.handoverDate && (
               <Row label="Estimated Handover" value={fmtDate(unit.project.handoverDate)} />
             )}
@@ -182,7 +251,7 @@ export default function SalesOfferPrintPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-300 mt-10 print:mt-6">
-          Generated on {today()} · {deal.dealNumber}
+          Generated on {today()} · {deal.dealNumber}{docVersion !== null ? ` · v${docVersion}` : ""}
         </p>
       </div>
     </div>
