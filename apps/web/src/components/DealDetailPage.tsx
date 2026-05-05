@@ -24,7 +24,7 @@ interface Deal {
   paymentPlan: { id: string; name: string; milestones: any[]; };
   payments: any[];
   commission?: { id: string; amount: number; rate: number; status: string; spaSignedMet: boolean; oqoodRegisteredMet: boolean; conditions?: { spaSignedMet: boolean; oqoodRegisteredMet: boolean; bothMet: boolean; }; };
-  documents: Array<{ id: string; type: string; version: number; name: string; uploadedAt: string; softDeleted: boolean; uploadedBy: string }>;
+  documents: Array<{ id: string; type: string; version: number; name: string; uploadedAt: string; softDeleted: boolean; uploadedBy: string; dataSnapshot?: any }>;
   stageHistory?: StageHistoryEntry[];
   brokerCompany?: { id: string; name: string } | null;
   brokerAgent?: { id: string; name: string } | null;
@@ -133,6 +133,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
   const [documentKey, setDocumentKey] = useState(0);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
+  const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
+  const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
   const [showReserveConfirm, setShowReserveConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -169,6 +171,32 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     navigator.clipboard.writeText(deal.dealNumber);
     setCopiedDealId(true);
     setTimeout(() => setCopiedDealId(false), 1500);
+  };
+
+  const generateInvoice = async (paymentId: string) => {
+    setGeneratingInvoice(paymentId);
+    try {
+      const r = await axios.post(`/api/payments/${paymentId}/generate-invoice`);
+      window.open(r.data.previewUrl, "_blank");
+      loadDeal();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to generate invoice");
+    } finally {
+      setGeneratingInvoice(null);
+    }
+  };
+
+  const generateReceipt = async (paymentId: string) => {
+    setGeneratingReceipt(paymentId);
+    try {
+      const r = await axios.post(`/api/payments/${paymentId}/generate-receipt`);
+      window.open(r.data.previewUrl, "_blank");
+      loadDeal();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to generate receipt");
+    } finally {
+      setGeneratingReceipt(null);
+    }
   };
 
   // Add custom milestone
@@ -582,6 +610,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const salesOfferDocs = deal.documents
     .filter((d) => d.type === "SALES_OFFER" && !d.softDeleted)
     .sort((a, b) => b.version - a.version);
+
+  // Invoice/receipt doc lookup helpers (keyed by paymentId)
+  const invoiceDocByPayment = (paymentId: string) =>
+    deal.documents.find((d) => !d.softDeleted && d.type === "OTHER" && d.dataSnapshot?.docSubtype === "INVOICE" && d.dataSnapshot?.paymentId === paymentId);
+  const receiptDocByPayment = (paymentId: string) =>
+    deal.documents.find((d) => !d.softDeleted && d.type === "PAYMENT_RECEIPT" && d.dataSnapshot?.paymentId === paymentId);
   const canGenerateSalesOffer = !["RESERVATION_PENDING", "CANCELLED"].includes(deal.stage) && !!deal.lead.firstName;
   const paidAmount    = deal.payments.filter((p: any) => p.status === "PAID").reduce((s: number, p: any) => s + p.amount, 0);
   const partialPaid   = deal.payments.filter((p: any) => p.status === "PARTIAL").reduce((s: number, p: any) => s + (p.partialPayments?.reduce((ps: number, pp: any) => ps + pp.amount, 0) ?? 0), 0);
@@ -1053,7 +1087,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {/* Payments tab */}
             {activeTab === "payments" && (
               deal.payments.length === 0 ? (
-                <p className="px-5 py-8 text-center text-sm text-slate-400">No payment milestones</p>
+                <div className="px-5 py-10 text-center">
+                  <p className="text-2xl mb-2">💳</p>
+                  <p className="text-sm font-medium text-slate-600 mb-1">No payment schedule yet</p>
+                  <p className="text-xs text-slate-400">
+                    {["RESERVATION_PENDING", "RESERVATION_CONFIRMED"].includes(deal.stage)
+                      ? "A payment plan will appear here once the deal advances to SPA stage."
+                      : "Assign a payment plan to this deal to generate the installment schedule."}
+                  </p>
+                </div>
               ) : (
                 <>
                 {/* Financial summary */}
@@ -1167,6 +1209,58 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                             </div>
                           </div>
                         </div>
+                        {/* Invoice / Receipt document buttons */}
+                        {(() => {
+                          const invoiceDoc = invoiceDocByPayment(p.id);
+                          const receiptDoc = receiptDocByPayment(p.id);
+                          const canInvoice = ["PENDING", "OVERDUE", "PARTIAL"].includes(p.status);
+                          const canReceipt = ["PAID", "PARTIAL"].includes(p.status);
+                          if (!canInvoice && !canReceipt) return null;
+                          return (
+                            <div className="px-5 pb-2 flex items-center gap-2 flex-wrap">
+                              {canInvoice && (
+                                invoiceDoc ? (
+                                  <a
+                                    href={`/payments/${p.id}/print/invoice?docId=${invoiceDoc.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1 text-xs font-medium border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                  >
+                                    View Invoice
+                                  </a>
+                                ) : (
+                                  <button
+                                    onClick={() => generateInvoice(p.id)}
+                                    disabled={generatingInvoice === p.id}
+                                    className="px-2.5 py-1 text-xs font-medium border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                  >
+                                    {generatingInvoice === p.id ? "Generating…" : "Generate Invoice"}
+                                  </button>
+                                )
+                              )}
+                              {canReceipt && (
+                                receiptDoc ? (
+                                  <a
+                                    href={`/payments/${p.id}/print/receipt?docId=${receiptDoc.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1 text-xs font-medium border border-emerald-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
+                                  >
+                                    View Receipt
+                                  </a>
+                                ) : (
+                                  <button
+                                    onClick={() => generateReceipt(p.id)}
+                                    disabled={generatingReceipt === p.id}
+                                    className="px-2.5 py-1 text-xs font-medium border border-emerald-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                                  >
+                                    {generatingReceipt === p.id ? "Generating…" : "Generate Receipt"}
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          );
+                        })()}
                         {/* Audit log accordion */}
                         {auditOpen && p.auditLog?.length > 0 && (
                           <div className="px-5 pb-3">

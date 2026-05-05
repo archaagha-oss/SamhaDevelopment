@@ -3,6 +3,7 @@ import { requireRole } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { markPaymentPaidSchema } from "../schemas/validation";
 import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
+import { createGeneratedDocument } from "../services/documentService";
 import { prisma } from "../lib/prisma";
 
 const router = Router();
@@ -26,12 +27,41 @@ router.get("/deal/:dealId", async (req, res) => {
   }
 });
 
+// Get a single document for a payment (looked up via payment.dealId)
+// Allows InvoicePrintPage / ReceiptPrintPage to fetch a frozen dataSnapshot
+// using only the paymentId (no dealId required on the client).
+router.get("/:id/documents/:docId", async (req, res) => {
+  try {
+    const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    const doc = await prisma.document.findFirst({
+      where: { id: req.params.docId, dealId: payment.dealId, softDeleted: false },
+    });
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.json(doc);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch document", code: "FETCH_DOC_ERROR", statusCode: 500 });
+  }
+});
+
 // Get payment detail
 router.get("/:id", async (req, res) => {
   try {
     const payment = await prisma.payment.findUnique({
       where: { id: req.params.id },
-      include: { deal: true, auditLog: true },
+      include: {
+        auditLog: true,
+        deal: {
+          include: {
+            lead: true,
+            unit: { include: { project: { select: { id: true, name: true, location: true } } } },
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -233,6 +263,147 @@ router.get("/status/overdue", async (req, res) => {
       code: "FETCH_OVERDUE_ERROR",
       statusCode: 500,
     });
+  }
+});
+
+// Generate an invoice for an installment (pre-payment document)
+// Uses DocumentType.OTHER with dataSnapshot.docSubtype = "INVOICE" (no schema migration needed)
+// POST /api/payments/:id/generate-invoice
+router.post("/:id/generate-invoice", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        deal: {
+          include: {
+            lead: true,
+            unit: { include: { project: { select: { id: true, name: true, location: true } } } },
+          },
+        },
+      },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+
+    const { deal } = payment;
+    const dataSnapshot = {
+      docSubtype:       "INVOICE",
+      paymentId:        payment.id,
+      dealId:           deal.id,
+      dealNumber:       deal.dealNumber,
+      milestoneLabel:   payment.milestoneLabel,
+      amount:           payment.amount,
+      dueDate:          payment.dueDate,
+      status:           payment.status,
+      buyerDetails:     { name: `${deal.lead.firstName} ${deal.lead.lastName}`, phone: deal.lead.phone, email: deal.lead.email },
+      unitDetails:      { unitNumber: deal.unit.unitNumber, type: deal.unit.type, floor: deal.unit.floor },
+      projectDetails:   (deal.unit as any).project,
+    };
+
+    // Count existing invoices for this payment to set version
+    const existingCount = await prisma.document.count({
+      where: { dealId: deal.id, type: "OTHER", softDeleted: false, name: { contains: `INVOICE — ${deal.dealNumber} — ${payment.milestoneLabel}` } },
+    });
+
+    const doc = await createGeneratedDocument({
+      type:        "OTHER" as any,
+      name:        `INVOICE — ${deal.dealNumber} — ${payment.milestoneLabel}`,
+      dealId:      deal.id,
+      leadId:      deal.leadId,
+      dataSnapshot,
+      createdBy:   req.auth.userId,
+    });
+
+    await prisma.activity.create({
+      data: {
+        dealId:    deal.id,
+        leadId:    deal.leadId,
+        type:      "NOTE",
+        summary:   `Invoice generated for installment "${payment.milestoneLabel}" (${deal.dealNumber})`,
+        createdBy: req.auth.userId,
+      },
+    });
+
+    res.status(201).json({ ...doc, previewUrl: `/payments/${payment.id}/print/invoice?docId=${doc.id}` });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to generate invoice", code: "GENERATE_INVOICE_ERROR", statusCode: 400 });
+  }
+});
+
+// Generate a receipt for a paid installment (post-payment document)
+// Uses DocumentType.PAYMENT_RECEIPT
+// POST /api/payments/:id/generate-receipt
+router.post("/:id/generate-receipt", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        deal: {
+          include: {
+            lead: true,
+            unit: { include: { project: { select: { id: true, name: true, location: true } } } },
+          },
+        },
+      },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    if (!["PAID", "PARTIAL"].includes(payment.status)) {
+      return res.status(400).json({
+        error: "Receipt can only be generated after payment is recorded",
+        code: "PAYMENT_NOT_RECEIVED",
+        statusCode: 400,
+      });
+    }
+
+    const { deal } = payment;
+    const dataSnapshot = {
+      paymentId:      payment.id,
+      dealId:         deal.id,
+      dealNumber:     deal.dealNumber,
+      milestoneLabel: payment.milestoneLabel,
+      amount:         payment.amount,
+      paidDate:       payment.paidDate,
+      paymentMethod:  payment.paymentMethod,
+      receiptKey:     payment.receiptKey,
+      status:         payment.status,
+      buyerDetails:   { name: `${deal.lead.firstName} ${deal.lead.lastName}`, phone: deal.lead.phone, email: deal.lead.email },
+      unitDetails:    { unitNumber: deal.unit.unitNumber, type: deal.unit.type, floor: deal.unit.floor },
+      projectDetails: (deal.unit as any).project,
+    };
+
+    const doc = await createGeneratedDocument({
+      type:        "PAYMENT_RECEIPT" as any,
+      name:        `RECEIPT — ${deal.dealNumber} — ${payment.milestoneLabel}`,
+      dealId:      deal.id,
+      leadId:      deal.leadId,
+      dataSnapshot,
+      createdBy:   req.auth.userId,
+    });
+
+    await prisma.activity.create({
+      data: {
+        dealId:    deal.id,
+        leadId:    deal.leadId,
+        type:      "NOTE",
+        summary:   `Receipt generated for payment AED ${payment.amount.toLocaleString()} — "${payment.milestoneLabel}" (${deal.dealNumber})`,
+        createdBy: req.auth.userId,
+      },
+    });
+
+    res.status(201).json({ ...doc, previewUrl: `/payments/${payment.id}/print/receipt?docId=${doc.id}` });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to generate receipt", code: "GENERATE_RECEIPT_ERROR", statusCode: 400 });
   }
 });
 

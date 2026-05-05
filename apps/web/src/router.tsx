@@ -22,6 +22,8 @@ import OfferPrintPage from "./components/OfferPrintPage";
 import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
 import SpaDraftPrintPage from "./components/SpaDraftPrintPage";
 import SalesOfferPrintPage from "./components/SalesOfferPrintPage";
+import InvoicePrintPage from "./components/InvoicePrintPage";
+import ReceiptPrintPage from "./components/ReceiptPrintPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReservationsPage from "./components/ReservationsPage";
 import OffersPage from "./components/OffersPage";
@@ -34,6 +36,8 @@ export const router = createBrowserRouter([
   { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
   { path: "/deals/:dealId/print/spa-draft",              element: <SpaDraftPrintPage /> },
   { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
+  { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
+  { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
   {
     path: "/",
     element: <AppShell />,
