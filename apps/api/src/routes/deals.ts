@@ -73,7 +73,7 @@ router.get("/:id", async (req, res) => {
       where: { id: req.params.id },
       include: {
         lead: true,
-        unit: true,
+        unit: { include: { project: true } },
         paymentPlan: { include: { milestones: true } },
         payments: { orderBy: { dueDate: "asc" }, include: { auditLog: true } },
         commission: true,
