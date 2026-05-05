@@ -1,0 +1,25 @@
+{
+  "name": "samha-crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Samha Real Estate CRM - Property sales pipeline management",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspace=apps/api",
+    "db:push": "npm run db:push --workspace=apps/api",
+    "db:seed": "npm run db:seed --workspace=apps/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@types/swagger-ui-express": "^4.1.8",
+    "pg": "^8.20.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

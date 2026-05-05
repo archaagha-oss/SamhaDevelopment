@@ -1,0 +1,11 @@
+const SQM_TO_SQFT = 10.764;
+export function formatArea(sqm) {
+    const sqft = Math.round(sqm * SQM_TO_SQFT);
+    return `${sqft.toLocaleString()} sqft / ${sqm} sqm`;
+}
+export function formatAreaShort(sqm) {
+    return `${Math.round(sqm * SQM_TO_SQFT).toLocaleString()} sqft`;
+}
+export function sqmToSqft(sqm) {
+    return Math.round(sqm * SQM_TO_SQFT);
+}

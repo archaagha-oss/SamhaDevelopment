@@ -1,0 +1,6 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useNavigate } from "react-router-dom";
+export default function NotFoundPage() {
+    const navigate = useNavigate();
+    return (_jsxs("div", { className: "flex flex-col items-center justify-center h-full min-h-[70vh] px-6 text-center", children: [_jsx("div", { className: "w-24 h-24 rounded-3xl bg-slate-800 border border-slate-700 flex items-center justify-center text-5xl mb-8 select-none", children: "\uD83C\uDFDA\uFE0F" }), _jsx("h1", { className: "text-white text-3xl font-bold mb-3 tracking-tight", children: "404 \u2014 Page Not Found" }), _jsx("p", { className: "text-slate-400 text-sm mb-10 max-w-sm leading-relaxed", children: "The page you're looking for doesn't exist or may have been moved. Head back to the dashboard to continue." }), _jsxs("div", { className: "flex items-center gap-3", children: [_jsx("button", { onClick: () => navigate(-1), className: "px-5 py-2.5 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 text-sm font-medium rounded-lg transition-all", children: "\u2190 Go Back" }), _jsx("button", { onClick: () => navigate("/"), className: "px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-sm", children: "Back to Dashboard" })] })] }));
+}

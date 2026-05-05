@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit -p apps/web/tsconfig.json)",
+      "Bash(node_modules/.bin/tsc --noEmit -p apps/api/tsconfig.json)",
+      "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc --noEmit -p apps/web/tsconfig.json 2>&1\")",
+      "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc --noEmit -p apps/api/tsconfig.json 2>&1\")",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(node -e 'const { PrismaClient } = require\\('\\\\''@prisma/client'\\\\''\\); const p = new PrismaClient\\(\\); p.project.findFirst\\(\\).then\\(r => console.log\\('\\\\''DB OK:'\\\\'', JSON.stringify\\(r\\)?.slice\\(0,100\\)\\)\\).catch\\(e => console.log\\('\\\\''DB ERROR:'\\\\'', e.message\\)\\).finally\\(\\(\\) => p.$disconnect\\(\\)\\)')",
+      "Bash(npm run *)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(find /c/laragon/www/SamhaDevelopment/apps/api/src -type f -name \"*.ts\" -exec grep -l \"PricingRule\\\\|LateFeeRule\" {} \\\\;)"
+    ]
+  }
+}
