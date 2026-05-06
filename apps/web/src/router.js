@@ -22,6 +22,9 @@ import PaymentPlansPage from "./components/PaymentPlansPage";
 import OfferPrintPage from "./components/OfferPrintPage";
 import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
 import SpaDraftPrintPage from "./components/SpaDraftPrintPage";
+import SalesOfferPrintPage from "./components/SalesOfferPrintPage";
+import InvoicePrintPage from "./components/InvoicePrintPage";
+import ReceiptPrintPage from "./components/ReceiptPrintPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReservationsPage from "./components/ReservationsPage";
 import OffersPage from "./components/OffersPage";
@@ -32,6 +35,9 @@ export const router = createBrowserRouter([
     { path: "/offers/:offerId", element: _jsx(OfferPrintPage, {}) },
     { path: "/deals/:dealId/print/reservation-form", element: _jsx(ReservationFormPrintPage, {}) },
     { path: "/deals/:dealId/print/spa-draft", element: _jsx(SpaDraftPrintPage, {}) },
+    { path: "/deals/:dealId/print/sales-offer", element: _jsx(SalesOfferPrintPage, {}) },
+    { path: "/payments/:paymentId/print/invoice", element: _jsx(InvoicePrintPage, {}) },
+    { path: "/payments/:paymentId/print/receipt", element: _jsx(ReceiptPrintPage, {}) },
     {
         path: "/",
         element: _jsx(AppShell, {}),
