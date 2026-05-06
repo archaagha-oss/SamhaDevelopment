@@ -291,18 +291,23 @@ router.post("/:id/generate-invoice", async (req, res) => {
     }
 
     const { deal } = payment;
+
+    // Fetch payment instructions from AppSettings to embed in snapshot
+    const appSettings = await prisma.appSettings.findFirst().catch(() => null);
+
     const dataSnapshot = {
-      docSubtype:       "INVOICE",
-      paymentId:        payment.id,
-      dealId:           deal.id,
-      dealNumber:       deal.dealNumber,
-      milestoneLabel:   payment.milestoneLabel,
-      amount:           payment.amount,
-      dueDate:          payment.dueDate,
-      status:           payment.status,
-      buyerDetails:     { name: `${deal.lead.firstName} ${deal.lead.lastName}`, phone: deal.lead.phone, email: deal.lead.email },
-      unitDetails:      { unitNumber: deal.unit.unitNumber, type: deal.unit.type, floor: deal.unit.floor },
-      projectDetails:   (deal.unit as any).project,
+      docSubtype:          "INVOICE",
+      paymentId:           payment.id,
+      dealId:              deal.id,
+      dealNumber:          deal.dealNumber,
+      milestoneLabel:      payment.milestoneLabel,
+      amount:              payment.amount,
+      dueDate:             payment.dueDate,
+      status:              payment.status,
+      buyerDetails:        { name: `${deal.lead.firstName} ${deal.lead.lastName}`, phone: deal.lead.phone, email: deal.lead.email },
+      unitDetails:         { unitNumber: deal.unit.unitNumber, type: deal.unit.type, floor: deal.unit.floor },
+      projectDetails:      (deal.unit as any).project,
+      paymentInstructions: appSettings?.paymentInstructions ?? null,
     };
 
     // Count existing invoices for this payment to set version

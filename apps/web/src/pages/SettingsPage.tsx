@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+interface EmailTemplates {
+  beforeDue?: string;
+  onDue?: string;
+  overdue7?: string;
+  overdue30?: string;
+}
+
 interface AppSettings {
   id?: string;
   companyName?: string;
@@ -14,9 +21,15 @@ interface AppSettings {
   whatsappNumber?: string;
   smsProvider?: string;
   emailProvider?: string;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
+  paymentInstructions?: string;
+  emailTemplates?: EmailTemplates;
 }
 
-type Tab = "company" | "localization" | "communication";
+type Tab = "company" | "localization" | "communication" | "finance" | "templates";
 
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400";
 const lbl = "block text-xs font-semibold text-slate-600 mb-1";
@@ -76,6 +89,8 @@ export default function SettingsPage() {
     { key: "company",       label: "Company Profile" },
     { key: "localization",  label: "Localization" },
     { key: "communication", label: "Communication" },
+    { key: "finance",       label: "Finance" },
+    { key: "templates",     label: "Email Templates" },
   ];
 
   if (loading) {
@@ -227,6 +242,118 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Finance Settings */}
+        {tab === "finance" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Payment Instructions</p>
+                <p className="text-xs text-slate-400 mb-3">Auto-injected into invoices and reminder emails. Include bank name, account name, IBAN, and Swift code.</p>
+                <textarea
+                  className={inp + " resize-y min-h-[140px]"}
+                  value={form.paymentInstructions ?? ""}
+                  onChange={(e) => set("paymentInstructions", e.target.value)}
+                  placeholder={`Bank Name: Emirates NBD\nAccount Name: Samha Development LLC\nIBAN: AE123456789012345678\nSwift Code: EBILAEAD`}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">SMTP Email Delivery</p>
+              <p className="text-xs text-slate-400">Requires nodemailer to be installed. Leave blank to use console logging (development).</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>SMTP Host</label>
+                  <input className={inp} value={form.smtpHost ?? ""} onChange={(e) => set("smtpHost", e.target.value)} placeholder="smtp.gmail.com" />
+                </div>
+                <div>
+                  <label className={lbl}>SMTP Port</label>
+                  <input type="number" className={inp} value={form.smtpPort ?? ""} onChange={(e) => set("smtpPort", e.target.value)} placeholder="587" />
+                </div>
+                <div>
+                  <label className={lbl}>Username</label>
+                  <input className={inp} value={form.smtpUsername ?? ""} onChange={(e) => set("smtpUsername", e.target.value)} placeholder="your@email.com" />
+                </div>
+                <div>
+                  <label className={lbl}>Password</label>
+                  <input type="password" className={inp} value={form.smtpPassword ?? ""} onChange={(e) => set("smtpPassword", e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+            </div>
+
+            {/* Permissions reference matrix */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Role Permissions Reference</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left py-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+                      {["Admin", "Manager", "Agent", "Finance"].map((r) => (
+                        <th key={r} className="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{r}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {[
+                      ["Create Deal",       true,  true,  true,  false],
+                      ["Reserve Unit",      true,  true,  true,  false],
+                      ["Record Payment",    true,  false, false, true ],
+                      ["Generate Receipt",  true,  false, false, true ],
+                      ["Manage Settings",   true,  false, false, false],
+                      ["View Reports",      true,  true,  false, true ],
+                    ].map(([action, ...perms]) => (
+                      <tr key={String(action)}>
+                        <td className="py-2.5 pr-4 text-sm text-slate-700">{action}</td>
+                        {perms.map((allowed, i) => (
+                          <td key={i} className="py-2.5 px-3 text-center">
+                            <span className={allowed ? "text-emerald-600 font-bold" : "text-slate-300"}>
+                              {allowed ? "✓" : "–"}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-slate-400 mt-3">Roles are managed per user in the Team section. This matrix is for reference only.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Email Templates */}
+        {tab === "templates" && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
+              <p className="font-semibold mb-1">Template Variables</p>
+              <p>Use: <code className="bg-amber-100 px-1 rounded">{"{{BuyerName}}"}</code> <code className="bg-amber-100 px-1 rounded">{"{{UnitNumber}}"}</code> <code className="bg-amber-100 px-1 rounded">{"{{Amount}}"}</code> <code className="bg-amber-100 px-1 rounded">{"{{DueDate}}"}</code> <code className="bg-amber-100 px-1 rounded">{"{{ProjectName}}"}</code> <code className="bg-amber-100 px-1 rounded">{"{{Milestone}}"}</code></p>
+            </div>
+            {([
+              { key: "beforeDue" as const, label: "7 Days Before Due",     desc: "Friendly reminder — sent 7 days before the due date" },
+              { key: "onDue"     as const, label: "Payment Due Today",      desc: "Urgent reminder — sent on the due date" },
+              { key: "overdue7"  as const, label: "7 Days Overdue",         desc: "Overdue notice — sent 7 days after the due date" },
+              { key: "overdue30" as const, label: "30 Days Overdue (Final)",desc: "Final notice — sent 30 days after the due date" },
+            ]).map(({ key, label, desc }) => (
+              <div key={key} className="bg-white rounded-xl border border-slate-200 p-6 space-y-2">
+                <p className="text-xs font-semibold text-slate-700">{label}</p>
+                <p className="text-xs text-slate-400">{desc}</p>
+                <textarea
+                  className={inp + " resize-y min-h-[100px] font-mono text-xs"}
+                  value={(form.emailTemplates as EmailTemplates)?.[key] ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      emailTemplates: { ...(f.emailTemplates as EmailTemplates), [key]: e.target.value },
+                    }))
+                  }
+                  placeholder={`Dear {{BuyerName}},\n\nYour payment of {{Amount}} for {{Milestone}} is due on {{DueDate}}.\n\nThank you.`}
+                />
+              </div>
+            ))}
           </div>
         )}
 

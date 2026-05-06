@@ -11,6 +11,7 @@ interface InvoiceData {
   buyerDetails: { name: string; phone: string; email?: string };
   unitDetails: { unitNumber: string; type: string; floor: number };
   projectDetails: { name: string; location: string };
+  paymentInstructions?: string | null;
   version?: number;
   generatedAt?: string;
 }
@@ -166,8 +167,14 @@ export default function InvoicePrintPage() {
         {/* Payment instructions */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 mb-8">
           <p className="font-semibold text-slate-700 mb-2">Payment Instructions</p>
-          <p>Please transfer the amount due to our designated bank account before the due date.</p>
-          <p className="mt-1 text-xs text-slate-400">Quote your unit number and deal reference when making the transfer.</p>
+          {data.paymentInstructions ? (
+            <pre className="whitespace-pre-wrap font-sans text-sm text-slate-600">{data.paymentInstructions}</pre>
+          ) : (
+            <>
+              <p>Please transfer the amount due to our designated bank account before the due date.</p>
+              <p className="mt-1 text-xs text-slate-400">Quote your unit number and deal reference when making the transfer.</p>
+            </>
+          )}
         </div>
 
         {/* Signature */}

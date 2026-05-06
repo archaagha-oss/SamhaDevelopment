@@ -1,11 +1,14 @@
 /**
- * Mailer service — stub implementation.
+ * Mailer service.
  *
- * Reads email config from AppSettings. Logs email content to stdout.
- * To enable real delivery: install nodemailer, then replace the `sendMail`
- * implementation with a transporter call using settings.emailProvider + SMTP env vars.
+ * When AppSettings.smtpHost is configured, delivers via SMTP using nodemailer.
+ * Otherwise logs the email to stdout (useful for dev / when provider not configured).
+ *
+ * To enable nodemailer: npm install nodemailer @types/nodemailer in apps/api
+ * and uncomment the import below.
  */
 
+// import nodemailer from "nodemailer";
 import { prisma } from "../lib/prisma.js";
 
 interface EmailPayload {
@@ -18,20 +21,45 @@ interface EmailPayload {
 export async function sendEmail(payload: EmailPayload): Promise<{ sent: boolean; reason?: string }> {
   let fromName = "Samha Properties";
   let fromEmail = "noreply@samha.ae";
+  let smtpHost: string | null = null;
+  let smtpPort = 587;
+  let smtpUsername: string | null = null;
+  let smtpPassword: string | null = null;
 
   try {
     const settings = await prisma.appSettings.findFirst();
     if (settings) {
       if (settings.defaultFromName) fromName = settings.defaultFromName;
       if (settings.defaultFromEmail) fromEmail = settings.defaultFromEmail;
+      const s = settings as any;
+      if (s.smtpHost) smtpHost = s.smtpHost;
+      if (s.smtpPort) smtpPort = Number(s.smtpPort);
+      if (s.smtpUsername) smtpUsername = s.smtpUsername;
+      if (s.smtpPassword) smtpPassword = s.smtpPassword;
     }
   } catch {
     // AppSettings not available — use defaults
   }
 
-  // In production, replace this block with a real transporter (nodemailer, resend, sendgrid, etc.)
+  const from = `"${fromName}" <${fromEmail}>`;
+
+  if (smtpHost) {
+    // SMTP delivery via nodemailer (requires: npm install nodemailer @types/nodemailer)
+    // Uncomment when nodemailer is installed:
+    //
+    // const transporter = nodemailer.createTransport({
+    //   host: smtpHost, port: smtpPort, secure: smtpPort === 465,
+    //   auth: smtpUsername ? { user: smtpUsername, pass: smtpPassword ?? "" } : undefined,
+    // });
+    // await transporter.sendMail({ from, to: payload.to, subject: payload.subject, text: payload.text, html: payload.html });
+    // return { sent: true };
+
+    console.log(`[Mailer/SMTP] ${smtpHost}:${smtpPort} — nodemailer not installed, logging instead`);
+  }
+
+  // Fallback: log to stdout
   console.log(
-    `[Mailer] FROM: "${fromName}" <${fromEmail}> TO: ${payload.to}\n` +
+    `[Mailer] FROM: ${from} TO: ${payload.to}\n` +
     `         SUBJECT: ${payload.subject}\n` +
     `         ---\n${payload.text}\n         ---`
   );

@@ -17,6 +17,14 @@ interface LeadReport  { byStage: Record<string, number>; bySource: Record<string
 interface MonthlyRev  { key: string; label: string; collected: number; expected: number }
 interface InventoryProject { projectName: string; total: number; byStatus: Record<string, number>; totalValue: number; availableRate: string }
 interface AgentSummary { agentId: string; agentName: string; role: string; totalLeads: number; closedLeads: number; closeRate: string; totalDeals: number; dealRevenue: number; commissionEarned: number; tasksCompleted: number }
+interface Collections {
+  overdue: { count: number; total: number };
+  aging: Array<{ range: string; count: number; amount: number }>;
+  upcoming: {
+    next7Days:  { count: number; total: number; payments: any[] };
+    next30Days: { count: number; total: number; payments: any[] };
+  };
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -132,6 +140,56 @@ function PipelineTab({ overview, dealStages, leads }: { overview: Overview; deal
           </div>
         </div>
       </div>
+
+      {/* Conversion funnel */}
+      {(() => {
+        const funnelStages = [
+          { label: "Total Leads",  value: overview.totalLeads,  color: "bg-purple-500" },
+          { label: "Active Deals", value: overview.totalDeals,  color: "bg-blue-500"   },
+          {
+            label: "Res. Confirmed",
+            value: sorted.find((s) => s.stage === STAGE_LABELS["RESERVATION_CONFIRMED"])?.count
+              ?? sorted.filter((s) => !["Cancelled", "Res. Pending"].includes(s.stage)).reduce((a, s) => a + s.count, 0),
+            color: "bg-indigo-500",
+          },
+          {
+            label: "Completed",
+            value: sorted.find((s) => s.stage === STAGE_LABELS["COMPLETED"])?.count ?? 0,
+            color: "bg-emerald-500",
+          },
+        ];
+        const max = funnelStages[0]?.value || 1;
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <SectionTitle>Conversion Funnel</SectionTitle>
+            <div className="space-y-3 mt-2">
+              {funnelStages.map((stage, i) => {
+                const pctOfFirst = max > 0 ? (stage.value / max) * 100 : 0;
+                const pctOfPrev  = i > 0 && funnelStages[i - 1].value > 0
+                  ? ((stage.value / funnelStages[i - 1].value) * 100).toFixed(0) + "% of prev"
+                  : "";
+                return (
+                  <div key={stage.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-slate-600">{stage.label}</span>
+                      <span className="text-xs text-slate-500">
+                        <strong className="text-slate-800">{stage.value.toLocaleString()}</strong>
+                        {pctOfPrev && <span className="ml-2 text-slate-400">({pctOfPrev})</span>}
+                      </span>
+                    </div>
+                    <div className="h-6 bg-slate-100 rounded-lg overflow-hidden">
+                      <div
+                        className={`h-full ${stage.color} rounded-lg transition-all`}
+                        style={{ width: `${Math.max(pctOfFirst, 1)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -361,27 +419,134 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
   );
 }
 
+// ─── Tab: Finance / Collections ───────────────────────────────────────────────
+
+function FinanceTab({ overview, collections }: { overview: Overview; collections: Collections | null }) {
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
+
+  if (!collections) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const agingColors: Record<string, string> = {
+    "0-30":  "bg-amber-50 border-amber-200 text-amber-700",
+    "31-60": "bg-orange-50 border-orange-200 text-orange-700",
+    "61-90": "bg-red-50 border-red-200 text-red-700",
+    "90+":   "bg-red-100 border-red-300 text-red-800",
+  };
+
+  const overduePayments = [
+    ...collections.upcoming.next7Days.payments.filter(() => false), // upcoming is pending, not overdue
+  ];
+  // The collections API returns overdue count/total but not payment rows; we'll show upcoming for the table
+  const upcomingPayments7 = collections.upcoming.next7Days.payments ?? [];
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <KPI label="Total Collected"    value={fmtAED(overview.revenueCollected)} color="text-emerald-700" />
+        <KPI label="Overdue Amount"     value={fmtAED(overview.overduePayments)}  color="text-red-700"
+          sub={`${collections.overdue.count} payment${collections.overdue.count !== 1 ? "s" : ""}`} />
+        <KPI label="Due in 7 Days"      value={fmtAED(collections.upcoming.next7Days.total)}  color="text-amber-700"
+          sub={`${collections.upcoming.next7Days.count} payments`} />
+        <KPI label="Due in 30 Days"     value={fmtAED(collections.upcoming.next30Days.total)} color="text-blue-700"
+          sub={`${collections.upcoming.next30Days.count} payments`} />
+      </div>
+
+      {/* Aging buckets */}
+      <div>
+        <SectionTitle>Overdue Aging Buckets</SectionTitle>
+        <div className="grid grid-cols-4 gap-3">
+          {collections.aging.map(({ range, count, amount }) => (
+            <div key={range} className={`rounded-xl border p-4 ${agingColors[range] || "bg-slate-50 border-slate-200 text-slate-600"}`}>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1">{range} days</p>
+              <p className="text-2xl font-bold">{count}</p>
+              <p className="text-xs mt-0.5 opacity-80">AED {amount.toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Upcoming payments */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+          <SectionTitle>Payments Due in Next 7 Days</SectionTitle>
+          <button
+            onClick={() => exportCSV(upcomingPayments7.map((p: any) => ({
+              deal:      p.deal?.dealNumber ?? "",
+              buyer:     `${p.deal?.lead?.firstName ?? ""} ${p.deal?.lead?.lastName ?? ""}`,
+              unit:      p.deal?.unit?.unitNumber ?? "",
+              milestone: p.milestoneLabel,
+              dueDate:   new Date(p.dueDate).toLocaleDateString("en-AE"),
+              amount:    p.amount,
+            })), "upcoming-7days.csv")}
+            className="text-xs text-slate-400 hover:text-slate-700 border border-slate-200 rounded px-2 py-1"
+          >Export</button>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-100">
+            <tr>
+              {["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount"].map((h) => (
+                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {upcomingPayments7.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400 text-sm">No payments due in the next 7 days</td></tr>
+            ) : upcomingPayments7.map((p: any) => (
+              <tr key={p.id} className="hover:bg-slate-50/80">
+                <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.deal?.dealNumber}</td>
+                <td className="px-4 py-3 font-semibold text-slate-800">{p.deal?.lead?.firstName} {p.deal?.lead?.lastName}</td>
+                <td className="px-4 py-3 text-slate-700">{p.deal?.unit?.unitNumber}</td>
+                <td className="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title={p.milestoneLabel}>{p.milestoneLabel}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {(() => {
+                    const days = Math.ceil((new Date(p.dueDate).getTime() - Date.now()) / 86400000);
+                    return (
+                      <>
+                        <p className="text-slate-700">{fmtDate(p.dueDate)}</p>
+                        <p className="text-xs text-amber-600 font-medium">{days <= 0 ? "Today" : `in ${days}d`}</p>
+                      </>
+                    );
+                  })()}
+                </td>
+                <td className="px-4 py-3 font-semibold text-slate-800">AED {p.amount.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "pipeline" | "revenue" | "agents" | "inventory";
+type Tab = "pipeline" | "revenue" | "agents" | "inventory" | "finance";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "pipeline",  label: "Sales Pipeline" },
-  { id: "revenue",   label: "Revenue"        },
+  { id: "pipeline",  label: "Sales Pipeline"    },
+  { id: "revenue",   label: "Revenue"           },
   { id: "agents",    label: "Agent Performance" },
-  { id: "inventory", label: "Inventory"      },
+  { id: "inventory", label: "Inventory"         },
+  { id: "finance",   label: "Finance"           },
 ];
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<Tab>("pipeline");
   const [loading, setLoading] = useState(true);
 
-  const [overview,    setOverview]    = useState<Overview    | null>(null);
-  const [dealStages,  setDealStages]  = useState<DealStage[]>([]);
-  const [leads,       setLeads]       = useState<LeadReport  | null>(null);
-  const [monthly,     setMonthly]     = useState<MonthlyRev[]>([]);
-  const [agents,      setAgents]      = useState<AgentSummary[]>([]);
-  const [inventory,   setInventory]   = useState<InventoryProject[]>([]);
+  const [overview,     setOverview]     = useState<Overview     | null>(null);
+  const [dealStages,   setDealStages]   = useState<DealStage[]>([]);
+  const [leads,        setLeads]        = useState<LeadReport   | null>(null);
+  const [monthly,      setMonthly]      = useState<MonthlyRev[]>([]);
+  const [agents,       setAgents]       = useState<AgentSummary[]>([]);
+  const [inventory,    setInventory]    = useState<InventoryProject[]>([]);
+  const [collections,  setCollections]  = useState<Collections  | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -392,13 +557,15 @@ export default function ReportsPage() {
       axios.get("/api/reports/revenue/monthly"),
       axios.get("/api/reports/agents/summary"),
       axios.get("/api/reports/inventory"),
-    ]).then(([ov, ds, ld, rev, ag, inv]) => {
+      axios.get("/api/reports/collections"),
+    ]).then(([ov, ds, ld, rev, ag, inv, col]) => {
       setOverview(ov.data);
       setDealStages(ds.data);
       setLeads(ld.data);
       setMonthly(rev.data);
       setAgents(ag.data);
       setInventory(inv.data);
+      setCollections(col.data);
     }).catch(console.error)
     .finally(() => setLoading(false));
   }, []);
@@ -434,6 +601,7 @@ export default function ReportsPage() {
           {tab === "revenue"   && <RevenueTab   overview={overview} monthly={monthly} />}
           {tab === "agents"    && <AgentsTab    agents={agents} />}
           {tab === "inventory" && <InventoryTab overview={overview} inventory={inventory} />}
+          {tab === "finance"   && <FinanceTab   overview={overview} collections={collections} />}
         </>
       )}
     </div>

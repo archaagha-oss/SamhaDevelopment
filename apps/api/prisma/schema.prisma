@@ -1306,6 +1306,18 @@ model AppSettings {
   smsProvider      String? // e.g. "twilio"
   emailProvider    String? // e.g. "sendgrid", "smtp"
 
+  // SMTP delivery settings (used when emailProvider = "smtp")
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUsername String?
+  smtpPassword String?
+
+  // Finance — payment instructions injected into invoices and reminder emails
+  paymentInstructions String? @db.Text
+
+  // Email templates (JSON object keyed by template name)
+  emailTemplates Json?
+
   // Notification preferences stored as JSON blob
   notificationPrefs Json?
 
