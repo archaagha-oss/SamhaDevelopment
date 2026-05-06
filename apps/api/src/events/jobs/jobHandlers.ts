@@ -10,6 +10,12 @@
 import { prisma } from "../../lib/prisma.js";
 import { eventBus } from "../eventBus.js";
 import { releaseExpiredHolds } from "../../services/unitService.js";
+import {
+  sendEmail,
+  buildBeforeDueEmail,
+  buildOnDueEmail,
+  buildOverdueEmail,
+} from "../../services/mailerService.js";
 
 // ---------------------------------------------------------------------------
 // Job types
@@ -21,7 +27,8 @@ export type JobType =
   | "OQOOD_DEADLINE_WARNING"
   | "RESERVATION_EXPIRY_CHECK"
   | "PAYMENT_OVERDUE_CHECK"
-  | "UNIT_HOLD_EXPIRY_CHECK";
+  | "UNIT_HOLD_EXPIRY_CHECK"
+  | "PAYMENT_REMINDER_SWEEP";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JobPayload = Record<string, any>;
@@ -37,6 +44,13 @@ function backgroundJobModel() {
     return null;
   }
   return p.backgroundJob;
+}
+
+function reminderLogModel() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = prisma as any;
+  if (typeof p.reminderLog?.findFirst !== "function") return null;
+  return p.reminderLog;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +199,8 @@ async function dispatchJob(type: JobType, payload: JobPayload): Promise<void> {
       return handlePaymentOverdueCheck();
     case "UNIT_HOLD_EXPIRY_CHECK":
       return handleUnitHoldExpiryCheck();
+    case "PAYMENT_REMINDER_SWEEP":
+      return handlePaymentReminderSweep();
     default: {
       const exhaustive: never = type;
       throw new Error(`Unknown job type: ${exhaustive}`);
@@ -423,6 +439,186 @@ async function handleUnitHoldExpiryCheck(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Reminder rule types (mirrors the DB enum)
+// ---------------------------------------------------------------------------
+
+type ReminderRuleType = "BEFORE_DUE" | "ON_DUE" | "OVERDUE_7" | "OVERDUE_30";
+
+interface ReminderRule {
+  type: ReminderRuleType;
+  /** Returns true when this rule should fire for a payment due on dueDate */
+  matches: (dueDate: Date, now: Date) => boolean;
+  daysOverdue: number;
+}
+
+const REMINDER_RULES: ReminderRule[] = [
+  {
+    type: "BEFORE_DUE",
+    matches: (due, now) => {
+      const daysDiff = Math.round((due.getTime() - now.getTime()) / 86400000);
+      return daysDiff === 7;
+    },
+    daysOverdue: 0,
+  },
+  {
+    type: "ON_DUE",
+    matches: (due, now) => {
+      return (
+        due.getFullYear() === now.getFullYear() &&
+        due.getMonth() === now.getMonth() &&
+        due.getDate() === now.getDate()
+      );
+    },
+    daysOverdue: 0,
+  },
+  {
+    type: "OVERDUE_7",
+    matches: (due, now) => {
+      const daysLate = Math.round((now.getTime() - due.getTime()) / 86400000);
+      return daysLate === 7;
+    },
+    daysOverdue: 7,
+  },
+  {
+    type: "OVERDUE_30",
+    matches: (due, now) => {
+      const daysLate = Math.round((now.getTime() - due.getTime()) / 86400000);
+      return daysLate === 30;
+    },
+    daysOverdue: 30,
+  },
+];
+
+/**
+ * 7. PAYMENT_REMINDER_SWEEP — daily sweep applying all 4 reminder rules.
+ * For each eligible payment, fires at most once per rule (deduped by ReminderLog).
+ * Respects deal-level remindersPaused flag and checks remindersPausedUntil expiry.
+ */
+async function handlePaymentReminderSweep(): Promise<void> {
+  const rlModel = reminderLogModel();
+  if (!rlModel) {
+    console.warn("[JobProcessor] PAYMENT_REMINDER_SWEEP: ReminderLog model not yet available — schema migration pending");
+    return;
+  }
+
+  const now = new Date();
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const payments = await prisma.payment.findMany({
+    where: {
+      status: { notIn: ["PAID", "CANCELLED", "PDC_CLEARED", "WAIVED"] },
+    },
+    include: {
+      deal: {
+        include: { lead: true },
+      },
+    },
+  });
+
+  let sent = 0, skipped = 0;
+
+  await Promise.allSettled(
+    payments.map(async (payment) => {
+      try {
+        const deal = payment.deal as any;
+
+        // Respect pause flag
+        if (deal.remindersPaused) {
+          const until = deal.remindersPausedUntil ? new Date(deal.remindersPausedUntil) : null;
+          if (!until || until > nowDay) {
+            // Still paused — log SKIPPED_PAUSED once (no dedup needed, just skip)
+            skipped++;
+            return;
+          }
+          // Pause expired — clear it
+          await prisma.deal.update({
+            where: { id: deal.id },
+            data: { remindersPaused: false, remindersPausedReason: null, remindersPausedUntil: null },
+          });
+        }
+
+        const buyerEmail = (deal.lead as any)?.email ?? null;
+        const buyerName  = `${(deal.lead as any)?.firstName ?? ""} ${(deal.lead as any)?.lastName ?? ""}`.trim();
+        const dueDate    = new Date(payment.dueDate);
+
+        for (const rule of REMINDER_RULES) {
+          if (!rule.matches(dueDate, nowDay)) continue;
+
+          // Dedup: only send each rule once per payment
+          const existing = await rlModel.findFirst({
+            where: { paymentId: payment.id, ruleType: rule.type },
+          });
+          if (existing) continue;
+
+          // Determine status
+          let status = "SENT";
+          if (!buyerEmail) status = "SKIPPED_NO_EMAIL";
+
+          // Log the reminder
+          await rlModel.create({
+            data: {
+              paymentId: payment.id,
+              ruleType:  rule.type,
+              sentAt:    now,
+              email:     buyerEmail,
+              status,
+            },
+          });
+
+          // Update payment reminder tracking
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              lastReminderSentAt: now,
+              reminderCount: { increment: 1 },
+            } as any,
+          });
+
+          // Log activity on deal
+          await prisma.activity.create({
+            data: {
+              dealId:    deal.id,
+              leadId:    deal.leadId,
+              type:      "NOTE",
+              summary:   `Reminder sent (${rule.type.replace(/_/g, " ").toLowerCase()}) for "${payment.milestoneLabel}" — AED ${payment.amount.toLocaleString()}`,
+              createdBy: "system",
+            },
+          });
+
+          // Send email if address available
+          if (buyerEmail) {
+            const fmtDate = (d: Date) =>
+              d.toLocaleDateString("en-AE", { day: "2-digit", month: "long", year: "numeric" });
+            const fmtAED  = (n: number) => `AED ${n.toLocaleString("en-AE")}`;
+
+            const templateVars = {
+              buyerName,
+              unitNumber:     (deal.unit as any)?.unitNumber ?? "",
+              projectName:    (deal.unit as any)?.project?.name ?? "",
+              milestoneLabel: payment.milestoneLabel,
+              dueDate:        fmtDate(dueDate),
+              amount:         fmtAED(payment.amount),
+            };
+
+            let template;
+            if (rule.type === "BEFORE_DUE") template = buildBeforeDueEmail(templateVars);
+            else if (rule.type === "ON_DUE")  template = buildOnDueEmail(templateVars);
+            else                              template = buildOverdueEmail(templateVars, rule.daysOverdue);
+
+            await sendEmail({ to: buyerEmail, ...template });
+            sent++;
+          }
+        }
+      } catch (err) {
+        console.error(`[JobProcessor] PAYMENT_REMINDER_SWEEP: error for payment ${payment.id}:`, err);
+      }
+    })
+  );
+
+  console.log(`[JobProcessor] PAYMENT_REMINDER_SWEEP complete — ${sent} sent, ${skipped} paused`);
+}
+
+// ---------------------------------------------------------------------------
 // startJobProcessor — run processJobs on a fixed interval
 // ---------------------------------------------------------------------------
 
@@ -430,11 +626,28 @@ export function startJobProcessor(intervalMs: number): NodeJS.Timer {
   console.log(
     `[JobProcessor] Starting job processor with interval ${intervalMs}ms`
   );
+
+  // Schedule the daily reminder sweep — runs at startup + every 24 hours
+  scheduleDailyReminderSweep();
+  setInterval(() => scheduleDailyReminderSweep(), 24 * 60 * 60 * 1000);
+
   return setInterval(() => {
     processJobs().catch((err: unknown) => {
       console.error("[JobProcessor] processJobs interval error:", err);
     });
   }, intervalMs);
+}
+
+function scheduleDailyReminderSweep(): void {
+  // Schedule reminder sweep for 9:00 AM today (or immediately if past 9 AM)
+  const now = new Date();
+  const targetHour = 9;
+  const run = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, 0, 0);
+  if (run <= now) run.setDate(run.getDate() + 1); // already past 9 AM — schedule for tomorrow
+
+  scheduleJob("PAYMENT_REMINDER_SWEEP", {}, run).catch((err) => {
+    console.error("[JobProcessor] Failed to schedule PAYMENT_REMINDER_SWEEP:", err);
+  });
 }
 
 // ---------------------------------------------------------------------------

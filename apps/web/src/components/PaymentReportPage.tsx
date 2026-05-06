@@ -13,7 +13,16 @@ interface PaymentReport {
   totals: Record<string, number>;
 }
 
-const STATUS_ORDER = ["OVERDUE", "PENDING", "PARTIAL", "PDC_PENDING", "PAID", "PDC_CLEARED", "CANCELLED", "PDC_BOUNCED"];
+interface CollectionsData {
+  overdue: { count: number; total: number };
+  aging: Array<{ range: string; count: number; amount: number }>;
+  upcoming: {
+    next7Days:  { count: number; total: number; payments: Payment[] };
+    next30Days: { count: number; total: number; payments: Payment[] };
+  };
+}
+
+const STATUS_ORDER = ["OVERDUE", "PENDING", "PARTIAL", "PDC_PENDING", "PAID", "PDC_CLEARED", "CANCELLED", "PDC_BOUNCED", "UPCOMING"];
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; kpi: string }> = {
   OVERDUE:     { label: "Overdue",      badge: "bg-red-100 text-red-700",         kpi: "text-red-600" },
@@ -24,6 +33,7 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; kpi: string 
   PDC_CLEARED: { label: "PDC Cleared",  badge: "bg-teal-100 text-teal-700",       kpi: "text-teal-600" },
   PDC_BOUNCED: { label: "PDC Bounced",  badge: "bg-red-200 text-red-800",         kpi: "text-red-700" },
   CANCELLED:   { label: "Cancelled",    badge: "bg-slate-100 text-slate-600",     kpi: "text-slate-500" },
+  UPCOMING:    { label: "Upcoming",     badge: "bg-blue-100 text-blue-700",       kpi: "text-blue-600" },
 };
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
@@ -107,15 +117,20 @@ function exportCSV(payments: Payment[], filename: string) {
 }
 
 export default function PaymentReportPage() {
-  const [report, setReport]       = useState<PaymentReport | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [report, setReport]             = useState<PaymentReport | null>(null);
+  const [collections, setCollections]   = useState<CollectionsData | null>(null);
+  const [loading, setLoading]           = useState(true);
   const [activeStatus, setActiveStatus] = useState("OVERDUE");
-  const [modal, setModal]         = useState<{ payment: Payment; action: PaymentAction } | null>(null);
+  const [upcomingView, setUpcomingView] = useState<"7" | "30">("7");
+  const [modal, setModal]               = useState<{ payment: Payment; action: PaymentAction } | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    axios.get("/api/reports/payments")
-      .then((r) => setReport(r.data))
+    Promise.all([
+      axios.get("/api/reports/payments"),
+      axios.get("/api/reports/collections"),
+    ])
+      .then(([rpt, col]) => { setReport(rpt.data); setCollections(col.data); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -128,8 +143,12 @@ export default function PaymentReportPage() {
     </div>
   );
 
-  const activePayments = report.byStatus[activeStatus] || [];
-  const availableActions = getActions(activeStatus);
+  const isUpcoming = activeStatus === "UPCOMING";
+  const upcomingPayments = isUpcoming
+    ? (collections?.upcoming[upcomingView === "7" ? "next7Days" : "next30Days"]?.payments ?? [])
+    : [];
+  const activePayments = isUpcoming ? upcomingPayments : (report.byStatus[activeStatus] || []);
+  const availableActions = isUpcoming ? [] : getActions(activeStatus);
 
   return (
     <div className="p-6 space-y-5">
@@ -143,13 +162,39 @@ export default function PaymentReportPage() {
         </button>
       </div>
 
+      {/* Collections overview widgets — shown on OVERDUE tab */}
+      {activeStatus === "OVERDUE" && collections && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {collections.aging.map(({ range, count, amount }) => {
+            const colors: Record<string, string> = {
+              "0-30":  "bg-amber-50 border-amber-200 text-amber-700",
+              "31-60": "bg-orange-50 border-orange-200 text-orange-700",
+              "61-90": "bg-red-50 border-red-200 text-red-700",
+              "90+":   "bg-red-100 border-red-300 text-red-800",
+            };
+            return (
+              <div key={range} className={`rounded-xl border p-4 ${colors[range] || "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-1">{range} days overdue</p>
+                <p className="text-2xl font-bold">{count}</p>
+                <p className="text-xs mt-0.5 opacity-80">AED {amount.toLocaleString()}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* KPI tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
         {STATUS_ORDER.map((status) => {
           const cfg = STATUS_CONFIG[status];
           if (!cfg) return null;
-          const payments = report.byStatus[status] || [];
-          const total = report.totals?.[status] ?? payments.reduce((s, p) => s + p.amount, 0);
+          const isUpcomingTab = status === "UPCOMING";
+          const payments = isUpcomingTab
+            ? (collections?.upcoming.next30Days.payments ?? [])
+            : (report.byStatus[status] || []);
+          const total = isUpcomingTab
+            ? (collections?.upcoming.next30Days.total ?? 0)
+            : (report.totals?.[status] ?? payments.reduce((s, p) => s + p.amount, 0));
           const isActive = activeStatus === status;
           return (
             <button
@@ -167,30 +212,30 @@ export default function PaymentReportPage() {
         })}
       </div>
 
-      {/* Aging buckets — only shown on OVERDUE tab */}
-      {activeStatus === "OVERDUE" && activePayments.length > 0 && (() => {
-        const buckets = agingBuckets(activePayments);
-        const bucketColors: Record<string, string> = {
-          "0–30":  "bg-amber-50 text-amber-700 border-amber-200",
-          "31–60": "bg-orange-50 text-orange-700 border-orange-200",
-          "61–90": "bg-red-50 text-red-700 border-red-200",
-          "90+":   "bg-red-100 text-red-800 border-red-300",
-        };
-        return (
-          <div className="grid grid-cols-4 gap-3">
-            {(["0–30", "31–60", "61–90", "90+"] as const).map((label) => {
-              const bp = buckets[label];
-              return (
-                <div key={label} className={`rounded-xl border p-4 ${bucketColors[label]}`}>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-1">{label} days</p>
-                  <p className="text-xl font-bold">{bp.length}</p>
-                  <p className="text-xs mt-0.5 opacity-80">AED {bp.reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+      {/* Upcoming payments view toggle */}
+      {isUpcoming && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium">Show:</span>
+          {(["7", "30"] as const).map((d) => (
+            <button
+              key={d}
+              onClick={() => setUpcomingView(d)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${
+                upcomingView === d ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              Next {d} days
+            </button>
+          ))}
+          {collections && (
+            <span className="ml-2 text-xs text-slate-400">
+              {upcomingView === "7"
+                ? `${collections.upcoming.next7Days.count} payments · AED ${collections.upcoming.next7Days.total.toLocaleString()}`
+                : `${collections.upcoming.next30Days.count} payments · AED ${collections.upcoming.next30Days.total.toLocaleString()}`}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

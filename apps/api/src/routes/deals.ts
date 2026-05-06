@@ -752,6 +752,27 @@ router.get("/:id/documents/:docId", async (req, res) => {
   }
 });
 
+// Pause / resume payment reminders for a deal
+router.patch("/:id/pause-reminders", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const { paused, reason, pausedUntil } = req.body;
+    const updated = await prisma.deal.update({
+      where: { id: req.params.id },
+      data: {
+        remindersPaused:       !!paused,
+        remindersPausedReason: paused ? (reason ?? null) : null,
+        remindersPausedUntil:  paused && pausedUntil ? new Date(pausedUntil) : null,
+      } as any,
+    });
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to update reminder settings", code: "PAUSE_REMINDERS_ERROR", statusCode: 400 });
+  }
+});
+
 // Delete deal (only RESERVATION_PENDING or CANCELLED)
 router.delete("/:id", async (req, res) => {
   try {

@@ -151,6 +151,61 @@ router.get("/revenue/monthly", async (req, res) => {
   }
 });
 
+// GET /collections — finance collections overview (overdue summary, aging, upcoming)
+router.get("/collections", async (req, res) => {
+  try {
+    const now = new Date();
+    const in7  = new Date(now.getTime() + 7  * 86400000);
+    const in30 = new Date(now.getTime() + 30 * 86400000);
+
+    const [overduePayments, upcoming7, upcoming30] = await Promise.all([
+      prisma.payment.findMany({
+        where: { status: { in: ["OVERDUE", "PARTIAL"] }, dueDate: { lt: now } },
+        include: { deal: { include: { lead: true, unit: true } } },
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.payment.findMany({
+        where: { status: "PENDING", dueDate: { gte: now, lte: in7 } },
+        include: { deal: { include: { lead: true, unit: true } } },
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.payment.findMany({
+        where: { status: "PENDING", dueDate: { gte: now, lte: in30 } },
+        include: { deal: { include: { lead: true, unit: true } } },
+        orderBy: { dueDate: "asc" },
+      }),
+    ]);
+
+    // Build aging buckets
+    const aging = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
+    const agingAmt = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
+    for (const p of overduePayments) {
+      const days = Math.floor((now.getTime() - new Date(p.dueDate).getTime()) / 86400000);
+      const bucket = days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+";
+      aging[bucket]++;
+      agingAmt[bucket] += p.amount;
+    }
+
+    res.json({
+      overdue: {
+        count: overduePayments.length,
+        total: overduePayments.reduce((s, p) => s + p.amount, 0),
+      },
+      aging: Object.entries(aging).map(([range, count]) => ({
+        range,
+        count,
+        amount: agingAmt[range as keyof typeof agingAmt],
+      })),
+      upcoming: {
+        next7Days:  { count: upcoming7.length,  total: upcoming7.reduce((s, p) => s + p.amount, 0),  payments: upcoming7 },
+        next30Days: { count: upcoming30.length, total: upcoming30.reduce((s, p) => s + p.amount, 0), payments: upcoming30 },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch collections overview", code: "FETCH_COLLECTIONS_ERROR", statusCode: 500 });
+  }
+});
+
 // GET /inventory — units grouped by project and status
 router.get("/inventory", async (req, res) => {
   try {

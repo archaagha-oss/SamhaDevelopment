@@ -34,6 +34,9 @@ interface Deal {
   adminFeeWaivedReason?: string;
   dldWaivedReason?: string;
   commissionRateOverride?: number;
+  remindersPaused?: boolean;
+  remindersPausedReason?: string | null;
+  remindersPausedUntil?: string | null;
 }
 
 interface Props { dealId?: string; onBack?: () => void; }
@@ -171,6 +174,32 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     navigator.clipboard.writeText(deal.dealNumber);
     setCopiedDealId(true);
     setTimeout(() => setCopiedDealId(false), 1500);
+  };
+
+  // Pause reminders
+  const [pausingReminders, setPausingReminders] = useState(false);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [pauseReason, setPauseReason] = useState("");
+  const [pauseUntil, setPauseUntil] = useState("");
+
+  const togglePauseReminders = async (paused: boolean) => {
+    setPausingReminders(true);
+    try {
+      await axios.patch(`/api/deals/${dealId}/pause-reminders`, {
+        paused,
+        reason: paused ? pauseReason : undefined,
+        pausedUntil: paused && pauseUntil ? pauseUntil : undefined,
+      });
+      setShowPauseModal(false);
+      setPauseReason("");
+      setPauseUntil("");
+      loadDeal();
+      toast.success(paused ? "Reminders paused" : "Reminders resumed");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update reminder settings");
+    } finally {
+      setPausingReminders(false);
+    }
   };
 
   const generateInvoice = async (paymentId: string) => {
@@ -1080,6 +1109,25 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       >Restructure</button>
                     </>
                   )}
+                  {/* Pause reminders toggle */}
+                  {deal.payments.length > 0 && (
+                    deal.remindersPaused ? (
+                      <button
+                        onClick={() => togglePauseReminders(false)}
+                        disabled={pausingReminders}
+                        className="ml-auto px-2 py-1 text-xs border border-amber-300 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        <span>⏸</span> Reminders Paused
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowPauseModal(true)}
+                        className="ml-auto px-2 py-1 text-xs border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1"
+                      >
+                        <span>🔔</span> Pause Reminders
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -1141,6 +1189,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                               {isOverdue && <span className="text-xs font-semibold text-red-600">{overdueDays}d overdue</span>}
                               {isPartial && overdueDays > 0 && <span className="text-xs font-semibold text-red-600">{overdueDays}d overdue</span>}
                               {isPartial && <span className="text-xs text-amber-700">Remaining: AED {partialRemaining.toLocaleString()}</span>}
+                              {p.lastReminderSentAt && (
+                                <span className="text-xs text-slate-400" title={`Reminder count: ${p.reminderCount ?? 0}`}>
+                                  Reminded {timeAgo(p.lastReminderSentAt)}
+                                </span>
+                              )}
                               {(p.auditLog?.length > 0) && (
                                 <button onClick={() => setExpandedAuditId(auditOpen ? null : p.id)} className="text-xs text-blue-500 hover:underline">
                                   {auditOpen ? "Hide" : `History (${p.auditLog.length})`}
@@ -2028,6 +2081,54 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         onConfirm={confirmStageChange}
         onCancel={() => setPendingStage(null)}
       />
+
+      {/* Pause Reminders Modal */}
+      {showPauseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 py-5 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Pause Payment Reminders</h3>
+              <p className="text-xs text-slate-400 mt-1">No automated emails will be sent while paused.</p>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Reason <span className="text-slate-400">(optional)</span></label>
+                <textarea
+                  value={pauseReason}
+                  onChange={(e) => setPauseReason(e.target.value)}
+                  placeholder="e.g. Buyer requested delay"
+                  rows={2}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Resume on <span className="text-slate-400">(optional)</span></label>
+                <input
+                  type="date"
+                  value={pauseUntil}
+                  onChange={(e) => setPauseUntil(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 pb-5">
+              <button
+                onClick={() => togglePauseReminders(true)}
+                disabled={pausingReminders}
+                className="flex-1 px-4 py-2.5 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-50"
+              >
+                {pausingReminders ? "Pausing…" : "Pause Reminders"}
+              </button>
+              <button
+                onClick={() => setShowPauseModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

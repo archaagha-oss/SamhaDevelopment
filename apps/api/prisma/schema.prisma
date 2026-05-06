@@ -935,6 +935,12 @@ model Deal {
   dldWaivedBy            String?
 
   notes     String?  @db.Text
+
+  // Reminder controls (finance collections)
+  remindersPaused       Boolean   @default(false)
+  remindersPausedReason String?   @db.Text
+  remindersPausedUntil  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1003,6 +1009,11 @@ model Payment {
 
   partialPayments PartialPayment[]
   auditLog        PaymentAuditLog[]
+  reminderLogs    ReminderLog[]
+
+  // Reminder tracking
+  lastReminderSentAt DateTime?
+  reminderCount      Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1042,6 +1053,27 @@ model PaymentAuditLog {
   changedAt DateTime @default(now())
 
   @@index([paymentId])
+}
+
+enum ReminderRuleType {
+  BEFORE_DUE   // 7 days before due
+  ON_DUE       // on the due date
+  OVERDUE_7    // 7 days after due
+  OVERDUE_30   // 30 days after due
+}
+
+model ReminderLog {
+  id        String            @id @default(cuid())
+  paymentId String
+  payment   Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  ruleType  ReminderRuleType
+  sentAt    DateTime          @default(now())
+  email     String?           // email it was sent to (null = no email, notification only)
+  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
+
+  @@index([paymentId])
+  @@index([paymentId, ruleType])
 }
 
 // ============================================================
