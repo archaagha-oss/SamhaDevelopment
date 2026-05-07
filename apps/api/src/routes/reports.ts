@@ -6,29 +6,74 @@ const router = Router();
 
 // ===== NEW UI ENDPOINTS =====
 
+// Helper: parse projectId, from, to from query and build common filters.
+// All four entities reach a project via different paths:
+//   Unit.projectId, Lead.projectId, Deal.unit.projectId, Payment.deal.unit.projectId
+function parseFilters(req: any) {
+  const projectId = typeof req.query.projectId === "string" && req.query.projectId !== "all"
+    ? req.query.projectId : undefined;
+  const from = typeof req.query.from === "string" ? new Date(req.query.from) : undefined;
+  const to   = typeof req.query.to   === "string" ? new Date(req.query.to)   : undefined;
+  const dateRange = (from || to) ? {
+    ...(from && !isNaN(from.getTime()) ? { gte: from } : {}),
+    ...(to   && !isNaN(to.getTime())   ? { lte: to   } : {}),
+  } : undefined;
+  return { projectId, dateRange };
+}
+
 // GET /overview — ExecutiveDashboard KPI cards
+// Optional filters: projectId, from (ISO), to (ISO)
 router.get("/overview", async (req, res) => {
   try {
+    const { projectId, dateRange } = parseFilters(req);
+
+    const unitWhere   = projectId ? { projectId }                           : {};
+    const leadWhere   = {
+      ...(projectId ? { projectId } : {}),
+      ...(dateRange ? { createdAt: dateRange } : {}),
+    };
+    const dealWhere   = {
+      ...(projectId ? { unit: { projectId } } : {}),
+      ...(dateRange ? { createdAt: dateRange } : {}),
+    };
+    const paymentBase = projectId ? { deal: { unit: { projectId } } } : {};
+
     const [
       totalUnits, soldUnits, totalLeads, totalDeals,
-      revenueResult, pipelineResult, overdueResult,
+      revenueResult, overdueResult,
       dldWaivedResult, adminFeeWaivedCount,
     ] = await Promise.all([
-      prisma.unit.count(),
-      prisma.unit.count({ where: { status: "SOLD" } }),
-      prisma.lead.count(),
-      prisma.deal.count(),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "PAID" } }),
-      prisma.deal.aggregate({ _sum: { salePrice: true }, where: { stage: { notIn: ["COMPLETED","CANCELLED"] } } }),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "OVERDUE" } }),
-      prisma.deal.aggregate({ _sum: { dldFee: true }, where: { dldPaidBy: "DEVELOPER", stage: { notIn: ["CANCELLED"] } } }),
-      prisma.deal.count({ where: { adminFeeWaived: true, stage: { notIn: ["CANCELLED"] } } }),
+      prisma.unit.count({ where: unitWhere }),
+      prisma.unit.count({ where: { ...unitWhere, status: "SOLD" } }),
+      prisma.lead.count({ where: leadWhere }),
+      prisma.deal.count({ where: dealWhere }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          ...paymentBase,
+          status: "PAID",
+          ...(dateRange ? { paidDate: dateRange } : {}),
+        },
+      }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { ...paymentBase, status: "OVERDUE" },
+      }),
+      prisma.deal.aggregate({
+        _sum: { dldFee: true },
+        where: { ...dealWhere, dldPaidBy: "DEVELOPER", stage: { notIn: ["CANCELLED"] } },
+      }),
+      prisma.deal.count({
+        where: { ...dealWhere, adminFeeWaived: true, stage: { notIn: ["CANCELLED"] } },
+      }),
     ]);
+
     const pipelineDeals = await prisma.deal.findMany({
-      where: { stage: { notIn: ["COMPLETED","CANCELLED"] } },
+      where: { ...dealWhere, stage: { notIn: ["COMPLETED","CANCELLED"] } },
       select: { salePrice: true, discount: true },
     });
     const pipelineNetValue = pipelineDeals.reduce((s, d) => s + d.salePrice - (d.discount ?? 0), 0);
+
     res.json({
       unitsSold: soldUnits,
       totalUnits,
@@ -42,16 +87,20 @@ router.get("/overview", async (req, res) => {
         dldWaivedTotal: dldWaivedResult._sum.dldFee || 0,
         adminFeeWaivedCount,
       },
+      filters: { projectId: projectId || null, from: dateRange?.gte || null, to: dateRange?.lte || null },
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch overview", code: "FETCH_OVERVIEW_ERROR", statusCode: 500 });
   }
 });
 
-// GET /units-by-status — ExecutiveDashboard bar chart
+// GET /units-by-status — ExecutiveDashboard inventory donut
+// Optional filter: projectId
 router.get("/units-by-status", async (req, res) => {
   try {
-    const groups = await prisma.unit.groupBy({ by: ["status"], _count: { id: true } });
+    const { projectId } = parseFilters(req);
+    const where = projectId ? { projectId } : {};
+    const groups = await prisma.unit.groupBy({ by: ["status"], _count: { id: true }, where });
     const result: Record<string, number> = {};
     groups.forEach((g) => { result[g.status] = g._count.id; });
     res.json(result);
@@ -61,13 +110,19 @@ router.get("/units-by-status", async (req, res) => {
 });
 
 // GET /leads — ExecutiveDashboard lead pipeline
+// Optional filters: projectId, from, to (filter on lead.createdAt)
 router.get("/leads", async (req, res) => {
   try {
+    const { projectId, dateRange } = parseFilters(req);
+    const where = {
+      ...(projectId ? { projectId } : {}),
+      ...(dateRange ? { createdAt: dateRange } : {}),
+    };
     const [stageGroups, sourceGroups, totalLeads, convertedToDeals] = await Promise.all([
-      prisma.lead.groupBy({ by: ["stage"], _count: { id: true } }),
-      prisma.lead.groupBy({ by: ["source"], _count: { id: true } }),
-      prisma.lead.count(),
-      prisma.lead.count({ where: { stage: "CLOSED_WON" } }),
+      prisma.lead.groupBy({ by: ["stage"],  _count: { id: true }, where }),
+      prisma.lead.groupBy({ by: ["source"], _count: { id: true }, where }),
+      prisma.lead.count({ where }),
+      prisma.lead.count({ where: { ...where, stage: "CLOSED_WON" } }),
     ]);
     const byStage: Record<string, number> = {};
     stageGroups.forEach((g) => { byStage[g.stage] = g._count.id; });
@@ -105,19 +160,24 @@ router.get("/payments", async (req, res) => {
   }
 });
 
-// GET /revenue/monthly — last 12 months of collected payments
+// GET /revenue/monthly — collected vs expected per month
+// Optional filters: projectId, months (default 12, max 24)
 router.get("/revenue/monthly", async (req, res) => {
   try {
+    const { projectId } = parseFilters(req);
+    const monthsCount = Math.min(24, Math.max(1, parseInt(String(req.query.months ?? "12"), 10) || 12));
+    const projectScope = projectId ? { deal: { unit: { projectId } } } : {};
+
     const payments = await prisma.payment.findMany({
-      where: { status: { in: ["PAID", "PDC_CLEARED"] } },
+      where: { ...projectScope, status: { in: ["PAID", "PDC_CLEARED"] } },
       select: { amount: true, paidDate: true },
       orderBy: { paidDate: "asc" },
     });
 
-    // Build last 12 months buckets
+    // Build last N months buckets
     const now = new Date();
     const months: { key: string; label: string; collected: number; expected: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
+    for (let i = monthsCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months.push({
         key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
@@ -136,7 +196,7 @@ router.get("/revenue/monthly", async (req, res) => {
 
     // Expected: all non-cancelled payments due in those months
     const allDue = await prisma.payment.findMany({
-      where: { status: { notIn: ["CANCELLED"] } },
+      where: { ...projectScope, status: { notIn: ["CANCELLED"] } },
       select: { amount: true, dueDate: true },
     });
     allDue.forEach((p) => {
@@ -152,25 +212,28 @@ router.get("/revenue/monthly", async (req, res) => {
 });
 
 // GET /collections — finance collections overview (overdue summary, aging, upcoming)
+// Optional filter: projectId
 router.get("/collections", async (req, res) => {
   try {
+    const { projectId } = parseFilters(req);
+    const projectScope = projectId ? { deal: { unit: { projectId } } } : {};
     const now = new Date();
     const in7  = new Date(now.getTime() + 7  * 86400000);
     const in30 = new Date(now.getTime() + 30 * 86400000);
 
     const [overduePayments, upcoming7, upcoming30] = await Promise.all([
       prisma.payment.findMany({
-        where: { status: { in: ["OVERDUE", "PARTIAL"] }, dueDate: { lt: now } },
+        where: { ...projectScope, status: { in: ["OVERDUE", "PARTIAL"] }, dueDate: { lt: now } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),
       prisma.payment.findMany({
-        where: { status: "PENDING", dueDate: { gte: now, lte: in7 } },
+        where: { ...projectScope, status: "PENDING", dueDate: { gte: now, lte: in7 } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),
       prisma.payment.findMany({
-        where: { status: "PENDING", dueDate: { gte: now, lte: in30 } },
+        where: { ...projectScope, status: "PENDING", dueDate: { gte: now, lte: in30 } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),

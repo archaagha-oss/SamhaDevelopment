@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -42,6 +42,30 @@ interface Task {
   lead?: { id: string; firstName: string; lastName: string } | null;
   deal?: { id: string; dealNumber: string } | null;
 }
+interface ProjectOption { id: string; name: string; }
+
+// ===== Time period filter =====
+type PeriodKey = "1M" | "3M" | "6M" | "12M" | "YTD" | "ALL";
+const PERIOD_OPTIONS: { key: PeriodKey; label: string; months: number }[] = [
+  { key: "1M",  label: "Last 30d", months: 1  },
+  { key: "3M",  label: "Last 3mo", months: 3  },
+  { key: "6M",  label: "Last 6mo", months: 6  },
+  { key: "12M", label: "Last 12mo", months: 12 },
+  { key: "YTD", label: "Year to date", months: 0 },
+  { key: "ALL", label: "All time",  months: 0 },
+];
+
+function periodToRange(p: PeriodKey): { from?: Date; months: number } {
+  const now = new Date();
+  switch (p) {
+    case "1M":  return { from: new Date(now.getTime() - 30  * 86400000), months: 1  };
+    case "3M":  return { from: new Date(now.getTime() - 90  * 86400000), months: 3  };
+    case "6M":  return { from: new Date(now.getTime() - 180 * 86400000), months: 6  };
+    case "12M": return { from: new Date(now.getTime() - 365 * 86400000), months: 12 };
+    case "YTD": return { from: new Date(now.getFullYear(), 0, 1),        months: now.getMonth() + 1 };
+    case "ALL": return { months: 24 };
+  }
+}
 
 // ===== Formatters =====
 const fmtAED = (n: number) =>
@@ -77,15 +101,36 @@ export default function ExecutiveDashboard(): React.ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAll = (silent = false) => {
+  // Filters
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [projectId, setProjectId] = useState<string>("all"); // "all" or project id
+  const [period, setPeriod] = useState<PeriodKey>("12M");
+
+  // Load projects once for the dropdown
+  useEffect(() => {
+    axios.get("/api/projects")
+      .then((res) => {
+        const list: ProjectOption[] = (res.data || []).map((p: any) => ({ id: p.id, name: p.name }));
+        setProjects(list);
+      })
+      .catch(() => setProjects([]));
+  }, []);
+
+  const fetchAll = useCallback((silent = false) => {
     if (silent) setRefreshing(true); else setLoading(true);
     setError(null);
+
+    const { from, months } = periodToRange(period);
+    const baseParams: Record<string, string> = {};
+    if (projectId !== "all") baseParams.projectId = projectId;
+    if (from) baseParams.from = from.toISOString();
+
     Promise.all([
-      axios.get("/api/reports/overview"),
-      axios.get("/api/reports/units-by-status"),
-      axios.get("/api/reports/leads"),
-      axios.get("/api/reports/revenue/monthly"),
-      axios.get("/api/reports/collections"),
+      axios.get("/api/reports/overview",         { params: baseParams }),
+      axios.get("/api/reports/units-by-status",  { params: { projectId: baseParams.projectId } }),
+      axios.get("/api/reports/leads",            { params: baseParams }),
+      axios.get("/api/reports/revenue/monthly",  { params: { projectId: baseParams.projectId, months } }),
+      axios.get("/api/reports/collections",      { params: { projectId: baseParams.projectId } }),
       axios.get("/api/reports/agents/summary"),
       axios.get("/api/reports/inventory"),
       axios.get("/api/tasks", { params: { status: "PENDING", limit: 8 } }),
@@ -100,9 +145,15 @@ export default function ExecutiveDashboard(): React.ReactNode {
       setTasks(Array.isArray(t.data) ? t.data : (t.data?.data || []));
     }).catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => { setLoading(false); setRefreshing(false); });
-  };
+  }, [projectId, period]);
 
-  useEffect(() => { fetchAll(); }, []);
+  // Refetch whenever filters change (silent so the page doesn't blank out)
+  useEffect(() => { fetchAll(overview !== null); /* eslint-disable-next-line */ }, [projectId, period]);
+
+  const activeProjectName = projectId === "all"
+    ? "All projects"
+    : projects.find((p) => p.id === projectId)?.name || "All projects";
+  const activePeriodLabel = PERIOD_OPTIONS.find((p) => p.key === period)?.label || "Last 12mo";
 
   // Derived data
   const unitChartData = useMemo(
@@ -150,7 +201,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
     {
       label: "Revenue Collected",
       value: `AED ${fmtAED(overview.revenueCollected)}`,
-      sub: `${monthly.length > 0 ? `Last 12mo: AED ${fmtAED(monthly.reduce((s,m) => s + m.collected, 0))}` : "All time"}`,
+      sub: period === "ALL" ? "All time" : activePeriodLabel,
       tone: "from-emerald-500/15 to-emerald-500/5", accent: "text-emerald-400", icon: "↑",
     },
     {
@@ -193,17 +244,50 @@ export default function ExecutiveDashboard(): React.ReactNode {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Command Center</h1>
           <p className="text-slate-400 text-sm mt-1">
-            Real-time pipeline overview · {new Date().toLocaleDateString("en-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            <span className="text-slate-300">{activeProjectName}</span>
+            <span className="mx-1.5 text-slate-600">·</span>
+            <span className="text-slate-300">{activePeriodLabel}</span>
+            <span className="mx-1.5 text-slate-600">·</span>
+            {new Date().toLocaleDateString("en-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Project filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg pl-3 pr-1 py-1">
+            <span className="text-xs text-slate-500">Project</span>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="bg-slate-900 text-slate-100 text-xs font-medium px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[160px]"
+            >
+              <option value="all">All projects</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          {/* Period filter */}
+          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+            {PERIOD_OPTIONS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                  period === p.key ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+                title={p.label}
+              >
+                {p.key}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={() => fetchAll(true)}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 transition-colors disabled:opacity-50"
+            title="Refresh"
           >
-            <span className={refreshing ? "animate-spin" : ""}>↻</span>
-            <span>{refreshing ? "Refreshing…" : "Refresh"}</span>
+            <span className={refreshing ? "animate-spin inline-block" : "inline-block"}>↻</span>
           </button>
           <button
             onClick={() => navigate("/reports")}
@@ -295,7 +379,9 @@ export default function ExecutiveDashboard(): React.ReactNode {
         <div className="flex items-baseline justify-between mb-4">
           <div>
             <h2 className="text-sm font-semibold text-white">Revenue Trend</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Collected vs expected · last 12 months</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Collected vs expected · {activePeriodLabel.toLowerCase()} · {activeProjectName}
+            </p>
           </div>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
@@ -345,7 +431,10 @@ export default function ExecutiveDashboard(): React.ReactNode {
         {/* Inventory donut */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white">Unit Inventory</h2>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Unit Inventory</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{activeProjectName}</p>
+            </div>
             <button onClick={() => navigate("/units")} className="text-xs text-blue-400 hover:text-blue-300">Manage →</button>
           </div>
           <div className="flex items-center gap-4">
@@ -381,20 +470,25 @@ export default function ExecutiveDashboard(): React.ReactNode {
               ))}
             </div>
           </div>
-          {/* Per-project mini-rows */}
-          {inventory.length > 1 && (
+          {/* Per-project mini-rows (hidden when a single project is filtered) */}
+          {projectId === "all" && inventory.length > 1 && (
             <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Sold rate by project</p>
               {inventory.slice(0, 4).map((p) => {
                 const sold = p.byStatus["SOLD"] || 0;
                 const pct = p.total > 0 ? Math.round((sold / p.total) * 100) : 0;
                 return (
-                  <div key={p.projectId} className="flex items-center gap-3">
-                    <span className="text-xs text-slate-300 truncate w-24">{p.projectName}</span>
+                  <button
+                    key={p.projectId}
+                    onClick={() => setProjectId(p.projectId)}
+                    className="w-full flex items-center gap-3 hover:bg-slate-800/40 rounded -mx-2 px-2 py-1 transition-colors"
+                  >
+                    <span className="text-xs text-slate-300 truncate w-24 text-left">{p.projectName}</span>
                     <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="text-xs text-slate-400 w-16 text-right">{sold}/{p.total}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -516,25 +610,32 @@ export default function ExecutiveDashboard(): React.ReactNode {
 
       {/* ===== Quick Actions ===== */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-white">Quick Actions</h2>
+          <p className="text-xs text-slate-500">Jump straight into common flows</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
           {[
-            { label: "New Lead",     desc: "Capture inquiry",     icon: "◉", to: "/leads" },
-            { label: "New Deal",     desc: "Start sales process", icon: "◈", to: "/deals" },
-            { label: "Reservations", desc: "Manage bookings",     icon: "⊗", to: "/reservations" },
-            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions" },
+            { label: "New Lead",     desc: "Capture inquiry",     icon: "◉", to: "/leads",        tone: "bg-blue-600/20 text-blue-400" },
+            { label: "New Deal",     desc: "Start sales process", icon: "◈", to: "/deals",        tone: "bg-emerald-600/20 text-emerald-400" },
+            { label: "Reservation",  desc: "Hold a unit",         icon: "⊗", to: "/reservations", tone: "bg-purple-600/20 text-purple-400" },
+            { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: "bg-cyan-600/20 text-cyan-400" },
+            { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: "bg-amber-600/20 text-amber-400" },
+            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: "bg-pink-600/20 text-pink-400" },
+            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: "bg-indigo-600/20 text-indigo-400" },
+            { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: "bg-slate-600/20 text-slate-300" },
           ].map((a) => (
             <button
               key={a.label}
               onClick={() => navigate(a.to)}
-              className="flex items-center gap-3 px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors text-left"
+              className="flex items-center gap-3 px-3 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors text-left"
             >
-              <span className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center text-base flex-shrink-0">
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 ${a.tone}`}>
                 {a.icon}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{a.label}</p>
-                <p className="text-xs text-slate-500 truncate">{a.desc}</p>
+                <p className="text-xs font-semibold text-white truncate">{a.label}</p>
+                <p className="text-[10px] text-slate-500 truncate">{a.desc}</p>
               </div>
             </button>
           ))}
