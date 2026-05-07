@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import DealActivityPanel from "./DealActivityPanel";
+import DealDetailContent from "./DealDetailContent";
 import DealSummaryPanel from "./DealSummaryPanel";
 import Breadcrumbs from "./Breadcrumbs";
 
@@ -136,10 +137,10 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
         />
       </div>
 
-      {/* Two-Column Layout: Responsive */}
-      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-0">
-        {/* Left Column: Timeline + Activity (60% on desktop) */}
-        <div className="lg:col-span-2 overflow-hidden flex flex-col">
+      {/* Three-Column Layout: Responsive */}
+      <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
+        {/* Left Column: Timeline + Activity (25% on desktop) */}
+        <div className="hidden lg:flex overflow-hidden flex-col border-r border-slate-200">
           <DealActivityPanel
             dealId={dealId}
             stage={deal.stage}
@@ -151,13 +152,36 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
           />
         </div>
 
-        {/* Right Column: Summary Panel (40% on desktop, sticky) */}
-        <div className="hidden lg:flex flex-col h-full overflow-hidden">
+        {/* Middle Column: Content (Payments, Documents, Tasks, History) (50% on desktop) */}
+        <div className="md:col-span-1 lg:col-span-2 overflow-hidden flex flex-col">
+          <DealDetailContent
+            dealId={dealId}
+            deal={deal}
+            onPaymentPaid={() => loadDeal()}
+            onTaskCompleted={() => loadDeal()}
+          />
+        </div>
+
+        {/* Right Column: Summary Panel (25% on desktop, sticky) */}
+        <div className="hidden lg:flex flex-col h-full overflow-hidden sticky top-0">
           <DealSummaryPanel
             deal={deal}
             onPrimaryAction={handlePrimaryAction}
             primaryActionLabel="Next Step"
             primaryActionColor="bg-blue-600 hover:bg-blue-700"
+          />
+        </div>
+
+        {/* Mobile: Activity on top (md:hidden) */}
+        <div className="lg:hidden overflow-hidden flex flex-col border-b border-slate-200">
+          <DealActivityPanel
+            dealId={dealId}
+            stage={deal.stage}
+            reservationDate={deal.reservationDate}
+            spaSignedDate={deal.spaSignedDate}
+            oqoodRegisteredDate={deal.oqoodRegisteredDate}
+            oqoodDeadline={deal.oqoodDeadline}
+            completedDate={deal.completedDate}
           />
         </div>
       </div>
