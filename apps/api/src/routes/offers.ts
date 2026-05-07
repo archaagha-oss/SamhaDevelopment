@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { createGeneratedDocument } from "../services/documentService";
+import { createDeal as createDealService } from "../services/dealService";
 
 const router = Router();
 
@@ -186,6 +187,7 @@ router.post("/", async (req, res) => {
 });
 
 // ─── Update offer status (accept / reject / withdraw) ────────────────────────
+// When accepted, automatically creates a deal from the offer
 
 router.patch("/:id/status", async (req, res) => {
   try {
@@ -199,28 +201,115 @@ router.patch("/:id/status", async (req, res) => {
       return res.status(400).json({ error: "Invalid status", code: "INVALID_STATUS", statusCode: 400 });
     }
 
+    // If accepting an offer, create a deal
+    if (status === "ACCEPTED") {
+      // 1. Fetch offer with all necessary data
+      const offer = await prisma.offer.findUnique({
+        where: { id: req.params.id },
+        include: {
+          lead: { select: { id: true, brokerAgentId: true, firstName: true, lastName: true } },
+          unit: { select: { id: true, projectId: true, status: true, unitNumber: true } },
+          paymentPlan: { select: { id: true } },
+        },
+      });
+
+      if (!offer) {
+        return res.status(404).json({ error: "Offer not found", code: "NOT_FOUND", statusCode: 404 });
+      }
+
+      if (offer.status !== "ACTIVE") {
+        return res.status(400).json({
+          error: "Only ACTIVE offers can be accepted",
+          code: "OFFER_NOT_ACTIVE",
+          statusCode: 400,
+        });
+      }
+
+      if (!offer.paymentPlanId) {
+        return res.status(400).json({
+          error: "Payment plan must be selected on offer before accepting",
+          code: "MISSING_PAYMENT_PLAN",
+          statusCode: 400,
+        });
+      }
+
+      if (!["AVAILABLE", "ON_HOLD"].includes(offer.unit.status)) {
+        return res.status(400).json({
+          error: `Unit is no longer available for sale (status: ${offer.unit.status})`,
+          code: "UNIT_NOT_AVAILABLE",
+          statusCode: 400,
+        });
+      }
+
+      // 2. Get broker company from broker agent (if assigned)
+      let brokerCompanyId: string | undefined;
+      if (offer.lead.brokerAgentId) {
+        const brokerAgent = await prisma.brokerAgent.findUnique({
+          where: { id: offer.lead.brokerAgentId },
+          select: { brokerCompanyId: true },
+        });
+        brokerCompanyId = brokerAgent?.brokerCompanyId;
+      }
+
+      // 3. Create deal in transaction
+      const deal = await createDealService({
+        leadId: offer.leadId,
+        unitId: offer.unitId,
+        salePrice: offer.offeredPrice,
+        discount: offer.discountAmount,
+        paymentPlanId: offer.paymentPlanId,
+        brokerCompanyId,
+        brokerAgentId: offer.lead.brokerAgentId,
+        offerId: req.params.id,
+        createdBy: req.auth.userId,
+      });
+
+      // 4. Mark offer as ACCEPTED
+      const updatedOffer = await prisma.offer.update({
+        where: { id: req.params.id },
+        data: {
+          status: "ACCEPTED",
+          acceptedBy: req.auth.userId,
+        },
+        include: OFFER_INCLUDE,
+      });
+
+      // 5. Log activity
+      await prisma.activity.create({
+        data: {
+          leadId: offer.leadId,
+          dealId: deal.id,
+          type: "NOTE",
+          summary: `Offer accepted — ${offer.offeredPrice.toLocaleString()} AED · Deal ${deal.dealNumber} created`,
+          createdBy: req.auth.userId,
+        },
+      });
+
+      res.status(201).json({ offer: updatedOffer, deal });
+      return;
+    }
+
+    // For non-ACCEPTED status changes (REJECTED, WITHDRAWN, etc.)
     const offer = await prisma.offer.update({
       where: { id: req.params.id },
       data: {
         status,
-        ...(status === "ACCEPTED" ? { acceptedBy: req.auth.userId } : {}),
-        ...(rejectedReason        ? { rejectedReason }              : {}),
+        ...(rejectedReason ? { rejectedReason } : {}),
       },
       include: OFFER_INCLUDE,
     });
 
     // Log activity
     const actionLabel: Record<string, string> = {
-      ACCEPTED:  "accepted",
-      REJECTED:  "rejected",
+      REJECTED: "rejected",
       WITHDRAWN: "withdrawn",
     };
     if (actionLabel[status]) {
       await prisma.activity.create({
         data: {
-          leadId:    offer.leadId,
-          type:      "NOTE",
-          summary:   `Offer ${actionLabel[status]} — ${offer.offeredPrice.toLocaleString()} AED`,
+          leadId: offer.leadId,
+          type: "NOTE",
+          summary: `Offer ${actionLabel[status]} — ${offer.offeredPrice.toLocaleString()} AED`,
           createdBy: req.auth.userId,
         },
       });

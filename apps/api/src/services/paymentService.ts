@@ -1,6 +1,8 @@
 import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { paymentLogger } from "../lib/logger";
+import { checkStageAdvancement } from "../config/stageAdvancementRules";
+import { updateDealStage } from "./dealService";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,6 +135,71 @@ export async function markPaymentPaid(
     }),
   ]);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // CHECK FOR STAGE ADVANCEMENT based on payment milestone reached
+  // ─────────────────────────────────────────────────────────────────────────
+  try {
+    // Fetch current deal state + all payments
+    const deal = await prisma.deal.findUnique({
+      where: { id: payment.dealId },
+      include: { payments: { where: { status: "PAID" } } },
+    });
+
+    if (!deal) {
+      paymentLogger.error("Deal not found for stage advancement check", { dealId: payment.dealId });
+      return updated;
+    }
+
+    // Calculate total paid percentage
+    const totalDealValue = deal.salePrice + deal.dldFee + deal.adminFee;
+    const totalPaidAmount = deal.payments.reduce((sum, p) => sum + p.amount, 0);
+    const paidPercentage = (totalPaidAmount / totalDealValue) * 100;
+
+    paymentLogger.info("Checking stage advancement", {
+      dealId: payment.dealId,
+      currentStage: deal.stage,
+      paidPercentage: paidPercentage.toFixed(2),
+      totalPaid: totalPaidAmount,
+      totalValue: totalDealValue,
+    });
+
+    // Check if we can advance the stage
+    const nextStage = checkStageAdvancement(deal.stage, paidPercentage);
+
+    if (nextStage && nextStage !== deal.stage) {
+      paymentLogger.info("Auto-advancing deal stage", {
+        dealId: payment.dealId,
+        fromStage: deal.stage,
+        toStage: nextStage,
+        reason: `Payment received: ${paidPercentage.toFixed(2)}% paid`,
+      });
+
+      // Update deal stage
+      await updateDealStage(payment.dealId, nextStage, data.paidBy);
+
+      // Log activity about the auto-advancement
+      await prisma.activity.create({
+        data: {
+          dealId: payment.dealId,
+          leadId: deal.leadId,
+          type: "NOTE",
+          summary: `Deal auto-advanced from ${deal.stage} → ${nextStage} (${paidPercentage.toFixed(2)}% paid)`,
+          createdBy: data.paidBy,
+        },
+      }).catch((err) => {
+        paymentLogger.error("Failed to log stage advancement activity", { dealId: payment.dealId, error: err });
+      });
+    }
+  } catch (error: any) {
+    paymentLogger.error("Error during stage advancement check", {
+      paymentId,
+      dealId: payment.dealId,
+      error: error.message,
+    });
+    // Don't throw — payment was already marked as paid successfully
+    // Stage advancement failure shouldn't block payment recording
+  }
+
   return updated;
 }
 
@@ -237,6 +304,71 @@ export async function recordPartialPayment(
     where: { id: paymentId },
     include: { partialPayments: true, auditLog: true },
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CHECK FOR STAGE ADVANCEMENT if payment just became fully paid
+  // ─────────────────────────────────────────────────────────────────────────
+  if (isFullyPaid) {
+    try {
+      // Fetch current deal state + all payments
+      const deal = await prisma.deal.findUnique({
+        where: { id: payment.dealId },
+        include: { payments: { where: { status: "PAID" } } },
+      });
+
+      if (!deal) {
+        paymentLogger.error("Deal not found for stage advancement check", { dealId: payment.dealId });
+      } else {
+        // Calculate total paid percentage
+        const totalDealValue = deal.salePrice + deal.dldFee + deal.adminFee;
+        const totalPaidAmount = deal.payments.reduce((sum, p) => sum + p.amount, 0);
+        const paidPercentage = (totalPaidAmount / totalDealValue) * 100;
+
+        paymentLogger.info("Checking stage advancement after partial payment", {
+          dealId: payment.dealId,
+          currentStage: deal.stage,
+          paidPercentage: paidPercentage.toFixed(2),
+          totalPaid: totalPaidAmount,
+          totalValue: totalDealValue,
+        });
+
+        // Check if we can advance the stage
+        const nextStage = checkStageAdvancement(deal.stage, paidPercentage);
+
+        if (nextStage && nextStage !== deal.stage) {
+          paymentLogger.info("Auto-advancing deal stage", {
+            dealId: payment.dealId,
+            fromStage: deal.stage,
+            toStage: nextStage,
+            reason: `Partial payments completed: ${paidPercentage.toFixed(2)}% paid`,
+          });
+
+          // Update deal stage
+          await updateDealStage(payment.dealId, nextStage, data.paidBy);
+
+          // Log activity about the auto-advancement
+          await prisma.activity.create({
+            data: {
+              dealId: payment.dealId,
+              leadId: deal.leadId,
+              type: "NOTE",
+              summary: `Deal auto-advanced from ${deal.stage} → ${nextStage} (${paidPercentage.toFixed(2)}% paid)`,
+              createdBy: data.paidBy,
+            },
+          }).catch((err) => {
+            paymentLogger.error("Failed to log stage advancement activity", { dealId: payment.dealId, error: err });
+          });
+        }
+      }
+    } catch (error: any) {
+      paymentLogger.error("Error during stage advancement check after partial payment", {
+        paymentId,
+        dealId: payment.dealId,
+        error: error.message,
+      });
+      // Don't throw — partial payment was already recorded successfully
+    }
+  }
 
   return { payment: updatedPayment, partial, isFullyPaid };
 }
