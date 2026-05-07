@@ -157,6 +157,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved]   = useState(false);
 
+  // Quick note input
+  const [quickNote, setQuickNote] = useState("");
+  const [addingQuickNote, setAddingQuickNote] = useState(false);
+
+  const submitQuickNote = async () => {
+    if (!quickNote.trim() || !deal) return;
+    setAddingQuickNote(true);
+    try {
+      await axios.post(`/api/deals/${dealId}/activities`, {
+        type: "NOTE",
+        summary: quickNote.trim(),
+        activityDate: new Date().toISOString().slice(0, 16),
+      });
+      setQuickNote("");
+      toast.success("Note added");
+      loadActivities();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to add note");
+    } finally {
+      setAddingQuickNote(false);
+    }
+  };
+
   // Waive payment
   const [waiveId, setWaiveId] = useState<string | null>(null);
   const [waiveReason, setWaiveReason] = useState("");
@@ -807,6 +830,27 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {showStageSelect && (
         <div className="fixed inset-0 z-10" onClick={() => setShowStageSelect(false)} />
       )}
+
+      {/* Quick note input */}
+      <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 flex items-center gap-2">
+        <input
+          type="text"
+          value={quickNote}
+          onChange={(e) => setQuickNote(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitQuickNote();
+          }}
+          placeholder="Add a quick note and press Enter…"
+          className="flex-1 bg-white border border-blue-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <button
+          onClick={submitQuickNote}
+          disabled={!quickNote.trim() || addingQuickNote}
+          className="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {addingQuickNote ? "…" : "Add"}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main: control sections + unit + financials + payments */}
