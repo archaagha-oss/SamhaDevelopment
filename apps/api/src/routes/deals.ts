@@ -8,6 +8,7 @@ import {
 } from "../services/dealService";
 import { addCustomMilestone, restructureSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
+import { buildSpaSnapshot } from "../services/spaService";
 import { prisma } from "../lib/prisma";
 
 const router = Router();
@@ -73,9 +74,21 @@ router.get("/:id", async (req, res) => {
       where: { id: req.params.id },
       include: {
         lead: true,
-        unit: { include: { project: true } },
-        paymentPlan: { include: { milestones: true } },
+        unit: {
+          include: {
+            project: {
+              include: {
+                config: true,
+                bankAccounts: true,
+                specifications: { orderBy: { sortOrder: "asc" } },
+              },
+            },
+            images: { orderBy: { sortOrder: "asc" } },
+          },
+        },
+        paymentPlan: { include: { milestones: { orderBy: { sortOrder: "asc" } } } },
         payments: { orderBy: { dueDate: "asc" }, include: { auditLog: true } },
+        purchasers: { orderBy: { sortOrder: "asc" } },
         commission: true,
         documents: true,
         stageHistory: { orderBy: { changedAt: "desc" } },
@@ -131,6 +144,25 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({
       error: "Failed to fetch deal",
       code: "FETCH_DEAL_ERROR",
+      statusCode: 500,
+    });
+  }
+});
+
+// SPA snapshot — the canonical shape consumed by the legal SPA renderer.
+// Live preview, but the same builder produces the persisted dataSnapshot.
+// GET /api/deals/:id/spa-snapshot
+router.get("/:id/spa-snapshot", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    res.json(snapshot);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({
+      error: "Failed to build SPA snapshot",
+      code: "SPA_SNAPSHOT_ERROR",
       statusCode: 500,
     });
   }
@@ -651,36 +683,41 @@ router.post("/:id/generate-document", async (req, res) => {
       }
     }
 
-    const dataSnapshot = {
-      dealId:           deal.id,
-      dealNumber:       deal.dealNumber,
-      salePrice:        deal.salePrice,
-      discount:         deal.discount,
-      reservationAmount: (deal as any).reservationAmount,
-      reservationDate:  deal.reservationDate,
-      oqoodDeadline:    deal.oqoodDeadline,
-      dldFee:           deal.dldFee,
-      adminFee:         deal.adminFee,
-      paymentPlan:      { id: deal.paymentPlanId, name: deal.paymentPlan?.name },
-      unitDetails: {
-        unitNumber:    deal.unit.unitNumber,
-        floor:         deal.unit.floor,
-        type:          deal.unit.type,
-        area:          deal.unit.area,
-        view:          deal.unit.view,
-        bathrooms:     deal.unit.bathrooms,
-        parkingSpaces: deal.unit.parkingSpaces,
-        internalArea:  deal.unit.internalArea,
-        externalArea:  deal.unit.externalArea,
-      },
-      projectDetails: (deal.unit as any).project,
-      buyerDetails: {
-        name:        `${deal.lead.firstName} ${deal.lead.lastName}`,
-        phone:       deal.lead.phone,
-        email:       deal.lead.email,
-        nationality: deal.lead.nationality,
-      },
-    };
+    // SPA gets the full legal snapshot (purchasers, escrow, specs, schedules,
+    // business-rule constants). Other doc types keep the lightweight shape.
+    const dataSnapshot =
+      type === "SPA"
+        ? await buildSpaSnapshot(deal.id)
+        : {
+            dealId:           deal.id,
+            dealNumber:       deal.dealNumber,
+            salePrice:        deal.salePrice,
+            discount:         deal.discount,
+            reservationAmount: (deal as any).reservationAmount,
+            reservationDate:  deal.reservationDate,
+            oqoodDeadline:    deal.oqoodDeadline,
+            dldFee:           deal.dldFee,
+            adminFee:         deal.adminFee,
+            paymentPlan:      { id: deal.paymentPlanId, name: deal.paymentPlan?.name },
+            unitDetails: {
+              unitNumber:    deal.unit.unitNumber,
+              floor:         deal.unit.floor,
+              type:          deal.unit.type,
+              area:          deal.unit.area,
+              view:          deal.unit.view,
+              bathrooms:     deal.unit.bathrooms,
+              parkingSpaces: deal.unit.parkingSpaces,
+              internalArea:  deal.unit.internalArea,
+              externalArea:  deal.unit.externalArea,
+            },
+            projectDetails: (deal.unit as any).project,
+            buyerDetails: {
+              name:        `${deal.lead.firstName} ${deal.lead.lastName}`,
+              phone:       deal.lead.phone,
+              email:       deal.lead.email,
+              nationality: deal.lead.nationality,
+            },
+          };
 
     const labelMap: Record<string, string> = {
       RESERVATION_FORM: "Reservation Form",

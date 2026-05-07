@@ -78,6 +78,37 @@ enum UnitImageType {
   PHOTO
   FLOOR_PLAN
   FLOOR_MAP
+  SCHEDULE_DIMENSIONED   // SPA Schedule 1 — dimensioned plan
+  SCHEDULE_FURNISHED     // SPA Schedule 1 — furnished plan
+  SCHEDULE_FLOOR_PLAN    // SPA Schedule 3 — floor plan
+}
+
+enum BankAccountPurpose {
+  ESCROW
+  CURRENT
+}
+
+// Which project bank account a given payment instalment is routed to.
+// Reservation Form / Sales Offer / SPA payment-plan tables show this column
+// per row (e.g. reservation deposit -> CORPORATE, contract signing -> ESCROW).
+enum PaymentTargetAccount {
+  ESCROW
+  CORPORATE
+}
+
+enum SpecificationArea {
+  FOYER
+  LIVING_AREA
+  DINING_AREA
+  BEDROOM
+  KITCHEN
+  MASTER_BATHROOM
+  SECONDARY_BATHROOM
+  BALCONY
+  POWDER_ROOM
+  STUDY
+  MAID_ROOM
+  LAUNDRY
 }
 
 // ----- User / Access -----
@@ -337,6 +368,21 @@ model Project {
   purpose          PropertyPurpose  @default(SALE)
   furnishing       FurnishingStatus @default(UNFURNISHED)
 
+  // ----- SPA particulars (developer / regulatory) -----
+  // Populated from the project's RERA registration and used in the
+  // generated Sale & Purchase Agreement particulars block.
+  commercialLicense  String? // e.g. "958954"
+  developerNumber    String? // RERA developer registration number (e.g. "2216")
+  developerAddress   String?
+  developerPhone     String?
+  developerEmail     String?
+  plotNumber         String? // e.g. "JVC10EMRH005"
+  buildingPermitRef  String? // e.g. "TKS/CEDSR-146631/JVC10EMRH005/2024"
+  buildingStructure  String? // e.g. "B+G+3P+19+R"
+  masterDeveloper    String? // e.g. "Jumeirah Village LLC"
+  masterCommunity    String? // e.g. "Jumeirah Village Circle"
+  permittedUse       String? // e.g. "Single Family Residential Purpose"
+
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
@@ -348,6 +394,8 @@ model Project {
   pricingRules       PricingRule[]
   images             ProjectImage[]
   stageDocumentRules StageDocumentRule[]
+  bankAccounts       ProjectBankAccount[]
+  specifications     ProjectSpecification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -390,8 +438,61 @@ model ProjectConfig {
   defaultView      String? @default("GARDEN")
   defaultPrice     Float?
 
+  // ----- SPA business-rule constants -----
+  // Defaults reflect the SAMHA-style legal SPA. Override per project as needed.
+  lateFeeMonthlyPercent           Float @default(2)   // 2% per month, daily accrual
+  delayCompensationAnnualPercent  Float @default(1)   // 1% per year of paid amount
+  delayCompensationCapPercent     Float @default(5)   // capped at 5% of purchase price
+  liquidatedDamagesPercent        Float @default(40)  // 40% on purchaser default
+  disposalThresholdPercent        Float @default(30)  // 30% paid before resale allowed
+  resaleProcessingFee             Float @default(3000)
+  gracePeriodMonths               Int   @default(12)  // auto-extension on completion date
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// One escrow + one current account per project (SPA Particulars items IX & X).
+// Per-unit escrow reference (e.g. "SR2-STD-207") is built at render time
+// from refPrefix + unit number.
+model ProjectBankAccount {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  purpose       BankAccountPurpose
+  accountName   String
+  bankName      String
+  branchAddress String?
+  iban          String
+  accountNumber String
+  refPrefix     String? // only meaningful for ESCROW (e.g. "SR2-STD-")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, purpose])
+  @@index([projectId])
+}
+
+// SPA Schedule 2 — finishes specification table (per area).
+model ProjectSpecification {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  area               SpecificationArea
+  floorFinish        String?
+  wallFinish         String?
+  ceilingFinish      String?
+  additionalFinishes String?  @db.Text
+  sortOrder          Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, area])
+  @@index([projectId])
 }
 
 model UserProjectAccess {
@@ -458,6 +559,13 @@ model Unit {
   parkingSpaces  Int?
   internalArea   Float?   // suite sq metres (CSV: Suite SQ.M)
   externalArea   Float?   // balcony sq metres (CSV: Balcony SQ.M)
+  areaSqft       Float?   // total area in sq feet (SPA particulars print both units)
+  ratePerSqft    Float?   // unit rate per sq ft (SPA particulars)
+  smartHome      Boolean? // sales offer / particulars
+
+  // Per-unit override of the project's anticipated completion date.
+  // Falls back to project.handoverDate when null.
+  anticipatedCompletionDate DateTime?
 
   status        UnitStatus         @default(NOT_RELEASED)
   statusHistory UnitStatusHistory[]
@@ -542,6 +650,14 @@ model Lead {
   email       String?
   nationality String?
 
+  // ----- SPA particulars (Purchaser block) -----
+  address                   String? @db.Text
+  emiratesId                String?
+  passportNumber            String?
+  companyRegistrationNumber String?
+  authorizedSignatory       String? // for corporate purchasers
+  sourceOfFunds             String? // AML clause + reservation form (e.g. "Husband Savings", "Salary")
+
   source          String
   brokerCompanyId String?
   brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
@@ -565,6 +681,7 @@ model Lead {
   reservations Reservation[]
   offers       Offer[]
   documents    Document[]
+  dealPurchasers DealPurchaser[]
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())
@@ -915,10 +1032,15 @@ model Deal {
   spaSignedDate       DateTime?
   oqoodRegisteredDate DateTime?
 
+  // SPA Particulars Item IV. Falls back to unit.anticipatedCompletionDate
+  // and then to project.handoverDate at render time.
+  anticipatedCompletionDate DateTime?
+
   documents  Document[]
   commission Commission?
   activities Activity[]
   tasks      Task[]     @relation("DealTasks")
+  purchasers DealPurchaser[]
 
   brokerCompanyId String?
   brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
@@ -967,6 +1089,41 @@ model DealStageHistory {
   @@index([dealId])
 }
 
+// SPA "Purchaser 1 / 2 / ..." block — supports joint purchasers.
+// Each row is jointly and severally liable under the SPA. The primary
+// purchaser is normally derived from Deal.lead, but a row may exist
+// independently of the Lead table (e.g. a spouse or co-buyer).
+model DealPurchaser {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Optional link back to Lead. Primary purchasers usually have one;
+  // additional joint purchasers may be lead-less.
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  name                       String
+  ownershipPercentage        Float    @default(100)
+  address                    String?  @db.Text
+  phone                      String?
+  email                      String?
+  nationality                String?
+  emiratesId                 String?
+  passportNumber             String?
+  companyRegistrationNumber  String?
+  authorizedSignatory        String?
+  sourceOfFunds              String?
+  isPrimary                  Boolean  @default(false)
+  sortOrder                  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([leadId])
+}
+
 // ============================================================
 // SECTION 11: PAYMENT
 // ============================================================
@@ -1002,6 +1159,12 @@ model Payment {
   sortOrder       Int              @default(0)
   milestoneType   String           @default("PLAN") // "PLAN" | "CUSTOM" | "DEVELOPER_COST"
   scheduleTrigger MilestoneTrigger @default(DAYS_FROM_RESERVATION)
+
+  // Account routing column shown on Sales Offer / Reservation Form / SPA
+  // payment schedule (CORPORATE for reservation, ADMIN, DLD; ESCROW for
+  // contract-signing and construction-stage instalments).
+  targetAccount    PaymentTargetAccount @default(ESCROW)
+  paymentReference String?
   isWaived      Boolean @default(false)
   waivedBy      String?
   waivedAt      DateTime?
