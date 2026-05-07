@@ -4,7 +4,7 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "finance" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -13,6 +13,7 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/leads")) return "leads";
   if (pathname.startsWith("/deals")) return "deals";
   if (pathname.startsWith("/payments")) return "payments";
+  if (pathname.startsWith("/finance")) return "finance";
   if (pathname.startsWith("/commissions")) return "commissions";
   if (pathname.startsWith("/brokers")) return "brokers";
   if (pathname.startsWith("/tasks")) return "tasks";

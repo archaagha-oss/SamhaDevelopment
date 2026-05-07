@@ -10,6 +10,7 @@ import DealsPage from "./components/DealsPage";
 import DealDetailPage from "./components/DealDetailPage";
 import BrokerPage from "./components/BrokerPage";
 import CommissionDashboard from "./components/CommissionDashboard";
+import FinanceDashboard from "./components/FinanceDashboard";
 import PaymentReportPage from "./components/PaymentReportPage";
 import ContractsPage from "./pages/ContractsPage";
 import NotFoundPage from "./components/NotFoundPage";
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: "deals/:dealId",                            element: <DealDetailPage /> },
       { path: "brokers",                                  element: <BrokerPage /> },
       { path: "commissions",                              element: <CommissionDashboard /> },
+      { path: "finance",                                  element: <FinanceDashboard /> },
       { path: "tasks",                                     element: <ActivitiesPage /> },
       { path: "payments",                                  element: <PaymentReportPage /> },
       { path: "contracts",                                 element: <ContractsPage /> },

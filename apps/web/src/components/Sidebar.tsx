@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "finance" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
 interface SidebarProps {
   currentPage: Page;
@@ -22,6 +22,7 @@ const salesItems: { page: Page; label: string; icon: string }[] = [
 ];
 
 const financeItems: { page: Page; label: string; icon: string }[] = [
+  { page: "finance",     label: "Dashboard",   icon: "📊" },
   { page: "payments",    label: "Payments",    icon: "⊟" },
   { page: "payment-plans", label: "Pay. Plans", icon: "≡" },
   { page: "commissions", label: "Commissions", icon: "◇" },
