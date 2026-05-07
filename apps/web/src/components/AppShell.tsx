@@ -4,7 +4,7 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -13,6 +13,8 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/leads")) return "leads";
   if (pathname.startsWith("/deals")) return "deals";
   if (pathname.startsWith("/payments")) return "payments";
+  // Match the more specific commission-tiers before commissions to avoid collision.
+  if (pathname.startsWith("/commission-tiers")) return "commission-tiers";
   if (pathname.startsWith("/commissions")) return "commissions";
   if (pathname.startsWith("/brokers")) return "brokers";
   if (pathname.startsWith("/tasks")) return "tasks";
@@ -24,6 +26,7 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/offers-list")) return "offers-list";
   if (pathname.startsWith("/contacts")) return "contacts";
   if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/refunds")) return "refunds";
   return "dashboard";
 }
 
@@ -131,6 +134,9 @@ export default function AppShell() {
       "payment-plans": "/payment-plans", reservations: "/reservations", "offers-list": "/offers-list",
       team: "/team", reports: "/reports",
       contacts: "/contacts", settings: "/settings",
+      // Phase 4 additions
+      refunds: "/refunds",
+      "commission-tiers": "/commission-tiers",
     };
     navigate(map[page]);
   }, [navigate]);

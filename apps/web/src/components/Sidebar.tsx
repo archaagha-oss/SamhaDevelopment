@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers";
 
 interface SidebarProps {
   currentPage: Page;
@@ -22,10 +22,12 @@ const salesItems: { page: Page; label: string; icon: string }[] = [
 ];
 
 const financeItems: { page: Page; label: string; icon: string }[] = [
-  { page: "payments",    label: "Payments",    icon: "⊟" },
-  { page: "payment-plans", label: "Pay. Plans", icon: "≡" },
-  { page: "commissions", label: "Commissions", icon: "◇" },
-  { page: "reports",     label: "Reports",     icon: "▤" },
+  { page: "payments",          label: "Payments",          icon: "⊟" },
+  { page: "payment-plans",     label: "Pay. Plans",        icon: "≡" },
+  { page: "commissions",       label: "Commissions",       icon: "◇" },
+  { page: "commission-tiers",  label: "Comm. Tiers",       icon: "◈" },
+  { page: "refunds",           label: "Refunds",           icon: "↺" },
+  { page: "reports",           label: "Reports",           icon: "▤" },
 ];
 
 const adminItems: { page: Page; label: string; icon: string }[] = [
