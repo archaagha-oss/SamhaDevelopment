@@ -150,10 +150,11 @@ export async function markPaymentPaid(
       return updated;
     }
 
-    // Calculate total paid percentage
-    const totalDealValue = deal.salePrice + deal.dldFee + deal.adminFee;
+    // Calculate total paid percentage (only against sale price, not fees)
+    // DLD and admin fees are separate line items, not part of percentage calculation
+    const totalDealValue = deal.salePrice;
     const totalPaidAmount = deal.payments.reduce((sum, p) => sum + p.amount, 0);
-    const paidPercentage = (totalPaidAmount / totalDealValue) * 100;
+    const paidPercentage = (totalDealValue > 0 ? (totalPaidAmount / totalDealValue) * 100 : 0);
 
     paymentLogger.info("Checking stage advancement", {
       dealId: payment.dealId,
@@ -319,10 +320,11 @@ export async function recordPartialPayment(
       if (!deal) {
         paymentLogger.error("Deal not found for stage advancement check", { dealId: payment.dealId });
       } else {
-        // Calculate total paid percentage
-        const totalDealValue = deal.salePrice + deal.dldFee + deal.adminFee;
+        // Calculate total paid percentage (only against sale price, not fees)
+        // DLD and admin fees are separate line items, not part of percentage calculation
+        const totalDealValue = deal.salePrice;
         const totalPaidAmount = deal.payments.reduce((sum, p) => sum + p.amount, 0);
-        const paidPercentage = (totalPaidAmount / totalDealValue) * 100;
+        const paidPercentage = (totalDealValue > 0 ? (totalPaidAmount / totalDealValue) * 100 : 0);
 
         paymentLogger.info("Checking stage advancement after partial payment", {
           dealId: payment.dealId,

@@ -264,26 +264,26 @@ router.patch("/:id/status", async (req, res) => {
         createdBy: req.auth.userId,
       });
 
-      // 4. Mark offer as ACCEPTED
-      const updatedOffer = await prisma.offer.update({
-        where: { id: req.params.id },
-        data: {
-          status: "ACCEPTED",
-          acceptedBy: req.auth.userId,
-        },
-        include: OFFER_INCLUDE,
-      });
-
-      // 5. Log activity
-      await prisma.activity.create({
-        data: {
-          leadId: offer.leadId,
-          dealId: deal.id,
-          type: "NOTE",
-          summary: `Offer accepted — ${offer.offeredPrice.toLocaleString()} AED · Deal ${deal.dealNumber} created`,
-          createdBy: req.auth.userId,
-        },
-      });
+      // 4 & 5. Mark offer as ACCEPTED + log activity in single transaction
+      const [updatedOffer] = await prisma.$transaction([
+        prisma.offer.update({
+          where: { id: req.params.id },
+          data: {
+            status: "ACCEPTED",
+            acceptedBy: req.auth.userId,
+          },
+          include: OFFER_INCLUDE,
+        }),
+        prisma.activity.create({
+          data: {
+            leadId: offer.leadId,
+            dealId: deal.id,
+            type: "NOTE",
+            summary: `Offer accepted — ${offer.offeredPrice.toLocaleString()} AED · Deal ${deal.dealNumber} created`,
+            createdBy: req.auth.userId,
+          },
+        }),
+      ]);
 
       res.status(201).json({ offer: updatedOffer, deal });
       return;
