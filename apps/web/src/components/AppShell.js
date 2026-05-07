@@ -104,14 +104,19 @@ export default function AppShell() {
     }, [fetchNotifications]);
     useEffect(() => {
         const handler = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+            if (e.repeat)
+                return;
+            if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "k") {
                 e.preventDefault();
-                setShowSearch(true);
+                e.stopPropagation();
+                setShowSearch((v) => !v);
             }
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
     }, []);
+    const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+    const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
     // Close panels when clicking outside
     useEffect(() => {
         if (!showNotifPanel)
@@ -147,7 +152,7 @@ export default function AppShell() {
         navigate(map[page]);
     }, [navigate]);
     const currentPage = pathToPage(location.pathname);
-    return (_jsxs("div", { className: "flex h-screen bg-slate-950 overflow-hidden", children: [_jsx(Sidebar, { currentPage: currentPage, onNavigate: handleNavigate }), _jsxs("div", { className: "flex flex-col flex-1 min-w-0 overflow-hidden", children: [_jsxs("header", { className: "flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0", children: [_jsxs("button", { onClick: () => setShowSearch(true), className: "flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors", children: [_jsx("span", { children: "\uD83D\uDD0D" }), _jsx("span", { children: "Search\u2026" }), _jsx("kbd", { className: "ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono", children: "\u2318K" })] }), _jsxs("div", { className: "flex items-center gap-3", ref: notifPanelRef, children: [_jsxs("div", { className: "relative", children: [_jsxs("button", { onClick: () => { setShowNotifPanel((v) => !v); if (!showNotifPanel)
+    return (_jsxs("div", { className: "flex h-screen bg-slate-950 overflow-hidden", children: [_jsx(Sidebar, { currentPage: currentPage, onNavigate: handleNavigate }), _jsxs("div", { className: "flex flex-col flex-1 min-w-0 overflow-hidden", children: [_jsxs("header", { className: "flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0", children: [_jsxs("button", { onClick: () => setShowSearch(true), className: "flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors", children: [_jsx("span", { children: "\uD83D\uDD0D" }), _jsx("span", { children: "Search\u2026" }), _jsx("kbd", { className: "ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono", children: shortcutLabel })] }), _jsxs("div", { className: "flex items-center gap-3", ref: notifPanelRef, children: [_jsxs("div", { className: "relative", children: [_jsxs("button", { onClick: () => { setShowNotifPanel((v) => !v); if (!showNotifPanel)
                                                     fetchNotifications(); }, className: "relative p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors", title: "Notifications", children: [_jsx("span", { className: "text-lg leading-none", children: "\uD83D\uDD14" }), unreadCount > 0 && (_jsx("span", { className: "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1", children: unreadCount > 99 ? "99+" : unreadCount }))] }), showNotifPanel && (_jsxs("div", { className: "absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between px-4 py-3 border-b border-slate-100", children: [_jsx("span", { className: "text-sm font-bold text-slate-900", children: "Notifications" }), unreadCount > 0 && (_jsx("button", { onClick: markAllRead, className: "text-xs text-blue-600 hover:underline", children: "Mark all read" }))] }), _jsx("div", { className: "max-h-80 overflow-y-auto divide-y divide-slate-50", children: notifications.length === 0 ? (_jsx("p", { className: "px-4 py-8 text-center text-sm text-slate-400", children: "No notifications" })) : notifications.map((n) => (_jsxs("div", { className: `flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-blue-50/40" : ""}`, children: [_jsx("span", { className: "text-base mt-0.5 flex-shrink-0 cursor-pointer", onClick: () => {
                                                                         if (!n.read)
                                                                             axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => { });

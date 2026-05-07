@@ -94,11 +94,19 @@ export default function AppShell() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setShowSearch(true); }
+      if (e.repeat) return;
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowSearch((v) => !v);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
 
   // Close panels when clicking outside
   useEffect(() => {
@@ -149,7 +157,7 @@ export default function AppShell() {
           >
             <span>🔍</span>
             <span>Search…</span>
-            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono">⌘K</kbd>
+            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono">{shortcutLabel}</kbd>
           </button>
 
           <div className="flex items-center gap-3" ref={notifPanelRef}>
