@@ -12,6 +12,7 @@ import BrokerPage from "./components/BrokerPage";
 import CommissionDashboard from "./components/CommissionDashboard";
 import FinanceDashboard from "./components/FinanceDashboard";
 import PaymentReportPage from "./components/PaymentReportPage";
+import BrokerOnboarding from "./components/BrokerOnboarding";
 import ContractsPage from "./pages/ContractsPage";
 import NotFoundPage from "./components/NotFoundPage";
 import ProjectsPage from "./components/ProjectsPage";
@@ -32,6 +33,9 @@ import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
 
 export const router = createBrowserRouter([
+  // Standalone pages (no app shell — full-page layout)
+  { path: "/broker-onboarding",                          element: <BrokerOnboarding /> },
+
   // Standalone print pages (no app shell — full-page printable layout)
   { path: "/offers/:offerId",                            element: <OfferPrintPage /> },
   { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
