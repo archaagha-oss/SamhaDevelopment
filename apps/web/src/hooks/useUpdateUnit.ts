@@ -52,3 +52,21 @@ export function useChangeStatus(unitId: string) {
     },
   });
 }
+
+export function useDeleteUnit(unitId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await axios.delete(`/api/units/${unitId}`);
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['unit', unitId] });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+    },
+    onError: (err: any) => {
+      const apiError = classifyError(err);
+      throw apiError;
+    },
+  });
+}
