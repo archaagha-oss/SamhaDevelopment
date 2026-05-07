@@ -28,7 +28,11 @@ export type JobType =
   | "RESERVATION_EXPIRY_CHECK"
   | "PAYMENT_OVERDUE_CHECK"
   | "UNIT_HOLD_EXPIRY_CHECK"
-  | "PAYMENT_REMINDER_SWEEP";
+  | "PAYMENT_REMINDER_SWEEP"
+  // Phase 3 / 5 additions:
+  | "LATE_FEE_RUN"
+  | "KYC_EXPIRY_CHECK"
+  | "RERA_EXPIRY_CHECK";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JobPayload = Record<string, any>;
@@ -201,11 +205,76 @@ async function dispatchJob(type: JobType, payload: JobPayload): Promise<void> {
       return handleUnitHoldExpiryCheck();
     case "PAYMENT_REMINDER_SWEEP":
       return handlePaymentReminderSweep();
+    case "LATE_FEE_RUN":
+      return handleLateFeeRun();
+    case "KYC_EXPIRY_CHECK":
+      return handleKycExpiryCheck();
+    case "RERA_EXPIRY_CHECK":
+      return handleReraExpiryCheck();
     default: {
       const exhaustive: never = type;
       throw new Error(`Unknown job type: ${exhaustive}`);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 / 5 job implementations
+// ---------------------------------------------------------------------------
+
+async function handleLateFeeRun(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { runLateFeeEngine } = await import("../../services/lateFeeService");
+  const result = await runLateFeeEngine();
+  console.log(
+    `[LateFeeRun] rules=${result.rulesEvaluated} payments=${result.paymentsUpdated} feesApplied=${result.totalFeesApplied}`,
+  );
+}
+
+async function handleKycExpiryCheck(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { checkExpiringKYC } = await import("../../services/kycService");
+  const count = await checkExpiringKYC(30);
+  console.log(`[KycExpiryCheck] alerted=${count}`);
+}
+
+async function handleReraExpiryCheck(): Promise<void> {
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+  // BrokerCompany license expiry
+  const expiringCompanies = await (prisma as any).brokerCompany.findMany({
+    where: {
+      reraLicenseExpiry: { not: null, lte: horizon },
+      OR: [{ licenseExpiryAlertedAt: null }, { licenseExpiryAlertedAt: { lt: now } }],
+    },
+    take: 200,
+  });
+  for (const c of expiringCompanies) {
+    await (prisma as any).brokerCompany.update({
+      where: { id: c.id },
+      data: { licenseExpiryAlertedAt: now },
+    });
+  }
+
+  // BrokerAgent card expiry
+  const expiringAgents = await (prisma as any).brokerAgent.findMany({
+    where: {
+      reraCardExpiry: { not: null, lte: horizon },
+      OR: [{ licenseExpiryAlertedAt: null }, { licenseExpiryAlertedAt: { lt: now } }],
+    },
+    take: 200,
+  });
+  for (const a of expiringAgents) {
+    await (prisma as any).brokerAgent.update({
+      where: { id: a.id },
+      data: { licenseExpiryAlertedAt: now },
+    });
+  }
+
+  console.log(
+    `[ReraExpiryCheck] companies=${expiringCompanies.length} agents=${expiringAgents.length}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
