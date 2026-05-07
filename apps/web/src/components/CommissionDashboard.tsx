@@ -1,306 +1,311 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import EmptyState from "./EmptyState";
 
 interface Commission {
-  id: string; amount: number; rate: number; status: string;
-  spaSignedMet: boolean; oqoodMet: boolean;
-  paidDate?: string; paidAmount?: number; paidVia?: string;
+  id: string;
+  dealId: string;
+  amount: number;
+  status: "PENDING_APPROVAL" | "APPROVED" | "PAID";
+  createdAt: string;
+  approvedDate?: string;
+  paidDate?: string;
   deal: {
-    dealNumber: string; stage: string;
-    unit: { unitNumber: string };
-    lead: { firstName: string; lastName: string };
+    id: string;
+    dealNumber: string;
     salePrice: number;
+    spaSignedDate?: string;
+    oqoodRegisteredDate?: string;
+    lead: { id: string; firstName: string; lastName: string };
+    unit: { id: string; number: string };
   };
-  brokerCompany?: { name: string };
+  brokerCompany: { id: string; name: string };
 }
-interface Stats { [status: string]: { count: number; total: number } | undefined; }
 
-type Tab = "PENDING_APPROVAL" | "APPROVED" | "PAID";
+interface Stats {
+  [key: string]: { count: number; total: number };
+}
 
-const fmtM = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(0)}K` : String(n);
+const statusColors: Record<string, string> = {
+  PENDING_APPROVAL: "bg-amber-50 border-amber-200",
+  APPROVED: "bg-blue-50 border-blue-200",
+  PAID: "bg-emerald-50 border-emerald-200",
+};
+
+const statusBadge: Record<string, string> = {
+  PENDING_APPROVAL: "bg-amber-100 text-amber-900",
+  APPROVED: "bg-blue-100 text-blue-900",
+  PAID: "bg-emerald-100 text-emerald-900",
+};
 
 export default function CommissionDashboard() {
-  const [tab, setTab] = useState<Tab>("PENDING_APPROVAL");
-  const [pending, setPending] = useState<Commission[]>([]);
-  const [approved, setApproved] = useState<Commission[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
   const [stats, setStats] = useState<Stats>({});
+  const [tab, setTab] = useState<"pending" | "approved" | "paid">("pending");
   const [loading, setLoading] = useState(true);
-  const [paid, setPaid] = useState<Commission[]>([]);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [showPayModal, setShowPayModal] = useState<Commission | null>(null);
-  const [payForm, setPayForm] = useState({ paidAmount: "", paidVia: "BANK_TRANSFER", receiptKey: "" });
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const [paidFilter, setPaidFilter] = useState<"all" | "unpaid">("unpaid");
 
-  const fetchData = () => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
     setLoading(true);
-    Promise.all([
-      axios.get("/api/commissions/pending"),
-      axios.get("/api/commissions/stats"),
-      axios.get("/api/commissions", { params: { status: "APPROVED", limit: 100 } }),
-      axios.get("/api/commissions", { params: { status: "PAID", limit: 100 } }),
-    ]).then(([pendingRes, statsRes, approvedRes, paidRes]) => {
-      setPending(pendingRes.data);
+    try {
+      const [commRes, statsRes] = await Promise.all([
+        axios.get("/api/commissions?limit=1000"),
+        axios.get("/api/commissions/stats"),
+      ]);
+      setCommissions(commRes.data.data || []);
       setStats(statsRes.data);
-      setApproved(approvedRes.data.data || approvedRes.data);
-      setPaid(paidRes.data.data || paidRes.data);
-    }).catch(console.error).finally(() => setLoading(false));
+    } catch (err) {
+      toast.error("Failed to load commissions");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(fetchData, []);
+  const handleApprove = async (commissionId: string, commission: Commission) => {
+    const spaOk = !!commission.deal.spaSignedDate;
+    const oqoodOk = !!commission.deal.oqoodRegisteredDate;
 
-  const handleApprove = async (id: string) => {
-    setApprovingId(id);
+    if (!spaOk || !oqoodOk) {
+      const missing = [!spaOk && "SPA signing", !oqoodOk && "Oqood registration"].filter(Boolean).join(" & ");
+      toast.error(`Cannot approve: Missing ${missing}`);
+      return;
+    }
+
+    setApprovingId(commissionId);
     try {
-      await axios.patch(`/api/commissions/${id}/approve`, { approvedBy: "system" });
+      await axios.patch(`/api/commissions/${commissionId}/approve`);
       toast.success("Commission approved");
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to approve");
+      toast.error(err.response?.data?.error || "Approval failed");
     } finally {
       setApprovingId(null);
     }
   };
 
-  const handleMarkPaid = async () => {
-    if (!showPayModal) return;
-    setPayingId(showPayModal.id);
+  const handleMarkPaid = async (commissionId: string) => {
     try {
-      await axios.patch(`/api/commissions/${showPayModal.id}/paid`, {
-        paidAmount: payForm.paidAmount || showPayModal.amount,
-        paidVia: payForm.paidVia,
-        receiptKey: payForm.receiptKey || null,
-      });
+      await axios.patch(`/api/commissions/${commissionId}/paid`);
       toast.success("Commission marked as paid");
-      setShowPayModal(null);
       fetchData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to mark as paid");
-    } finally {
-      setPayingId(null);
+    } catch (err) {
+      toast.error("Failed to mark as paid");
     }
   };
 
-  const canApprove = (c: Commission) => c.spaSignedMet && c.oqoodMet;
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
+  const filteredCommissions = commissions.filter((c) => {
+    if (tab === "pending") return c.status === "PENDING_APPROVAL";
+    if (tab === "approved") {
+      if (paidFilter === "unpaid") return c.status === "APPROVED";
+      return c.status === "APPROVED";
+    }
+    return c.status === "PAID";
+  });
 
-  const kpis = [
-    { label: "Pending Approval", key: "PENDING_APPROVAL", color: "text-amber-600",   bg: "bg-amber-50" },
-    { label: "Approved",         key: "APPROVED",         color: "text-blue-600",    bg: "bg-blue-50" },
-    { label: "Paid",             key: "PAID",             color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Not Due",          key: "NOT_DUE",          color: "text-slate-500",   bg: "bg-slate-50" },
-  ];
-
-  const tableRows = tab === "PENDING_APPROVAL" ? pending : tab === "APPROVED" ? approved : paid;
+  const pendingStats = stats["PENDING_APPROVAL"] || { count: 0, total: 0 };
+  const approvedStats = stats["APPROVED"] || { count: 0, total: 0 };
+  const paidStats = stats["PAID"] || { count: 0, total: 0 };
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Commissions</h1>
-        <p className="text-slate-400 text-xs mt-0.5">Review, approve and pay broker commissions</p>
-      </div>
+    <div className="p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-900">Commission Dashboard</h1>
+          <p className="text-sm text-slate-600 mt-1">Manage broker commission approvals and payments</p>
+        </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map(({ label, key, color, bg }) => {
-          const s = stats[key];
-          return (
-            <div key={key} className={`${bg} rounded-xl p-4 border border-slate-200`}>
-              <p className="text-xs text-slate-500 mb-1">{label}</p>
-              <p className={`text-2xl font-bold ${color}`}>{s?.count ?? 0}</p>
-              <p className="text-xs text-slate-400 mt-0.5">AED {fmtM(s?.total ?? 0)}</p>
-            </div>
-          );
-        })}
-      </div>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Pending Approval</p>
+            <p className="text-3xl font-bold text-amber-600">{pendingStats.count}</p>
+            <p className="text-xs text-slate-600 mt-1">Total: {(pendingStats.total / 1000).toFixed(1)}k AED</p>
+          </div>
 
-      {/* Tab header */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-            <button
-              onClick={() => setTab("PENDING_APPROVAL")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "PENDING_APPROVAL" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Pending Approval
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-700" : "bg-slate-200 text-slate-500"
-              }`}>{pending.length}</span>
-            </button>
-            <button
-              onClick={() => setTab("APPROVED")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "APPROVED" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Ready to Pay
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "APPROVED" ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-500"
-              }`}>{approved.length}</span>
-            </button>
-            <button
-              onClick={() => setTab("PAID")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "PAID" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Paid
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
-              }`}>{paid.length}</span>
-            </button>
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Approved</p>
+            <p className="text-3xl font-bold text-blue-600">{approvedStats.count}</p>
+            <p className="text-xs text-slate-600 mt-1">Total: {(approvedStats.total / 1000).toFixed(1)}k AED</p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Paid</p>
+            <p className="text-3xl font-bold text-emerald-600">{paidStats.count}</p>
+            <p className="text-xs text-slate-600 mt-1">Total: {(paidStats.total / 1000).toFixed(1)}k AED</p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Total Value</p>
+            <p className="text-3xl font-bold text-slate-900">
+              {((pendingStats.total + approvedStats.total + paidStats.total) / 1000).toFixed(1)}k
+            </p>
+            <p className="text-xs text-slate-600 mt-1">All commissions</p>
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6">
+          {["pending", "approved", "paid"].map((t) => (
+            <button
+              key={t}
+              onClick={() => { setTab(t as any); setPaidFilter("unpaid"); }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tab === t
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {t === "pending" && "Pending Approval"}
+              {t === "approved" && "Approved"}
+              {t === "paid" && "Paid"}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter for Approved Tab */}
+        {tab === "approved" && (
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={() => setPaidFilter("unpaid")}
+              className={`px-3 py-1.5 rounded text-xs font-medium ${
+                paidFilter === "unpaid"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Unpaid Only
+            </button>
+            <button
+              onClick={() => setPaidFilter("all")}
+              className={`px-3 py-1.5 rounded text-xs font-medium ${
+                paidFilter === "all"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              All
+            </button>
+          </div>
+        )}
+
+        {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
+            <p className="text-slate-500">Loading commissions...</p>
+          </div>
+        ) : filteredCommissions.length === 0 ? (
+          <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
+            <p className="text-slate-500">No commissions to display</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {["Deal", "Buyer", "Unit", "Broker", "Amount", "Rate", tab === "PAID" ? "Paid On" : "Conditions", "Action"].map((h) => (
-                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {tableRows.length === 0 ? (
-                <tr><td colSpan={8}>
-                  <EmptyState
-                    icon="◇"
-                    title={tab === "PENDING_APPROVAL" ? "No commissions pending approval" : "No commissions awaiting payment"}
-                    description={tab === "PENDING_APPROVAL"
-                      ? "Commissions appear here once SPA is signed and Oqood is registered."
-                      : "Once commissions are approved, they appear here for payment processing."}
-                  />
-                </td></tr>
-              ) : tableRows.map((c) => {
-                const approvable = canApprove(c);
-                return (
-                  <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{c.deal.dealNumber}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">
-                      {c.deal.lead.firstName} {c.deal.lead.lastName}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{c.deal.unit.unitNumber}</td>
-                    <td className="px-4 py-3 text-slate-600">{c.brokerCompany?.name || "—"}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800">AED {c.amount.toLocaleString()}</p>
-                      {tab === "PAID" && c.paidAmount && c.paidAmount !== c.amount && (
-                        <p className="text-xs text-slate-400">Paid: AED {c.paidAmount.toLocaleString()}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{c.rate}%</td>
-                    <td className="px-4 py-3">
-                      {tab === "PAID" ? (
-                        <div>
-                          {c.paidDate && <p className="text-xs font-semibold text-emerald-700">{fmtDate(c.paidDate)}</p>}
-                          {c.paidVia && <p className="text-xs text-slate-500">{c.paidVia.replace(/_/g, " ")}</p>}
-                        </div>
-                      ) : (
-                        <div className="flex gap-1.5">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.spaSignedMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                            SPA {c.spaSignedMet ? "✓" : "✗"}
-                          </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.oqoodMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                            Oqood {c.oqoodMet ? "✓" : "✗"}
-                          </span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {tab === "PENDING_APPROVAL" ? (
-                        <button
-                          onClick={() => handleApprove(c.id)}
-                          disabled={!approvable || approvingId === c.id}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                            approvable
-                              ? "bg-blue-600 text-white hover:bg-blue-700"
-                              : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          {approvingId === c.id ? "…" : approvable ? "Approve" : "Blocked"}
-                        </button>
-                      ) : tab === "APPROVED" ? (
-                        <button
-                          onClick={() => { setShowPayModal(c); setPayForm({ paidAmount: String(c.amount), paidVia: "BANK_TRANSFER", receiptKey: "" }); }}
-                          disabled={payingId === c.id}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                        >
-                          {payingId === c.id ? "…" : "Mark Paid"}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-emerald-600 font-semibold">✓ Paid</span>
-                      )}
-                    </td>
+          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Deal</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Lead</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Broker</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700">Amount</th>
+                    {tab === "pending" && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Gates</th>}
+                    {tab === "approved" && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Approval Date</th>}
+                    {tab === "paid" && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Paid Date</th>}
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700">Actions</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {/* Mark Paid Modal */}
-      {showPayModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Mark Commission as Paid</h3>
-              <p className="text-xs text-slate-400 mt-0.5">{showPayModal.deal.dealNumber} · {showPayModal.brokerCompany?.name}</p>
-            </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Amount Paid (AED)</label>
-                <input
-                  type="number"
-                  value={payForm.paidAmount}
-                  onChange={(e) => setPayForm((f) => ({ ...f, paidAmount: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-emerald-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Method</label>
-                <select
-                  value={payForm.paidVia}
-                  onChange={(e) => setPayForm((f) => ({ ...f, paidVia: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-emerald-400"
-                >
-                  {["BANK_TRANSFER","CHEQUE","CASH"].map((m) => (
-                    <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Receipt / Reference (optional)</label>
-                <input
-                  type="text"
-                  value={payForm.receiptKey}
-                  onChange={(e) => setPayForm((f) => ({ ...f, receiptKey: e.target.value }))}
-                  placeholder="e.g. CHQ-2026-001"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-emerald-400"
-                />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPayModal(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
-                Cancel
-              </button>
-              <button
-                onClick={handleMarkPaid}
-                disabled={payingId !== null}
-                className="flex-1 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 text-sm disabled:opacity-50"
-              >
-                {payingId ? "Saving…" : "Confirm Paid"}
-              </button>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredCommissions.map((c) => {
+                    const spaOk = !!c.deal.spaSignedDate;
+                    const oqoodOk = !!c.deal.oqoodRegisteredDate;
+                    return (
+                      <tr key={c.id} className={`${statusColors[c.status]} border-l-4`}>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">{c.deal.dealNumber}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">
+                          {c.deal.lead.firstName} {c.deal.lead.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{c.brokerCompany.name}</td>
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                          {(c.amount / 1000).toFixed(1)}k
+                        </td>
+
+                        {/* Pending Tab: Show Gates */}
+                        {tab === "pending" && (
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex gap-2">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  spaOk
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {spaOk ? "✓ SPA" : "✗ SPA"}
+                              </span>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  oqoodOk
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {oqoodOk ? "✓ Oqood" : "✗ Oqood"}
+                              </span>
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Approved Tab: Show Approval Date */}
+                        {tab === "approved" && (
+                          <td className="px-4 py-3 text-sm text-slate-700">
+                            {c.approvedDate ? new Date(c.approvedDate).toLocaleDateString() : "—"}
+                          </td>
+                        )}
+
+                        {/* Paid Tab: Show Paid Date */}
+                        {tab === "paid" && (
+                          <td className="px-4 py-3 text-sm text-slate-700">
+                            {c.paidDate ? new Date(c.paidDate).toLocaleDateString() : "—"}
+                          </td>
+                        )}
+
+                        {/* Actions */}
+                        <td className="px-4 py-3 text-right text-sm">
+                          {tab === "pending" && (
+                            <button
+                              onClick={() => handleApprove(c.id, c)}
+                              disabled={approvingId === c.id || !c.deal.spaSignedDate || !c.deal.oqoodRegisteredDate}
+                              className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {approvingId === c.id ? "Approving…" : "Approve"}
+                            </button>
+                          )}
+                          {tab === "approved" && c.status === "APPROVED" && (
+                            <button
+                              onClick={() => handleMarkPaid(c.id)}
+                              className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          {tab === "paid" && (
+                            <span className="text-emerald-700 text-xs font-medium">✓ Completed</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
