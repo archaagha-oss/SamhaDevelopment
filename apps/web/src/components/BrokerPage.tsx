@@ -450,6 +450,10 @@ export default function BrokerPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-44 focus:outline-none focus:border-blue-400 bg-slate-50"
           />
+          <a href="/broker-onboarding"
+            className="px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5">
+            <span className="text-base leading-none">✓</span> Onboard New Broker
+          </a>
           <button onClick={() => setShowForm(true)}
             className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
             <span className="text-base leading-none">+</span> Add Company
