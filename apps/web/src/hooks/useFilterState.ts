@@ -1,61 +1,41 @@
 import { useState, useCallback, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
-interface UseFilterStateOptions {
-  defaultValues: Record<string, string | boolean | number>;
+interface FilterState {
+  floor: string;
+  type: string;
+  minPrice: string;
+  maxPrice: string;
 }
 
-export const useFilterState = (options: UseFilterStateOptions) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [filters, setFilters] = useState<Record<string, string | boolean | number>>({});
+export function useFilterState() {
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialize filters from URL params on mount
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const initialFilters = { ...options.defaultValues };
+  const filters: FilterState = {
+    floor: searchParams.get("floor") || "All",
+    type: searchParams.get("type") || "All",
+    minPrice: searchParams.get("minPrice") || "",
+    maxPrice: searchParams.get("maxPrice") || "",
+  };
 
-    for (const [key, value] of params.entries()) {
-      if (value === "true") initialFilters[key] = true;
-      else if (value === "false") initialFilters[key] = false;
-      else if (!isNaN(Number(value))) initialFilters[key] = Number(value);
-      else initialFilters[key] = value;
-    }
-
-    setFilters(initialFilters);
-  }, [location.search, options.defaultValues]);
-
-  // Update URL when filters change
-  const updateFilter = useCallback((key: string, value: string | boolean | number | null) => {
-    setFilters((prev) => {
-      const updated = { ...prev };
-      if (value === null || value === options.defaultValues[key]) {
-        delete updated[key];
-      } else {
-        updated[key] = value;
-      }
-
-      // Build new URL params
+  const updateFilters = useCallback(
+    (newFilters: Partial<FilterState>) => {
+      const updated = { ...filters, ...newFilters };
       const params = new URLSearchParams();
-      for (const [k, v] of Object.entries(updated)) {
-        if (v !== null && v !== undefined) {
-          params.set(k, String(v));
-        }
-      }
 
-      // Update URL without full page reload
-      const queryString = params.toString();
-      navigate(`${location.pathname}${queryString ? "?" + queryString : ""}`, { replace: true });
+      if (updated.floor && updated.floor !== "All") params.set("floor", updated.floor);
+      if (updated.type && updated.type !== "All") params.set("type", updated.type);
+      if (updated.minPrice) params.set("minPrice", updated.minPrice);
+      if (updated.maxPrice) params.set("maxPrice", updated.maxPrice);
 
-      return updated;
-    });
-  }, [location.pathname, navigate, options.defaultValues]);
+      setSearchParams(params);
+    },
+    [filters, setSearchParams]
+  );
 
-  // Reset all filters
   const resetFilters = useCallback(() => {
-    setFilters(options.defaultValues);
-    navigate(location.pathname, { replace: true });
-  }, [location.pathname, navigate, options.defaultValues]);
+    setSearchParams(new URLSearchParams());
+  }, [setSearchParams]);
 
-  return { filters, updateFilter, resetFilters };
-};
+  return { filters, updateFilters, resetFilters };
+}
