@@ -1,15 +1,23 @@
+// Env validation runs at import — must come before anything that reads env
+import { env, allowedOrigins, isProd } from "./lib/env";
+
 import express, { Request, Response, NextFunction } from "express";
-import dotenv from "dotenv";
 import cors from "cors";
+import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import { openAPISpec } from "./docs/openapi";
 import { prisma } from "./lib/prisma";
 import { logger } from "./lib/logger";
+import { initSentry, Sentry, captureError } from "./lib/sentry";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
+import { attachAuth } from "./middleware/auth";
+import { apiRateLimiter, authRateLimiter } from "./middleware/rateLimit";
 
-// Import routes
+// Routes
+import authRoutes from "./routes/auth";
 import projectRoutes from "./routes/projects";
 import unitRoutes from "./routes/units";
 import leadRoutes from "./routes/leads";
@@ -28,63 +36,33 @@ import offerRoutes from "./routes/offers";
 import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
 
-dotenv.config();
+initSentry();
 
 // ── Bootstrap event system + background jobs ──────────────────────────────────
 registerDealHandlers();
-startJobProcessor(30_000); // poll every 30 s
+startJobProcessor(30_000);
 
-// Hourly sweep: release expired ON_HOLD units
 setInterval(() => {
   releaseExpiredHolds("system").catch((err: unknown) => {
-    console.error("[Cron] ON_HOLD expiry sweep error:", err);
+    logger.error("ON_HOLD expiry sweep error", { err });
+    captureError(err);
   });
 }, 60 * 60 * 1000);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// ── Security headers ───────────────────────────────────────────────────────
-app.use((_req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.removeHeader("X-Powered-By");
-  next();
-});
+// Trust proxy headers when running behind a load balancer (PM2 + nginx)
+app.set("trust proxy", 1);
 
-// ── Rate limiting (100 req / min per IP) ──────────────────────────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-app.use((req, res, next) => {
-  const ip = req.ip ?? "unknown";
-  const now = Date.now();
-  const window = 60_000;
-  const limit = 100;
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + window });
-    return next();
-  }
-  entry.count++;
-  if (entry.count > limit) {
-    res.setHeader("Retry-After", "60");
-    return res.status(429).json({ error: "Too many requests", code: "RATE_LIMITED", statusCode: 429 });
-  }
-  next();
-});
+// ── Security headers (helmet) ──────────────────────────────────────────────
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Swagger UI breaks under default CSP; tune later
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
-
-// ── CORS ──────────────────────────────────────────────────────────────────
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
+// ── CORS ───────────────────────────────────────────────────────────────────
 app.use(
   cors({
     origin: allowedOrigins,
@@ -92,25 +70,36 @@ app.use(
   })
 );
 
-// Body parser
-app.use(express.json());
+// ── Body + cookie parsing ──────────────────────────────────────────────────
+app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
-// Static file serving for uploads
-app.use(express.static("public"));
-
-// ===== HEALTH CHECK =====
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+// ── Health check (before rate limiter so probes never get throttled) ──────
+app.get("/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch (err) {
+    captureError(err);
+    res.status(503).json({ status: "degraded", error: "db_unreachable" });
+  }
 });
 
-// ===== SWAGGER DOCUMENTATION =====
+// ── Rate limiting ──────────────────────────────────────────────────────────
+app.use("/api/auth", authRateLimiter);
+app.use("/api", apiRateLimiter);
+
+// ── Static + Swagger ───────────────────────────────────────────────────────
+app.use(express.static("public"));
 app.use("/api-docs", swaggerUi.serve);
 app.get("/api-docs", swaggerUi.setup(openAPISpec, { swaggerOptions: { url: "/openapi.json" } }));
-app.get("/openapi.json", (req, res) => {
-  res.json(openAPISpec);
-});
+app.get("/openapi.json", (_req, res) => res.json(openAPISpec));
 
-// ===== API ROUTES =====
+// ── Auth: parse session token from cookie/header ──────────────────────────
+app.use(attachAuth);
+
+// ── API routes ─────────────────────────────────────────────────────────────
+app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/leads", leadRoutes);
@@ -129,18 +118,8 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
 
-// ===== ERROR HANDLING =====
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Internal server error",
-    code: err.code || "INTERNAL_ERROR",
-    statusCode: err.statusCode || 500,
-  });
-});
-
-// 404 handler
-app.use((req, res) => {
+// ── 404 ────────────────────────────────────────────────────────────────────
+app.use((_req, res) => {
   res.status(404).json({
     error: "Route not found",
     code: "NOT_FOUND",
@@ -148,34 +127,62 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler — must have 4 parameters
+// ── Global error handler ───────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error("Unhandled Express error", {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const status = err.statusCode || 500;
+  const isServerError = status >= 500;
+
+  logger.error("Express error", {
     message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
+    statusCode: status,
   });
-  res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", statusCode: 500 });
+
+  if (isServerError) {
+    if (env.SENTRY_DSN) Sentry.captureException(err);
+  }
+
+  res.status(status).json({
+    error: isServerError ? "Internal server error" : err.message,
+    code: err.code || (isServerError ? "INTERNAL_ERROR" : "BAD_REQUEST"),
+    statusCode: status,
+  });
 });
 
-// ===== SERVER STARTUP =====
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
+// ── Server startup ─────────────────────────────────────────────────────────
+const server = app.listen(env.PORT, () => {
+  logger.info(`Server running on port ${env.PORT}`);
   logger.info(`CORS origins: ${allowedOrigins.join(", ")}`);
-  logger.info(`Clerk auth: ${process.env.CLERK_SECRET_KEY ? "enabled" : "DISABLED (dev mode)"}`);
+  logger.info(`Auth: cookie session (JWT) — ${isProd ? "prod" : "dev"} mode`);
 });
 
-// Graceful shutdown
-process.on("SIGINT", async () => {
-  console.log("\n🛑 Shutting down gracefully...");
-  await prisma.$disconnect();
-  process.exit(0);
-});
+const shutdown = async (signal: string) => {
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+  // Force exit if not closed within 10s
+  setTimeout(() => {
+    logger.warn("Graceful shutdown timed out — forcing exit");
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
 process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled promise rejection", { reason });
+  captureError(reason);
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception", { message: err.message, stack: err.stack });
+  captureError(err);
 });
 
 export default app;

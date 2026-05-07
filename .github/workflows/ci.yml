@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: API (typecheck + unit tests + build)
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATABASE_URL: "mysql://test:test@localhost:3306/test"
+      JWT_SECRET: "test-jwt-secret-must-be-at-least-32-characters-long"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      # NOTE: ESLint v10 requires a flat config (eslint.config.js) — repo still
+      # uses the legacy format. Re-enable this step after migration.
+      # - name: Lint API
+      #   working-directory: apps/api
+      #   run: npm run lint
+
+      - name: Typecheck API
+        working-directory: apps/api
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: apps/api
+        run: npm run test:unit
+
+      - name: Build API
+        working-directory: apps/api
+        run: npm run build
+
+  web:
+    name: Web (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+
+      # NOTE: see note above re: ESLint v10 flat-config migration.
+      # - name: Lint web
+      #   working-directory: apps/web
+      #   run: npm run lint
+
+      - name: Build web
+        working-directory: apps/web
+        run: npm run build

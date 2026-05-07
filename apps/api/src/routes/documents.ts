@@ -2,8 +2,15 @@ import { Router } from "express";
 import multer from "multer";
 import { documentService } from "../services/documentService";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+// All document routes require authentication
+router.use(requireAuthentication);
+
+const ROLES_WITH_DELETE = new Set(["ADMIN", "OPERATIONS"]);
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -322,21 +329,15 @@ router.get("/:id/download", async (req, res) => {
 });
 
 // DELETE /api/documents/:id - Delete document
+// Allowed: the original uploader, an ADMIN, or OPERATIONS.
 router.delete("/:id", async (req, res) => {
-  const userId = req.auth?.userId || "unknown";
+  const userId = req.auth!.userId;
+  const role = req.auth!.role;
 
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        code: "UNAUTHENTICATED",
-        statusCode: 401,
-      });
-    }
-
     const document = await prisma.document.findUnique({
       where: { id: req.params.id },
-      select: { id: true, key: true, name: true, dealId: true },
+      select: { id: true, key: true, name: true, dealId: true, uploadedBy: true },
     });
 
     if (!document) {
@@ -347,33 +348,49 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    // Delete from S3 first (failure here shouldn't prevent DB delete)
+    const isOwner = document.uploadedBy === userId;
+    const hasRole = ROLES_WITH_DELETE.has(role);
+    if (!isOwner && !hasRole) {
+      logger.warn("Document delete denied", {
+        userId,
+        role,
+        docId: document.id,
+        uploadedBy: document.uploadedBy,
+      });
+      return res.status(403).json({
+        error: "You do not have permission to delete this document",
+        code: "FORBIDDEN",
+        statusCode: 403,
+      });
+    }
+
     try {
       await documentService.deleteFile(document.key);
     } catch (s3Error: any) {
-      console.warn("[S3 Delete Failed but continuing]", {
+      logger.warn("S3 delete failed but continuing", {
         docId: document.id,
         key: document.key,
         error: s3Error.message,
       });
-      // Continue - file might already be deleted
     }
 
-    // Delete from database
     await prisma.document.delete({ where: { id: req.params.id } });
 
-    console.log(
-      `[Document Deleted] docId=${document.id}, dealId=${document.dealId}, name=${document.name}, user=${userId}`
-    );
+    logger.info("Document deleted", {
+      docId: document.id,
+      dealId: document.dealId,
+      name: document.name,
+      userId,
+      role,
+    });
 
     res.json({ success: true });
   } catch (error: any) {
-    console.error("[Document Delete Error]", {
+    logger.error("Document delete error", {
       docId: req.params.id,
       userId,
       error: error.message,
     });
-
     res.status(500).json({
       error: error.message || "Failed to delete document",
       code: "DOCUMENT_DELETE_ERROR",

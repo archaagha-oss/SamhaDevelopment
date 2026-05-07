@@ -415,10 +415,16 @@ model UserProjectAccess {
 
 model User {
   id       String   @id @default(cuid())
-  clerkId  String   @unique
   email    String   @unique
   name     String
   role     UserRole
+
+  passwordHash        String
+  mustChangePassword  Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
 
   phone      String?
   department String?
@@ -434,6 +440,7 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([isActive])
 }
 
 // ============================================================

@@ -506,7 +506,7 @@ async function handlePaymentReminderSweep(): Promise<void> {
 
   const payments = await prisma.payment.findMany({
     where: {
-      status: { notIn: ["PAID", "CANCELLED", "PDC_CLEARED", "WAIVED"] },
+      status: { notIn: ["PAID", "CANCELLED", "PDC_CLEARED"] },
     },
     include: {
       deal: {
@@ -520,7 +520,7 @@ async function handlePaymentReminderSweep(): Promise<void> {
   await Promise.allSettled(
     payments.map(async (payment) => {
       try {
-        const deal = payment.deal as any;
+        const deal = (payment as any).deal;
 
         // Respect pause flag
         if (deal.remindersPaused) {

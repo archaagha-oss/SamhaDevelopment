@@ -1,11 +1,41 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkMiddleware } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { verifySessionToken } from "../lib/jwt";
+import { env } from "../lib/env";
 
-// Clerk middleware - attach to express app in production
-export const setupClerkAuth = () => clerkMiddleware();
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      auth?: {
+        userId: string;
+        role: string;
+        email: string;
+      };
+    }
+  }
+}
 
-// Middleware to require authentication on protected routes
+function extractToken(req: Request): string | null {
+  const cookieToken = req.cookies?.[env.COOKIE_NAME];
+  if (typeof cookieToken === "string" && cookieToken.length > 0) return cookieToken;
+
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    return header.slice("Bearer ".length).trim();
+  }
+  return null;
+}
+
+export const attachAuth = (req: Request, _res: Response, next: NextFunction) => {
+  const token = extractToken(req);
+  if (!token) return next();
+  const payload = verifySessionToken(token);
+  if (!payload) return next();
+  req.auth = { userId: payload.sub, role: payload.role, email: payload.email };
+  next();
+};
+
 export const requireAuthentication = (
   req: Request,
   res: Response,
@@ -22,16 +52,10 @@ export const requireAuthentication = (
 };
 
 /**
- * Middleware factory: ensure the calling user has one of the allowed roles.
+ * Require the authenticated user to have one of the allowed roles.
  *
- * Role resolution order:
- *  1. Look up User row by clerkId = req.auth.userId
- *  2. In dev mode (NODE_ENV !== "production"), unknown users default to ADMIN
- *     so the mock "dev-user-1" account can reach all routes.
- *  3. In production, unknown users get 403.
- *
- * Usage:
- *   router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), handler)
+ * Reads the role from the JWT first (no DB hit). For sensitive endpoints,
+ * combine with a fresh DB lookup to confirm `isActive`.
  */
 export const requireRole = (allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -43,39 +67,56 @@ export const requireRole = (allowedRoles: string[]) => {
       });
     }
 
-    const isDev = process.env.NODE_ENV !== "production";
-
-    try {
-      const user = await prisma.user.findFirst({
-        where: { clerkId: req.auth.userId },
-        select: { id: true, role: true, name: true },
+    if (!allowedRoles.includes(req.auth.role)) {
+      return res.status(403).json({
+        error: `Access denied. Required role: ${allowedRoles.join(" or ")}.`,
+        code: "INSUFFICIENT_ROLE",
+        statusCode: 403,
       });
-
-      if (!user) {
-        if (isDev) {
-          // Dev mode: mock user gets full access — safe because auth is mocked
-          return next();
-        }
-        return res.status(403).json({
-          error: "User account not found",
-          code: "USER_NOT_FOUND",
-          statusCode: 403,
-        });
-      }
-
-      if (!allowedRoles.includes(user.role)) {
-        return res.status(403).json({
-          error: `Access denied. Required role: ${allowedRoles.join(" or ")}. Your role: ${user.role}`,
-          code: "INSUFFICIENT_ROLE",
-          statusCode: 403,
-        });
-      }
-
-      // Attach resolved user to request for downstream handlers
-      (req as any).resolvedUser = user;
-      next();
-    } catch (err) {
-      next(err);
     }
+
+    next();
   };
+};
+
+/**
+ * Confirms the user still exists, is active, and matches the JWT role.
+ * Use on high-trust admin endpoints (user create/delete, billing, etc.).
+ */
+export const requireActiveUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.auth?.userId) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      code: "UNAUTHENTICATED",
+      statusCode: 401,
+    });
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.auth.userId },
+      select: { id: true, role: true, isActive: true, email: true },
+    });
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        error: "Account disabled or removed",
+        code: "ACCOUNT_DISABLED",
+        statusCode: 401,
+      });
+    }
+    if (user.role !== req.auth.role) {
+      return res.status(401).json({
+        error: "Session is stale, please sign in again",
+        code: "STALE_SESSION",
+        statusCode: 401,
+      });
+    }
+    (req as Request & { resolvedUser?: unknown }).resolvedUser = user;
+    next();
+  } catch (err) {
+    next(err);
+  }
 };

@@ -12,7 +12,7 @@ async function auditDataIntegrity() {
     // 1. Check for orphaned leads
     console.log("1️⃣ Checking for orphaned leads...");
     const leadsWithoutAgent = await prisma.lead.count({
-      where: { assignedAgent: null },
+      where: { assignedAgentId: null as unknown as string },
     });
     if (leadsWithoutAgent > 0) {
       console.warn(`⚠️ Found ${leadsWithoutAgent} leads without assigned agent`);
@@ -56,9 +56,9 @@ async function auditDataIntegrity() {
     const dealsWithMissingData = await prisma.deal.findMany({
       where: {
         OR: [
-          { lead: null },
-          { unit: null },
-          { paymentPlan: null },
+          { leadId: null as unknown as string },
+          { unitId: null as unknown as string },
+          { paymentPlanId: null as unknown as string },
         ],
       },
       select: { id: true, dealNumber: true, leadId: true, unitId: true, paymentPlanId: true },

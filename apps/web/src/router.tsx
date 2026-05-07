@@ -1,5 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./components/AppShell";
+import RequireAuth from "./components/RequireAuth";
+import LoginPage from "./pages/LoginPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import ExecutiveDashboard from "./components/ExecutiveDashboard";
 import ProjectDetailPage from "./components/ProjectDetailPage";
 import UnitDetailPage from "./components/UnitDetailPage";
@@ -31,16 +34,20 @@ import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
 
 export const router = createBrowserRouter([
+  // Auth pages — outside the app shell
+  { path: "/login",            element: <LoginPage /> },
+  { path: "/change-password",  element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
+
   // Standalone print pages (no app shell — full-page printable layout)
-  { path: "/offers/:offerId",                            element: <OfferPrintPage /> },
-  { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
-  { path: "/deals/:dealId/print/spa-draft",              element: <SpaDraftPrintPage /> },
-  { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
-  { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
-  { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
+  { path: "/offers/:offerId",                            element: <RequireAuth><OfferPrintPage /></RequireAuth> },
+  { path: "/deals/:dealId/print/reservation-form",       element: <RequireAuth><ReservationFormPrintPage /></RequireAuth> },
+  { path: "/deals/:dealId/print/spa-draft",              element: <RequireAuth><SpaDraftPrintPage /></RequireAuth> },
+  { path: "/deals/:dealId/print/sales-offer",            element: <RequireAuth><SalesOfferPrintPage /></RequireAuth> },
+  { path: "/payments/:paymentId/print/invoice",          element: <RequireAuth><InvoicePrintPage /></RequireAuth> },
+  { path: "/payments/:paymentId/print/receipt",          element: <RequireAuth><ReceiptPrintPage /></RequireAuth> },
   {
     path: "/",
-    element: <AppShell />,
+    element: <RequireAuth><AppShell /></RequireAuth>,
     children: [
       { index: true,                                      element: <ExecutiveDashboard /> },
       { path: "projects",                                 element: <ProjectsPage /> },

@@ -1,6 +1,9 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./components/AppShell";
+import RequireAuth from "./components/RequireAuth";
+import LoginPage from "./pages/LoginPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import ExecutiveDashboard from "./components/ExecutiveDashboard";
 import ProjectDetailPage from "./components/ProjectDetailPage";
 import UnitDetailPage from "./components/UnitDetailPage";
@@ -31,16 +34,19 @@ import OffersPage from "./components/OffersPage";
 import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
 export const router = createBrowserRouter([
+    // Auth pages — outside the app shell
+    { path: "/login", element: _jsx(LoginPage, {}) },
+    { path: "/change-password", element: _jsx(RequireAuth, { children: _jsx(ChangePasswordPage, {}) }) },
     // Standalone print pages (no app shell — full-page printable layout)
-    { path: "/offers/:offerId", element: _jsx(OfferPrintPage, {}) },
-    { path: "/deals/:dealId/print/reservation-form", element: _jsx(ReservationFormPrintPage, {}) },
-    { path: "/deals/:dealId/print/spa-draft", element: _jsx(SpaDraftPrintPage, {}) },
-    { path: "/deals/:dealId/print/sales-offer", element: _jsx(SalesOfferPrintPage, {}) },
-    { path: "/payments/:paymentId/print/invoice", element: _jsx(InvoicePrintPage, {}) },
-    { path: "/payments/:paymentId/print/receipt", element: _jsx(ReceiptPrintPage, {}) },
+    { path: "/offers/:offerId", element: _jsx(RequireAuth, { children: _jsx(OfferPrintPage, {}) }) },
+    { path: "/deals/:dealId/print/reservation-form", element: _jsx(RequireAuth, { children: _jsx(ReservationFormPrintPage, {}) }) },
+    { path: "/deals/:dealId/print/spa-draft", element: _jsx(RequireAuth, { children: _jsx(SpaDraftPrintPage, {}) }) },
+    { path: "/deals/:dealId/print/sales-offer", element: _jsx(RequireAuth, { children: _jsx(SalesOfferPrintPage, {}) }) },
+    { path: "/payments/:paymentId/print/invoice", element: _jsx(RequireAuth, { children: _jsx(InvoicePrintPage, {}) }) },
+    { path: "/payments/:paymentId/print/receipt", element: _jsx(RequireAuth, { children: _jsx(ReceiptPrintPage, {}) }) },
     {
         path: "/",
-        element: _jsx(AppShell, {}),
+        element: _jsx(RequireAuth, { children: _jsx(AppShell, {}) }),
         children: [
             { index: true, element: _jsx(ExecutiveDashboard, {}) },
             { path: "projects", element: _jsx(ProjectsPage, {}) },
