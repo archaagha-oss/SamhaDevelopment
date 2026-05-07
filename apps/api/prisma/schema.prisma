@@ -814,6 +814,11 @@ model Offer {
   discountAmount Float  @default(0)
   discountPct    Float  @default(0)
 
+  // ── Money in fils ────────────────────────────────────────────────────────
+  offeredPriceFils   BigInt?
+  originalPriceFils  BigInt?
+  discountAmountFils BigInt?  @default(0)
+
   notes     String? @db.Text
   status    OfferStatus @default(ACTIVE)
   expiresAt DateTime?
@@ -905,6 +910,14 @@ model Deal {
   dldFee  Float
   adminFee Float @default(5000)
 
+  // ── Money in fils (1 AED = 100 fils) — authoritative once backfilled ────
+  // Float columns above are legacy; LedgerService writes/reads fils.
+  salePriceFils         BigInt?
+  discountFils          BigInt? @default(0)
+  reservationAmountFils BigInt? @default(0)
+  dldFeeFils            BigInt?
+  adminFeeFils          BigInt? @default(500000) // 5,000 AED in fils
+
   paymentPlanId String
   paymentPlan   PaymentPlan @relation(fields: [paymentPlanId], references: [id])
 
@@ -983,6 +996,12 @@ model Payment {
   adjustmentReason String?
   percentage     Float
 
+  // ── Money in fils (1 AED = 100 fils) ─────────────────────────────────────
+  amountFils         BigInt?
+  originalAmountFils BigInt?
+  adjustedAmountFils BigInt?
+  vatFils            BigInt? @default(0) // VAT applied to this milestone
+
   dueDate DateTime
   status  PaymentStatus @default(PENDING)
 
@@ -1030,6 +1049,7 @@ model PartialPayment {
   payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   amount        Float
+  amountFils    BigInt?  // money in fils — authoritative once backfilled
   paidDate      DateTime
   paymentMethod String
   paidBy        String
@@ -1090,6 +1110,10 @@ model Commission {
 
   amount Float
   rate   Float
+
+  // ── Money in fils ────────────────────────────────────────────────────────
+  amountFils     BigInt?
+  paidAmountFils BigInt?
 
   status CommissionStatus @default(NOT_DUE)
 
@@ -1250,14 +1274,43 @@ model DomainEvent {
   aggregateId   String    // entity id (dealId, unitId, leadId …)
   aggregateType String    // "DEAL", "UNIT", "LEAD", etc.
   payload       Json
+  userId        String?   // actor who triggered the event, if any
   version       Int       @default(1)
+  occurredAt    DateTime  @default(now()) // business time of the event
+  // Outbox dispatch tracking
   processedAt   DateTime?
+  dispatchAttempts Int    @default(0)
+  lastDispatchError String? @db.Text
   createdAt     DateTime  @default(now())
 
   @@index([aggregateId])
   @@index([eventType])
   @@index([createdAt])
   @@index([processedAt])
+  // Outbox worker scans pending events ordered by createdAt
+  @@index([processedAt, createdAt])
+}
+
+// ============================================================
+// SECTION 15b: IDEMPOTENCY KEYS
+// ============================================================
+
+// Cache of (key, response) pairs for mutating endpoints.
+// Webhook retries from PF/Bayut/Meta etc. are de-duplicated here.
+// TTL is enforced by a background sweeper (default 24h).
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique          // client-provided Idempotency-Key header
+  scope       String                    // route path, used for collision avoidance
+  method      String                    // HTTP method
+  requestHash String                    // hash of request body for collision detection
+  status      Int                       // cached HTTP status
+  response    Json                      // cached response body
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime                  // sweeper deletes rows past this point
+
+  @@index([expiresAt])
+  @@index([scope, method])
 }
 
 model BackgroundJob {
@@ -1355,4 +1408,60 @@ model Contact {
   @@index([email])
   @@index([phone])
   @@index([firstName])
+}
+
+// ============================================================
+// SECTION 18: FINANCIAL LEDGER (P0-1)
+// ============================================================
+// Append-only double-entry ledger. Every state-changing financial
+// event (payment received, discount, fee assessed, commission paid,
+// refund) writes a balanced set of entries. Replaying these entries
+// reproduces every account balance.
+//
+// All money in this table is integer fils (1 AED = 100 fils).
+
+enum LedgerAccountType {
+  RECEIVABLE        // money owed by buyer
+  CASH_RECEIVED     // payments collected
+  REVENUE           // recognized sale revenue
+  DISCOUNT          // sale discount given
+  DLD_FEE           // DLD payable / paid
+  ADMIN_FEE         // admin fee billed
+  VAT_PAYABLE       // VAT collected, payable to FTA
+  COMMISSION_PAYABLE // broker commission owed
+  COMMISSION_PAID   // broker commission paid
+  REFUND            // refunds issued
+}
+
+model LedgerEntry {
+  id          String            @id @default(cuid())
+  txId        String            // grouping id — entries with the same txId balance to zero
+  accountType LedgerAccountType
+  // The "account holder" — for RECEIVABLE/CASH_RECEIVED that's the dealId,
+  // for COMMISSION_* that's the commissionId, etc. Always interpret with
+  // accountType.
+  accountRef  String
+
+  debitFils   BigInt @default(0)
+  creditFils  BigInt @default(0)
+
+  // Optional pointers to the originating domain rows so we can join cleanly.
+  dealId       String?
+  paymentId    String?
+  commissionId String?
+
+  description String?  @db.Text
+  metadata    Json?    // free-form extra context
+
+  postedBy   String   // userId or "system"
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([txId])
+  @@index([accountType])
+  @@index([accountRef])
+  @@index([dealId])
+  @@index([paymentId])
+  @@index([commissionId])
+  @@index([occurredAt])
 }

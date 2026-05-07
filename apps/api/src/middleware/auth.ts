@@ -44,6 +44,7 @@ export const requireRole = (allowedRoles: string[]) => {
     }
 
     const isDev = process.env.NODE_ENV !== "production";
+    const allowDevAuth = process.env.ALLOW_DEV_AUTH === "1";
 
     try {
       const user = await prisma.user.findFirst({
@@ -52,8 +53,9 @@ export const requireRole = (allowedRoles: string[]) => {
       });
 
       if (!user) {
-        if (isDev) {
-          // Dev mode: mock user gets full access — safe because auth is mocked
+        // Dev bypass requires explicit opt-in. Without ALLOW_DEV_AUTH=1,
+        // unknown users get 403 in every environment.
+        if (isDev && allowDevAuth) {
           return next();
         }
         return res.status(403).json({

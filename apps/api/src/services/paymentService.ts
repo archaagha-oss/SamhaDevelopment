@@ -1,6 +1,9 @@
 import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { paymentLogger } from "../lib/logger";
+import { aedToFils, applyPercent } from "../lib/money";
+import { post as postLedger, makeTxId } from "./ledgerService";
+import { eventBus, recordEvent } from "../events/eventBus";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,8 +113,16 @@ export async function markPaymentPaid(
     paidBy: data.paidBy, paymentMethod: data.paymentMethod,
   });
 
-  const [updated] = await prisma.$transaction([
-    prisma.payment.update({
+  // Compute the fils amount from the payment row.
+  // Prefer adjustedAmountFils → originalAmountFils → derive from Float.
+  const amountFils =
+    payment.adjustedAmountFils ??
+    payment.amountFils ??
+    payment.originalAmountFils ??
+    aedToFils(payment.adjustedAmount ?? payment.amount);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedPayment = await tx.payment.update({
       where: { id: paymentId },
       data: {
         status: "PAID",
@@ -123,15 +134,68 @@ export async function markPaymentPaid(
         updatedAt: new Date(),
       },
       include: { auditLog: true },
-    }),
-    prisma.paymentAuditLog.create({
+    });
+
+    await tx.paymentAuditLog.create({
       data: {
         paymentId,
         action: "PAYMENT_RECEIVED",
         changedBy: data.paidBy,
       },
-    }),
-  ]);
+    });
+
+    // Ledger: cash collected against this deal (RECEIVABLE goes down)
+    await postLedger(
+      {
+        txId: makeTxId("PAYMENT", paymentId, "RECEIVED"),
+        postedBy: data.paidBy,
+        occurredAt: data.paidDate,
+        entries: [
+          {
+            accountType: "CASH_RECEIVED",
+            accountRef: payment.dealId,
+            debitFils: amountFils,
+            dealId: payment.dealId,
+            paymentId,
+            description: `${payment.milestoneLabel} paid via ${data.paymentMethod}`,
+          },
+          {
+            accountType: "RECEIVABLE",
+            accountRef: payment.dealId,
+            creditFils: amountFils,
+            dealId: payment.dealId,
+            paymentId,
+            description: `${payment.milestoneLabel} settled`,
+          },
+        ],
+      },
+      tx
+    );
+
+    // Outbox: PAYMENT_RECEIVED, atomic with the ledger + payment update
+    await recordEvent(tx, {
+      eventType: "PAYMENT_RECEIVED",
+      aggregateId: paymentId,
+      aggregateType: "PAYMENT",
+      data: { amount: payment.amount, dealId: payment.dealId, amountFils: amountFils.toString() },
+      userId: data.paidBy,
+      timestamp: data.paidDate,
+    });
+
+    return updatedPayment;
+  });
+
+  // Best-effort in-process dispatch
+  setImmediate(() =>
+    eventBus.dispatch({
+      eventType: "PAYMENT_RECEIVED",
+      aggregateId: paymentId,
+      aggregateType: "PAYMENT",
+      data: { amount: payment.amount, dealId: payment.dealId, amountFils: amountFils.toString() },
+      userId: data.paidBy,
+      timestamp: data.paidDate,
+    })
+  );
 
   return updated;
 }
@@ -181,11 +245,13 @@ export async function recordPartialPayment(
   const isFullyPaid = Math.abs(newAlreadyPaid - totalAmount) < 0.01;
 
   // Build transaction ops
+  const partialAmountFils = aedToFils(data.amount);
   const partial = await prisma.$transaction(async (tx) => {
     const created = await tx.partialPayment.create({
       data: {
         paymentId,
         amount: data.amount,
+        amountFils: partialAmountFils,
         paidDate: data.paidDate,
         paymentMethod: data.paymentMethod,
         paidBy: data.paidBy,
@@ -193,6 +259,34 @@ export async function recordPartialPayment(
         notes: data.notes ?? null,
       },
     });
+
+    // Ledger: cash collected against the deal for this partial
+    await postLedger(
+      {
+        txId: makeTxId("PARTIAL_PAYMENT", created.id, "RECEIVED"),
+        postedBy: data.paidBy,
+        occurredAt: data.paidDate,
+        entries: [
+          {
+            accountType: "CASH_RECEIVED",
+            accountRef: payment.dealId,
+            debitFils: partialAmountFils,
+            dealId: payment.dealId,
+            paymentId,
+            description: `Partial payment ${created.id} via ${data.paymentMethod}`,
+          },
+          {
+            accountType: "RECEIVABLE",
+            accountRef: payment.dealId,
+            creditFils: partialAmountFils,
+            dealId: payment.dealId,
+            paymentId,
+            description: `Partial settlement of ${payment.milestoneLabel}`,
+          },
+        ],
+      },
+      tx
+    );
 
     await tx.paymentAuditLog.create({
       data: {
@@ -418,21 +512,30 @@ export async function generatePaymentSchedule(
   const dldPaidBy = options?.dldPaidBy ?? "BUYER";
   const adminFeeWaived = options?.adminFeeWaived ?? false;
 
+  // Pre-compute fils for each milestone (for exact ledger math)
+  const salePriceFils = aedToFils(salePrice);
+  const dldFeeFils    = aedToFils(dldFee);
+  const adminFeeFils  = aedToFils(adminFee);
+
   return prisma.$transaction(async (tx) => {
     const created = await Promise.all(
       plan.map((milestone, idx) => {
         let amount: number;
+        let amountFils: bigint;
         let milestoneType = "PLAN";
         let isWaived = false;
 
         if (milestone.isDLDFee) {
           amount = dldFee;
+          amountFils = dldFeeFils;
           if (dldPaidBy === "DEVELOPER") milestoneType = "DEVELOPER_COST";
         } else if (milestone.isAdminFee) {
           amount = adminFee;
+          amountFils = adminFeeFils;
           if (adminFeeWaived) isWaived = true;
         } else {
           amount = (milestone.percentage / 100) * salePrice;
+          amountFils = applyPercent(salePriceFils, milestone.percentage);
         }
 
         const trigger = (milestone.triggerType ?? "DAYS_FROM_RESERVATION") as string;
@@ -466,6 +569,9 @@ export async function generatePaymentSchedule(
             isWaived,
             status: isWaived ? "CANCELLED" : "PENDING",
             originalAmount: amount,
+            // fils columns
+            amountFils,
+            originalAmountFils: amountFils,
           },
         });
       })
@@ -534,6 +640,7 @@ export async function addCustomMilestone(
 
   const maxSort = deal.payments.reduce((max, p) => Math.max(max, p.sortOrder ?? 0), 0);
 
+  const amountFils = aedToFils(data.amount);
   const payment = await prisma.$transaction(async (tx) => {
     const created = await tx.payment.create({
       data: {
@@ -541,6 +648,8 @@ export async function addCustomMilestone(
         milestoneLabel: data.label,
         amount: data.amount,
         originalAmount: data.amount,
+        amountFils,
+        originalAmountFils: amountFils,
         percentage: 0,
         dueDate: data.dueDate,
         status: "PENDING",

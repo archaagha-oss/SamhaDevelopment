@@ -12,7 +12,7 @@
 import { DealStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { dealLogger } from "../lib/logger";
-import { eventBus } from "../events/eventBus";
+import { eventBus, recordEvent } from "../events/eventBus";
 import {
   reserveUnit,
   bookUnit,
@@ -21,6 +21,8 @@ import {
   updateUnitStatus,
 } from "./unitService";
 import { generatePaymentSchedule } from "./paymentService";
+import { aedToFils, applyPercent } from "../lib/money";
+import { post as postLedger, makeTxId } from "./ledgerService";
 
 // ---------------------------------------------------------------------------
 // Stage transition machine
@@ -152,9 +154,21 @@ export async function createDeal(input: CreateDealInput) {
     }
 
     // ── Calculate financials ───────────────────────────────────────────────
+    // Float math kept for backwards-compat; fils math is the source of truth.
     const netPrice      = salePrice - discount;
     const dldFee        = netPrice * (dldPercent / 100);
     const brokerCommAmt = brokerCompanyId ? netPrice * (brokerRate / 100) : 0;
+
+    // Fils-based authoritative math
+    const salePriceFils         = aedToFils(salePrice);
+    const discountFils          = aedToFils(discount);
+    const reservationAmountFils = aedToFils(reservationAmount);
+    const adminFeeFils          = aedToFils(adminFee);
+    const netPriceFils          = salePriceFils - discountFils;
+    const dldFeeFils            = applyPercent(netPriceFils, dldPercent);
+    const brokerCommAmtFils     = brokerCompanyId
+      ? applyPercent(netPriceFils, brokerRate)
+      : 0n;
 
     // ── Dates ──────────────────────────────────────────────────────────────
     const reservationDate = new Date();
@@ -176,6 +190,12 @@ export async function createDeal(input: CreateDealInput) {
         reservationAmount,
         dldFee,
         adminFee,
+        // fils columns
+        salePriceFils,
+        discountFils,
+        reservationAmountFils,
+        dldFeeFils,
+        adminFeeFils,
         paymentPlanId,
         brokerCompanyId,
         brokerAgentId,
@@ -227,17 +247,117 @@ export async function createDeal(input: CreateDealInput) {
     );
 
     // ── Create commission (broker deals only) ──────────────────────────────
+    let commissionId: string | undefined;
     if (brokerCompanyId) {
-      await tx.commission.create({
+      const commission = await tx.commission.create({
         data: {
           dealId:         deal.id,
           brokerCompanyId,
           amount:         brokerCommAmt,
+          amountFils:     brokerCommAmtFils,
           rate:           brokerRate,
           status:         "NOT_DUE",
         },
       });
+      commissionId = commission.id;
     }
+
+    // ── Post initial ledger entries (within the same transaction) ──────────
+    // Convention: RECEIVABLE debit = buyer owes us; REVENUE credit = sale recognized.
+    //   net price → REVENUE (credit) + DISCOUNT (debit) + RECEIVABLE (debit) — balances at salePrice.
+    //   DLD fee   → DLD_FEE (credit) + RECEIVABLE (debit) — balances at dldFee.
+    //   Admin fee → ADMIN_FEE (credit) + RECEIVABLE (debit) — balances at adminFee.
+    //   Broker commission (if any) → COMMISSION_PAYABLE (credit) + REVENUE (debit, expense).
+    const txId = makeTxId("DEAL", deal.id, "CREATED");
+    const entries: Parameters<typeof postLedger>[0]["entries"] = [
+      // Sale revenue
+      {
+        accountType: "RECEIVABLE",
+        accountRef: deal.id,
+        debitFils: salePriceFils,
+        dealId: deal.id,
+        description: `Sale price billed for deal ${dealNumber}`,
+      },
+      {
+        accountType: "REVENUE",
+        accountRef: deal.id,
+        creditFils: netPriceFils,
+        dealId: deal.id,
+        description: `Net sale revenue recognized for deal ${dealNumber}`,
+      },
+      {
+        accountType: "DISCOUNT",
+        accountRef: deal.id,
+        creditFils: discountFils,
+        dealId: deal.id,
+        description: `Discount given on deal ${dealNumber}`,
+      },
+      // DLD fee — billed to whoever pays it
+      {
+        accountType: "RECEIVABLE",
+        accountRef: deal.id,
+        debitFils: dldFeeFils,
+        dealId: deal.id,
+        description: `DLD fee billed (${dldPercent}%) for deal ${dealNumber}`,
+      },
+      {
+        accountType: "DLD_FEE",
+        accountRef: deal.id,
+        creditFils: dldFeeFils,
+        dealId: deal.id,
+        description: `DLD fee payable for deal ${dealNumber}`,
+      },
+    ];
+    // Admin fee (skip if waived)
+    if (!adminFeeWaived) {
+      entries.push(
+        {
+          accountType: "RECEIVABLE",
+          accountRef: deal.id,
+          debitFils: adminFeeFils,
+          dealId: deal.id,
+          description: `Admin fee billed for deal ${dealNumber}`,
+        },
+        {
+          accountType: "ADMIN_FEE",
+          accountRef: deal.id,
+          creditFils: adminFeeFils,
+          dealId: deal.id,
+          description: `Admin fee payable for deal ${dealNumber}`,
+        }
+      );
+    }
+    // Broker commission accrual (offset against REVENUE as expense)
+    if (commissionId && brokerCommAmtFils > 0n) {
+      entries.push(
+        {
+          accountType: "REVENUE",
+          accountRef: deal.id,
+          debitFils: brokerCommAmtFils,
+          dealId: deal.id,
+          commissionId,
+          description: `Broker commission accrued for deal ${dealNumber}`,
+        },
+        {
+          accountType: "COMMISSION_PAYABLE",
+          accountRef: commissionId,
+          creditFils: brokerCommAmtFils,
+          dealId: deal.id,
+          commissionId,
+          description: `Commission payable to broker for deal ${dealNumber}`,
+        }
+      );
+    }
+
+    await postLedger(
+      {
+        txId,
+        postedBy: createdBy,
+        occurredAt: reservationDate,
+        entries,
+      },
+      tx
+    );
 
     // ── Mark reservation as converted (if applicable) ─────────────────────
     if (reservationId) {
@@ -267,23 +387,26 @@ export async function createDeal(input: CreateDealInput) {
       salePrice, discount, paymentPlanId, createdBy,
     });
 
-    // ── Emit domain event (outside transaction, fire-and-forget) ──────────
-    setImmediate(() => {
-      eventBus.emit({
-        eventType:     "DEAL_CREATED",
-        aggregateId:   deal.id,
-        aggregateType: "DEAL",
-        data: {
-          dealNumber,
-          leadId,
-          unitId,
-          salePrice,
-          oqoodDeadline: oqoodDeadline.toISOString(),
-        },
-        userId:    createdBy,
-        timestamp: new Date(),
-      });
-    });
+    // ── Record domain event in the outbox (atomic with the deal write) ─────
+    const dealCreatedEvent = {
+      eventType:     "DEAL_CREATED" as const,
+      aggregateId:   deal.id,
+      aggregateType: "DEAL" as const,
+      data: {
+        dealNumber,
+        leadId,
+        unitId,
+        salePrice,
+        oqoodDeadline: oqoodDeadline.toISOString(),
+      },
+      userId:    createdBy,
+      timestamp: new Date(),
+    };
+    await recordEvent(tx, dealCreatedEvent);
+
+    // After commit, dispatch in-process for low-latency handling.
+    // The outbox worker will also pick this up if dispatch is missed.
+    setImmediate(() => eventBus.dispatch(dealCreatedEvent));
 
     return deal;
   });
@@ -560,21 +683,34 @@ export async function tryUnlockCommission(dealId: string) {
 
   // Both conditions must be met before moving to PENDING_APPROVAL
   if (deal.spaSignedDate && deal.oqoodRegisteredDate) {
-    const unlocked = await prisma.commission.update({
-      where: { id: deal.commission.id },
-      data: {
-        status:      "PENDING_APPROVAL",
-        spaSignedMet: true,
-        oqoodMet:    true,
-      },
+    const unlocked = await prisma.$transaction(async (tx) => {
+      const updated = await tx.commission.update({
+        where: { id: deal.commission!.id },
+        data: {
+          status:       "PENDING_APPROVAL",
+          spaSignedMet: true,
+          oqoodMet:     true,
+        },
+      });
+      await recordEvent(tx, {
+        eventType:     "COMMISSION_UNLOCKED",
+        aggregateId:   updated.id,
+        aggregateType: "COMMISSION",
+        data: { dealId, amount: updated.amount, commissionId: updated.id },
+        timestamp:     new Date(),
+      });
+      return updated;
     });
 
-    eventBus.emit({
-      eventType: "COMMISSION_UNLOCKED", aggregateId: unlocked.id,
-      aggregateType: "COMMISSION",
-      data: { dealId, amount: unlocked.amount },
-      timestamp: new Date(),
-    });
+    setImmediate(() =>
+      eventBus.dispatch({
+        eventType:     "COMMISSION_UNLOCKED",
+        aggregateId:   unlocked.id,
+        aggregateType: "COMMISSION",
+        data: { dealId, amount: unlocked.amount, commissionId: unlocked.id },
+        timestamp:     new Date(),
+      })
+    );
 
     return unlocked;
   }
@@ -582,8 +718,12 @@ export async function tryUnlockCommission(dealId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// markPaymentPaid
+// markPaymentPaid (legacy thin wrapper — prefer paymentService.markPaymentPaid)
 // ---------------------------------------------------------------------------
+//
+// This signature is preserved for backwards-compat with older callers that
+// pass positional args. The richer service in `paymentService.ts` posts the
+// ledger entry and writes the audit log; this wrapper just delegates.
 
 export async function markPaymentPaid(
   paymentId: string,
@@ -591,24 +731,6 @@ export async function markPaymentPaid(
   paymentMethod: string,
   paidBy: string
 ) {
-  const payment = await prisma.payment.update({
-    where: { id: paymentId },
-    data: {
-      status: "PAID",
-      paidDate,
-      paymentMethod,
-      paidBy,
-    },
-  });
-
-  // Emit event for payment received
-  eventBus.emit({
-    eventType: "PAYMENT_RECEIVED",
-    aggregateId: paymentId,
-    aggregateType: "PAYMENT",
-    data: { amount: payment.amount, dealId: payment.dealId },
-    timestamp: new Date(),
-  });
-
-  return payment;
+  const { markPaymentPaid: markPaid } = await import("./paymentService");
+  return markPaid(paymentId, { paidDate, paymentMethod, paidBy });
 }

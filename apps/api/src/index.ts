@@ -7,7 +7,10 @@ import { prisma } from "./lib/prisma";
 import { logger } from "./lib/logger";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
+import { startOutboxWorker } from "./events/eventBus";
+import { sweepExpiredIdempotencyKeys } from "./middleware/idempotency";
 import { releaseExpiredHolds } from "./services/unitService";
+import { setupClerkAuth } from "./middleware/auth";
 
 // Import routes
 import projectRoutes from "./routes/projects";
@@ -33,11 +36,15 @@ dotenv.config();
 // ── Bootstrap event system + background jobs ──────────────────────────────────
 registerDealHandlers();
 startJobProcessor(30_000); // poll every 30 s
+startOutboxWorker(5_000); // outbox dispatcher every 5 s
 
-// Hourly sweep: release expired ON_HOLD units
+// Hourly sweep: release expired ON_HOLD units + expired idempotency keys
 setInterval(() => {
   releaseExpiredHolds("system").catch((err: unknown) => {
     console.error("[Cron] ON_HOLD expiry sweep error:", err);
+  });
+  sweepExpiredIdempotencyKeys().catch((err: unknown) => {
+    console.error("[Cron] idempotency-key sweep error:", err);
   });
 }, 60 * 60 * 1000);
 
@@ -74,11 +81,34 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
+// ── Auth: Clerk in production; dev bypass requires explicit opt-in ─────────
+const allowDevAuth = process.env.ALLOW_DEV_AUTH === "1";
+const isProduction = process.env.NODE_ENV === "production";
+
+if (allowDevAuth && !isProduction) {
+  console.warn(
+    "[auth] ALLOW_DEV_AUTH=1 — using mock dev-user-1 for all requests. " +
+      "DO NOT enable this in production."
+  );
+  app.use((req, _res, next) => {
+    req.auth = { userId: "dev-user-1" };
+    next();
+  });
+} else if (process.env.CLERK_SECRET_KEY) {
+  // Clerk middleware will populate req.auth for authenticated requests
+  // (each route should still be guarded with requireAuthentication)
+  app.use(setupClerkAuth());
+} else if (!isProduction) {
+  console.warn(
+    "[auth] No CLERK_SECRET_KEY set and ALLOW_DEV_AUTH not enabled. " +
+      "All authenticated routes will return 401. Set ALLOW_DEV_AUTH=1 to use mock auth."
+  );
+} else {
+  console.error(
+    "[auth] FATAL: production mode requires CLERK_SECRET_KEY. " +
+      "Server is starting but all authenticated routes will return 401."
+  );
+}
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
