@@ -63,6 +63,12 @@ router.patch("/", async (req, res) => {
       paymentInstructions,
       emailTemplates,
       notificationPrefs,
+      twilioWhatsappFrom,
+      twilioMessagingServiceSid,
+      twilioWhatsappContentSidBeforeDue,
+      twilioWhatsappContentSidOnDue,
+      twilioWhatsappContentSidOverdue7,
+      twilioWhatsappContentSidOverdue30,
     } = req.body;
 
     const settings = await prisma.appSettings.upsert({
@@ -87,6 +93,12 @@ router.patch("/", async (req, res) => {
         paymentInstructions,
         emailTemplates,
         notificationPrefs,
+        twilioWhatsappFrom,
+        twilioMessagingServiceSid,
+        twilioWhatsappContentSidBeforeDue,
+        twilioWhatsappContentSidOnDue,
+        twilioWhatsappContentSidOverdue7,
+        twilioWhatsappContentSidOverdue30,
       },
       update: {
         ...(companyName           !== undefined && { companyName }),
@@ -107,6 +119,12 @@ router.patch("/", async (req, res) => {
         ...(paymentInstructions   !== undefined && { paymentInstructions }),
         ...(emailTemplates        !== undefined && { emailTemplates }),
         ...(notificationPrefs     !== undefined && { notificationPrefs }),
+        ...(twilioWhatsappFrom                !== undefined && { twilioWhatsappFrom }),
+        ...(twilioMessagingServiceSid         !== undefined && { twilioMessagingServiceSid }),
+        ...(twilioWhatsappContentSidBeforeDue !== undefined && { twilioWhatsappContentSidBeforeDue }),
+        ...(twilioWhatsappContentSidOnDue     !== undefined && { twilioWhatsappContentSidOnDue }),
+        ...(twilioWhatsappContentSidOverdue7  !== undefined && { twilioWhatsappContentSidOverdue7 }),
+        ...(twilioWhatsappContentSidOverdue30 !== undefined && { twilioWhatsappContentSidOverdue30 }),
       },
     } as any);
 

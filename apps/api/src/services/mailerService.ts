@@ -3,12 +3,9 @@
  *
  * When AppSettings.smtpHost is configured, delivers via SMTP using nodemailer.
  * Otherwise logs the email to stdout (useful for dev / when provider not configured).
- *
- * To enable nodemailer: npm install nodemailer @types/nodemailer in apps/api
- * and uncomment the import below.
  */
 
-// import nodemailer from "nodemailer";
+import nodemailer from "nodemailer";
 import { prisma } from "../lib/prisma.js";
 
 interface EmailPayload {
@@ -18,7 +15,13 @@ interface EmailPayload {
   html: string;
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<{ sent: boolean; reason?: string }> {
+export interface SendResult {
+  sent: boolean;
+  reason?: string;
+  messageId?: string;
+}
+
+export async function sendEmail(payload: EmailPayload): Promise<SendResult> {
   let fromName = "Samha Properties";
   let fromEmail = "noreply@samha.ae";
   let smtpHost: string | null = null;
@@ -44,27 +47,36 @@ export async function sendEmail(payload: EmailPayload): Promise<{ sent: boolean;
   const from = `"${fromName}" <${fromEmail}>`;
 
   if (smtpHost) {
-    // SMTP delivery via nodemailer (requires: npm install nodemailer @types/nodemailer)
-    // Uncomment when nodemailer is installed:
-    //
-    // const transporter = nodemailer.createTransport({
-    //   host: smtpHost, port: smtpPort, secure: smtpPort === 465,
-    //   auth: smtpUsername ? { user: smtpUsername, pass: smtpPassword ?? "" } : undefined,
-    // });
-    // await transporter.sendMail({ from, to: payload.to, subject: payload.subject, text: payload.text, html: payload.html });
-    // return { sent: true };
-
-    console.log(`[Mailer/SMTP] ${smtpHost}:${smtpPort} — nodemailer not installed, logging instead`);
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: smtpUsername ? { user: smtpUsername, pass: smtpPassword ?? "" } : undefined,
+      });
+      const info = await transporter.sendMail({
+        from,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      });
+      return { sent: true, messageId: info.messageId };
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error(`[Mailer/SMTP] send failed: ${reason}`);
+      return { sent: false, reason };
+    }
   }
 
-  // Fallback: log to stdout
+  // Fallback: log to stdout (no provider configured)
   console.log(
     `[Mailer] FROM: ${from} TO: ${payload.to}\n` +
     `         SUBJECT: ${payload.subject}\n` +
     `         ---\n${payload.text}\n         ---`
   );
 
-  return { sent: true };
+  return { sent: true, reason: "logged-only" };
 }
 
 // ─── Email templates ─────────────────────────────────────────────────────────

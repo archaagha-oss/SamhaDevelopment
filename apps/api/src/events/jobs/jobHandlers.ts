@@ -10,12 +10,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { eventBus } from "../eventBus.js";
 import { releaseExpiredHolds } from "../../services/unitService.js";
-import {
-  sendEmail,
-  buildBeforeDueEmail,
-  buildOnDueEmail,
-  buildOverdueEmail,
-} from "../../services/mailerService.js";
+import { dispatchPaymentReminder } from "../../services/communicationDispatcher.js";
 
 // ---------------------------------------------------------------------------
 // Job types
@@ -506,27 +501,33 @@ async function handlePaymentReminderSweep(): Promise<void> {
 
   const payments = await prisma.payment.findMany({
     where: {
-      status: { notIn: ["PAID", "CANCELLED", "PDC_CLEARED", "WAIVED"] },
+      status: { notIn: ["PAID", "CANCELLED", "PDC_CLEARED"] },
     },
     include: {
       deal: {
-        include: { lead: true },
+        include: {
+          lead: true,
+          unit: { include: { project: true } },
+        },
       },
     },
   });
 
-  let sent = 0, skipped = 0;
+  let sent = 0, skipped = 0, failed = 0;
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString("en-AE", { day: "2-digit", month: "long", year: "numeric" });
+  const fmtAED  = (n: number) => `AED ${n.toLocaleString("en-AE")}`;
 
   await Promise.allSettled(
     payments.map(async (payment) => {
       try {
         const deal = payment.deal as any;
+        const lead = deal.lead as any;
 
         // Respect pause flag
         if (deal.remindersPaused) {
           const until = deal.remindersPausedUntil ? new Date(deal.remindersPausedUntil) : null;
           if (!until || until > nowDay) {
-            // Still paused — log SKIPPED_PAUSED once (no dedup needed, just skip)
             skipped++;
             return;
           }
@@ -537,9 +538,7 @@ async function handlePaymentReminderSweep(): Promise<void> {
           });
         }
 
-        const buyerEmail = (deal.lead as any)?.email ?? null;
-        const buyerName  = `${(deal.lead as any)?.firstName ?? ""} ${(deal.lead as any)?.lastName ?? ""}`.trim();
-        const dueDate    = new Date(payment.dueDate);
+        const dueDate = new Date(payment.dueDate);
 
         for (const rule of REMINDER_RULES) {
           if (!rule.matches(dueDate, nowDay)) continue;
@@ -550,22 +549,13 @@ async function handlePaymentReminderSweep(): Promise<void> {
           });
           if (existing) continue;
 
-          // Determine status
-          let status = "SENT";
-          if (!buyerEmail) status = "SKIPPED_NO_EMAIL";
-
-          // Log the reminder
-          await rlModel.create({
-            data: {
-              paymentId: payment.id,
-              ruleType:  rule.type,
-              sentAt:    now,
-              email:     buyerEmail,
-              status,
-            },
-          });
-
-          // Update payment reminder tracking
+          // Update payment reminder tracking BEFORE dispatch (so a transient send
+          // failure doesn't leave the payment forever un-bumped while the
+          // ReminderLog row marks it FAILED — the next sweep will retry that rule
+          // because dedup keys on paymentId+ruleType which only logs SENT once
+          // we make recordOutbound + dedup wedge: leave dedup row creation to the
+          // dispatcher's writeReminderLog so a FAILED row prevents retry; that's
+          // intentional — operator manually re-sends from UI after fixing config).
           await prisma.payment.update({
             where: { id: payment.id },
             data: {
@@ -574,40 +564,30 @@ async function handlePaymentReminderSweep(): Promise<void> {
             } as any,
           });
 
-          // Log activity on deal
-          await prisma.activity.create({
-            data: {
-              dealId:    deal.id,
-              leadId:    deal.leadId,
-              type:      "NOTE",
-              summary:   `Reminder sent (${rule.type.replace(/_/g, " ").toLowerCase()}) for "${payment.milestoneLabel}" — AED ${payment.amount.toLocaleString()}`,
-              createdBy: "system",
+          const result = await dispatchPaymentReminder({
+            paymentId: payment.id,
+            dealId: deal.id,
+            leadId: deal.leadId,
+            rule: rule.type,
+            daysOverdue: rule.daysOverdue,
+            recipient: {
+              name:  `${lead?.firstName ?? ""} ${lead?.lastName ?? ""}`.trim(),
+              email: lead?.email ?? null,
+              phone: lead?.phone ?? null,
             },
-          });
-
-          // Send email if address available
-          if (buyerEmail) {
-            const fmtDate = (d: Date) =>
-              d.toLocaleDateString("en-AE", { day: "2-digit", month: "long", year: "numeric" });
-            const fmtAED  = (n: number) => `AED ${n.toLocaleString("en-AE")}`;
-
-            const templateVars = {
-              buyerName,
-              unitNumber:     (deal.unit as any)?.unitNumber ?? "",
-              projectName:    (deal.unit as any)?.project?.name ?? "",
+            vars: {
+              buyerName:      `${lead?.firstName ?? ""} ${lead?.lastName ?? ""}`.trim(),
+              unitNumber:     deal.unit?.unitNumber ?? "",
+              projectName:    deal.unit?.project?.name ?? "",
               milestoneLabel: payment.milestoneLabel,
               dueDate:        fmtDate(dueDate),
               amount:         fmtAED(payment.amount),
-            };
+            },
+          });
 
-            let template;
-            if (rule.type === "BEFORE_DUE") template = buildBeforeDueEmail(templateVars);
-            else if (rule.type === "ON_DUE")  template = buildOnDueEmail(templateVars);
-            else                              template = buildOverdueEmail(templateVars, rule.daysOverdue);
-
-            await sendEmail({ to: buyerEmail, ...template });
-            sent++;
-          }
+          if (result.sent) sent++;
+          else if (result.channel === null) skipped++;
+          else failed++;
         }
       } catch (err) {
         console.error(`[JobProcessor] PAYMENT_REMINDER_SWEEP: error for payment ${payment.id}:`, err);
@@ -615,7 +595,7 @@ async function handlePaymentReminderSweep(): Promise<void> {
     })
   );
 
-  console.log(`[JobProcessor] PAYMENT_REMINDER_SWEEP complete — ${sent} sent, ${skipped} paused`);
+  console.log(`[JobProcessor] PAYMENT_REMINDER_SWEEP complete — ${sent} sent, ${skipped} skipped, ${failed} failed`);
 }
 
 // ---------------------------------------------------------------------------
@@ -650,32 +630,3 @@ function scheduleDailyReminderSweep(): void {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Required schema additions (add to prisma/schema.prisma):
-//
-// enum JobStatus {
-//   PENDING
-//   RUNNING
-//   COMPLETED
-//   FAILED
-// }
-//
-// model BackgroundJob {
-//   id           String    @id @default(cuid())
-//   type         String
-//   payload      String    @db.Text
-//   status       JobStatus @default(PENDING)
-//   scheduledAt  DateTime
-//   startedAt    DateTime?
-//   completedAt  DateTime?
-//   failedAt     DateTime?
-//   errorMessage String?   @db.Text
-//   retryCount   Int       @default(0)
-//   maxRetries   Int       @default(3)
-//   createdAt    DateTime  @default(now())
-//   updatedAt    DateTime  @updatedAt
-//
-//   @@index([status, scheduledAt])
-//   @@index([type])
-// }
-// ---------------------------------------------------------------------------

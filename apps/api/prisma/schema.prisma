@@ -565,6 +565,7 @@ model Lead {
   reservations Reservation[]
   offers       Offer[]
   documents    Document[]
+  communicationPreference CommunicationPreference?
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())
@@ -624,12 +625,17 @@ model Activity {
   contactId String?
   contact   Contact? @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
 
-  type    String  // CALL, EMAIL, WHATSAPP, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
+  type    String  // CALL, EMAIL, WHATSAPP, SMS, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
   summary String  @db.Text
   outcome String? @db.Text
 
   callDuration Int?    // minutes
-  messageId    String? // WhatsApp message ID
+  messageId    String? // legacy WhatsApp message ID — superseded by providerMessageSid
+
+  // Communication channel metadata (for EMAIL | WHATSAPP | SMS activities)
+  direction          String?  // INBOUND | OUTBOUND (null for non-comm activities)
+  providerMessageSid String?  @unique // Twilio Sid, SMTP message-id, etc — used for inbound webhook idempotency
+  deliveryStatus     String?  // queued | sent | delivered | read | failed
 
   // For SITE_VISIT activities: which unit was physically visited
   siteVisitUnitId String?
@@ -1069,11 +1075,17 @@ model ReminderLog {
 
   ruleType  ReminderRuleType
   sentAt    DateTime          @default(now())
-  email     String?           // email it was sent to (null = no email, notification only)
-  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
+
+  channel   String            @default("EMAIL") // EMAIL | WHATSAPP | SMS
+  email     String?           // email address it was sent to (null when channel != EMAIL)
+  phoneE164 String?           // E.164 phone (when channel = WHATSAPP | SMS)
+  providerMessageId String?   // SMTP message-id, Twilio sid, etc.
+  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_RECIPIENT | SKIPPED_PAUSED | SKIPPED_OPTOUT
+  failureReason String?       @db.Text
 
   @@index([paymentId])
   @@index([paymentId, ruleType])
+  @@index([channel])
 }
 
 // ============================================================
@@ -1261,17 +1273,17 @@ model DomainEvent {
 }
 
 model BackgroundJob {
-  id          String    @id @default(cuid())
-  type        String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
-  payload     Json
-  status      JobStatus @default(PENDING)
-  scheduledAt DateTime
-  startedAt   DateTime?
-  completedAt DateTime?
-  failedAt    DateTime?
-  error       String?   @db.Text
-  retryCount  Int       @default(0)
-  maxRetries  Int       @default(3)
+  id           String    @id @default(cuid())
+  type         String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
+  payload      Json
+  status       JobStatus @default(PENDING)
+  scheduledAt  DateTime
+  startedAt    DateTime?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  errorMessage String?   @db.Text
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
 
   createdAt DateTime @default(now())
 
@@ -1312,6 +1324,15 @@ model AppSettings {
   smtpUsername String?
   smtpPassword String?
 
+  // Twilio public config (operator-managed, non-secret).
+  // Secrets (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WEBHOOK_SIGNING_SECRET) live in env vars.
+  twilioWhatsappFrom              String? // e.g. "whatsapp:+14155238886"
+  twilioMessagingServiceSid       String? // SMS messaging-service for number pool
+  twilioWhatsappContentSidBeforeDue   String?
+  twilioWhatsappContentSidOnDue       String?
+  twilioWhatsappContentSidOverdue7    String?
+  twilioWhatsappContentSidOverdue30   String?
+
   // Finance — payment instructions injected into invoices and reminder emails
   paymentInstructions String? @db.Text
 
@@ -1347,6 +1368,7 @@ model Contact {
   tags        String?       // comma-separated
 
   activities Activity[] @relation("ContactActivities")
+  communicationPreference CommunicationPreference?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1355,4 +1377,53 @@ model Contact {
   @@index([email])
   @@index([phone])
   @@index([firstName])
+}
+
+// ============================================================
+// SECTION 18: COMMUNICATION PREFERENCE
+// ============================================================
+// One row per recipient (Lead xor Contact). Tracks per-channel signal
+// counts so the channel-picker can choose where to deliver reminders.
+
+model CommunicationPreference {
+  id        String   @id @default(cuid())
+  leadId    String?  @unique
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contactId String?  @unique
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  preferredChannel String?   // EMAIL | WHATSAPP | SMS — null = auto-pick
+  emailOptOut      Boolean   @default(false)
+  whatsappOptOut   Boolean   @default(false)
+  smsOptOut        Boolean   @default(false)
+
+  // Outbound counters
+  emailSent        Int @default(0)
+  whatsappSent     Int @default(0)
+  smsSent          Int @default(0)
+
+  // Engagement signals
+  emailOpens       Int @default(0)
+  emailClicks      Int @default(0)
+  emailReplies     Int @default(0)
+  whatsappReads    Int @default(0)
+  whatsappReplies  Int @default(0)
+  smsReplies       Int @default(0)
+
+  lastEmailReplyAt    DateTime?
+  lastWhatsappReplyAt DateTime?
+  lastSmsReplyAt      DateTime?
+
+  // Average response latency in seconds (rolling)
+  avgResponseLatencyEmailSec    Int?
+  avgResponseLatencyWhatsappSec Int?
+  avgResponseLatencySmsSec      Int?
+
+  consentGivenAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([contactId])
 }

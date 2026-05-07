@@ -27,6 +27,12 @@ interface AppSettings {
   smtpPassword?: string;
   paymentInstructions?: string;
   emailTemplates?: EmailTemplates;
+  twilioWhatsappFrom?: string;
+  twilioMessagingServiceSid?: string;
+  twilioWhatsappContentSidBeforeDue?: string;
+  twilioWhatsappContentSidOnDue?: string;
+  twilioWhatsappContentSidOverdue7?: string;
+  twilioWhatsappContentSidOverdue30?: string;
 }
 
 type Tab = "company" | "localization" | "communication" | "finance" | "templates";
@@ -225,10 +231,10 @@ export default function SettingsPage() {
 
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">WhatsApp & SMS</p>
-              <p className="text-xs text-slate-400">Used for direct messaging to leads and contacts (future integration).</p>
+              <p className="text-xs text-slate-400">Used for direct messaging to leads and contacts.</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lbl}>WhatsApp Number</label>
+                  <label className={lbl}>Display WhatsApp Number</label>
                   <input className={inp} value={form.whatsappNumber ?? ""} onChange={(e) => set("whatsappNumber", e.target.value)} placeholder="+971501234567" />
                 </div>
                 <div>
@@ -239,6 +245,44 @@ export default function SettingsPage() {
                     <option value="unifonic">Unifonic</option>
                     <option value="stc">STC Pay</option>
                   </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Twilio</p>
+              <p className="text-xs text-slate-400">
+                Auth token + account SID live in environment variables (<code className="bg-slate-100 px-1 rounded">TWILIO_ACCOUNT_SID</code>, <code className="bg-slate-100 px-1 rounded">TWILIO_AUTH_TOKEN</code>). Configure the public sender details below.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>WhatsApp From</label>
+                  <input className={inp} value={form.twilioWhatsappFrom ?? ""} onChange={(e) => set("twilioWhatsappFrom", e.target.value)} placeholder="whatsapp:+14155238886" />
+                </div>
+                <div>
+                  <label className={lbl}>SMS Messaging Service SID</label>
+                  <input className={inp} value={form.twilioMessagingServiceSid ?? ""} onChange={(e) => set("twilioMessagingServiceSid", e.target.value)} placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 pt-2">
+                Approved Meta Content Template SIDs (start with <code className="bg-slate-100 px-1 rounded">HX</code>) — required for proactive WhatsApp sends outside the 24h service window.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>Template: 7 Days Before Due</label>
+                  <input className={inp} value={form.twilioWhatsappContentSidBeforeDue ?? ""} onChange={(e) => set("twilioWhatsappContentSidBeforeDue", e.target.value)} placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                </div>
+                <div>
+                  <label className={lbl}>Template: Due Today</label>
+                  <input className={inp} value={form.twilioWhatsappContentSidOnDue ?? ""} onChange={(e) => set("twilioWhatsappContentSidOnDue", e.target.value)} placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                </div>
+                <div>
+                  <label className={lbl}>Template: 7 Days Overdue</label>
+                  <input className={inp} value={form.twilioWhatsappContentSidOverdue7 ?? ""} onChange={(e) => set("twilioWhatsappContentSidOverdue7", e.target.value)} placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                </div>
+                <div>
+                  <label className={lbl}>Template: 30 Days Overdue (Final)</label>
+                  <input className={inp} value={form.twilioWhatsappContentSidOverdue30 ?? ""} onChange={(e) => set("twilioWhatsappContentSidOverdue30", e.target.value)} placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
                 </div>
               </div>
             </div>

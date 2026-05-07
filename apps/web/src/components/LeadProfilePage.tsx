@@ -19,6 +19,20 @@ interface DealSummary {
   unit: { unitNumber: string; type: string };
 }
 
+interface CommunicationPreference {
+  id: string;
+  preferredChannel: string | null;
+  emailOptOut: boolean;
+  whatsappOptOut: boolean;
+  smsOptOut: boolean;
+  emailSent: number;
+  whatsappSent: number;
+  smsSent: number;
+  emailReplies: number;
+  whatsappReplies: number;
+  smsReplies: number;
+}
+
 interface Lead {
   id: string; firstName: string; lastName: string; phone: string; email?: string;
   nationality?: string; source: string; budget?: number; stage: string; notes?: string;
@@ -30,6 +44,7 @@ interface Lead {
   brokerAgentId?: string | null;
   interests: { id: string; unitId: string; isPrimary: boolean; unit: { unitNumber: string; type: string; price: number; floor: number } }[];
   deals?: DealSummary[];
+  communicationPreference?: CommunicationPreference | null;
 }
 
 interface Agent        { id: string; name: string; }
@@ -336,6 +351,16 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       toast.error(err.response?.data?.error || "Failed to change stage");
     } finally {
       setChangingStage(false);
+    }
+  };
+
+  const handlePreferenceChange = async (changes: Partial<CommunicationPreference & { preferredChannel: string | null }>) => {
+    if (!lead) return;
+    try {
+      const r = await axios.patch(`/api/leads/${lead.id}/communication-preference`, changes);
+      setLead((prev) => prev ? { ...prev, communicationPreference: r.data } : prev);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update preference");
     }
   };
 
@@ -733,6 +758,56 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                   <p className="text-sm text-slate-700 leading-relaxed">{lead.notes}</p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Communication Preference */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Comm. Preference</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Preferred Channel</label>
+                <select
+                  className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  value={lead.communicationPreference?.preferredChannel ?? ""}
+                  onChange={(e) =>
+                    handlePreferenceChange({ preferredChannel: e.target.value === "" ? null : e.target.value })
+                  }
+                >
+                  <option value="">Auto (learn from engagement)</option>
+                  <option value="EMAIL">Email</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                  <option value="SMS">SMS</option>
+                </select>
+              </div>
+              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                {(["email", "whatsapp", "sms"] as const).map((ch) => {
+                  const optKey  = `${ch}OptOut` as "emailOptOut" | "whatsappOptOut" | "smsOptOut";
+                  const sentKey = `${ch}Sent`   as "emailSent" | "whatsappSent" | "smsSent";
+                  const repKey  = `${ch}Replies` as "emailReplies" | "whatsappReplies" | "smsReplies";
+                  const optedOut = lead.communicationPreference?.[optKey] ?? false;
+                  const sent     = lead.communicationPreference?.[sentKey] ?? 0;
+                  const replies  = lead.communicationPreference?.[repKey]  ?? 0;
+                  return (
+                    <label key={ch} className="flex items-center justify-between text-xs cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={optedOut}
+                          onChange={(e) => handlePreferenceChange({ [optKey]: e.target.checked } as Partial<CommunicationPreference>)}
+                          className="w-3.5 h-3.5 rounded"
+                        />
+                        <span className={optedOut ? "text-slate-400 line-through" : "text-slate-700"}>
+                          {ch === "email" ? "Email" : ch === "whatsapp" ? "WhatsApp" : "SMS"} opt-out
+                        </span>
+                      </span>
+                      <span className="text-slate-400">
+                        {sent}{sent > 0 ? ` · ${replies} replies` : ""}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
