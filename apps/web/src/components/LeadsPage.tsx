@@ -40,6 +40,16 @@ const SOURCE_COLORS: Record<string, string> = {
   BROKER:   "bg-purple-100 text-purple-700",
   WEBSITE:  "bg-cyan-100 text-cyan-700",
   REFERRAL: "bg-emerald-100 text-emerald-700",
+  WHATSAPP: "bg-green-100 text-green-700",
+  WALK_IN:  "bg-amber-100 text-amber-700",
+};
+const SOURCE_ICON: Record<string, string> = {
+  DIRECT:   "📱",
+  BROKER:   "🤝",
+  WEBSITE:  "🌐",
+  REFERRAL: "👥",
+  WHATSAPP: "💬",
+  WALK_IN:  "🚶",
 };
 
 
@@ -320,8 +330,12 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                               </p>
                               <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                 {lead.source && (
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${SOURCE_COLORS[lead.source] || "bg-slate-100 text-slate-600"}`}>
-                                    {lead.source}
+                                  <span
+                                    title={lead.source}
+                                    className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium ${SOURCE_COLORS[lead.source] || "bg-slate-100 text-slate-600"}`}
+                                  >
+                                    <span aria-hidden>{SOURCE_ICON[lead.source] || "•"}</span>
+                                    <span className="hidden sm:inline">{lead.source}</span>
                                   </span>
                                 )}
                                 {/* Card action menu */}
@@ -352,7 +366,15 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                               </div>
                             </div>
 
-                            <p className="text-xs text-slate-500 mb-2">{lead.phone}</p>
+                            {lead.phone && (
+                              <a
+                                href={`tel:${lead.phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="block text-xs text-blue-600 hover:underline mb-2"
+                              >
+                                {lead.phone}
+                              </a>
+                            )}
 
                             {lead.budget && (
                               <p className="text-xs text-slate-600 mb-1.5">

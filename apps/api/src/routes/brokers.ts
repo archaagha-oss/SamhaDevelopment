@@ -122,19 +122,20 @@ router.post(
       }
 
       const {
-        name, email, phone,
+        name, email, phone, status,
         reraLicenseNumber, reraLicenseExpiry, tradeLicenseNumber,
         tradeLicenseCopyUrl, vatCertificateNo, vatCertificateUrl,
         corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
         officeManagerBrokerId, website, officeNo, buildingName,
         neighborhood, emirate, postalCode,
-        bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency,
+        bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency, bankSwiftCode,
         commissionRate,
       } = req.body;
 
       const company = await prisma.brokerCompany.create({
         data: {
           name, email, phone,
+          status: status || "PENDING_APPROVAL",
           reraLicenseNumber,
           reraLicenseExpiry: reraLicenseExpiry ? new Date(reraLicenseExpiry) : null,
           tradeLicenseNumber, tradeLicenseCopyUrl,
@@ -142,7 +143,7 @@ router.post(
           corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
           officeManagerBrokerId, website, officeNo, buildingName,
           neighborhood, emirate, postalCode,
-          bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency,
+          bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency, bankSwiftCode,
           commissionRate: commissionRate || 4,
         },
       });
@@ -281,18 +282,19 @@ router.patch("/companies/:id", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
     const {
-      name, email, phone, commissionRate,
+      name, email, phone, status, commissionRate,
       reraLicenseNumber, reraLicenseExpiry, tradeLicenseNumber,
       tradeLicenseCopyUrl, vatCertificateNo, vatCertificateUrl,
       corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
       officeManagerBrokerId, website, officeNo, buildingName,
       neighborhood, emirate, postalCode,
-      bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency,
+      bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency, bankSwiftCode,
     } = req.body;
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
+    if (status !== undefined && ["ACTIVE", "INACTIVE", "PENDING_APPROVAL"].includes(status)) data.status = status;
     if (commissionRate !== undefined) data.commissionRate = parseFloat(commissionRate);
     if (reraLicenseNumber !== undefined) data.reraLicenseNumber = reraLicenseNumber || null;
     if (reraLicenseExpiry !== undefined) data.reraLicenseExpiry = reraLicenseExpiry ? new Date(reraLicenseExpiry) : null;
@@ -303,13 +305,14 @@ router.patch("/companies/:id", async (req, res) => {
       "officeManagerBrokerId", "website", "officeNo", "buildingName",
       "neighborhood", "emirate", "postalCode",
       "bankName", "bankAccountName", "bankAccountNo", "bankIban", "bankCurrency",
+      "bankSwiftCode",
     ];
     const bodyVals: Record<string, any> = {
       tradeLicenseCopyUrl, vatCertificateNo, vatCertificateUrl,
       corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
       officeManagerBrokerId, website, officeNo, buildingName,
       neighborhood, emirate, postalCode,
-      bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency,
+      bankName, bankAccountName, bankAccountNo, bankIban, bankCurrency, bankSwiftCode,
     };
     for (const f of strFields) {
       if (bodyVals[f] !== undefined) data[f] = bodyVals[f] || null;

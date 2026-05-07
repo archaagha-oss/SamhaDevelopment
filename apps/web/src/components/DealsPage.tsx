@@ -20,6 +20,32 @@ interface Deal {
 
 const STAGES = ["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT","SPA_SIGNED","OQOOD_PENDING","OQOOD_REGISTERED","INSTALLMENTS_ACTIVE","HANDOVER_PENDING","COMPLETED","CANCELLED"];
 
+// Stages considered "active range" (per spec: RESERVATION_PENDING through INSTALLMENTS_ACTIVE)
+const ACTIVE_STAGES = ["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT","SPA_SIGNED","OQOOD_PENDING","OQOOD_REGISTERED","INSTALLMENTS_ACTIVE"];
+
+// Allowed forward transitions per stage (mirrors API rules)
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  RESERVATION_PENDING:   ["RESERVATION_CONFIRMED", "CANCELLED"],
+  RESERVATION_CONFIRMED: ["SPA_PENDING", "CANCELLED"],
+  SPA_PENDING:           ["SPA_SENT", "CANCELLED"],
+  SPA_SENT:              ["SPA_SIGNED", "CANCELLED"],
+  SPA_SIGNED:            ["OQOOD_PENDING", "CANCELLED"],
+  OQOOD_PENDING:         ["OQOOD_REGISTERED", "CANCELLED"],
+  OQOOD_REGISTERED:      ["INSTALLMENTS_ACTIVE", "CANCELLED"],
+  INSTALLMENTS_ACTIVE:   ["HANDOVER_PENDING", "CANCELLED"],
+  HANDOVER_PENDING:      ["COMPLETED", "CANCELLED"],
+  COMPLETED:             [],
+  CANCELLED:             [],
+};
+
+function daysBetween(date: string | Date) {
+  return Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
+}
+
+function paymentOverdue(deal: any): boolean {
+  return Array.isArray(deal.payments) && deal.payments.some((p: any) => p.status === "OVERDUE");
+}
+
 const STAGE_BADGE: Record<string, string> = {
   RESERVATION_PENDING:   "bg-slate-100 text-slate-600",
   RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
@@ -66,6 +92,13 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
+  // Kanban view + active-stages-only toggle
+  const [viewMode, setViewMode] = useState<"kanban" | "list">((searchParams.get("view") as "kanban" | "list") || "kanban");
+  const [activeOnly, setActiveOnly] = useState<boolean>(searchParams.get("active") !== "0");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+
   // Debounce search input 350ms before firing API call
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -91,8 +124,10 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
     if (currentPage > 1) p.page  = String(currentPage);
     if (sortCol !== "reservationDate") p.sort = sortCol;
     if (sortDir !== "desc") p.dir = sortDir;
+    if (viewMode !== "kanban") p.view = viewMode;
+    if (!activeOnly) p.active = "0";
     setSearchParams(p, { replace: true });
-  }, [debouncedSearch, selectedStage, currentPage, sortCol, sortDir]);
+  }, [debouncedSearch, selectedStage, currentPage, sortCol, sortDir, viewMode, activeOnly]);
 
   const handleSort = (col: string) => {
     if (sortCol === col) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -120,6 +155,27 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
       {sortCol === col ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
     </span>
   );
+
+  const moveDeal = async (deal: Deal, targetStage: string) => {
+    if (deal.stage === targetStage) return;
+    const allowed = VALID_TRANSITIONS[deal.stage] || [];
+    if (!allowed.includes(targetStage)) {
+      toast.error(`Cannot move ${deal.dealNumber}: ${deal.stage.replace(/_/g, " ")} → ${targetStage.replace(/_/g, " ")} is not allowed.`);
+      return;
+    }
+    setMovingId(deal.id);
+    try {
+      await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: targetStage });
+      toast.success(`Moved to ${targetStage.replace(/_/g, " ")}`);
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+    } catch (err: any) {
+      // Server-side validation (e.g. "5% payment not recorded") surfaces here
+      const reason = err?.response?.data?.error || `Cannot move to ${targetStage.replace(/_/g, " ")}`;
+      toast.error(reason);
+    } finally {
+      setMovingId(null);
+    }
+  };
 
   const handleQuickCancel = async (deal: Deal) => {
     const reason = prompt("Cancel reason:");
@@ -155,6 +211,17 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
               onChange={(e) => handleSearch(e.target.value)}
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-56 focus:outline-none focus:border-blue-400 bg-slate-50"
             />
+            {/* View toggle */}
+            <div className="inline-flex border border-slate-200 rounded-lg overflow-hidden text-xs">
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "kanban" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+              >▦ Kanban</button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+              >☰ List</button>
+            </div>
             <button
               onClick={() => setShowNewDeal(true)}
               className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
@@ -163,8 +230,8 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
             </button>
           </div>
         </div>
-        {/* Stage filters */}
-        <div className="flex gap-1.5 flex-wrap">
+        {/* Stage filters + active-only toggle */}
+        <div className="flex gap-1.5 flex-wrap items-center">
           <button
             onClick={() => setSelectedStage(null)}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
@@ -176,15 +243,111 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
             >{s.replace(/_/g," ")}</button>
           ))}
+          {viewMode === "kanban" && (
+            <label className="flex items-center gap-1.5 ml-2 text-xs text-slate-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={activeOnly}
+                onChange={(e) => setActiveOnly(e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              Active stages only
+            </label>
+          )}
         </div>
       </div>
 
-      {/* Table */}
+      {/* Board / Table */}
       <div className="flex-1 overflow-auto scrollbar-thin">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-64 bg-slate-100 rounded-xl animate-pulse" />
+            ))}
           </div>
+        ) : viewMode === "kanban" ? (
+          (() => {
+            // Group deals by stage. The kanban shows ALL deals returned by useDeals,
+            // not just the paginated current page; for large pipelines, switch to List view.
+            const byStage: Record<string, Deal[]> = {};
+            STAGES.forEach((s) => { byStage[s] = []; });
+            for (const d of filtered) {
+              (byStage[d.stage] ||= []).push(d);
+            }
+            const visibleStages = STAGES.filter((s) => {
+              if (!activeOnly) return true;
+              return ACTIVE_STAGES.includes(s) || (byStage[s] && byStage[s].length > 0);
+            });
+
+            return (
+              <div className="flex gap-3 p-4 h-full min-w-max">
+                {visibleStages.map((stage) => {
+                  const cards = byStage[stage] || [];
+                  const isDropTarget = draggingId !== null && dragOverStage === stage;
+                  return (
+                    <div
+                      key={stage}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage); }}
+                      onDragLeave={() => { if (dragOverStage === stage) setDragOverStage(null); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverStage(null);
+                        const id = e.dataTransfer.getData("text/deal-id");
+                        const deal = deals.find((d) => d.id === id);
+                        setDraggingId(null);
+                        if (deal) moveDeal(deal, stage);
+                      }}
+                      className={`w-72 flex-shrink-0 flex flex-col rounded-xl border ${isDropTarget ? "border-blue-400 bg-blue-50/50" : "border-slate-200 bg-slate-50"} overflow-hidden`}
+                    >
+                      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-slate-200 ${STAGE_BADGE[stage] || "bg-slate-100 text-slate-600"}`}>
+                        <span className="text-xs font-semibold">{stage.replace(/_/g, " ")}</span>
+                        <span className="text-xs font-bold opacity-70">{cards.length}</span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2 min-h-[200px]">
+                        {cards.length === 0 ? (
+                          <p className="text-xs text-slate-400 text-center py-6">Drop a deal here</p>
+                        ) : cards.map((deal) => {
+                          const days = daysBetween(deal.reservationDate);
+                          const overdue = paymentOverdue(deal as any);
+                          const isMoving = movingId === deal.id;
+                          return (
+                            <div
+                              key={deal.id}
+                              draggable={!isMoving}
+                              onDragStart={(e) => {
+                                setDraggingId(deal.id);
+                                e.dataTransfer.setData("text/deal-id", deal.id);
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragEnd={() => { setDraggingId(null); setDragOverStage(null); }}
+                              onClick={() => navigate(`/deals/${deal.id}`)}
+                              onDoubleClick={() => navigate(`/deals/${deal.id}`)}
+                              className={`bg-white rounded-lg border border-slate-200 p-3 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all ${draggingId === deal.id ? "opacity-50" : ""} ${isMoving ? "opacity-50 pointer-events-none" : ""}`}
+                            >
+                              <div className="flex items-start justify-between mb-1.5">
+                                <p className="text-sm font-semibold text-slate-800 leading-tight">
+                                  {deal.lead.firstName} {deal.lead.lastName}
+                                </p>
+                                {overdue && (
+                                  <span title="Has overdue payment" className="text-rose-500 text-base leading-none flex-shrink-0">▲</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mb-1">{deal.unit.unitNumber} · {deal.unit.type.replace(/_/g, " ")}</p>
+                              <p className="text-xs font-semibold text-slate-700 mb-2">AED {deal.salePrice.toLocaleString()}</p>
+                              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                <span>{days}d in pipeline</span>
+                                <span className="font-mono">{deal.dealNumber}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()
         ) : (
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
@@ -307,22 +470,24 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
         )}
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0">
-        <p className="text-xs text-slate-500">Page {currentPage} of {totalPages}</p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >← Prev</button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >Next →</button>
+      {/* Pagination — hidden in kanban view (kanban shows current page's batch only) */}
+      {viewMode === "list" && (
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0">
+          <p className="text-xs text-slate-500">Page {currentPage} of {totalPages}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >← Prev</button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Next →</button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showNewDeal && (
         <DealFormModal

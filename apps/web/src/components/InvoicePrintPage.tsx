@@ -100,7 +100,7 @@ export default function InvoicePrintPage() {
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
         <button onClick={() => window.print()}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 shadow-lg">
-          Download / Print
+          Download / Print PDF
         </button>
         <button onClick={() => window.close()}
           className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 shadow-lg">
@@ -178,15 +178,15 @@ export default function InvoicePrintPage() {
         </div>
 
         {/* Signature */}
-        <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200">
+        <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 break-inside-avoid">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-6">Authorized By</p>
-            <div className="border-b border-slate-300 mb-2" />
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Authorized By</p>
+            <div className="border-b border-slate-400 h-10 mb-2" />
             <p className="text-xs text-slate-400">Developer Representative</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-6">Acknowledged By</p>
-            <div className="border-b border-slate-300 mb-2" />
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Acknowledged By</p>
+            <div className="border-b border-slate-400 h-10 mb-2" />
             <p className="text-xs text-slate-400">{data.buyerDetails.name}</p>
           </div>
         </div>
@@ -195,6 +195,14 @@ export default function InvoicePrintPage() {
           Generated {today()} · {data.dealNumber}{docVersion !== null ? ` · v${docVersion}` : ""}
         </p>
       </div>
+
+      <style>{`
+        @media print {
+          @page { margin: 15mm; }
+          .print\\:hidden { display: none !important; }
+          .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+        }
+      `}</style>
     </div>
   );
 }

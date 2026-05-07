@@ -19,22 +19,22 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string; badge: st
     dot: "bg-orange-500",
   },
   RESERVED: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    badge: "bg-blue-100 text-blue-800",
-    dot: "bg-blue-500",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    badge: "bg-amber-100 text-amber-800",
+    dot: "bg-amber-500",
   },
   BOOKED: {
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    badge: "bg-purple-100 text-purple-800",
-    dot: "bg-purple-500",
+    bg: "bg-sky-50",
+    text: "text-sky-700",
+    badge: "bg-sky-100 text-sky-800",
+    dot: "bg-sky-500",
   },
   SOLD: {
-    bg: "bg-gray-50",
-    text: "text-gray-700",
-    badge: "bg-gray-100 text-gray-800",
-    dot: "bg-gray-400",
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    badge: "bg-rose-100 text-rose-800",
+    dot: "bg-rose-400",
   },
   HANDED_OVER: {
     bg: "bg-teal-50",
@@ -43,12 +43,35 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string; badge: st
     dot: "bg-teal-500",
   },
   BLOCKED: {
-    bg: "bg-red-50",
-    text: "text-red-700",
-    badge: "bg-red-100 text-red-800",
-    dot: "bg-red-500",
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+    badge: "bg-slate-200 text-slate-700",
+    dot: "bg-slate-400",
   },
 };
+
+export const PAYMENT_STATUS_COLORS: Record<string, { bg: string; text: string; badge: string; dot: string }> = {
+  PAID:     { bg: "bg-emerald-50", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
+  PARTIAL:  { bg: "bg-sky-50",     text: "text-sky-700",     badge: "bg-sky-100 text-sky-800",         dot: "bg-sky-500" },
+  PDC:      { bg: "bg-violet-50",  text: "text-violet-700",  badge: "bg-violet-100 text-violet-800",   dot: "bg-violet-500" },
+  PENDING:  { bg: "bg-slate-50",   text: "text-slate-700",   badge: "bg-slate-100 text-slate-800",     dot: "bg-slate-400" },
+  OVERDUE:  { bg: "bg-rose-50",    text: "text-rose-700",    badge: "bg-rose-100 text-rose-800",       dot: "bg-rose-500" },
+  WAIVED:   { bg: "bg-amber-50",   text: "text-amber-700",   badge: "bg-amber-100 text-amber-800",     dot: "bg-amber-500" },
+};
+
+export function getPaymentStatusColor(status: string) {
+  return PAYMENT_STATUS_COLORS[status] || PAYMENT_STATUS_COLORS.PENDING;
+}
+
+export const BROKER_STATUS_COLORS: Record<string, { badge: string; dot: string }> = {
+  ACTIVE:            { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  INACTIVE:          { badge: "bg-rose-100 text-rose-700",       dot: "bg-rose-500" },
+  PENDING_APPROVAL:  { badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500" },
+};
+
+export function getBrokerStatusColor(status: string) {
+  return BROKER_STATUS_COLORS[status] || BROKER_STATUS_COLORS.PENDING_APPROVAL;
+}
 
 export function getStatusColor(status: string) {
   return STATUS_COLORS[status] || STATUS_COLORS.NOT_RELEASED;

@@ -254,6 +254,14 @@ export default function SalesOfferPrintPage() {
           Generated on {today()} · {deal.dealNumber}{docVersion !== null ? ` · v${docVersion}` : ""}
         </p>
       </div>
+
+      <style>{`
+        @media print {
+          @page { margin: 15mm; }
+          .print\\:hidden { display: none !important; }
+          table, tr, .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+        }
+      `}</style>
     </div>
   );
 }

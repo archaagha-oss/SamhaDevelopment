@@ -118,6 +118,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
   // Core data
   const [lead,       setLead]       = useState<Lead | null>(null);
+  const [activeTab,  setActiveTab]  = useState<"offers" | "deals" | "activity">("offers");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [tasks,      setTasks]      = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -163,7 +164,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   // Offers
   const [offers, setOffers] = useState<{
     id: string; unitId: string; offeredPrice: number; discountAmount: number;
-    status: string; createdAt: string; notes?: string;
+    status: string; createdAt: string; expiresAt?: string | null; notes?: string;
     paymentPlan?: { id: string; name: string } | null;
     unit?: { unitNumber: string; type: string; floor: number };
   }[]>([]);
@@ -455,11 +456,16 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     setOfferModalUnit(unitId);
     setRevisingOffer(existing?.id ?? null);
     const unit = lead?.interests.find((i) => i.unitId === unitId)?.unit;
+    const defaultExpiry = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().slice(0, 10);
+    })();
     setOfferForm({
       offeredPrice:   existing ? String(existing.offeredPrice) : (unit ? String(unit.price) : ""),
       discountAmount: existing ? String(existing.discountAmount) : "0",
       paymentPlanId:  existing?.paymentPlan?.id ?? "",
-      expiresAt:      "",
+      expiresAt:      existing?.expiresAt ? new Date(existing.expiresAt).toISOString().slice(0,10) : defaultExpiry,
       notes:          existing?.notes ?? "",
     });
     setShowOfferModal(true);
@@ -497,8 +503,17 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     try {
       await axios.patch(`/api/offers/${offerId}/status`, { status, rejectedReason });
       const r = await axios.get("/api/offers", { params: { leadId } });
-      setOffers(r.data ?? []);
+      const updatedOffers = r.data ?? [];
+      setOffers(updatedOffers);
       toast.success(`Offer ${status.toLowerCase()}`);
+
+      // Prompt to create a deal immediately after acceptance
+      if (status === "ACCEPTED") {
+        const accepted = updatedOffers.find((o: any) => o.id === offerId);
+        if (accepted && window.confirm("Offer accepted. Create a reservation deal now?")) {
+          openReservationFromOffer(accepted);
+        }
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to update offer");
     }
@@ -703,6 +718,30 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         </div>
       </div>
 
+      {/* Tabs: Offers / Deals / Activity */}
+      <div className="border-b border-slate-200 flex items-center gap-1">
+        {([
+          { key: "offers",   label: "Offers",   count: offers.length },
+          { key: "deals",    label: "Deals",    count: lead.deals?.length ?? 0 },
+          { key: "activity", label: "Activity", count: activities.length },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === t.key
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {t.label}
+            <span className={`ml-1.5 text-[11px] ${activeTab === t.key ? "text-blue-500" : "text-slate-400"}`}>
+              ({t.count})
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left column */}
         <div className="space-y-4">
@@ -790,6 +829,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </div>
 
           {/* Deals */}
+          {activeTab === "deals" && (
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
               Deals <span className="text-slate-400 font-normal">({lead.deals?.length ?? 0})</span>
@@ -821,8 +861,10 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </div>
             )}
           </div>
+          )}
 
           {/* Offers history */}
+          {activeTab === "offers" && (
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
               Offers <span className="text-slate-400 font-normal">({offers.length})</span>
@@ -889,6 +931,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div>
@@ -960,6 +1003,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         </div>
 
         {/* Activity timeline */}
+        {activeTab === "activity" && (
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
@@ -1043,6 +1087,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* ── Edit Lead Modal ─────────────────────────────────────────────────────── */}
@@ -1402,13 +1447,18 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Offer Expiry</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Offer Expiry <span className="text-slate-400 font-normal">(default 7 days)</span></label>
               <input
                 type="date"
                 value={offerForm.expiresAt}
                 onChange={(e) => setOfferForm((p) => ({ ...p, expiresAt: e.target.value }))}
                 className={inputCls}
               />
+              {offerForm.expiresAt && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Expires {new Date(offerForm.expiresAt).toLocaleDateString("en-AE", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>

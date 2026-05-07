@@ -1,10 +1,13 @@
 import { useState } from "react";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+
+type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
 
 interface SidebarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  role?: Role;
 }
 
 const salesItems: { page: Page; label: string; icon: string }[] = [
@@ -22,6 +25,7 @@ const salesItems: { page: Page; label: string; icon: string }[] = [
 ];
 
 const financeItems: { page: Page; label: string; icon: string }[] = [
+  { page: "finance",     label: "Finance",     icon: "$" },
   { page: "payments",    label: "Payments",    icon: "⊟" },
   { page: "payment-plans", label: "Pay. Plans", icon: "≡" },
   { page: "commissions", label: "Commissions", icon: "◇" },
@@ -32,6 +36,18 @@ const adminItems: { page: Page; label: string; icon: string }[] = [
   { page: "team",        label: "Team",        icon: "⊞" },
   { page: "settings",    label: "Settings",    icon: "⚙" },
 ];
+
+// Role-based section visibility
+function visibleSections(role: Role | undefined) {
+  // Default: assume ADMIN if role unknown
+  const r = role ?? "ADMIN";
+  if (r === "ADMIN") return { sales: true, finance: true, admin: true };
+  if (r === "SALES_MANAGER") return { sales: true, finance: true, admin: false };
+  if (r === "SALES" || r === "SALES_AGENT") return { sales: true, finance: false, admin: false };
+  if (r === "FINANCE") return { sales: false, finance: true, admin: false };
+  if (r === "OPERATIONS") return { sales: true, finance: true, admin: false };
+  return { sales: true, finance: true, admin: true };
+}
 
 function NavItem({ page, label, icon, active, collapsed, onNavigate }: {
   page: Page; label: string; icon: string; active: boolean;
@@ -62,8 +78,9 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
   );
 }
 
-export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const sections = visibleSections(role);
 
   return (
     <div className={`${collapsed ? "w-14" : "w-56"} bg-slate-900 flex flex-col h-full flex-shrink-0 border-r border-slate-800 transition-all duration-200`}>
@@ -80,23 +97,35 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
-        <SectionLabel label="Sales" collapsed={collapsed} />
-        {salesItems.map(({ page, label, icon }) => (
-          <NavItem key={page} page={page} label={label} icon={icon}
-            active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
-        ))}
+        {sections.sales && (
+          <>
+            <SectionLabel label="Sales" collapsed={collapsed} />
+            {salesItems.map(({ page, label, icon }) => (
+              <NavItem key={page} page={page} label={label} icon={icon}
+                active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
 
-        <SectionLabel label="Finance" collapsed={collapsed} />
-        {financeItems.map(({ page, label, icon }) => (
-          <NavItem key={page} page={page} label={label} icon={icon}
-            active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
-        ))}
+        {sections.finance && (
+          <>
+            <SectionLabel label="Finance" collapsed={collapsed} />
+            {financeItems.map(({ page, label, icon }) => (
+              <NavItem key={page} page={page} label={label} icon={icon}
+                active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
 
-        <SectionLabel label="Admin" collapsed={collapsed} />
-        {adminItems.map(({ page, label, icon }) => (
-          <NavItem key={page} page={page} label={label} icon={icon}
-            active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
-        ))}
+        {sections.admin && (
+          <>
+            <SectionLabel label="Admin" collapsed={collapsed} />
+            {adminItems.map(({ page, label, icon }) => (
+              <NavItem key={page} page={page} label={label} icon={icon}
+                active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Collapse toggle */}

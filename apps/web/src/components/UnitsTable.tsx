@@ -8,6 +8,20 @@ import UnitModal from "./UnitModal";
 import UnitFormModal from "./UnitFormModal";
 import BulkUnitModal from "./BulkUnitModal";
 import ConfirmDialog from "./ConfirmDialog";
+import EmptyState from "./EmptyState";
+import UnitGrid from "./UnitGrid";
+
+// Solid background colors for matrix cells (different from the badge styling)
+const CELL_BG: Record<string, string> = {
+  NOT_RELEASED: "bg-slate-300",
+  AVAILABLE:    "bg-emerald-400",
+  ON_HOLD:      "bg-orange-400",
+  RESERVED:     "bg-amber-400",
+  BOOKED:       "bg-sky-400",
+  SOLD:         "bg-rose-400",
+  HANDED_OVER:  "bg-teal-400",
+  BLOCKED:      "bg-slate-400",
+};
 
 interface Unit {
   id: string;
@@ -74,6 +88,9 @@ export default function UnitsTable({ projectId }: Props) {
   // Sort
   const [sortKey, setSortKey] = useState<SortKey>(isGlobal ? "project" : "unitNumber");
   const [sortAsc, setSortAsc] = useState(true);
+
+  // View mode (Matrix is default for project-scoped view)
+  const [viewMode, setViewMode] = useState<"matrix" | "list">(isGlobal ? "list" : "matrix");
 
   // Inline price edit
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -269,6 +286,21 @@ export default function UnitsTable({ projectId }: Props) {
   return (
     <div className="flex flex-col h-full">
 
+      {/* ── Quick stats strip ── */}
+      {!loading && units.length > 0 && (
+        <div className="flex items-center gap-2 px-6 py-2 bg-white border-b border-slate-100 text-xs text-slate-600 flex-shrink-0">
+          <span className="font-semibold text-slate-700">Total {units.length}</span>
+          <span className="text-slate-300">·</span>
+          <span>Available <span className="font-semibold text-emerald-600">{byStatus.AVAILABLE || 0}</span></span>
+          <span className="text-slate-300">·</span>
+          <span>Reserved <span className="font-semibold text-amber-600">{byStatus.RESERVED || 0}</span></span>
+          <span className="text-slate-300">·</span>
+          <span>Booked <span className="font-semibold text-sky-600">{byStatus.BOOKED || 0}</span></span>
+          <span className="text-slate-300">·</span>
+          <span>Sold <span className="font-semibold text-rose-600">{byStatus.SOLD || 0}</span></span>
+        </div>
+      )}
+
       {/* ── Action bar ── */}
       <div className="flex items-center gap-2 px-6 py-3 bg-white border-b border-slate-100 flex-shrink-0 flex-wrap">
         {!selectionMode ? (
@@ -297,6 +329,26 @@ export default function UnitsTable({ projectId }: Props) {
             >
               ☑ Select
             </button>
+
+            {/* View toggle (project mode only — matrix needs a single project) */}
+            {!isGlobal && (
+              <div className="inline-flex border border-slate-200 rounded-lg overflow-hidden text-xs">
+                <button
+                  onClick={() => setViewMode("matrix")}
+                  className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "matrix" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                  title="Matrix view"
+                >
+                  ▦ Matrix
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                  title="List view"
+                >
+                  ☰ List
+                </button>
+              </div>
+            )}
 
             <div className="h-5 w-px bg-slate-200 mx-1" />
 
@@ -503,8 +555,28 @@ export default function UnitsTable({ projectId }: Props) {
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-400">
-            <p>{units.length === 0 ? "No units yet — add your first unit above" : "No units match the current filters"}</p>
+          units.length === 0 ? (
+            <EmptyState
+              icon="🏢"
+              title="No units yet"
+              description="Add units one at a time, or import a full floor in bulk."
+              action={!isGlobal ? { label: "Import Units", onClick: () => setShowBulkModal(true) } : undefined}
+            />
+          ) : (
+            <EmptyState
+              icon="🔍"
+              title="No units match the current filters"
+              description="Try clearing the search or status filters."
+            />
+          )
+        ) : viewMode === "matrix" && !isGlobal ? (
+          <div className="p-4">
+            <UnitGrid
+              units={filtered as any}
+              statusColors={CELL_BG}
+              statusLabels={STATUS_LABELS}
+              onRefresh={load}
+            />
           </div>
         ) : (
           <table className="w-full text-sm">

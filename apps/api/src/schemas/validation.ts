@@ -54,6 +54,7 @@ export const createLeadSchema = z.object({
   brokerCompanyId: z.string().optional(),
   brokerAgentId: z.string().optional(),
   notes: z.string().optional(),
+  consent: z.boolean().optional(),
 });
 
 export const updateLeadSchema = z.object({
@@ -147,6 +148,8 @@ export const createBrokerCompanySchema = z.object({
   bankAccountNo: z.string().optional(),
   bankIban: z.string().optional(),
   bankCurrency: z.string().optional(),
+  bankSwiftCode: z.string().optional(),
+  status: z.enum(["ACTIVE", "INACTIVE", "PENDING_APPROVAL"]).optional(),
   commissionRate: z.number().nonnegative().max(100).default(4),
 });
 

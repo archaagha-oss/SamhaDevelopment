@@ -18,6 +18,7 @@ const BLANK = {
   firstName: "", lastName: "", phone: "", email: "", nationality: "",
   source: "DIRECT", budget: "", assignedAgentId: "", notes: "",
   brokerCompanyId: "", brokerAgentId: "",
+  consent: false,
 };
 
 export default function LeadFormModal({ onClose, onCreated }: Props) {
@@ -77,6 +78,10 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!form.consent) {
+      setError("Consent is required before creating a lead.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await axios.post("/api/leads", {
@@ -91,6 +96,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         notes:          form.notes || undefined,
         brokerCompanyId: form.source === "BROKER" && form.brokerCompanyId ? form.brokerCompanyId : undefined,
         brokerAgentId:   form.source === "BROKER" && form.brokerAgentId   ? form.brokerAgentId   : undefined,
+        consent:         form.consent,
       });
 
       const leadId = res.data.id;
@@ -127,8 +133,13 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
   const selectedUnits = availableUnits.filter((u) => selectedUnitIds.has(u.id));
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/40" onClick={handleClose} />
+      <div className="
+        fixed bg-white shadow-2xl flex flex-col overflow-hidden
+        left-0 right-0 bottom-0 top-12 rounded-t-2xl
+        sm:left-auto sm:top-0 sm:bottom-0 sm:right-0 sm:rounded-none sm:rounded-l-2xl sm:w-full sm:max-w-lg
+      ">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
@@ -384,6 +395,23 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Consent */}
+          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                required
+                checked={form.consent}
+                onChange={(e) => set({ consent: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-xs text-slate-600 leading-relaxed">
+                The lead has consented to being contacted about properties and consents to data
+                processing under our privacy policy. <span className="text-red-500">*</span>
+              </span>
+            </label>
           </div>
 
           {error && (
