@@ -8,6 +8,7 @@ import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
+import DealTimeline from "./DealTimeline";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -243,7 +244,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [showPdcModal, setShowPdcModal] = useState<string | null>(null);
   const [pdcForm, setPdcForm] = useState({ pdcNumber: "", pdcBank: "", pdcDate: "" });
   const [stageRequirements, setStageRequirements] = useState<Array<{ documentType: string; label: string; required: boolean; uploaded: boolean }>>([]);
-  const [activeTab, setActiveTab] = useState<"payments" | "history" | "activity" | "tasks">("payments");
+  const [activeTab, setActiveTab] = useState<"timeline" | "payments" | "history" | "activity" | "tasks">("timeline");
   const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -736,6 +737,34 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 {generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer"}
               </button>
             )}
+            {(deal.stage === "SPA_PENDING" || deal.stage === "SPA_SENT") && (
+              <button
+                onClick={() => handleGenerateDocument("SPA")}
+                disabled={!!generatingDoc}
+                className="px-4 py-1.5 bg-violet-600 text-white text-sm font-bold rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+              >
+                {generatingDoc === "SPA" ? "Generating…" : "📝 Generate SPA"}
+              </button>
+            )}
+            {deal.stage === "OQOOD_PENDING" && (
+              <button
+                onClick={() => setShowDocumentUploadModal(true)}
+                className="px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                📋 Record Oqood
+              </button>
+            )}
+            {(deal.stage === "INSTALLMENTS_ACTIVE" || deal.stage === "SPA_SIGNED") && deal.payments.length > 0 && deal.payments.some((p: any) => p.status === "PENDING" || p.status === "OVERDUE") && (
+              <button
+                onClick={() => {
+                  const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
+                  if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                💰 Record Payment
+              </button>
+            )}
 
             <div className="relative flex items-center gap-2">
               {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
@@ -1076,7 +1105,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
               <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                {(["payments", "activity", "tasks", "history"] as const).map((tab) => (
+                {(["timeline", "payments", "activity", "tasks", "history"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -1084,7 +1113,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       activeTab === tab ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
-                    {tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage History"}
+                    {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage History"}
                   </button>
                 ))}
               </div>
@@ -1131,6 +1160,18 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </div>
               )}
             </div>
+
+            {/* Timeline tab */}
+            {activeTab === "timeline" && deal && (
+              <DealTimeline
+                stage={deal.stage}
+                reservationDate={deal.reservationDate}
+                spaSignedDate={deal.documents?.find((d: any) => d.type === "SPA")?.uploadedAt}
+                oqoodRegisteredDate={deal.documents?.find((d: any) => d.type === "OQOOD")?.uploadedAt}
+                oqoodDeadline={deal.oqoodDeadline}
+                completedDate={deal.stage === "COMPLETED" ? new Date().toISOString() : undefined}
+              />
+            )}
 
             {/* Payments tab */}
             {activeTab === "payments" && (

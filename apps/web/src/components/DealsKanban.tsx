@@ -56,6 +56,18 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
   const [draggingDeal, setDraggingDeal] = useState<string | null>(null);
   const [dragSource, setDragSource] = useState<string | null>(null);
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
+  const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem("kanban-collapsed-stages");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const toggleStageCollapse = (stage: string) => {
+    setCollapsedStages((prev) => {
+      const updated = { ...prev, [stage]: !prev[stage] };
+      localStorage.setItem("kanban-collapsed-stages", JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Determine which stages to display
   const visibleStages = useMemo(() => {
@@ -135,30 +147,48 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
         {visibleStages.map((stage) => {
           const stageDealCount = dealsByStage[stage].length;
           const colors = STAGE_COLORS[stage];
+          const isCollapsed = collapsedStages[stage] ?? false;
 
           return (
             <div
               key={stage}
-              className={`flex-shrink-0 w-80 ${colors.bg} rounded-xl border-2 ${colors.border} flex flex-col`}
+              className={`flex-shrink-0 ${isCollapsed ? "w-20" : "w-80"} ${colors.bg} rounded-xl border-2 ${colors.border} flex flex-col transition-all duration-200`}
             >
               {/* Column header */}
-              <div className="px-4 py-3 border-b border-slate-200">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className={`font-semibold text-sm ${colors.text}`}>{stage.replace(/_/g, " ")}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colors.bg} ${colors.text}`}>
-                    {stageDealCount}
-                  </span>
+              <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <div className={`flex-1 ${isCollapsed ? "hidden" : ""}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className={`font-semibold text-sm ${colors.text}`}>{stage.replace(/_/g, " ")}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colors.bg} ${colors.text}`}>
+                      {stageDealCount}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {stageDealCount === 0
+                      ? "No deals"
+                      : stageDealCount === 1
+                      ? "1 deal"
+                      : `${stageDealCount} deals`}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  {stageDealCount === 0
-                    ? "No deals"
-                    : stageDealCount === 1
-                    ? "1 deal"
-                    : `${stageDealCount} deals`}
-                </p>
+                {isCollapsed && (
+                  <div className="flex flex-col items-center justify-center gap-1">
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${colors.bg} ${colors.text}`}>
+                      {stageDealCount}
+                    </span>
+                  </div>
+                )}
+                <button
+                  onClick={() => toggleStageCollapse(stage)}
+                  title={isCollapsed ? "Expand" : "Collapse"}
+                  className={`text-xs font-semibold ${colors.text} hover:opacity-70 transition-opacity ml-2`}
+                >
+                  {isCollapsed ? "▶" : "◀"}
+                </button>
               </div>
 
               {/* Drop zone */}
+              {!isCollapsed && (
               <div
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage)}
@@ -249,6 +279,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                   })
                 )}
               </div>
+              )}
             </div>
           );
         })}
