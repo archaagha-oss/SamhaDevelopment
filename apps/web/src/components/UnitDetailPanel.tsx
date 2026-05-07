@@ -3,13 +3,14 @@ import { Unit, UnitStatusHistory } from "../types";
 import { getStatusColor } from "../utils/statusColors";
 import axios from "axios";
 import { toast } from "sonner";
+import CreateOfferModal from "./CreateOfferModal";
 
 interface UnitDetailPanelProps {
   unit: Unit;
   isOpen: boolean;
   onClose: () => void;
-  onCreateOffer: (unit: Unit) => void;
-  onViewDeal: (dealId: string) => void;
+  onCreateOffer?: (unit: Unit) => void;
+  onViewDeal?: (dealId: string) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -41,6 +42,7 @@ export default function UnitDetailPanel({
 }: UnitDetailPanelProps) {
   const [history, setHistory] = useState<UnitStatusHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
   const statusColor = getStatusColor(unit.status);
 
   React.useEffect(() => {
@@ -83,7 +85,7 @@ export default function UnitDetailPanel({
     actionButtons.push(
       <button
         key="offer"
-        onClick={() => onCreateOffer(unit)}
+        onClick={() => setShowOfferModal(true)}
         className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
       >
         Create Offer
@@ -97,7 +99,7 @@ export default function UnitDetailPanel({
       actionButtons.push(
         <button
           key="deal"
-          onClick={() => onViewDeal(deal.id)}
+          onClick={() => onViewDeal?.(deal.id)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
         >
           View Deal
@@ -232,6 +234,22 @@ export default function UnitDetailPanel({
           )}
         </div>
       </div>
+
+      {/* Offer Modal */}
+      <CreateOfferModal
+        isOpen={showOfferModal}
+        onClose={() => setShowOfferModal(false)}
+        unitId={unit.id}
+        unitNumber={unit.unitNumber}
+        unitPrice={unit.price}
+        unitArea={unit.area}
+        onOfferCreated={(offerId, dealId) => {
+          setShowOfferModal(false);
+          if (dealId) {
+            onViewDeal?.(dealId);
+          }
+        }}
+      />
     </>
   );
 }
