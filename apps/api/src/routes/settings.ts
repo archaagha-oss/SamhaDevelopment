@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuthentication, requireRole } from "../middleware/auth";
 import { validate } from "../middleware/validation";
@@ -18,6 +18,8 @@ import {
   recordAudit,
   diffFields,
   applyCommunicationPatch,
+  snapshotFields,
+  type SettingsSection,
 } from "../services/settingsService";
 import {
   sendEmail,
@@ -31,7 +33,6 @@ const router = Router();
 
 const ADMIN_ONLY = ["ADMIN"];
 
-// All settings endpoints require auth.
 router.use(requireAuthentication);
 
 // ─── Read ────────────────────────────────────────────────────────────────────
@@ -45,20 +46,62 @@ router.get("/", async (_req, res, next) => {
   }
 });
 
-// ─── Per-section update helpers ─────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-const userIdFrom = (req: any): string | null =>
-  req.resolvedUser?.id ?? req.auth?.userId ?? null;
+const userIdFrom = (req: Request): string | null =>
+  (req as any).resolvedUser?.id ?? req.auth?.userId ?? null;
+
+const ipFrom = (req: Request): string | null =>
+  (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || null;
+
+const uaFrom = (req: Request): string | null =>
+  (req.headers["user-agent"] as string) ?? null;
+
+interface SectionContext {
+  req: Request;
+  section: SettingsSection;
+  before: any;
+  data: Record<string, any>;
+  changed: string[];
+  reason: string | null;
+}
+
+async function commitSection(ctx: SectionContext) {
+  const updated = await prisma.appSettings.update({ where: { id: ctx.before.id }, data: ctx.data });
+  await recordAudit({
+    appSettingsId: ctx.before.id,
+    userId:        userIdFrom(ctx.req),
+    section:       ctx.section,
+    changedFields: ctx.changed,
+    before:        snapshotFields(ctx.before, ctx.changed),
+    after:         snapshotFields(updated,    ctx.changed),
+    reason:        ctx.reason,
+    ip:            ipFrom(ctx.req),
+    userAgent:     uaFrom(ctx.req),
+  });
+  return updated;
+}
+
+const reasonFrom = (req: Request): string | null => {
+  const r = (req.body as any)?._reason;
+  return typeof r === "string" && r.trim().length > 0 ? r.trim().slice(0, 500) : null;
+};
+
+const stripMeta = (body: any) => {
+  if (body && typeof body === "object") delete body._reason;
+  return body;
+};
+
+// ─── Per-section update ─────────────────────────────────────────────────────
 
 router.patch("/branding", requireRole(ADMIN_ONLY), validate(brandingSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const data = { ...req.body };
-    // Empty strings clear the field.
+    const data: Record<string, any> = { ...stripMeta(req.body) };
     for (const k of Object.keys(data)) if (data[k] === "") data[k] = null;
     const changed = diffFields(settings, data);
-    const updated = await prisma.appSettings.update({ where: { id: settings.id }, data });
-    recordAudit({ userId: userIdFrom(req), section: "branding", changedFields: changed });
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
+    const updated = await commitSection({ req, section: "branding", before: settings, data, changed, reason: reasonFrom(req) });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });
@@ -66,9 +109,10 @@ router.patch("/branding", requireRole(ADMIN_ONLY), validate(brandingSchema), asy
 router.patch("/localization", requireRole(ADMIN_ONLY), validate(localizationSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const changed = diffFields(settings, req.body);
-    const updated = await prisma.appSettings.update({ where: { id: settings.id }, data: req.body });
-    recordAudit({ userId: userIdFrom(req), section: "localization", changedFields: changed });
+    const data = { ...stripMeta(req.body) };
+    const changed = diffFields(settings, data);
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
+    const updated = await commitSection({ req, section: "localization", before: settings, data, changed, reason: reasonFrom(req) });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });
@@ -76,10 +120,10 @@ router.patch("/localization", requireRole(ADMIN_ONLY), validate(localizationSche
 router.patch("/communication", requireRole(ADMIN_ONLY), validate(communicationSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const data = applyCommunicationPatch(req.body);
+    const data = applyCommunicationPatch(stripMeta(req.body));
     const changed = diffFields(settings, data);
-    const updated = await prisma.appSettings.update({ where: { id: settings.id }, data });
-    recordAudit({ userId: userIdFrom(req), section: "communication", changedFields: changed });
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
+    const updated = await commitSection({ req, section: "communication", before: settings, data, changed, reason: reasonFrom(req) });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });
@@ -87,9 +131,10 @@ router.patch("/communication", requireRole(ADMIN_ONLY), validate(communicationSc
 router.patch("/finance", requireRole(ADMIN_ONLY), validate(financeSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const changed = diffFields(settings, req.body);
-    const updated = await prisma.appSettings.update({ where: { id: settings.id }, data: req.body });
-    recordAudit({ userId: userIdFrom(req), section: "finance", changedFields: changed });
+    const data = { ...stripMeta(req.body) };
+    const changed = diffFields(settings, data);
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
+    const updated = await commitSection({ req, section: "finance", before: settings, data, changed, reason: reasonFrom(req) });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });
@@ -97,13 +142,27 @@ router.patch("/finance", requireRole(ADMIN_ONLY), validate(financeSchema), async
 router.patch("/templates", requireRole(ADMIN_ONLY), validate(templatesSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const merged = { ...(settings.emailTemplates as any ?? {}), ...req.body.emailTemplates };
-    const changed = Object.keys(req.body.emailTemplates);
+    const beforeTemplates = (settings.emailTemplates as any) ?? {};
+    const merged = { ...beforeTemplates, ...req.body.emailTemplates };
+    const changed = Object.keys(req.body.emailTemplates).filter(
+      (k) => JSON.stringify(beforeTemplates[k] ?? null) !== JSON.stringify(req.body.emailTemplates[k] ?? null),
+    );
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
     const updated = await prisma.appSettings.update({
       where: { id: settings.id },
       data:  { emailTemplates: merged },
     });
-    recordAudit({ userId: userIdFrom(req), section: "templates", changedFields: changed });
+    await recordAudit({
+      appSettingsId: settings.id,
+      userId:        userIdFrom(req),
+      section:       "templates",
+      changedFields: changed,
+      before:        Object.fromEntries(changed.map((k) => [k, beforeTemplates[k] ?? null])),
+      after:         Object.fromEntries(changed.map((k) => [k, merged[k] ?? null])),
+      reason:        reasonFrom(req),
+      ip:            ipFrom(req),
+      userAgent:     uaFrom(req),
+    });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });
@@ -111,15 +170,89 @@ router.patch("/templates", requireRole(ADMIN_ONLY), validate(templatesSchema), a
 router.patch("/notifications", requireRole(ADMIN_ONLY), validate(notificationsSchema), async (req, res, next) => {
   try {
     const { settings } = await loadOrCreateSettings();
-    const merged = { ...(settings.notificationPrefs as any ?? {}), ...req.body.notificationPrefs };
-    const changed = Object.keys(req.body.notificationPrefs);
+    const beforePrefs = (settings.notificationPrefs as any) ?? {};
+    const merged = { ...beforePrefs, ...req.body.notificationPrefs };
+    const changed = Object.keys(req.body.notificationPrefs).filter(
+      (k) => JSON.stringify(beforePrefs[k] ?? null) !== JSON.stringify(req.body.notificationPrefs[k] ?? null),
+    );
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
     const updated = await prisma.appSettings.update({
       where: { id: settings.id },
       data:  { notificationPrefs: merged },
     });
-    recordAudit({ userId: userIdFrom(req), section: "notifications", changedFields: changed });
+    await recordAudit({
+      appSettingsId: settings.id,
+      userId:        userIdFrom(req),
+      section:       "notifications",
+      changedFields: changed,
+      before:        Object.fromEntries(changed.map((k) => [k, beforePrefs[k] ?? null])),
+      after:         Object.fromEntries(changed.map((k) => [k, merged[k] ?? null])),
+      reason:        reasonFrom(req),
+      ip:            ipFrom(req),
+      userAgent:     uaFrom(req),
+    });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
+});
+
+// ─── Audit log read ─────────────────────────────────────────────────────────
+
+router.get("/audit-log", requireRole(ADMIN_ONLY), async (req, res, next) => {
+  try {
+    const { settings } = await loadOrCreateSettings();
+    const limit  = Math.min(Number(req.query.limit  ?? 50), 200);
+    const offset = Math.max(Number(req.query.offset ?? 0), 0);
+    const section = typeof req.query.section === "string" ? req.query.section : undefined;
+
+    const where: Record<string, any> = { appSettingsId: settings.id };
+    if (section) where.section = section;
+
+    const [items, total] = await Promise.all([
+      (prisma as any).settingsAuditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      (prisma as any).settingsAuditLog.count({ where }),
+    ]);
+
+    // Resolve user names where possible — best effort.
+    const userIds = Array.from(new Set(items.map((i: any) => i.userId).filter(Boolean) as string[]));
+    const users = userIds.length
+      ? await prisma.user.findMany({
+          where: { OR: [{ id: { in: userIds } }, { clerkId: { in: userIds } }] },
+          select: { id: true, clerkId: true, name: true, role: true },
+        })
+      : [];
+    const userMap = new Map<string, { name: string; role: string }>();
+    for (const u of users) {
+      userMap.set(u.id, { name: u.name, role: u.role });
+      if (u.clerkId) userMap.set(u.clerkId, { name: u.name, role: u.role });
+    }
+
+    res.json({
+      data: items.map((i: any) => ({
+        ...i,
+        user: i.userId ? userMap.get(i.userId) ?? null : null,
+      })),
+      total,
+      limit,
+      offset,
+    });
+  } catch (err: any) {
+    if (/settingsAuditLog/i.test(err?.message ?? "")) {
+      // Model not migrated yet — return empty result with a hint.
+      return res.json({
+        data: [],
+        total: 0,
+        limit: 0,
+        offset: 0,
+        warning: "SettingsAuditLog table not yet migrated. Run `npm run db:push` in apps/api.",
+      });
+    }
+    next(err);
+  }
 });
 
 // ─── Test endpoints ─────────────────────────────────────────────────────────
@@ -165,15 +298,12 @@ router.patch("/", requireRole(ADMIN_ONLY), async (req, res, next) => {
     const { settings } = await loadOrCreateSettings();
     const data: Record<string, any> = {};
 
-    // Branding / localization / finance pass through
     const passthrough = [
       "companyName", "logoUrl", "primaryColor",
       "timezone", "currency", "dateFormat",
       "paymentInstructions",
     ];
     for (const k of passthrough) if (req.body[k] !== undefined) data[k] = req.body[k];
-
-    // Communication uses the patch-aware helper.
     Object.assign(data, applyCommunicationPatch(req.body));
 
     if (req.body.emailTemplates !== undefined) {
@@ -184,8 +314,8 @@ router.patch("/", requireRole(ADMIN_ONLY), async (req, res, next) => {
     }
 
     const changed = diffFields(settings, data);
-    const updated = await prisma.appSettings.update({ where: { id: settings.id }, data });
-    recordAudit({ userId: userIdFrom(req), section: "branding", changedFields: changed });
+    if (changed.length === 0) return res.json(toPublicSettings(settings));
+    const updated = await commitSection({ req, section: "branding", before: settings, data, changed, reason: reasonFrom(req) });
     res.json(toPublicSettings(updated));
   } catch (err) { next(err); }
 });

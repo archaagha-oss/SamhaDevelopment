@@ -96,26 +96,84 @@ export function toPublicSettings(row: any): PublicSettings {
   };
 }
 
+export type SettingsSection =
+  | "branding" | "localization" | "communication" | "finance" | "templates" | "notifications";
+
 interface AuditCtx {
-  userId: string | null;
-  section: "branding" | "localization" | "communication" | "finance" | "templates" | "notifications";
+  appSettingsId: string;
+  userId:    string | null;
+  section:   SettingsSection;
   changedFields: string[];
+  before?:   Record<string, unknown> | null;
+  after?:    Record<string, unknown> | null;
+  reason?:   string | null;
+  ip?:       string | null;
+  userAgent?: string | null;
 }
 
 /**
- * Lightweight audit log. Persists to the application logger so a search of the
- * logs surfaces every settings change with userId + section + fields. DB-backed
- * audit can be added later via a SettingsAuditLog model.
+ * Redact secret values from an object before persisting them to the audit log.
+ * Returns a shallow clone with secret fields replaced by sentinel markers.
  */
-export function recordAudit(ctx: AuditCtx) {
+export function redactForAudit<T extends Record<string, any>>(obj: T | null | undefined): Record<string, unknown> | null {
+  if (!obj) return null;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SECRET_FIELDS.includes(k as any)) {
+      out[k] = v ? "***REDACTED***" : null;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/**
+ * Persist an audit entry. Writes to the DB SettingsAuditLog table when
+ * available; always mirrors a structured logger entry for forensic search.
+ */
+export async function recordAudit(ctx: AuditCtx): Promise<void> {
   if (ctx.changedFields.length === 0) return;
-  // Never log secret values, only their field names.
+
   logger.info("settings.update", {
     userId:        ctx.userId,
     section:       ctx.section,
     changedFields: ctx.changedFields,
     timestamp:     new Date().toISOString(),
   });
+
+  try {
+    await (prisma as any).settingsAuditLog.create({
+      data: {
+        appSettingsId: ctx.appSettingsId,
+        userId:        ctx.userId,
+        section:       ctx.section,
+        changedFields: ctx.changedFields,
+        before:        ctx.before ?? undefined,
+        after:         ctx.after  ?? undefined,
+        reason:        ctx.reason ?? null,
+        ip:            ctx.ip     ?? null,
+        userAgent:     ctx.userAgent ?? null,
+      },
+    });
+  } catch (err: any) {
+    // If the model isn't generated yet (pre db:push), the call throws — log
+    // but don't break the user's save. Prompt the operator to run migrations.
+    logger.warn("settings.audit_write_failed", {
+      message: err?.message ?? String(err),
+      hint:    "Run `npm run db:push` in apps/api to create the SettingsAuditLog table.",
+    });
+  }
+}
+
+/**
+ * Read snapshot of just the fields named in `keys` from a settings row,
+ * redacting secrets so they never land in the audit log.
+ */
+export function snapshotFields(row: any, keys: string[]): Record<string, unknown> {
+  const snap: Record<string, unknown> = {};
+  for (const k of keys) snap[k] = row?.[k] ?? null;
+  return redactForAudit(snap) ?? {};
 }
 
 /**

@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useSettings, type AppSettings } from "../contexts/SettingsContext";
 
-type Tab = "company" | "localization" | "communication" | "finance" | "templates";
+type Tab = "company" | "localization" | "communication" | "finance" | "templates" | "audit";
 
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400";
 const lbl = "block text-xs font-semibold text-slate-600 mb-1";
@@ -77,9 +77,11 @@ export default function SettingsPage() {
   const set = <K extends keyof Form>(key: K, val: Form[K]) => setForm((f) => ({ ...f, [key]: val }));
 
   async function save(section: Tab, body: Record<string, unknown>) {
+    if (section === "audit") return;
     setSaving(section);
+    const reason = window.prompt("Optional: reason for this change (recorded in audit log). Leave blank to skip.") ?? "";
     try {
-      await axios.patch(`/api/settings/${apiSection[section]}`, body);
+      await axios.patch(`/api/settings/${apiSection[section]}`, { ...body, ...(reason.trim() ? { _reason: reason.trim() } : {}) });
       await refresh();
       toast.success(`${labels[section]} saved`);
     } catch (e: any) {
@@ -96,6 +98,7 @@ export default function SettingsPage() {
     { key: "communication", label: "Communication" },
     { key: "finance",       label: "Finance" },
     { key: "templates",     label: "Email Templates" },
+    { key: "audit",         label: "Audit Log" },
   ];
 
   if (isLoading) {
@@ -136,6 +139,7 @@ export default function SettingsPage() {
         {tab === "communication" && <CommunicationSection form={form} set={set} saving={saving === "communication"} onSave={() => save("communication", communicationBody(form))} />}
         {tab === "finance"       && <FinanceSection       form={form} set={set} saving={saving === "finance"}       onSave={() => save("finance", { paymentInstructions: form.paymentInstructions })} />}
         {tab === "templates"     && <TemplatesSection     form={form} set={set} saving={saving === "templates"}     onSave={() => save("templates", { emailTemplates: form.emailTemplates })} />}
+        {tab === "audit"         && <AuditLogSection />}
       </div>
     </div>
   );
@@ -147,6 +151,7 @@ const apiSection: Record<Tab, string> = {
   communication: "communication",
   finance: "finance",
   templates: "templates",
+  audit: "",
 };
 
 const labels: Record<Tab, string> = {
@@ -155,6 +160,7 @@ const labels: Record<Tab, string> = {
   communication: "Communication",
   finance: "Finance",
   templates: "Email templates",
+  audit: "Audit log",
 };
 
 function communicationBody(f: Form) {
@@ -510,6 +516,137 @@ function TemplatesSection({ form, set, saving, onSave }: SectionProps) {
         </div>
       ))}
       <SaveBar saving={saving} onSave={onSave} />
+    </div>
+  );
+}
+
+// ─── Audit log viewer ─────────────────────────────────────────────────────
+
+interface AuditEntry {
+  id: string;
+  section: string;
+  changedFields: string[];
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  reason: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  user: { name: string; role: string } | null;
+}
+
+function AuditLogSection() {
+  const [items, setItems] = useState<AuditEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [section, setSection] = useState<string>("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const r = await axios.get("/api/settings/audit-log", {
+        params: { limit: 50, section: section || undefined },
+      });
+      setItems(r.data.data || []);
+      setTotal(r.data.total ?? 0);
+      setWarning(r.data.warning ?? null);
+    } catch (e: any) {
+      toast.error(e.response?.data?.error ?? "Failed to load audit log");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [section]);
+
+  const sections = ["", "branding", "localization", "communication", "finance", "templates", "notifications"];
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Audit Log</p>
+            <p className="text-xs text-slate-400 mt-0.5">{total} entries — admin-only, last 50 shown</p>
+          </div>
+          <div className="flex gap-2 items-center">
+            <select className={sel + " w-44"} value={section} onChange={(e) => setSection(e.target.value)}>
+              {sections.map((s) => (
+                <option key={s} value={s}>{s ? s : "All sections"}</option>
+              ))}
+            </select>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg disabled:opacity-50"
+            >
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        {warning && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
+            {warning}
+          </div>
+        )}
+
+        {items.length === 0 && !loading && !warning && (
+          <p className="text-sm text-slate-400 py-8 text-center">No settings changes recorded yet.</p>
+        )}
+
+        <div className="divide-y divide-slate-100">
+          {items.map((it) => (
+            <div key={it.id} className="py-3">
+              <button
+                onClick={() => setExpanded((id) => (id === it.id ? null : it.id))}
+                className="w-full flex items-start justify-between gap-3 text-left hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded bg-slate-100 text-slate-700">
+                      {it.section}
+                    </span>
+                    <span className="text-xs text-slate-700 font-medium">
+                      {it.changedFields.join(", ")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {it.user ? `${it.user.name} (${it.user.role})` : "Unknown user"}
+                    {" · "}
+                    {new Date(it.createdAt).toLocaleString()}
+                    {it.ip ? ` · ${it.ip}` : ""}
+                  </p>
+                  {it.reason && (
+                    <p className="text-xs text-slate-600 mt-1 italic">"{it.reason}"</p>
+                  )}
+                </div>
+                <span className="text-slate-400 text-xs flex-shrink-0">
+                  {expanded === it.id ? "▾" : "▸"}
+                </span>
+              </button>
+              {expanded === it.id && (
+                <div className="grid grid-cols-2 gap-3 mt-2 px-2">
+                  <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-rose-600 uppercase mb-1">Before</p>
+                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono break-all">
+                      {JSON.stringify(it.before ?? {}, null, 2)}
+                    </pre>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">After</p>
+                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono break-all">
+                      {JSON.stringify(it.after ?? {}, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

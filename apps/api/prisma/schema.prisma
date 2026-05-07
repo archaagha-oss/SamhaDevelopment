@@ -1323,6 +1323,38 @@ model AppSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  auditLogs SettingsAuditLog[]
+}
+
+model SettingsAuditLog {
+  id              String      @id @default(cuid())
+  appSettingsId   String
+  appSettings     AppSettings @relation(fields: [appSettingsId], references: [id], onDelete: Cascade)
+
+  // Who: clerkId or User.id; null when no auth context (e.g. system migration)
+  userId          String?
+  // What section was changed (branding | localization | communication | finance | templates | notifications)
+  section         String
+  // Which fields changed (JSON array of strings)
+  changedFields   Json
+  // Snapshot of values BEFORE the change. Secrets are redacted before write.
+  before          Json?
+  // Snapshot of values AFTER the change. Secrets are redacted before write.
+  after           Json?
+  // Optional human reason / comment
+  reason          String?
+  // Source IP for forensics
+  ip              String?
+  // User-agent for forensics
+  userAgent       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([appSettingsId])
+  @@index([section])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // ============================================================
