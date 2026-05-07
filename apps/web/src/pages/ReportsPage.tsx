@@ -437,9 +437,6 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
     "90+":   "bg-red-100 border-red-300 text-red-800",
   };
 
-  const overduePayments = [
-    ...collections.upcoming.next7Days.payments.filter(() => false), // upcoming is pending, not overdue
-  ];
   // The collections API returns overdue count/total but not payment rows; we'll show upcoming for the table
   const upcomingPayments7 = collections.upcoming.next7Days.payments ?? [];
 

@@ -632,8 +632,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     </div>
   );
 
-  const netPrice      = deal.salePrice - deal.discount;
-  const totalWithFees = netPrice + deal.dldFee + deal.adminFee;
+  const netPrice = deal.salePrice - deal.discount;
 
   // Document state — hoisted so header CTA and Documents section share the same values
   const salesOfferDocs = deal.documents

@@ -129,17 +129,7 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
 
-// ===== ERROR HANDLING =====
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Internal server error",
-    code: err.code || "INTERNAL_ERROR",
-    statusCode: err.statusCode || 500,
-  });
-});
-
-// 404 handler
+// ===== 404 HANDLER =====
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
@@ -148,16 +138,21 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler — must have 4 parameters
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+// ===== ERROR HANDLER =====
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const statusCode = err.statusCode || 500;
   logger.error("Unhandled Express error", {
     message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
+    statusCode,
   });
-  res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", statusCode: 500 });
+  res.status(statusCode).json({
+    error: err.message || "Internal server error",
+    code: err.code || "INTERNAL_ERROR",
+    statusCode,
+  });
 });
 
 // ===== SERVER STARTUP =====

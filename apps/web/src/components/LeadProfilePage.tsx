@@ -78,8 +78,6 @@ const cancelBtn  = "px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-const fmtTime = (d: string) =>
-  new Date(d).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" });
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
