@@ -1,11 +1,14 @@
-import { Request } from "express";
+import "express";
 
 declare global {
   namespace Express {
     interface Request {
       auth?: {
         userId: string;
+        role?: string;
       };
     }
   }
 }
+
+export {};

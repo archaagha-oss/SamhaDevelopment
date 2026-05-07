@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
+import { useAuth } from "../lib/auth";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
@@ -50,12 +51,16 @@ function timeAgo(dateStr: string) {
 export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user: authUser, logout } = useAuth();
 
-  // Mock user for dev (TODO: integrate real Clerk auth in future phase)
-  const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
-  const handleSignOut = () => {
-    localStorage.clear();
-    navigate("/sign-in");
+  const user = {
+    firstName: authUser?.name?.split(" ")[0] || "",
+    fullName: authUser?.name || "",
+    primaryEmailAddress: { emailAddress: authUser?.email || "" },
+  };
+  const handleSignOut = async () => {
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -68,23 +73,25 @@ export default function AppShell() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(() => {
+    if (!authUser?.id) return;
     axios
-      .get("/api/users/dev-user-1/notifications", { params: { limit: 20 } })
+      .get(`/api/users/${authUser.id}/notifications`, { params: { limit: 20 } })
       .then((res) => {
         const items: any[] = res.data.data || res.data || [];
         setNotifications(Array.isArray(items) ? items : []);
         setUnreadCount(Array.isArray(items) ? items.filter((n: any) => !n.read).length : 0);
       })
       .catch(() => {});
-  }, []);
+  }, [authUser?.id]);
 
   const markAllRead = useCallback(() => {
+    if (!authUser?.id) return;
     notifications.filter((n) => !n.read).forEach((n) => {
-      axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+      axios.patch(`/api/users/${authUser.id}/notifications/${n.id}`, { read: true }).catch(() => {});
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
-  }, [notifications]);
+  }, [notifications, authUser?.id]);
 
   useEffect(() => {
     fetchNotifications();

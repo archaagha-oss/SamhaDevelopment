@@ -42,13 +42,11 @@ Before starting Phase 1 implementation, complete these items. The sample data is
     ```
   - Status: Ready? ☐ Not Started ☐ In Progress ☐
 
-- [ ] **Clerk Setup**
-  - [ ] Clerk account created at https://clerk.com
-  - [ ] Project created in Clerk dashboard
-  - [ ] Publishable Key: `pk_test_...` (to .env)
-  - [ ] Secret Key: `sk_test_...` (to .env)
-  - [ ] Email verification enabled
-  - [ ] User roles configured in Clerk
+- [ ] **Auth Setup**
+  - [ ] `JWT_SECRET` generated (`openssl rand -base64 64`) and set in `apps/api/.env`
+  - [ ] `PASSWORD_RESET_URL_BASE` set to the deployed web origin
+  - [ ] SMTP configured in `AppSettings` for password-reset emails (or mailer falls back to logging)
+  - [ ] User roles assigned in seed/admin UI (ADMIN, SALES_AGENT, OPERATIONS, FINANCE, DEVELOPER)
 
 ### 3. Business Logic Decisions
 
@@ -124,8 +122,8 @@ samha-crm/
 - [ ] Unit data Excel ready (173 units with all details)
 - [ ] User list with roles and emails
 - [ ] 8 business logic questions answered
-- [ ] PostgreSQL database running
-- [ ] Clerk account with keys configured
+- [ ] MySQL database running
+- [ ] `JWT_SECRET` generated and set in `apps/api/.env`
 - [ ] npm dependencies installed (`npm install`)
 - [ ] Prisma schema pushed (`npm run db:push`)
 - [ ] Dev servers start successfully (`npm run dev`)
@@ -162,7 +160,7 @@ npm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 
-# Fill in .env files with your Clerk keys and DB connection
+# Fill in .env files with DATABASE_URL and JWT_SECRET
 
 # Initialize database
 npm run db:push

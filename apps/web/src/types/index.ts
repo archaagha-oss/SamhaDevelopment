@@ -129,12 +129,13 @@ export interface UnitStatusHistory {
 
 export interface User {
   id: string;
-  clerkId: string;
   email: string;
   name: string;
   role: UserRole;
   phone?: string;
   department?: string;
+  isActive?: boolean;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -37,14 +37,10 @@ DATABASE_URL="postgresql://samha_user:samha_password@localhost:5432/samha_crm"
 
 Edit `apps/api/.env`:
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/samha_crm"
+DATABASE_URL="mysql://user:password@localhost:3306/samha_crm"
+JWT_SECRET="$(openssl rand -base64 64)"
+SEED_DEFAULT_PASSWORD="ChangeMe123!"
 ```
-
-**Clerk Setup** (Optional for auth, skip for local dev)
-
-1. Sign up at https://clerk.com
-2. Copy keys to `.env` files
-3. Or leave blank for public endpoints
 
 ## Step 3: Database (1 min)
 
@@ -110,11 +106,11 @@ npm run build
 
 | Issue | Fix |
 |-------|-----|
-| `ECONNREFUSED 127.0.0.1:5432` | Start PostgreSQL or Docker |
+| `ECONNREFUSED 127.0.0.1:3306` | Start MySQL or Docker |
 | `DATABASE_URL is missing` | Copy `.env.example` and fill it |
+| `JWT_SECRET is required` | Set `JWT_SECRET` in `apps/api/.env` |
 | Port 3000/5173 in use | Change in `.env` or close app |
 | npm install fails | `rm -rf node_modules && npm install` |
-| Clerk keys missing | Clerk is optional, leave blank for dev |
 
 ---
 

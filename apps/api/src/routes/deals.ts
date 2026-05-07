@@ -430,7 +430,7 @@ router.post("/:id/payments", async (req, res) => {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
-    const user = await prisma.user.findFirst({ where: { clerkId: req.auth.userId } });
+    const user = await prisma.user.findUnique({ where: { id: req.auth.userId } });
     if (!user || !["ADMIN", "FINANCE"].includes(user.role)) {
       return res.status(403).json({ error: "Only ADMIN or FINANCE can add milestones", code: "FORBIDDEN", statusCode: 403 });
     }
@@ -455,7 +455,7 @@ router.post("/:id/restructure", async (req, res) => {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
-    const user = await prisma.user.findFirst({ where: { clerkId: req.auth.userId } });
+    const user = await prisma.user.findUnique({ where: { id: req.auth.userId } });
     if (!user || !["ADMIN", "FINANCE"].includes(user.role)) {
       return res.status(403).json({ error: "Only ADMIN or FINANCE can restructure schedules", code: "FORBIDDEN", statusCode: 403 });
     }

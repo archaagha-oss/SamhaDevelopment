@@ -22,10 +22,10 @@ describe("Deal Lifecycle Integration Tests", () => {
       where: { email: "test-agent@example.com" },
       update: {},
       create: {
-        clerkId: "test-clerk-123",
         email: "test-agent@example.com",
         name: "Test Agent",
         role: "SALES_AGENT",
+        passwordHash: "$2b$12$placeholderhashfortestsuiteonlynotusedforlogin01234",
       },
     });
     userId = user.id;

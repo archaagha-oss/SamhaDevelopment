@@ -102,8 +102,12 @@ cat > .env << 'EOF'
 DATABASE_URL="mysql://samha_prod_user:PASSWORD@localhost:3306/samha_crm_prod"
 NODE_ENV="production"
 PORT=3000
-CLERK_PUBLISHABLE_KEY="your-clerk-key"
-CLERK_SECRET_KEY="your-clerk-secret"
+
+# Auth (generate JWT_SECRET with: openssl rand -base64 64)
+JWT_SECRET="REPLACE_WITH_GENERATED_SECRET"
+JWT_ACCESS_TTL="15m"
+JWT_REFRESH_TTL_DAYS=30
+PASSWORD_RESET_URL_BASE="https://app.yourdomain.com/reset-password"
 
 # AWS S3
 AWS_S3_BUCKET="your-prod-bucket"
@@ -201,7 +205,7 @@ tail -f /home/username/logs/nodejs-access.log
 ### Critical Checks
 - [ ] Database connection works
 - [ ] S3 upload/download works
-- [ ] Authentication works (Clerk)
+- [ ] Authentication works (login, refresh, logout, password reset)
 - [ ] API responds in < 500ms
 - [ ] No 5xx errors in logs
 - [ ] Disk space adequate (>5GB free)

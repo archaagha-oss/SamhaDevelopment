@@ -1,37 +1,47 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkMiddleware } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { verifyAccessToken } from "../lib/jwt";
 
-// Clerk middleware - attach to express app in production
-export const setupClerkAuth = () => clerkMiddleware();
-
-// Middleware to require authentication on protected routes
+/**
+ * requireAuthentication
+ *
+ * Verifies a JWT bearer token in the Authorization header. On success, sets
+ * `req.auth = { userId: <internal User.id>, role }`. Downstream handlers can
+ * use `req.auth.userId` to identify the actor (e.g. for audit logs).
+ */
 export const requireAuthentication = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.auth?.userId) {
+  const header = req.get("authorization") || req.get("Authorization");
+  if (!header || !header.toLowerCase().startsWith("bearer ")) {
     return res.status(401).json({
       error: "Unauthorized",
       code: "UNAUTHENTICATED",
       statusCode: 401,
     });
   }
-  next();
+
+  const token = header.slice(7).trim();
+  try {
+    const payload = verifyAccessToken(token);
+    req.auth = { userId: payload.sub, role: payload.role };
+    next();
+  } catch {
+    return res.status(401).json({
+      error: "Invalid or expired token",
+      code: "INVALID_TOKEN",
+      statusCode: 401,
+    });
+  }
 };
 
 /**
- * Middleware factory: ensure the calling user has one of the allowed roles.
+ * requireRole — must run after requireAuthentication.
  *
- * Role resolution order:
- *  1. Look up User row by clerkId = req.auth.userId
- *  2. In dev mode (NODE_ENV !== "production"), unknown users default to ADMIN
- *     so the mock "dev-user-1" account can reach all routes.
- *  3. In production, unknown users get 403.
- *
- * Usage:
- *   router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), handler)
+ * Looks up the User by id (the JWT subject) and checks role membership.
+ * Attaches the resolved User to `req.resolvedUser` for downstream use.
  */
 export const requireRole = (allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -43,21 +53,15 @@ export const requireRole = (allowedRoles: string[]) => {
       });
     }
 
-    const isDev = process.env.NODE_ENV !== "production";
-
     try {
-      const user = await prisma.user.findFirst({
-        where: { clerkId: req.auth.userId },
-        select: { id: true, role: true, name: true },
+      const user = await prisma.user.findUnique({
+        where: { id: req.auth.userId },
+        select: { id: true, role: true, name: true, isActive: true },
       });
 
-      if (!user) {
-        if (isDev) {
-          // Dev mode: mock user gets full access — safe because auth is mocked
-          return next();
-        }
+      if (!user || !user.isActive) {
         return res.status(403).json({
-          error: "User account not found",
+          error: "User account not found or disabled",
           code: "USER_NOT_FOUND",
           statusCode: 403,
         });
@@ -71,7 +75,6 @@ export const requireRole = (allowedRoles: string[]) => {
         });
       }
 
-      // Attach resolved user to request for downstream handlers
       (req as any).resolvedUser = user;
       next();
     } catch (err) {

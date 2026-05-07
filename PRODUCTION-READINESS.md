@@ -72,8 +72,11 @@
 DATABASE_URL="mysql://root:@localhost:3306/samha_crm"
 NODE_ENV="development"
 PORT=3000
-CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
+JWT_SECRET="generated-with-openssl-rand-base64-64"
+JWT_ACCESS_TTL="15m"
+JWT_REFRESH_TTL_DAYS=30
+PASSWORD_RESET_URL_BASE="http://localhost:5173/reset-password"
+SEED_DEFAULT_PASSWORD="ChangeMe123!"
 AWS_S3_BUCKET="samha-dev-bucket"
 AWS_S3_REGION="us-east-1"
 AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
@@ -87,8 +90,10 @@ ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000"
 DATABASE_URL="mysql://samha_prod:SECURE_PASSWORD@db.yourdomain.com/samha_crm"
 NODE_ENV="production"
 PORT=3000
-CLERK_PUBLISHABLE_KEY="pk_live_..."
-CLERK_SECRET_KEY="sk_live_..."
+JWT_SECRET="generated-with-openssl-rand-base64-64"
+JWT_ACCESS_TTL="15m"
+JWT_REFRESH_TTL_DAYS=30
+PASSWORD_RESET_URL_BASE="https://app.yourdomain.com/reset-password"
 AWS_S3_BUCKET="samha-production-bucket"
 AWS_S3_REGION="us-east-1"
 AWS_ACCESS_KEY_ID="AKIAIOSFODNN7PROD123"
@@ -147,7 +152,7 @@ curl "http://localhost:3000/api/leads?search=Ahmed"
 ### Authentication
 - [ ] All protected routes check `req.auth?.userId`
 - [ ] Public endpoints explicitly listed (no implicit auth)
-- [ ] Clerk integration working in development
+- [ ] JWT_SECRET is set and rotated for production
 - [ ] Authentication errors return 401
 
 ### Authorization

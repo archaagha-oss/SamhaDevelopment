@@ -414,26 +414,61 @@ model UserProjectAccess {
 // ============================================================
 
 model User {
-  id       String   @id @default(cuid())
-  clerkId  String   @unique
-  email    String   @unique
-  name     String
-  role     UserRole
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole
 
   phone      String?
   department String?
+
+  isActive            Boolean   @default(true)
+  mustChangePassword  Boolean   @default(false)
+  lastLoginAt         DateTime?
+  failedLoginCount    Int       @default(0)
+  lockedUntil         DateTime?
 
   assignedLeads  Lead[]             @relation("AssignedLeads")
   assignedUnits  Unit[]             @relation("AssignedUnits")
   notifications  Notification[]
   projectAccess  UserProjectAccess[]
   tasks          Task[]             @relation("AssignedTasks")
+  refreshTokens  RefreshToken[]
+  resetTokens    PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([role])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?   @db.Text
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ============================================================

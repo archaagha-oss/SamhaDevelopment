@@ -161,7 +161,6 @@ GET /api/units/:id
   ],
   "assignedAgent": {
     "id": "user123",
-    "clerkId": "clerk_user123",
     "email": "sara@samha.ae",
     "name": "Sara Sales",
     "role": "SALES_AGENT"
@@ -246,7 +245,6 @@ GET /api/users
 [
   {
     "id": "user123",
-    "clerkId": "clerk_user123",
     "email": "sara@samha.ae",
     "name": "Sara Sales",
     "role": "SALES_AGENT",
@@ -365,9 +363,13 @@ Currently no rate limiting. Will be added in production deployment.
 
 ## Authentication
 
-Authentication via Clerk is required for protected endpoints in Phase 2+.
+All `/api/*` routes (except `/api/auth/login`, `/api/auth/refresh`, `/api/auth/forgot-password`, `/api/auth/reset-password`) require a JWT bearer token.
 
-Currently, all endpoints are public for development. Add `@ClerkExpressWithAuth()` middleware to routes requiring authentication.
+```
+Authorization: Bearer <accessToken>
+```
+
+The access token is obtained from `POST /api/auth/login` and is short-lived (15 min by default). When it expires, call `POST /api/auth/refresh` (the httpOnly refresh cookie is sent automatically) to get a new one.
 
 ---
 

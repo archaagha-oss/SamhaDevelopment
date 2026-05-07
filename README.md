@@ -18,21 +18,20 @@ samha-crm/
 ### Backend
 - **Node.js** with Express
 - **TypeScript** for type safety
-- **Prisma** ORM with PostgreSQL
-- **Clerk** for authentication
+- **Prisma** ORM with MySQL
+- **Email + password** auth (bcrypt + JWT, httpOnly refresh cookie)
 
 ### Frontend
 - **React 18** with Vite bundler
 - **TypeScript** for type safety
 - **Tailwind CSS** for styling
 - **Axios** for API calls
-- **Clerk React** for authentication
+- Custom `AuthProvider` with automatic token refresh
 
 ## 📦 Prerequisites
 
 - **Node.js** v18+ and npm/yarn/pnpm
-- **PostgreSQL** v12+ (local or remote)
-- **Clerk account** (for authentication setup)
+- **MySQL** v8+ / MariaDB v10.5+ (local or remote)
 
 ## 🚀 Quick Start
 
@@ -47,16 +46,15 @@ npm install
 
 **Backend** (`apps/api/.env`):
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/samha_crm"
-CLERK_SECRET_KEY="your_clerk_secret_key"
+DATABASE_URL="mysql://user:password@localhost:3306/samha_crm"
 NODE_ENV="development"
 PORT=3000
+JWT_SECRET="$(openssl rand -base64 64)"
+PASSWORD_RESET_URL_BASE="http://localhost:5173/reset-password"
+SEED_DEFAULT_PASSWORD="ChangeMe123!"
 ```
 
-**Frontend** (`apps/web/.env`):
-```env
-VITE_CLERK_PUBLISHABLE_KEY="your_clerk_publishable_key"
-```
+The frontend talks to the API through Vite's dev proxy and does not need its own `.env`.
 
 ### 3. Set Up Database
 
@@ -64,7 +62,7 @@ VITE_CLERK_PUBLISHABLE_KEY="your_clerk_publishable_key"
 npm run db:push
 ```
 
-This will create all tables in PostgreSQL based on the Prisma schema.
+This will create all tables in MySQL based on the Prisma schema.
 
 ### 4. Seed Sample Data
 
@@ -202,12 +200,13 @@ npm run dev --workspace=apps/web      # Frontend only
 
 ## 🔐 Authentication
 
-The app uses Clerk for authentication. To enable:
+Email + password auth, no third-party identity provider.
 
-1. Create a Clerk project at https://clerk.com
-2. Get your publishable key and secret key
-3. Add them to `.env` files
-4. Users will be prompted to sign in before accessing protected routes
+- Login flow: `POST /api/auth/login` returns a short-lived (15 min) JWT access token and sets an httpOnly refresh cookie (30 days). The frontend stores the access token in memory and refreshes it transparently on 401.
+- Password reset: `POST /api/auth/forgot-password` emails a one-time link valid for 60 minutes (uses `mailerService`, falls back to logging the email if SMTP is not configured).
+- Account lockout: 5 consecutive failed logins lock the account for 15 minutes.
+- Seeded users all share `SEED_DEFAULT_PASSWORD` and are flagged `mustChangePassword: true` on first login.
+- `JWT_SECRET` must be set; in production, `apps/api` will refuse to boot without it. Generate one with `openssl rand -base64 64`.
 
 ## 📚 Next Steps (Phases 2-5)
 
@@ -232,7 +231,7 @@ Based on the 9-document specification set:
 ## 🐛 Troubleshooting
 
 ### Database Connection Error
-- Verify PostgreSQL is running
+- Verify MySQL is running
 - Check DATABASE_URL is correct
 - Run `npm run db:push` to initialize schema
 

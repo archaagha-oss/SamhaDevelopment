@@ -89,8 +89,10 @@ cat > .env << 'EOF'
 DATABASE_URL="mysql://samha_user:YOUR_PASSWORD@localhost:3306/samha_crm_prod"
 NODE_ENV="production"
 PORT=3000
-CLERK_PUBLISHABLE_KEY="pk_live_YOUR_KEY"
-CLERK_SECRET_KEY="sk_live_YOUR_SECRET"
+JWT_SECRET="GENERATED_WITH_OPENSSL_RAND_BASE64_64"
+JWT_ACCESS_TTL="15m"
+JWT_REFRESH_TTL_DAYS=30
+PASSWORD_RESET_URL_BASE="https://app.yourdomain.com/reset-password"
 AWS_S3_BUCKET="samha-prod-bucket"
 AWS_S3_REGION="us-east-1"
 AWS_ACCESS_KEY_ID="YOUR_AWS_KEY"

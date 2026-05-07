@@ -3,19 +3,15 @@
 ## Prerequisites Checklist
 
 - [ ] Node.js v18+ installed
-- [ ] PostgreSQL running locally or access to remote PostgreSQL
-- [ ] Clerk account created (clerk.com)
+- [ ] MySQL v8+ / MariaDB v10.5+ running locally or remotely
 - [ ] Text editor or IDE (VS Code recommended)
 
 ## Step-by-Step Setup
 
-### Step 1: Create PostgreSQL Database
+### Step 1: Create MySQL Database
 
 ```bash
-# Using psql
-createdb samha_crm
-
-# Or via GUI tool (pgAdmin, DBeaver, etc.)
+mysql -u root -e "CREATE DATABASE samha_crm CHARACTER SET utf8mb4;"
 ```
 
 ### Step 2: Clone/Navigate to Project
@@ -35,19 +31,15 @@ npm install
 **Backend** - Create `apps/api/.env`:
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/samha_crm"
-CLERK_SECRET_KEY="sk_test_xxxxxxxxxxxxx"
+DATABASE_URL="mysql://root:password@localhost:3306/samha_crm"
 NODE_ENV="development"
 PORT=3000
+JWT_SECRET="$(openssl rand -base64 64)"
+PASSWORD_RESET_URL_BASE="http://localhost:5173/reset-password"
+SEED_DEFAULT_PASSWORD="ChangeMe123!"
 ```
 
-**Frontend** - Create `apps/web/.env`:
-
-```env
-VITE_CLERK_PUBLISHABLE_KEY="pk_test_xxxxxxxxxxxxx"
-```
-
-> Get these keys from your Clerk dashboard at https://dashboard.clerk.com
+The frontend uses Vite's dev proxy and does not need its own `.env`.
 
 ### Step 5: Initialize Database
 
@@ -55,7 +47,7 @@ VITE_CLERK_PUBLISHABLE_KEY="pk_test_xxxxxxxxxxxxx"
 npm run db:push
 ```
 
-✅ Tables are now created in PostgreSQL
+✅ Tables are now created in MySQL
 
 ### Step 6: Seed Sample Data
 
@@ -118,16 +110,13 @@ Error: listen EADDRINUSE :::3000
 PORT=3001
 ```
 
-### Clerk Keys Not Working
+### Login fails on first run
 
-```
-Error: Clerk: VITE_CLERK_PUBLISHABLE_KEY is missing
-```
+Default seeded password is `SEED_DEFAULT_PASSWORD` (defaults to `ChangeMe123!`). All seeded users are flagged `mustChangePassword: true` — the API will accept the login but the UI should prompt to change.
 
-**Fix**: 
-1. Go to https://dashboard.clerk.com
-2. Copy your Publishable Key to `apps/web/.env`
-3. Copy your Secret Key to `apps/api/.env`
+### `JWT_SECRET is required`
+
+Set `JWT_SECRET` in `apps/api/.env`. Generate one with `openssl rand -base64 64`.
 
 ### npm install Fails
 
@@ -141,8 +130,8 @@ npm install
 
 ### Backend (`apps/api`)
 - ✅ Express server with 10+ API endpoints
-- ✅ Prisma ORM with PostgreSQL
-- ✅ Clerk authentication integration
+- ✅ Prisma ORM with MySQL
+- ✅ Email + password auth (bcrypt + JWT)
 - ✅ Unit grid data endpoints
 - ✅ Project and statistics APIs
 - ✅ Seed script with realistic data
@@ -177,7 +166,6 @@ npm install
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
 - **API Health**: http://localhost:3000/health
-- **Clerk Dashboard**: https://dashboard.clerk.com
 
 ## Important Files
 
@@ -189,22 +177,22 @@ npm install
 
 ## Database Inspection
 
-Connect to PostgreSQL to inspect data:
+Connect to MySQL to inspect data:
 
 ```bash
-psql samha_crm
+mysql samha_crm
 
 # List tables
-\dt
+SHOW TABLES;
 
 # View units
-SELECT id, "unitNumber", floor, type, price, status FROM "Unit" LIMIT 10;
+SELECT id, unitNumber, floor, type, price, status FROM Unit LIMIT 10;
 
 # View project
-SELECT * FROM "Project";
+SELECT * FROM Project;
 
 # View users
-SELECT id, email, name, role FROM "User";
+SELECT id, email, name, role FROM User;
 ```
 
 ## Documentation

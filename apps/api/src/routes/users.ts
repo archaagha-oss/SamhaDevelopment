@@ -1,6 +1,8 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { requireRole } from "../middleware/auth";
+import { hashPassword } from "../lib/password";
 
 const router = Router();
 
@@ -74,17 +76,23 @@ router.post("/", requireRole(["ADMIN"]), async (req, res) => {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ error: "A user with this email already exists", code: "EMAIL_CONFLICT", statusCode: 409 });
 
+    const tempPassword = crypto.randomBytes(9).toString("base64url");
+    const passwordHash = await hashPassword(tempPassword);
+
     const user = await prisma.user.create({
       data: {
-        clerkId: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name,
         email,
         role,
         phone: phone || null,
         department: department || null,
+        passwordHash,
+        mustChangePassword: true,
       },
+      select: { id: true, name: true, email: true, role: true, phone: true, department: true, createdAt: true },
     });
-    res.status(201).json(user);
+    // tempPassword is returned ONCE so the admin can hand it to the new user.
+    res.status(201).json({ ...user, tempPassword });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to create user", code: "CREATE_USER_ERROR", statusCode: 400 });
   }

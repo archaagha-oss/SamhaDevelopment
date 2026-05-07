@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import { openAPISpec } from "./docs/openapi";
 import { prisma } from "./lib/prisma";
@@ -8,8 +9,10 @@ import { logger } from "./lib/logger";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
+import { requireAuthentication } from "./middleware/auth";
 
 // Import routes
+import authRoutes from "./routes/auth";
 import projectRoutes from "./routes/projects";
 import unitRoutes from "./routes/units";
 import leadRoutes from "./routes/leads";
@@ -74,12 +77,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
-
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
   "http://localhost:5173",
@@ -92,8 +89,9 @@ app.use(
   })
 );
 
-// Body parser
+// Body + cookie parsers
 app.use(express.json());
+app.use(cookieParser());
 
 // Static file serving for uploads
 app.use(express.static("public"));
@@ -110,7 +108,12 @@ app.get("/openapi.json", (req, res) => {
   res.json(openAPISpec);
 });
 
-// ===== API ROUTES =====
+// ===== PUBLIC AUTH ROUTES =====
+// /api/auth/me and /api/auth/change-password apply requireAuthentication internally.
+app.use("/api/auth", authRoutes);
+
+// ===== AUTHENTICATED API ROUTES =====
+app.use("/api", requireAuthentication);
 app.use("/api/projects", projectRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/leads", leadRoutes);
@@ -164,7 +167,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`CORS origins: ${allowedOrigins.join(", ")}`);
-  logger.info(`Clerk auth: ${process.env.CLERK_SECRET_KEY ? "enabled" : "DISABLED (dev mode)"}`);
+  logger.info(`Auth: JWT (issued by /api/auth/login)`);
 });
 
 // Graceful shutdown

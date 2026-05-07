@@ -1,6 +1,9 @@
 import { PrismaClient, UserRole, ViewType } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD || "ChangeMe123!";
 
 const SAMHA_TOWER = {
   name: "Samha Tower",
@@ -71,37 +74,12 @@ const STATUS_DISTRIBUTION = {
   BLOCKED: 0.05,
 };
 
-const USERS: Array<{ name: string; email: string; role: UserRole; clerkId: string }> = [
-  {
-    name: "Mohamed Admin",
-    email: "admin@samha.ae",
-    role: "ADMIN" as UserRole,
-    clerkId: "admin_001",
-  },
-  {
-    name: "Sara Sales",
-    email: "sara@samha.ae",
-    role: "SALES_AGENT" as UserRole,
-    clerkId: "sales_001",
-  },
-  {
-    name: "Khalid Sales",
-    email: "khalid@samha.ae",
-    role: "SALES_AGENT" as UserRole,
-    clerkId: "sales_002",
-  },
-  {
-    name: "Fatima Operations",
-    email: "fatima@samha.ae",
-    role: "OPERATIONS" as UserRole,
-    clerkId: "ops_001",
-  },
-  {
-    name: "Omar Finance",
-    email: "omar@samha.ae",
-    role: "FINANCE" as UserRole,
-    clerkId: "finance_001",
-  },
+const USERS: Array<{ name: string; email: string; role: UserRole }> = [
+  { name: "Mohamed Admin",     email: "admin@samha.ae",   role: "ADMIN" as UserRole },
+  { name: "Sara Sales",        email: "sara@samha.ae",    role: "SALES_AGENT" as UserRole },
+  { name: "Khalid Sales",      email: "khalid@samha.ae",  role: "SALES_AGENT" as UserRole },
+  { name: "Fatima Operations", email: "fatima@samha.ae",  role: "OPERATIONS" as UserRole },
+  { name: "Omar Finance",      email: "omar@samha.ae",    role: "FINANCE" as UserRole },
 ];
 
 function getRandomStatus(): string {
@@ -190,12 +168,18 @@ async function seed() {
   });
   console.log(`✓ Project created: ${project.name}`);
 
-  // Create users
+  // Create users (all share DEFAULT_PASSWORD; mustChangePassword=true)
   console.log("Creating users...");
+  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
   const users = await Promise.all(
-    USERS.map((user) => prisma.user.create({ data: user }))
+    USERS.map((user) =>
+      prisma.user.create({
+        data: { ...user, passwordHash, mustChangePassword: true },
+      })
+    )
   );
   console.log(`✓ ${users.length} users created`);
+  console.log(`  Default password (must change on first login): ${DEFAULT_PASSWORD}`);
 
   // Create units from actual building layout
   console.log("Creating 175 units...");

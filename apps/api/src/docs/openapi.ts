@@ -71,7 +71,7 @@ export const openAPISpec = {
       post: {
         summary: "Create new project",
         tags: ["Projects"],
-        security: [{ ClerkAuth: [] }],
+        security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -147,7 +147,7 @@ export const openAPISpec = {
       post: {
         summary: "Create new lead",
         tags: ["Leads"],
-        security: [{ ClerkAuth: [] }],
+        security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -216,7 +216,7 @@ export const openAPISpec = {
       post: {
         summary: "Create new deal",
         tags: ["Deals"],
-        security: [{ ClerkAuth: [] }],
+        security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -247,7 +247,7 @@ export const openAPISpec = {
       patch: {
         summary: "Update deal stage",
         tags: ["Deals"],
-        security: [{ ClerkAuth: [] }],
+        security: [{ BearerAuth: [] }],
         parameters: [
           {
             name: "dealId",
@@ -349,11 +349,11 @@ export const openAPISpec = {
   },
   components: {
     securitySchemes: {
-      ClerkAuth: {
+      BearerAuth: {
         type: "http",
         scheme: "bearer",
         bearerFormat: "JWT",
-        description: "Clerk authentication token",
+        description: "JWT access token issued by /api/auth/login",
       },
     },
     schemas: {
