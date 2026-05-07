@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { useSettings } from "../contexts/SettingsContext";
+import { formatCurrency, formatDate } from "../utils/format";
 
 interface InvoiceData {
   dealNumber: string;
@@ -16,10 +18,6 @@ interface InvoiceData {
   generatedAt?: string;
 }
 
-const fmtAED  = (n: number) => "AED " + n.toLocaleString("en-AE", { minimumFractionDigits: 0 });
-const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "long", year: "numeric" });
-const today   = () => new Date().toLocaleDateString("en-AE", { day: "2-digit", month: "long", year: "numeric" });
-
 const TYPE_LABEL: Record<string, string> = {
   STUDIO: "Studio", ONE_BR: "1 Bedroom", TWO_BR: "2 Bedrooms",
   THREE_BR: "3 Bedrooms", FOUR_BR: "4 Bedrooms", COMMERCIAL: "Commercial",
@@ -34,10 +32,15 @@ const Row = ({ label, value, bold }: { label: string; value: string; bold?: bool
 
 export default function InvoicePrintPage() {
   const { paymentId } = useParams<{ paymentId: string }>();
+  const { settings } = useSettings();
   const [data, setData]       = useState<InvoiceData | null>(null);
   const [docVersion, setDocVersion] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+
+  const fmtAmt  = (n: number) => formatCurrency(n, settings, { decimals: 0 });
+  const fmtDate2 = (d: string) => formatDate(d, settings);
+  const today   = () => formatDate(new Date(), settings);
 
   const searchParams  = new URLSearchParams(window.location.search);
   const docId         = searchParams.get("docId");
@@ -119,14 +122,20 @@ export default function InvoicePrintPage() {
       <div className="max-w-2xl mx-auto px-8 py-12 print:py-8 print:px-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-slate-800">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">INVOICE</h1>
-            <p className="text-sm text-slate-500 mt-1">{data.projectDetails.name} — {data.projectDetails.location}</p>
+          <div className="flex items-start gap-3">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="" className="h-12 w-12 object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">INVOICE</h1>
+              {settings.companyName && <p className="text-xs font-semibold text-slate-700 mt-1">{settings.companyName}</p>}
+              <p className="text-sm text-slate-500 mt-0.5">{data.projectDetails.name} — {data.projectDetails.location}</p>
+            </div>
           </div>
           <div className="text-right text-sm text-slate-500 space-y-1">
             <p className="font-semibold text-slate-700">Date: {today()}</p>
             <p className="font-mono text-xs text-slate-400">{data.dealNumber}</p>
-            <p className="text-xs font-medium text-slate-600">Due: {fmtDate(data.dueDate)}</p>
+            <p className="text-xs font-medium text-slate-600">Due: {fmtDate2(data.dueDate)}</p>
           </div>
         </div>
 
@@ -156,10 +165,10 @@ export default function InvoicePrintPage() {
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Invoice Details</h2>
           <div className="bg-slate-50 rounded-xl p-4">
             <Row label="Description" value={data.milestoneLabel} />
-            <Row label="Due Date"    value={fmtDate(data.dueDate)} />
+            <Row label="Due Date"    value={fmtDate2(data.dueDate)} />
             <div className="flex justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm">
               <span className="font-bold text-slate-700 text-base">Amount Due</span>
-              <span className="font-bold text-slate-900 text-base">{fmtAED(data.amount)}</span>
+              <span className="font-bold text-slate-900 text-base">{fmtAmt(data.amount)}</span>
             </div>
           </div>
         </div>

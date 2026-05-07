@@ -15,6 +15,7 @@ import {
   buildBeforeDueEmail,
   buildOnDueEmail,
   buildOverdueEmail,
+  refreshSettingsCache,
 } from "../../services/mailerService.js";
 
 // ---------------------------------------------------------------------------
@@ -500,6 +501,9 @@ async function handlePaymentReminderSweep(): Promise<void> {
     console.warn("[JobProcessor] PAYMENT_REMINDER_SWEEP: ReminderLog model not yet available — schema migration pending");
     return;
   }
+
+  // Pull the latest custom email templates so this pass uses them.
+  await refreshSettingsCache();
 
   const now = new Date();
   const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());

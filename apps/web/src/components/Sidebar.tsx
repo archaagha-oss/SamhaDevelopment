@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettings } from "../contexts/SettingsContext";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
@@ -41,9 +42,10 @@ function NavItem({ page, label, icon, active, collapsed, onNavigate }: {
     <button
       onClick={() => onNavigate(page)}
       title={collapsed ? label : undefined}
+      style={active ? { backgroundColor: "var(--brand-primary)" } : undefined}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
         active
-          ? "bg-blue-600 text-white shadow-sm"
+          ? "text-white shadow-sm"
           : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
       } ${collapsed ? "justify-center" : ""}`}
     >
@@ -64,15 +66,33 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { settings } = useSettings();
+
+  const brandName = settings.companyName?.trim() || "Samha CRM";
+  const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
     <div className={`${collapsed ? "w-14" : "w-56"} bg-slate-900 flex flex-col h-full flex-shrink-0 border-r border-slate-800 transition-all duration-200`}>
       {/* Brand */}
       <div className={`px-3 py-4 border-b border-slate-800 flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
-        <div className="w-7 h-7 rounded-lg bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">S</div>
+        {settings.logoUrl ? (
+          <img
+            src={settings.logoUrl}
+            alt={brandName}
+            className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div
+            style={{ backgroundColor: "var(--brand-primary)" }}
+            className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+          >
+            {brandInitial}
+          </div>
+        )}
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-white font-semibold text-sm leading-tight truncate">Samha CRM</p>
+            <p className="text-white font-semibold text-sm leading-tight truncate">{brandName}</p>
             <p className="text-slate-500 text-xs truncate">Real Estate Pipeline</p>
           </div>
         )}
