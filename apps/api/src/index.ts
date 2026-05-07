@@ -27,6 +27,16 @@ import activityRoutes from "./routes/activities";
 import offerRoutes from "./routes/offers";
 import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
+// Phase 2: sales-workflow expansion
+import kycRoutes from "./routes/kyc";
+import dealPartiesRoutes from "./routes/dealParties";
+import handoverRoutes from "./routes/handover";
+import snagRoutes from "./routes/snags";
+import titleDeedRoutes from "./routes/titleDeeds";
+import constructionRoutes from "./routes/construction";
+import phaseRoutes from "./routes/phases";
+import unitTypePlanRoutes from "./routes/unitTypePlans";
+import spaRoutes from "./routes/spa";
 
 dotenv.config();
 
@@ -128,6 +138,16 @@ app.use("/api/activities", activityRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
+// Phase 2: sales-workflow expansion
+app.use("/api/kyc", kycRoutes);
+app.use("/api/deal-parties", dealPartiesRoutes);
+app.use("/api/handover", handoverRoutes);
+app.use("/api/snags", snagRoutes);
+app.use("/api/title-deeds", titleDeedRoutes);
+app.use("/api/construction", constructionRoutes);
+app.use("/api/phases", phaseRoutes);
+app.use("/api/unit-type-plans", unitTypePlanRoutes);
+app.use("/api/spa", spaRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

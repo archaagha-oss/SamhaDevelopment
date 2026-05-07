@@ -21,6 +21,10 @@ import {
   updateUnitStatus,
 } from "./unitService";
 import { generatePaymentSchedule } from "./paymentService";
+import {
+  createHandoverChecklist,
+  isChecklistReady,
+} from "./handoverService";
 
 // ---------------------------------------------------------------------------
 // Stage transition machine
@@ -351,6 +355,17 @@ export async function updateDealStage(
       throw new Error(`Missing required documents to enter ${newStage}: ${labels}`);
     }
 
+    // Handover-checklist gate: HANDOVER_PENDING -> COMPLETED requires all required items done
+    if (deal.stage === "HANDOVER_PENDING" && newStage === "COMPLETED") {
+      const { ready, pending } = await isChecklistReady(dealId);
+      if (!ready) {
+        const labels = pending.map((p) => p.label).join(", ");
+        throw new Error(
+          `Handover checklist incomplete. Pending items: ${labels || "none recorded"}`,
+        );
+      }
+    }
+
     // ── Extra data on milestone stages ────────────────────────────────────
     const stageData: Record<string, unknown> = {};
 
@@ -440,6 +455,16 @@ export async function updateDealStage(
           eventBus.emit({
             eventType: "OQOOD_REGISTERED", aggregateId: dealId,
             aggregateType: "DEAL", data: { dealId }, userId: changedBy, timestamp: new Date(),
+          });
+        }
+
+        // Handover pending → instantiate handover checklist (idempotent)
+        if (newStage === "HANDOVER_PENDING") {
+          await createHandoverChecklist(dealId).catch((err) => {
+            dealLogger.warn("Failed to create handover checklist", {
+              dealId,
+              error: (err as Error).message,
+            });
           });
         }
 
