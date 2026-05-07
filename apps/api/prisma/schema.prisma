@@ -24,7 +24,7 @@ datasource db {
 enum UnitStatus {
   NOT_RELEASED
   AVAILABLE
-  ON_HOLD    // temporary soft hold during offer period (auto-expires)
+  ON_HOLD // temporary soft hold during offer period (auto-expires)
   RESERVED
   BOOKED
   SOLD
@@ -168,11 +168,11 @@ enum MilestoneType {
 }
 
 enum MilestoneTrigger {
-  DAYS_FROM_RESERVATION  // dueDate = reservationDate + daysFromReservation
-  FIXED_DATE             // dueDate = fixedDate (specific calendar date)
-  ON_SPA_SIGNING         // dueDate auto-set when deal reaches SPA_SIGNED
-  ON_OQOOD               // dueDate auto-set when deal reaches OQOOD_REGISTERED
-  ON_HANDOVER            // dueDate auto-set when deal reaches HANDOVER_PENDING
+  DAYS_FROM_RESERVATION // dueDate = reservationDate + daysFromReservation
+  FIXED_DATE // dueDate = fixedDate (specific calendar date)
+  ON_SPA_SIGNING // dueDate auto-set when deal reaches SPA_SIGNED
+  ON_OQOOD // dueDate auto-set when deal reaches OQOOD_REGISTERED
+  ON_HANDOVER // dueDate auto-set when deal reaches HANDOVER_PENDING
 }
 
 // ----- Commission -----
@@ -266,6 +266,15 @@ enum TaskType {
   FOLLOW_UP
   DOCUMENT
   PAYMENT
+  KYC
+  SPA
+  OQOOD
+  HANDOVER
+  INSPECTION
+  SITE_VISIT
+  COMMISSION_REVIEW
+  RESERVATION_FOLLOWUP
+  OTHER
 }
 
 enum TaskPriority {
@@ -278,7 +287,71 @@ enum TaskPriority {
 enum TaskStatus {
   PENDING
   COMPLETED
+  CANCELLED
+  SNOOZED
+  // Legacy: OVERDUE retained for back-compat; computed from dueDate at read time
   OVERDUE
+}
+
+enum TaskSource {
+  USER
+  SYSTEM_RULE
+  AUTOMATION
+  SLA
+}
+
+// ----- Activity -----
+
+enum ActivityChannel {
+  CALL
+  WHATSAPP
+  EMAIL
+  IN_PERSON
+  PORTAL
+  SYSTEM
+}
+
+enum ActivityKind {
+  NOTE
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  SITE_VISIT
+  STAGE_CHANGE
+  DOC_UPLOAD
+  DOC_GENERATED
+  KYC_SUBMITTED
+  PAYMENT_RECEIVED
+  PAYMENT_REMINDER
+  RESERVATION_CREATED
+  RESERVATION_CONVERTED
+  RESERVATION_CANCELLED
+  OFFER_SENT
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  SPA_SIGNED
+  OQOOD_REGISTERED
+  COMMISSION_UNLOCKED
+  COMMISSION_PAID
+  OTHER
+}
+
+enum ActivityDirection {
+  INBOUND
+  OUTBOUND
+  N_A
+}
+
+enum ActivityOutcome {
+  INTERESTED
+  NOT_INTERESTED
+  NO_ANSWER
+  CALLBACK
+  BOOKED
+  LOST
+  COMPLETED
+  N_A
 }
 
 // ----- Notifications -----
@@ -305,11 +378,11 @@ enum NotificationPriority {
 // ============================================================
 
 model Organization {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  country  String    @default("UAE")
-  currency String    @default("AED")
-  timezone String    @default("Asia/Dubai")
+  id       String @id @default(cuid())
+  name     String @unique
+  country  String @default("UAE")
+  currency String @default("AED")
+  timezone String @default("Asia/Dubai")
 
   projects    Project[]
   appSettings AppSettings?
@@ -322,16 +395,16 @@ model Organization {
 }
 
 model Project {
-  id             String        @id @default(cuid())
-  name           String        @unique
-  location       String
-  description    String?       @db.Text
-  totalUnits     Int
-  totalFloors    Int?
-  projectStatus  ProjectStatus @default(ACTIVE)
-  handoverDate   DateTime
-  launchDate     DateTime?
-  startDate      DateTime?
+  id            String        @id @default(cuid())
+  name          String        @unique
+  location      String
+  description   String?       @db.Text
+  totalUnits    Int
+  totalFloors   Int?
+  projectStatus ProjectStatus @default(ACTIVE)
+  handoverDate  DateTime
+  launchDate    DateTime?
+  startDate     DateTime?
 
   completionStatus CompletionStatus @default(OFF_PLAN)
   purpose          PropertyPurpose  @default(SALE)
@@ -371,24 +444,24 @@ model ProjectImage {
 }
 
 model ProjectConfig {
-  id              String  @id @default(cuid())
-  projectId       String  @unique
-  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  dldPercent       Float   @default(4)
-  adminFee         Float   @default(5000)
-  reservationDays  Int     @default(7)
-  oqoodDays        Int     @default(90)
+  dldPercent      Float @default(4)
+  adminFee        Float @default(5000)
+  reservationDays Int   @default(7)
+  oqoodDays       Int   @default(90)
 
-  vatPercent       Float   @default(0)
-  agencyFeePercent Float   @default(2)
-  unitsPerFloor    Int     @default(8)
+  vatPercent       Float @default(0)
+  agencyFeePercent Float @default(2)
+  unitsPerFloor    Int   @default(8)
   totalFloors      Int?
 
   defaultUnitType String? @default("STUDIO")
-  defaultArea      Float?  @default(750)
-  defaultView      String? @default("GARDEN")
-  defaultPrice     Float?
+  defaultArea     Float?  @default(750)
+  defaultView     String? @default("GARDEN")
+  defaultPrice    Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -414,20 +487,20 @@ model UserProjectAccess {
 // ============================================================
 
 model User {
-  id       String   @id @default(cuid())
-  clerkId  String   @unique
-  email    String   @unique
-  name     String
-  role     UserRole
+  id      String   @id @default(cuid())
+  clerkId String   @unique
+  email   String   @unique
+  name    String
+  role    UserRole
 
   phone      String?
   department String?
 
-  assignedLeads  Lead[]             @relation("AssignedLeads")
-  assignedUnits  Unit[]             @relation("AssignedUnits")
-  notifications  Notification[]
-  projectAccess  UserProjectAccess[]
-  tasks          Task[]             @relation("AssignedTasks")
+  assignedLeads Lead[]              @relation("AssignedLeads")
+  assignedUnits Unit[]              @relation("AssignedUnits")
+  notifications Notification[]
+  projectAccess UserProjectAccess[]
+  tasks         Task[]              @relation("AssignedTasks")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -448,27 +521,27 @@ model Unit {
   unitNumber String
   floor      Int
   type       UnitType
-  area       Float     // sq metres
-  basePrice  Float     // original list price — immutable after creation
-  price      Float     // current asking price (AED)
+  area       Float // sq metres
+  basePrice  Float // original list price — immutable after creation
+  price      Float // current asking price (AED)
   view       ViewType
 
   // Physical layer
-  bathrooms      Int?
-  parkingSpaces  Int?
-  internalArea   Float?   // suite sq metres (CSV: Suite SQ.M)
-  externalArea   Float?   // balcony sq metres (CSV: Balcony SQ.M)
+  bathrooms     Int?
+  parkingSpaces Int?
+  internalArea  Float? // suite sq metres (CSV: Suite SQ.M)
+  externalArea  Float? // balcony sq metres (CSV: Balcony SQ.M)
 
-  status        UnitStatus         @default(NOT_RELEASED)
+  status        UnitStatus          @default(NOT_RELEASED)
   statusHistory UnitStatusHistory[]
 
   // Operational layer
   blockReason    String?
   blockExpiresAt DateTime?
   holdExpiresAt  DateTime?
-  internalNotes  String?  @db.Text
-  tags           Json?    // string array e.g. ["corner", "premium"]
-  paymentPlan    String?  // e.g. "60/40", "50/50", "40/60"
+  internalNotes  String?   @db.Text
+  tags           Json? // string array e.g. ["corner", "premium"]
+  paymentPlan    String? // e.g. "60/40", "50/50", "40/60"
 
   // Phase 1: assignments (operational agent tracking — not buyer tracking)
   assignedAgent   User?   @relation("AssignedUnits", fields: [assignedAgentId], references: [id])
@@ -515,16 +588,16 @@ model UnitStatusHistory {
 }
 
 model UnitImage {
-  id        String        @id @default(cuid())
-  unitId    String
-  unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   url       String        @db.Text
   caption   String?
   type      UnitImageType @default(PHOTO)
   sortOrder Int           @default(0)
 
-  createdAt DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([unitId])
   @@index([type])
@@ -551,8 +624,8 @@ model Lead {
   budget Float?
   stage  LeadStage @default(NEW)
 
-  projectId       String?
-  project         Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
 
   assignedAgentId String
   assignedAgent   User   @relation("AssignedLeads", fields: [assignedAgentId], references: [id])
@@ -614,7 +687,7 @@ model LeadStageHistory {
 
 model Activity {
   id        String   @id @default(cuid())
-  // At least one of leadId / dealId / unitId / contactId must be non-null (enforced in application layer)
+  // At least one polymorphic FK must be non-null (enforced in activityService)
   leadId    String?
   lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
   dealId    String?
@@ -624,57 +697,129 @@ model Activity {
   contactId String?
   contact   Contact? @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
 
-  type    String  // CALL, EMAIL, WHATSAPP, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
-  summary String  @db.Text
-  outcome String? @db.Text
+  // New polymorphic FKs (nullable)
+  reservationId   String?
+  offerId         String?
+  paymentId       String?
+  commissionId    String?
+  brokerCompanyId String?
 
-  callDuration Int?    // minutes
+  // Free-text type kept for back-compat; new code should use `kind`
+  type      String
+  // Structured taxonomy
+  kind      ActivityKind? // structured kind
+  channel   ActivityChannel? // delivery channel
+  direction ActivityDirection? @default(N_A)
+
+  summary     String           @db.Text
+  outcome     String?          @db.Text
+  // Reportable outcome enum (separate from free-text `outcome`)
+  outcomeCode ActivityOutcome?
+
+  callDuration Int? // minutes
   messageId    String? // WhatsApp message ID
 
   // For SITE_VISIT activities: which unit was physically visited
   siteVisitUnitId String?
 
-  activityDate DateTime @default(now()) // when the activity happened
+  activityDate DateTime  @default(now())
   followUpDate DateTime?
-  createdBy    String   // User email or id
-  createdAt    DateTime @default(now())
+
+  // Authorship: createdBy kept for back-compat; createdById is the FK going forward
+  createdBy       String // User email or id (legacy)
+  createdById     String?
+  systemGenerated Boolean @default(false)
+
+  // Optional link to the task this activity closed/produced
+  relatedTaskId String?
+
+  createdAt DateTime @default(now())
 
   @@index([leadId])
   @@index([dealId])
   @@index([unitId])
   @@index([contactId])
+  @@index([reservationId])
+  @@index([offerId])
+  @@index([paymentId])
+  @@index([commissionId])
+  @@index([brokerCompanyId])
   @@index([createdAt])
   @@index([activityDate])
   @@index([leadId, activityDate])
+  @@index([kind])
+  @@index([channel])
 }
 
 model Task {
-  id    String @id @default(cuid())
+  id String @id @default(cuid())
 
   title    String
   type     TaskType     @default(FOLLOW_UP)
   priority TaskPriority @default(MEDIUM)
   status   TaskStatus   @default(PENDING)
 
-  leadId String?
-  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  dealId String?
-  deal   Deal?   @relation("DealTasks", fields: [dealId], references: [id], onDelete: SetNull)
+  // Polymorphic owners (any combination)
+  leadId        String?
+  lead          Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  dealId        String?
+  deal          Deal?   @relation("DealTasks", fields: [dealId], references: [id], onDelete: SetNull)
+  unitId        String?
+  reservationId String?
+  offerId       String?
+  paymentId     String?
 
   assignedToId String?
   assignedTo   User?   @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
 
-  dueDate     DateTime
-  notes       String?  @db.Text
-  completedAt DateTime?
+  // Provenance — distinguishes user-created tasks from system rules
+  source      TaskSource @default(USER)
+  templateKey String? // e.g. "OQOOD_WARNING_T7"; lets the system update/cancel its own tasks
+  dedupeKey   String?    @unique // typically `${templateKey}:${entityId}`
+
+  dueDate  DateTime
+  slaDueAt DateTime? // hard SLA — separate from agent-set dueDate
+  notes    String?   @db.Text
+
+  completedAt     DateTime?
+  completedById   String?
+  completionNotes String?   @db.Text
+  cancelledAt     DateTime?
+  cancelledReason String?
+  snoozedUntil    DateTime?
+
+  parentTaskId String?
+  parent       Task?   @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subtasks     Task[]  @relation("TaskSubtasks")
+
+  // Watchers — users notified about updates (manager / finance)
+  watchers TaskWatcher[]
 
   createdAt DateTime @default(now())
 
   @@index([leadId])
   @@index([dealId])
+  @@index([unitId])
+  @@index([reservationId])
+  @@index([offerId])
+  @@index([paymentId])
   @@index([assignedToId])
   @@index([dueDate])
   @@index([status])
+  @@index([source])
+  @@index([templateKey])
+  @@index([parentTaskId])
+}
+
+// Many-to-many: users watching a task (notifications sent on change)
+model TaskWatcher {
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
 
 model Notification {
@@ -682,14 +827,14 @@ model Notification {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  message  String
-  leadId   String?
-  read     Boolean @default(false)
+  message String
+  leadId  String?
+  read    Boolean @default(false)
 
-  type     NotificationType     @default(GENERAL)
+  type       NotificationType     @default(GENERAL)
   entityId   String? // relevant entity id (dealId, unitId, paymentId …)
   entityType String? // "DEAL", "UNIT", "PAYMENT", etc.
-  priority NotificationPriority @default(NORMAL)
+  priority   NotificationPriority @default(NORMAL)
 
   createdAt DateTime @default(now())
 
@@ -709,14 +854,14 @@ model BrokerCompany {
   email String?
   phone String?
 
-  agents BrokerAgent[]
-  leads  Lead[]
-  deals  Deal[]
+  agents      BrokerAgent[]
+  leads       Lead[]
+  deals       Deal[]
   commissions Commission[]
 
-  reraLicenseNumber  String?
-  reraLicenseExpiry  DateTime?
-  tradeLicenseNumber String?
+  reraLicenseNumber     String?
+  reraLicenseExpiry     DateTime?
+  tradeLicenseNumber    String?
   tradeLicenseCopyUrl   String?
   vatCertificateNo      String?
   vatCertificateUrl     String?
@@ -734,8 +879,8 @@ model BrokerCompany {
   bankAccountName       String?
   bankAccountNo         String?
   bankIban              String?
-  bankCurrency          String?  @default("AED")
-  commissionRate     Float    @default(4)
+  bankCurrency          String?   @default("AED")
+  commissionRate        Float     @default(4)
 
   createdAt DateTime @default(now())
 
@@ -785,7 +930,7 @@ model Reservation {
   status    ReservationStatus @default(ACTIVE)
   expiresAt DateTime
 
-  reservedBy String  // userId who created this reservation
+  reservedBy String // userId who created this reservation
   notes      String? @db.Text
 
   convertedToDealId String? // set when status = CONVERTED
@@ -810,18 +955,18 @@ model Offer {
   paymentPlan   PaymentPlan? @relation(fields: [paymentPlanId], references: [id])
 
   offeredPrice   Float
-  originalPrice  Float  // unit.price at time of offer
-  discountAmount Float  @default(0)
-  discountPct    Float  @default(0)
+  originalPrice  Float // unit.price at time of offer
+  discountAmount Float @default(0)
+  discountPct    Float @default(0)
 
-  notes     String? @db.Text
+  notes     String?     @db.Text
   status    OfferStatus @default(ACTIVE)
   expiresAt DateTime?
 
   rejectedReason String?
   acceptedBy     String? // userId
 
-  createdBy String  // userId
+  createdBy String // userId
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -858,15 +1003,15 @@ model PaymentPlanMilestone {
   planId String
   plan   PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  label           String
-  percentage      Float
-  triggerType     MilestoneTrigger @default(DAYS_FROM_RESERVATION)
+  label       String
+  percentage  Float
+  triggerType MilestoneTrigger @default(DAYS_FROM_RESERVATION)
 
   isDLDFee   Boolean @default(false)
   isAdminFee Boolean @default(false)
 
-  daysFromReservation Int?       // used when triggerType = DAYS_FROM_RESERVATION
-  fixedDate           DateTime?  // used when triggerType = FIXED_DATE
+  daysFromReservation Int? // used when triggerType = DAYS_FROM_RESERVATION
+  fixedDate           DateTime? // used when triggerType = FIXED_DATE
   sortOrder           Int
 
   createdAt DateTime @default(now())
@@ -898,11 +1043,11 @@ model Deal {
   stageHistory DealStageHistory[]
 
   salePrice         Float
-  discount          Float  @default(0)
+  discount          Float   @default(0)
   discountReason    String?
-  reservationAmount Float  @default(0)
+  reservationAmount Float   @default(0)
 
-  dldFee  Float
+  dldFee   Float
   adminFee Float @default(5000)
 
   paymentPlanId String
@@ -918,7 +1063,7 @@ model Deal {
   documents  Document[]
   commission Commission?
   activities Activity[]
-  tasks      Task[]     @relation("DealTasks")
+  tasks      Task[]      @relation("DealTasks")
 
   brokerCompanyId String?
   brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
@@ -926,15 +1071,15 @@ model Deal {
   brokerAgent     BrokerAgent?   @relation(fields: [brokerAgentId], references: [id])
 
   // Per-deal financial overrides (null = use project defaults)
-  commissionRateOverride Float?   // overrides brokerCompany.commissionRate when set
-  adminFeeWaived         Boolean  @default(false)
+  commissionRateOverride Float? // overrides brokerCompany.commissionRate when set
+  adminFeeWaived         Boolean @default(false)
   adminFeeWaivedReason   String?
   adminFeeWaivedBy       String?
-  dldPaidBy              String   @default("BUYER") // "BUYER" | "DEVELOPER"
+  dldPaidBy              String  @default("BUYER") // "BUYER" | "DEVELOPER"
   dldWaivedReason        String?
   dldWaivedBy            String?
 
-  notes     String?  @db.Text
+  notes String? @db.Text
 
   // Reminder controls (finance collections)
   remindersPaused       Boolean   @default(false)
@@ -976,12 +1121,12 @@ model Payment {
   dealId String
   deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
-  milestoneLabel String
-  amount         Float  // current effective amount (may reflect adjustments)
-  originalAmount Float  // amount when first created — immutable audit trail
-  adjustedAmount Float? // non-null if a manual adjustment has been made
+  milestoneLabel   String
+  amount           Float // current effective amount (may reflect adjustments)
+  originalAmount   Float // amount when first created — immutable audit trail
+  adjustedAmount   Float? // non-null if a manual adjustment has been made
   adjustmentReason String?
-  percentage     Float
+  percentage       Float
 
   dueDate DateTime
   status  PaymentStatus @default(PENDING)
@@ -990,7 +1135,7 @@ model Payment {
   paidBy        String?
   paymentMethod String?
   receiptKey    String?
-  notes         String? @db.Text
+  notes         String?   @db.Text
 
   pdcNumber      String?
   pdcBank        String?
@@ -1002,10 +1147,10 @@ model Payment {
   sortOrder       Int              @default(0)
   milestoneType   String           @default("PLAN") // "PLAN" | "CUSTOM" | "DEVELOPER_COST"
   scheduleTrigger MilestoneTrigger @default(DAYS_FROM_RESERVATION)
-  isWaived      Boolean @default(false)
-  waivedBy      String?
-  waivedAt      DateTime?
-  waivedReason  String?
+  isWaived        Boolean          @default(false)
+  waivedBy        String?
+  waivedAt        DateTime?
+  waivedReason    String?
 
   partialPayments PartialPayment[]
   auditLog        PaymentAuditLog[]
@@ -1034,7 +1179,7 @@ model PartialPayment {
   paymentMethod String
   paidBy        String
   receiptKey    String?
-  notes         String? @db.Text
+  notes         String?  @db.Text
 
   createdAt DateTime @default(now())
 
@@ -1056,21 +1201,21 @@ model PaymentAuditLog {
 }
 
 enum ReminderRuleType {
-  BEFORE_DUE   // 7 days before due
-  ON_DUE       // on the due date
-  OVERDUE_7    // 7 days after due
-  OVERDUE_30   // 30 days after due
+  BEFORE_DUE // 7 days before due
+  ON_DUE // on the due date
+  OVERDUE_7 // 7 days after due
+  OVERDUE_30 // 30 days after due
 }
 
 model ReminderLog {
-  id        String            @id @default(cuid())
+  id        String  @id @default(cuid())
   paymentId String
-  payment   Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  ruleType  ReminderRuleType
-  sentAt    DateTime          @default(now())
-  email     String?           // email it was sent to (null = no email, notification only)
-  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
+  ruleType ReminderRuleType
+  sentAt   DateTime         @default(now())
+  email    String? // email it was sent to (null = no email, notification only)
+  status   String           @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
 
   @@index([paymentId])
   @@index([paymentId, ruleType])
@@ -1134,7 +1279,7 @@ model Document {
 
   expiryDate DateTime?
   uploadedBy String
-  uploadedAt DateTime @default(now())
+  uploadedAt DateTime  @default(now())
 
   softDeleted Boolean @default(false)
 
@@ -1154,14 +1299,14 @@ model Document {
 // projectId=null means the rule applies globally (all projects).
 // Per-project rules override global rules for the same stage+documentType.
 model StageDocumentRule {
-  id           String       @id @default(cuid())
-  projectId    String?
-  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  dealStage    DealStage    // destination stage that requires this document
+  dealStage    DealStage // destination stage that requires this document
   documentType DocumentType // required document type
   required     Boolean      @default(true)
-  label        String       // e.g. "Signed SPA Agreement"
+  label        String // e.g. "Signed SPA Agreement"
 
   createdAt DateTime @default(now())
 
@@ -1184,7 +1329,7 @@ model LateFeeRule {
   feeType          LateFeeType
   feeAmount        Float
   maxFeeAmount     Float?
-  isActive         Boolean @default(true)
+  isActive         Boolean     @default(true)
 
   createdAt DateTime @default(now())
 
@@ -1209,8 +1354,8 @@ model PricingRule {
   adjustmentType  PricingAdjustmentType
   adjustmentValue Float
 
-  priority  Int     @default(0)
-  isActive  Boolean @default(true)
+  priority Int     @default(0)
+  isActive Boolean @default(true)
 
   validFrom  DateTime?
   validUntil DateTime?
@@ -1246,9 +1391,9 @@ model UnitPriceHistory {
 
 model DomainEvent {
   id            String    @id @default(cuid())
-  eventType     String    // e.g. "DEAL_CREATED", "UNIT_RESERVED"
-  aggregateId   String    // entity id (dealId, unitId, leadId …)
-  aggregateType String    // "DEAL", "UNIT", "LEAD", etc.
+  eventType     String // e.g. "DEAL_CREATED", "UNIT_RESERVED"
+  aggregateId   String // entity id (dealId, unitId, leadId …)
+  aggregateType String // "DEAL", "UNIT", "LEAD", etc.
   payload       Json
   version       Int       @default(1)
   processedAt   DateTime?
@@ -1262,7 +1407,7 @@ model DomainEvent {
 
 model BackgroundJob {
   id          String    @id @default(cuid())
-  type        String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
+  type        String // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
   payload     Json
   status      JobStatus @default(PENDING)
   scheduledAt DateTime
@@ -1330,9 +1475,9 @@ model AppSettings {
 // ============================================================
 
 model Contact {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   firstName   String
   lastName    String?
@@ -1344,7 +1489,7 @@ model Contact {
   nationality String?
   source      ContactSource @default(MANUAL)
   notes       String?       @db.Text
-  tags        String?       // comma-separated
+  tags        String? // comma-separated
 
   activities Activity[] @relation("ContactActivities")
 

@@ -12,6 +12,7 @@ import {
 } from "../schemas/validation";
 import { updateUnitStatus, isDealOwnedStatus } from "../services/unitService";
 import { prisma } from "../lib/prisma";
+import { logActivity } from "../services/activityService";
 
 const router = Router();
 
@@ -613,19 +614,15 @@ router.post("/:id/activities", async (req, res) => {
       return res.status(400).json({ error: "type and summary are required", code: "VALIDATION_ERROR", statusCode: 400 });
     }
 
-    const activity = await prisma.activity.create({
-      data: {
-        unitId: req.params.id,
-        leadId: leadId || null,
-        siteVisitUnitId: type === "SITE_VISIT" ? req.params.id : null,
-        type,
-        summary,
-        outcome: outcome || null,
-        createdBy: req.auth?.userId || "dev-user-1",
-      },
-      include: {
-        lead: { select: { id: true, firstName: true, lastName: true } },
-      },
+    const activity = await logActivity({
+      unitId:          req.params.id,
+      leadId:          leadId || null,
+      siteVisitUnitId: type === "SITE_VISIT" ? req.params.id : null,
+      type,
+      summary,
+      outcome:         outcome || null,
+      createdBy:       req.auth?.userId || "dev-user-1",
+      createdById:     req.auth?.userId,
     });
 
     res.status(201).json(activity);

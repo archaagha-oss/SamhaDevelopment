@@ -5,6 +5,7 @@ import { markPaymentPaidSchema } from "../schemas/validation";
 import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { prisma } from "../lib/prisma";
+import { logActivity } from "../services/activityService";
 
 const router = Router();
 
@@ -324,14 +325,15 @@ router.post("/:id/generate-invoice", async (req, res) => {
       createdBy:   req.auth.userId,
     });
 
-    await prisma.activity.create({
-      data: {
-        dealId:    deal.id,
-        leadId:    deal.leadId,
-        type:      "NOTE",
-        summary:   `Invoice generated for installment "${payment.milestoneLabel}" (${deal.dealNumber})`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      dealId:      deal.id,
+      leadId:      deal.leadId,
+      paymentId:   payment.id,
+      type:        "DOC_GENERATED",
+      kind:        "DOC_GENERATED",
+      summary:     `Invoice generated for installment "${payment.milestoneLabel}" (${deal.dealNumber})`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     res.status(201).json({ ...doc, previewUrl: `/payments/${payment.id}/print/invoice?docId=${doc.id}` });
@@ -396,14 +398,15 @@ router.post("/:id/generate-receipt", async (req, res) => {
       createdBy:   req.auth.userId,
     });
 
-    await prisma.activity.create({
-      data: {
-        dealId:    deal.id,
-        leadId:    deal.leadId,
-        type:      "NOTE",
-        summary:   `Receipt generated for payment AED ${payment.amount.toLocaleString()} — "${payment.milestoneLabel}" (${deal.dealNumber})`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      dealId:      deal.id,
+      leadId:      deal.leadId,
+      paymentId:   payment.id,
+      type:        "DOC_GENERATED",
+      kind:        "DOC_GENERATED",
+      summary:     `Receipt generated for payment AED ${payment.amount.toLocaleString()} — "${payment.milestoneLabel}" (${deal.dealNumber})`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     res.status(201).json({ ...doc, previewUrl: `/payments/${payment.id}/print/receipt?docId=${doc.id}` });

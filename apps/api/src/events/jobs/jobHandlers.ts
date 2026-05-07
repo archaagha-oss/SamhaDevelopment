@@ -10,6 +10,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { eventBus } from "../eventBus.js";
 import { releaseExpiredHolds } from "../../services/unitService.js";
+import { logSystemActivity } from "../../services/activityService.js";
 import {
   sendEmail,
   buildBeforeDueEmail,
@@ -575,14 +576,13 @@ async function handlePaymentReminderSweep(): Promise<void> {
           });
 
           // Log activity on deal
-          await prisma.activity.create({
-            data: {
-              dealId:    deal.id,
-              leadId:    deal.leadId,
-              type:      "NOTE",
-              summary:   `Reminder sent (${rule.type.replace(/_/g, " ").toLowerCase()}) for "${payment.milestoneLabel}" — AED ${payment.amount.toLocaleString()}`,
-              createdBy: "system",
-            },
+          await logSystemActivity({
+            dealId:    deal.id,
+            leadId:    deal.leadId,
+            paymentId: payment.id,
+            type:      "PAYMENT_REMINDER",
+            kind:      "PAYMENT_REMINDER",
+            summary:   `Reminder sent (${rule.type.replace(/_/g, " ").toLowerCase()}) for "${payment.milestoneLabel}" — AED ${payment.amount.toLocaleString()}`,
           });
 
           // Send email if address available

@@ -10,6 +10,9 @@ interface User {
 interface Task {
   kind: "task";
   id: string; title: string; type: string; priority: string; status: string;
+  source?: string;
+  templateKey?: string | null;
+  isOverdue?: boolean;
   dueDate: string; notes?: string; completedAt?: string;
   assignedToId?: string;
   assignedTo?: { id: string; name: string };
@@ -56,7 +59,7 @@ const PRIORITY_BADGES: Record<string, string> = {
   URGENT: "bg-red-100 text-red-700",
 };
 
-const TASK_TYPES = ["CALL", "MEETING", "FOLLOW_UP", "DOCUMENT", "PAYMENT"];
+const TASK_TYPES = ["CALL", "MEETING", "FOLLOW_UP", "DOCUMENT", "PAYMENT", "KYC", "SPA", "OQOOD", "HANDOVER", "INSPECTION", "SITE_VISIT", "COMMISSION_REVIEW", "RESERVATION_FOLLOWUP", "OTHER"];
 const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const ACTIVITY_TYPES = ["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"];
 
@@ -126,7 +129,21 @@ function TaskCard({ task, users, onComplete, onDelete, onReassign }: {
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_BADGES[task.priority]}`}>
             {task.priority}
           </span>
-          {isOverdue && task.status !== "COMPLETED" && (
+          {task.source && task.source !== "USER" && (
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 uppercase"
+              title={task.templateKey ?? "Auto-generated"}
+            >
+              Auto
+            </span>
+          )}
+          {task.status === "SNOOZED" && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 uppercase">Snoozed</span>
+          )}
+          {task.status === "CANCELLED" && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 uppercase">Cancelled</span>
+          )}
+          {isOverdue && task.status !== "COMPLETED" && task.status !== "CANCELLED" && (
             <span className="text-[10px] font-semibold text-red-600">OVERDUE</span>
           )}
         </div>

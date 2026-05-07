@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { createGeneratedDocument } from "../services/documentService";
+import { logActivity } from "../services/activityService";
+import { eventBus } from "../events/eventBus";
 
 const router = Router();
 
@@ -170,13 +172,14 @@ router.post("/", async (req, res) => {
     // Activity log
     const planNote = planName ? ` · ${planName}` : "";
     const discountNote = discount > 0 ? ` (discount: ${discount.toLocaleString()} AED)` : "";
-    await prisma.activity.create({
-      data: {
-        leadId,
-        type:    "NOTE",
-        summary: `Sales Offer v${offerCount} generated — ${finalPrice.toLocaleString()} AED${discountNote}${planNote}`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      leadId,
+      offerId:     offer.id,
+      type:        "OFFER_SENT",
+      kind:        "OFFER_SENT",
+      summary:     `Sales Offer v${offerCount} generated — ${finalPrice.toLocaleString()} AED${discountNote}${planNote}`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     res.status(201).json(offer);
@@ -216,14 +219,28 @@ router.patch("/:id/status", async (req, res) => {
       WITHDRAWN: "withdrawn",
     };
     if (actionLabel[status]) {
-      await prisma.activity.create({
-        data: {
-          leadId:    offer.leadId,
-          type:      "NOTE",
-          summary:   `Offer ${actionLabel[status]} — ${offer.offeredPrice.toLocaleString()} AED`,
-          createdBy: req.auth.userId,
-        },
+      const kind = status === "ACCEPTED" ? "OFFER_ACCEPTED" : status === "REJECTED" ? "OFFER_REJECTED" : "NOTE";
+      await logActivity({
+        leadId:      offer.leadId,
+        offerId:     offer.id,
+        type:        kind,
+        kind:        kind as any,
+        summary:     `Offer ${actionLabel[status]} — ${offer.offeredPrice.toLocaleString()} AED`,
+        createdBy:   req.auth.userId,
+        createdById: req.auth.userId,
       });
+
+      // Emit a domain event so lifecycle handlers fire (creates SPA + KYC tasks).
+      if (status === "ACCEPTED" || status === "REJECTED") {
+        eventBus.emit({
+          eventType:     status === "ACCEPTED" ? "OFFER_ACCEPTED" : "OFFER_REJECTED",
+          aggregateId:   offer.id,
+          aggregateType: "OFFER",
+          data:          { offerId: offer.id, leadId: offer.leadId, unitId: offer.unitId },
+          userId:        req.auth.userId,
+          timestamp:     new Date(),
+        });
+      }
     }
 
     res.json(offer);

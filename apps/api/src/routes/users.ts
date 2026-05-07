@@ -30,6 +30,23 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Get the authenticated user (must come before /:id route)
+router.get("/me", async (req, res) => {
+  if (!req.auth?.userId) {
+    return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+  }
+  try {
+    const me = await prisma.user.findUnique({
+      where: { id: req.auth.userId },
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true },
+    });
+    if (!me) return res.status(404).json({ error: "User not found", code: "NOT_FOUND", statusCode: 404 });
+    res.json(me);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch current user", code: "FETCH_ME_ERROR", statusCode: 500 });
+  }
+});
+
 // Get user detail
 router.get("/:id", async (req, res) => {
   try {

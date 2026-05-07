@@ -6,8 +6,10 @@ import { openAPISpec } from "./docs/openapi";
 import { prisma } from "./lib/prisma";
 import { logger } from "./lib/logger";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
+import { registerLifecycleHandlers } from "./events/handlers/lifecycleHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
+import { startTaskNotifier } from "./events/jobs/taskNotifier";
 
 // Import routes
 import projectRoutes from "./routes/projects";
@@ -32,7 +34,9 @@ dotenv.config();
 
 // ── Bootstrap event system + background jobs ──────────────────────────────────
 registerDealHandlers();
+registerLifecycleHandlers();
 startJobProcessor(30_000); // poll every 30 s
+startTaskNotifier(15 * 60_000); // every 15 min: notify assignees + watchers
 
 // Hourly sweep: release expired ON_HOLD units
 setInterval(() => {

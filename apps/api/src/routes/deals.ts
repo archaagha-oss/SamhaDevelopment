@@ -9,6 +9,7 @@ import {
 import { addCustomMilestone, restructureSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { prisma } from "../lib/prisma";
+import { logActivity } from "../services/activityService";
 
 const router = Router();
 
@@ -259,13 +260,13 @@ router.patch("/:id", async (req, res) => {
 
     // Log notes change as an activity
     if (notes !== undefined) {
-      await prisma.activity.create({
-        data: {
-          dealId:    req.params.id,
-          type:      "NOTE",
-          summary:   "Deal notes updated",
-          createdBy: req.auth.userId,
-        },
+      await logActivity({
+        dealId:      req.params.id,
+        type:        "NOTE",
+        kind:        "NOTE",
+        summary:     "Deal notes updated",
+        createdBy:   req.auth.userId,
+        createdById: req.auth.userId,
       }).catch(() => {});
     }
 
@@ -354,13 +355,13 @@ router.patch("/:id/unit", async (req, res) => {
     });
 
     // Audit activity
-    await prisma.activity.create({
-      data: {
-        dealId:    req.params.id,
-        type:      "NOTE",
-        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      dealId:      req.params.id,
+      type:        "NOTE",
+      kind:        "NOTE",
+      summary:     `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     res.json(updated);
@@ -407,16 +408,15 @@ router.post("/:id/activities", async (req, res) => {
     if (!type || !summary) {
       return res.status(400).json({ error: "type and summary are required", code: "MISSING_FIELDS", statusCode: 400 });
     }
-    const activity = await prisma.activity.create({
-      data: {
-        dealId: req.params.id,
-        type,
-        summary,
-        outcome: outcome || null,
-        followUpDate: followUpDate ? new Date(followUpDate) : null,
-        activityDate: activityDate ? new Date(activityDate) : new Date(),
-        createdBy: req.auth.userId,
-      },
+    const activity = await logActivity({
+      dealId:       req.params.id,
+      type,
+      summary,
+      outcome:      outcome || null,
+      followUpDate,
+      activityDate,
+      createdBy:    req.auth.userId,
+      createdById:  req.auth.userId,
     });
     res.status(201).json(activity);
   } catch (error: any) {
@@ -572,14 +572,14 @@ router.post("/:id/reserve", async (req, res) => {
     }, { isolationLevel: "Serializable" });
 
     // Audit activity (outside transaction — non-critical)
-    prisma.activity.create({
-      data: {
-        dealId,
-        leadId:    result.leadId,
-        type:      "NOTE",
-        summary:   `Unit ${result.unit.unitNumber} reserved — deal confirmed`,
-        createdBy: userId,
-      },
+    logActivity({
+      dealId,
+      leadId:      result.leadId,
+      type:        "NOTE",
+      kind:        "NOTE",
+      summary:     `Unit ${result.unit.unitNumber} reserved — deal confirmed`,
+      createdBy:   userId,
+      createdById: userId,
     }).catch(() => {});
 
     res.json(result);
@@ -698,14 +698,14 @@ router.post("/:id/generate-document", async (req, res) => {
     });
 
     // Log activity with version
-    await prisma.activity.create({
-      data: {
-        dealId:    deal.id,
-        leadId:    deal.leadId,
-        type:      "NOTE",
-        summary:   `${labelMap[type]} v${doc.version} generated for ${deal.dealNumber}`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      dealId:      deal.id,
+      leadId:      deal.leadId,
+      type:        "DOC_GENERATED",
+      kind:        "DOC_GENERATED",
+      summary:     `${labelMap[type]} v${doc.version} generated for ${deal.dealNumber}`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     const printPathMap: Record<string, string> = {

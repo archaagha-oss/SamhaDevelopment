@@ -13,6 +13,7 @@ import { DealStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { dealLogger } from "../lib/logger";
 import { eventBus } from "../events/eventBus";
+import { upsertSystemTask } from "./taskService";
 import {
   reserveUnit,
   bookUnit,
@@ -502,12 +503,12 @@ export async function updateDealStage(
           }
         }
 
-        // Auto-create tasks for key stages
-        const stageTasks: Record<string, { title: string; type: string; priority: string }> = {
-          SPA_PENDING:          { title: "Prepare and send SPA to buyer",      type: "DOCUMENT", priority: "HIGH" },
-          SPA_SIGNED:           { title: "Upload signed SPA to system",        type: "DOCUMENT", priority: "HIGH" },
-          OQOOD_PENDING:        { title: "Submit Oqood registration",          type: "DOCUMENT", priority: "URGENT" },
-          INSTALLMENTS_ACTIVE:  { title: "Follow up on next payment due",      type: "PAYMENT",  priority: "MEDIUM" },
+        // Auto-create tasks for key stages (idempotent via templateKey)
+        const stageTasks: Record<string, { title: string; type: any; priority: any; templateKey: string }> = {
+          SPA_PENDING:         { title: "Prepare and send SPA to buyer", type: "SPA",      priority: "HIGH",   templateKey: "DEAL_SPA_PREPARE" },
+          SPA_SIGNED:          { title: "Upload signed SPA to system",   type: "SPA",      priority: "HIGH",   templateKey: "DEAL_SPA_UPLOAD" },
+          OQOOD_PENDING:       { title: "Submit Oqood registration",     type: "OQOOD",    priority: "URGENT", templateKey: "DEAL_OQOOD_SUBMIT" },
+          INSTALLMENTS_ACTIVE: { title: "Follow up on next payment due", type: "PAYMENT",  priority: "MEDIUM", templateKey: "DEAL_PAYMENT_FOLLOWUP" },
         };
         const taskDef = stageTasks[newStage];
         if (taskDef) {
@@ -515,18 +516,16 @@ export async function updateDealStage(
             where: { id: dealId },
             include: { lead: { select: { assignedAgentId: true } } },
           });
-          const agentId = fullDeal?.lead?.assignedAgentId ?? null;
-          await prisma.task.create({
-            data: {
-              title:       taskDef.title,
-              type:        taskDef.type as any,
-              priority:    taskDef.priority as any,
-              status:      "PENDING",
-              dealId,
-              leadId:      fullDeal?.leadId ?? null,
-              assignedToId: agentId,
-              dueDate:     new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-            },
+          await upsertSystemTask({
+            templateKey:  taskDef.templateKey,
+            entityId:     dealId,
+            title:        taskDef.title,
+            type:         taskDef.type,
+            priority:     taskDef.priority,
+            dealId,
+            leadId:       fullDeal?.leadId ?? null,
+            assignedToId: fullDeal?.lead?.assignedAgentId ?? null,
+            dueDate:      new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
           });
         }
 

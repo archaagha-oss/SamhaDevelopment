@@ -1,5 +1,6 @@
 import { LeadStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { upsertSystemTask } from "./taskService";
 
 // ---------------------------------------------------------------------------
 // Lead stage transition machine
@@ -129,15 +130,19 @@ export async function createLead(input: CreateLeadInput) {
     },
   });
 
-  // Auto-task: first contact within 24h
+  // Auto-task: first contact within 24h (idempotent, system-rule)
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  await prisma.task.create({
-    data: {
-      leadId:  lead.id,
-      title:   "First contact within 24h",
-      dueDate: tomorrow,
-    },
+  await upsertSystemTask({
+    templateKey:  "LEAD_FIRST_CONTACT",
+    entityId:     lead.id,
+    title:        "First contact within 24h",
+    type:         "FOLLOW_UP",
+    priority:     "HIGH",
+    leadId:       lead.id,
+    assignedToId: lead.assignedAgentId,
+    dueDate:      tomorrow,
+    slaDueAt:     tomorrow,
   });
 
   return lead;

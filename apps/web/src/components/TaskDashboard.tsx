@@ -8,9 +8,13 @@ interface Task {
   type: string;
   priority: string;
   status: string;
+  source?: string;
+  templateKey?: string | null;
   dueDate: string;
+  slaDueAt?: string | null;
   notes?: string;
   completedAt?: string;
+  isOverdue?: boolean;
   lead?: { id: string; firstName: string; lastName: string } | null;
   deal?: { id: string; dealNumber: string; lead?: { firstName: string; lastName: string } } | null;
   assignedTo?: { id: string; name: string } | null;
@@ -18,6 +22,8 @@ interface Task {
 
 const TYPE_ICON: Record<string, string> = {
   CALL: "📞", MEETING: "🤝", FOLLOW_UP: "🔁", DOCUMENT: "📄", PAYMENT: "💳",
+  KYC: "🪪", SPA: "📑", OQOOD: "🏛️", HANDOVER: "🔑", INSPECTION: "🔍",
+  SITE_VISIT: "🏗️", COMMISSION_REVIEW: "💼", RESERVATION_FOLLOWUP: "⏳", OTHER: "📌",
 };
 const PRIORITY_BADGE: Record<string, string> = {
   LOW: "bg-slate-100 text-slate-500",
@@ -42,6 +48,7 @@ export default function TaskDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [showAuto, setShowAuto] = useState(true); // toggle: include system-rule tasks
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -77,6 +84,29 @@ export default function TaskDashboard() {
     }
   };
 
+  const snooze = async (id: string, hours: number) => {
+    try {
+      await axios.patch(`/api/tasks/${id}/snooze`, { hours });
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      // silent
+    }
+  };
+
+  const assignToMe = async (id: string) => {
+    try {
+      const me = await axios.get("/api/users/me").catch(() => null);
+      const userId = me?.data?.id;
+      if (!userId) return;
+      await axios.patch(`/api/tasks/${id}`, { assignedToId: userId });
+      setTasks((prev) => prev.map((t) =>
+        t.id === id ? { ...t, assignedTo: { id: userId, name: me?.data?.name ?? "me" } } : t,
+      ));
+    } catch {
+      // silent
+    }
+  };
+
   const addTask = async () => {
     if (!addForm.title.trim() || !addForm.dueDate) return;
     setSubmitting(true);
@@ -101,6 +131,7 @@ export default function TaskDashboard() {
   const filtered = tasks.filter((t) => {
     if (filterType !== "ALL" && t.type !== filterType) return false;
     if (filterPriority !== "ALL" && t.priority !== filterPriority) return false;
+    if (!showAuto && t.source && t.source !== "USER") return false;
     return true;
   });
 
@@ -124,7 +155,9 @@ export default function TaskDashboard() {
     else if (t.lead?.id) navigate(`/leads/${t.lead.id}`);
   };
 
-  const renderTask = (t: Task) => (
+  const renderTask = (t: Task) => {
+    const isAuto = !!t.source && t.source !== "USER";
+    return (
     <div key={t.id} className={`flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors group ${completingId === t.id ? "opacity-50" : ""}`}>
       <button
         onClick={() => complete(t.id)}
@@ -136,6 +169,11 @@ export default function TaskDashboard() {
         <div className="flex items-start gap-2 flex-wrap">
           <span className="text-base leading-none">{TYPE_ICON[t.type] || "📌"}</span>
           <p className="text-sm font-medium text-slate-800 leading-snug flex-1">{t.title}</p>
+          {isAuto && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 flex-shrink-0" title={t.templateKey ?? "Auto-generated"}>
+              Auto
+            </span>
+          )}
           <span className={`text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${PRIORITY_BADGE[t.priority]}`}>
             {t.priority}
           </span>
@@ -147,6 +185,11 @@ export default function TaskDashboard() {
             </button>
           )}
           <span className="text-xs text-slate-400">{fmtTime(t.dueDate)}</span>
+          {!t.assignedTo && (
+            <button onClick={() => assignToMe(t.id)} className="text-xs text-emerald-600 hover:underline font-medium">
+              Assign to me
+            </button>
+          )}
           {reschedulingId === t.id ? (
             <span className="flex items-center gap-1.5">
               <input
@@ -159,18 +202,24 @@ export default function TaskDashboard() {
               <button onClick={() => { setReschedulingId(null); setNewDueDate(""); }} className="text-xs text-slate-400 hover:underline">×</button>
             </span>
           ) : (
-            <button
-              onClick={() => { setReschedulingId(t.id); setNewDueDate(t.dueDate.slice(0, 10)); }}
-              className="text-xs text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              Reschedule
-            </button>
+            <span className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => { setReschedulingId(t.id); setNewDueDate(t.dueDate.slice(0, 10)); }}
+                className="text-xs text-slate-400 hover:text-blue-500"
+              >
+                Reschedule
+              </button>
+              <button onClick={() => snooze(t.id, 24)}    className="text-xs text-slate-400 hover:text-blue-500">+1d</button>
+              <button onClick={() => snooze(t.id, 24*3)}  className="text-xs text-slate-400 hover:text-blue-500">+3d</button>
+              <button onClick={() => snooze(t.id, 24*7)}  className="text-xs text-slate-400 hover:text-blue-500">+7d</button>
+            </span>
           )}
         </div>
         {t.notes && <p className="text-xs text-slate-400 mt-1">{t.notes}</p>}
       </div>
     </div>
-  );
+    );
+  };
 
   const Section = ({ title, tasks: sectionTasks, colorClass }: { title: string; tasks: Task[]; colorClass: string }) => {
     if (sectionTasks.length === 0) return null;
@@ -204,10 +253,14 @@ export default function TaskDashboard() {
             className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white text-slate-600 focus:outline-none"
           >
             <option value="ALL">All Types</option>
-            {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT"].map((t) => (
+            {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT","KYC","SPA","OQOOD","HANDOVER","INSPECTION","SITE_VISIT","COMMISSION_REVIEW","RESERVATION_FOLLOWUP","OTHER"].map((t) => (
               <option key={t} value={t}>{t.replace(/_/g," ")}</option>
             ))}
           </select>
+          <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer select-none">
+            <input type="checkbox" checked={showAuto} onChange={(e) => setShowAuto(e.target.checked)} className="accent-violet-500" />
+            Auto
+          </label>
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
@@ -240,7 +293,7 @@ export default function TaskDashboard() {
           <div className="grid grid-cols-3 gap-2">
             <select value={addForm.type} onChange={(e) => setAddForm((f) => ({ ...f, type: e.target.value }))}
               className="border border-slate-200 rounded-lg px-2 py-2 text-sm bg-slate-50 focus:outline-none">
-              {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT"].map((t) => <option key={t} value={t}>{t.replace(/_/g," ")}</option>)}
+              {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT","KYC","SPA","OQOOD","HANDOVER","INSPECTION","SITE_VISIT","COMMISSION_REVIEW","RESERVATION_FOLLOWUP","OTHER"].map((t) => <option key={t} value={t}>{t.replace(/_/g," ")}</option>)}
             </select>
             <select value={addForm.priority} onChange={(e) => setAddForm((f) => ({ ...f, priority: e.target.value }))}
               className="border border-slate-200 rounded-lg px-2 py-2 text-sm bg-slate-50 focus:outline-none">

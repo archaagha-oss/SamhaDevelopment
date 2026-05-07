@@ -4,6 +4,8 @@ import { createLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
 import { createDeal as createDealService } from "../services/dealService";
+import { logActivity } from "../services/activityService";
+import { createTask } from "../services/taskService";
 
 const router = Router();
 
@@ -279,30 +281,26 @@ router.post("/:leadId/activities", validate(logActivitySchema), async (req, res)
 
     const { type, summary, outcome, callDuration, followUpDate } = req.body;
 
-    const activity = await prisma.activity.create({
-      data: {
-        leadId:       req.params.leadId,
-        type,
-        summary,
-        outcome,
-        callDuration,
-        followUpDate: followUpDate ? new Date(followUpDate) : null,
-        createdBy:    req.auth.userId,
-      },
+    const activity = await logActivity({
+      leadId:       req.params.leadId,
+      type,
+      summary,
+      outcome,
+      callDuration,
+      followUpDate,
+      createdBy:    req.auth.userId,
+      createdById:  req.auth.userId,
     });
 
     if (followUpDate) {
       const lead = await prisma.lead.findUnique({ where: { id: req.params.leadId }, select: { assignedAgentId: true } });
-      await prisma.task.create({
-        data: {
-          leadId:      req.params.leadId,
-          title:       `Follow up: ${summary.slice(0, 80)}`,
-          type:        "FOLLOW_UP",
-          priority:    "MEDIUM",
-          status:      "PENDING",
-          dueDate:     new Date(followUpDate),
-          assignedToId: lead?.assignedAgentId ?? null,
-        },
+      await createTask({
+        leadId:       req.params.leadId,
+        title:        `Follow up: ${summary.slice(0, 80)}`,
+        type:         "FOLLOW_UP",
+        priority:     "MEDIUM",
+        dueDate:      new Date(followUpDate),
+        assignedToId: lead?.assignedAgentId ?? null,
       });
     }
 
@@ -508,14 +506,14 @@ router.post("/:id/create-deal", async (req, res) => {
     }
 
     // Audit log
-    await prisma.activity.create({
-      data: {
-        leadId:    lead.id,
-        dealId:    deal.id,
-        type:      "NOTE",
-        summary:   `Deal created from lead — Unit ${resolvedUnit.unitNumber}`,
-        createdBy: req.auth.userId,
-      },
+    await logActivity({
+      leadId:      lead.id,
+      dealId:      deal.id,
+      type:        "NOTE",
+      kind:        "NOTE",
+      summary:     `Deal created from lead — Unit ${resolvedUnit.unitNumber}`,
+      createdBy:   req.auth.userId,
+      createdById: req.auth.userId,
     });
 
     res.status(201).json(deal);

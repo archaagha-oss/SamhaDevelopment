@@ -2,6 +2,8 @@ import { LeadStage } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { eventBus, type DomainEventPayload } from "../eventBus.js";
 import { scheduleJob } from "../jobs/jobHandlers.js";
+import { cancelSystemTasksForEntity } from "../../services/taskService.js";
+import { logActivity } from "../../services/activityService.js";
 
 // ---------------------------------------------------------------------------
 // Helper: log an activity on a lead (fire-and-forget, errors are non-fatal)
@@ -13,8 +15,13 @@ async function logLeadActivity(
   createdBy: string = "system"
 ): Promise<void> {
   try {
-    await prisma.activity.create({
-      data: { leadId, type: "NOTE", summary, createdBy },
+    await logActivity({
+      leadId,
+      type: "NOTE",
+      kind: "NOTE",
+      summary,
+      createdBy,
+      systemGenerated: createdBy === "system",
     });
   } catch (err) {
     console.error("[dealHandlers] logLeadActivity error:", err);
@@ -191,6 +198,9 @@ export async function handleDealCancelled(payload: DomainEventPayload): Promise<
       `Deal ${deal.dealNumber} was cancelled`,
       payload.userId ?? "system"
     );
+
+    // Clean up open system tasks attached to this deal.
+    await cancelSystemTasksForEntity({ dealId }, "Deal cancelled").catch(() => {});
   } catch (err) {
     console.error("[dealHandlers] handleDealCancelled error:", err);
   }
