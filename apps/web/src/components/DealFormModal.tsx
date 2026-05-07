@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   onClose: () => void;
@@ -14,8 +16,8 @@ interface Milestone { label: string; percentage: number; isDLDFee: boolean; isAd
 interface PaymentPlan { id: string; name: string; description?: string; milestones?: Milestone[]; }
 interface BrokerCompany { id: string; name: string; agents: { id: string; name: string }[]; }
 
-const inp = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const lbl = "block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide";
+const inp = "w-full border border-input rounded-xl px-4 py-2.5 text-sm bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide";
 
 const STEPS = ["Lead", "Unit & Price", "Payment Plan", "Broker & Incentives"] as const;
 
@@ -128,14 +130,13 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
   const selectedLead = leads.find((l) => l.id === leadId);
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh]">
+    <Dialog open onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0">
 
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex-shrink-0">
+        <div className="px-6 pt-5 pb-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-slate-900 text-lg">New Deal</h2>
-            <button onClick={handleClose} className="text-slate-400 hover:text-slate-700 text-2xl leading-none transition-colors">×</button>
+            <h2 className="font-bold text-foreground text-lg">New Deal</h2>
           </div>
 
           {/* Step progress */}
@@ -151,18 +152,18 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                     className="flex flex-col items-center gap-1 group disabled:cursor-default"
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border-2 ${
-                      done    ? "bg-blue-600 border-blue-600 text-white" :
-                      current ? "bg-white border-blue-600 text-blue-600" :
-                                "bg-slate-100 border-slate-200 text-slate-400"
+                      done    ? "bg-primary border-primary text-primary-foreground" :
+                      current ? "bg-background border-primary text-primary" :
+                                "bg-muted border-border text-muted-foreground"
                     }`}>
                       {done ? "✓" : i + 1}
                     </div>
-                    <span className={`text-[10px] font-semibold whitespace-nowrap ${current ? "text-blue-700" : done ? "text-blue-500" : "text-slate-400"}`}>
+                    <span className={`text-[10px] font-semibold whitespace-nowrap ${current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"}`}>
                       {label}
                     </span>
                   </button>
                   {i < STEPS.length - 1 && (
-                    <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${i < step ? "bg-blue-500" : "bg-slate-200"}`} />
+                    <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${i < step ? "bg-primary/70" : "bg-border"}`} />
                   )}
                 </div>
               );
@@ -545,46 +546,33 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center gap-3 flex-shrink-0">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="px-5 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 text-sm transition-colors"
-          >
-            Cancel
-          </button>
+        <div className="px-6 py-4 border-t flex items-center gap-3 flex-shrink-0">
+          <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
           <div className="flex-1 flex justify-end gap-2">
             {step > 0 && (
-              <button
-                type="button"
-                onClick={() => setStep((s) => s - 1)}
-                className="px-5 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 text-sm transition-colors"
-              >
-                ← Back
-              </button>
+              <Button type="button" variant="secondary" onClick={() => setStep((s) => s - 1)}>← Back</Button>
             )}
             {step < STEPS.length - 1 ? (
-              <button
+              <Button
                 type="button"
                 onClick={() => setStep((s) => s + 1)}
                 disabled={!canAdvance[step]}
-                className="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next →
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
+                variant="success"
                 onClick={handleSubmit}
                 disabled={submitting || !canAdvance.slice(0, 3).every(Boolean)}
-                className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-sm transition-colors disabled:opacity-50"
               >
                 {submitting ? "Creating…" : "Create Deal ✓"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

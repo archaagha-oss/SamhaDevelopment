@@ -1,6 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import { Document, DocumentType } from "../types";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   dealId: string;
@@ -139,16 +141,10 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">Upload Documents</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-          >
-            ×
-          </button>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl p-0 gap-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="font-bold text-foreground">Upload Documents</h2>
         </div>
 
         <div className="px-6 py-6 space-y-6">
@@ -256,25 +252,15 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 px-6 py-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={uploading}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 disabled:opacity-50 text-sm"
-          >
+        <div className="flex gap-3 px-6 py-4 border-t">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={uploading}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={uploading || files.length === 0}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
-          >
+          </Button>
+          <Button type="button" className="flex-1" onClick={handleUpload} disabled={uploading || files.length === 0}>
             {uploading ? "Uploading…" : "Upload"}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
