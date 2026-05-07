@@ -7,6 +7,7 @@ import { useDeals } from "../hooks/useDeals";
 import DealFormModal from "./DealFormModal";
 import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
+import DealsKanban from "./DealsKanban";
 
 interface Deal {
   id: string; dealNumber: string;
@@ -65,6 +66,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const [editDeal, setEditDeal] = useState<Deal | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">((searchParams.get("view") as "table" | "kanban") || "kanban");
 
   // Debounce search input 350ms before firing API call
   const handleSearch = (val: string) => {
@@ -91,8 +93,9 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
     if (currentPage > 1) p.page  = String(currentPage);
     if (sortCol !== "reservationDate") p.sort = sortCol;
     if (sortDir !== "desc") p.dir = sortDir;
+    if (viewMode !== "kanban") p.view = viewMode;
     setSearchParams(p, { replace: true });
-  }, [debouncedSearch, selectedStage, currentPage, sortCol, sortDir]);
+  }, [debouncedSearch, selectedStage, currentPage, sortCol, sortDir, viewMode]);
 
   const handleSort = (col: string) => {
     if (sortCol === col) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -163,30 +166,67 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
             </button>
           </div>
         </div>
-        {/* Stage filters */}
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setSelectedStage(null)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-          >All</button>
-          {STAGES.map((s) => (
+        {/* View toggle + Stage filters */}
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {/* View toggle */}
+          <div className="flex gap-1 border border-slate-200 rounded-lg p-0.5 ml-auto">
             <button
-              key={s}
-              onClick={() => setSelectedStage(s === selectedStage ? null : s)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-            >{s.replace(/_/g," ")}</button>
-          ))}
+              onClick={() => setViewMode("kanban")}
+              title="Kanban view"
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === "kanban"
+                  ? "bg-blue-600 text-white"
+                  : "bg-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              🎯 Kanban
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              title="Table view"
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === "table"
+                  ? "bg-blue-600 text-white"
+                  : "bg-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              📊 Table
+            </button>
+          </div>
+
+          {/* Stage filters */}
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setSelectedStage(null)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            >All</button>
+            {STAGES.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSelectedStage(s === selectedStage ? null : s)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              >{s.replace(/_/g," ")}</button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto scrollbar-thin">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <table className="w-full text-sm">
+      {/* Views */}
+      {viewMode === "kanban" ? (
+        <DealsKanban
+          deals={deals}
+          isLoading={isLoading}
+          onViewDeal={(id) => navigate(`/deals/${id}`)}
+          onNavigate={navigate}
+        />
+      ) : (
+        <div className="flex-1 overflow-auto scrollbar-thin">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
               <tr>
                 {[
@@ -303,26 +343,29 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                 );
               })}
             </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0">
-        <p className="text-xs text-slate-500">Page {currentPage} of {totalPages}</p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >← Prev</button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >Next →</button>
+            </table>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Pagination (table view only) */}
+      {viewMode === "table" && (
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0">
+          <p className="text-xs text-slate-500">Page {currentPage} of {totalPages}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >← Prev</button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Next →</button>
+          </div>
+        </div>
+      )}
 
       {showNewDeal && (
         <DealFormModal
