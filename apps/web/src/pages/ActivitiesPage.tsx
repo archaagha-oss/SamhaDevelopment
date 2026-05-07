@@ -16,6 +16,7 @@ interface Task {
   dueDate: string; notes?: string; completedAt?: string;
   assignedToId?: string;
   assignedTo?: { id: string; name: string };
+  assignees?: Array<{ userId: string; isPrimary?: boolean }>;
   lead?: { id: string; firstName: string; lastName: string };
   deal?: { id: string; dealNumber: string };
 }
@@ -161,8 +162,25 @@ function TaskCard({ task, users, onComplete, onDelete, onReassign }: {
             <span className="text-xs text-slate-500">Deal: {task.deal.dealNumber}</span>
           )}
 
-          {/* Assign user */}
-          <div className="flex items-center gap-1">
+          {/* Assignees */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {(task.assignees && task.assignees.length > 0
+              ? task.assignees
+              : (task.assignedTo ? [{ userId: task.assignedTo.id, isPrimary: true }] : [])
+            ).map((a) => {
+              const u = users.find((x) => x.id === a.userId);
+              return (
+                <span
+                  key={a.userId}
+                  className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                    a.isPrimary ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
+                  }`}
+                  title={a.isPrimary ? "Primary owner" : "Co-assignee"}
+                >
+                  {a.isPrimary ? "👤 " : "+ "}{u?.name ?? a.userId.slice(0, 6)}
+                </span>
+              );
+            })}
             {reassigning ? (
               <select
                 autoFocus
@@ -177,9 +195,9 @@ function TaskCard({ task, users, onComplete, onDelete, onReassign }: {
             ) : (
               <button
                 onClick={() => setReassigning(true)}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-blue-500 hover:underline"
               >
-                {task.assignedTo ? `@${task.assignedTo.name}` : "Assign"}
+                {(task.assignees && task.assignees.length > 0) || task.assignedTo ? "Edit" : "Assign"}
               </button>
             )}
           </div>
@@ -374,7 +392,7 @@ function CreateTaskModal({ users, onClose, onCreated }: {
   const [priority, setPriority]   = useState("MEDIUM");
   const [dueDate, setDueDate]     = useState(today() + "T09:00");
   const [notes, setNotes]         = useState("");
-  const [assignedToId, setAssignedToId] = useState("");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
 
@@ -384,7 +402,7 @@ function CreateTaskModal({ users, onClose, onCreated }: {
     try {
       await axios.post("/api/tasks", {
         title, type, priority, dueDate, notes: notes || undefined,
-        assignedToId: assignedToId || undefined,
+        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
       });
       onCreated();
     } catch (err: any) {
@@ -393,6 +411,10 @@ function CreateTaskModal({ users, onClose, onCreated }: {
       setLoading(false);
     }
   }
+
+  const toggleAssignee = (id: string) => {
+    setAssigneeIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -429,12 +451,31 @@ function CreateTaskModal({ users, onClose, onCreated }: {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Assign To</label>
-            <select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Unassigned</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-            </select>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Assign To {assigneeIds.length > 0 && <span className="text-slate-400 font-normal">({assigneeIds.length} selected)</span>}
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {users.map((u) => {
+                const selected = assigneeIds.includes(u.id);
+                return (
+                  <button
+                    type="button"
+                    key={u.id}
+                    onClick={() => toggleAssignee(u.id)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      selected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-400"
+                    }`}
+                  >
+                    {selected ? "✓ " : "+ "}{u.name}
+                  </button>
+                );
+              })}
+            </div>
+            {assigneeIds.length > 1 && (
+              <p className="text-[11px] text-slate-400 mt-1">First selection becomes the primary owner.</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>

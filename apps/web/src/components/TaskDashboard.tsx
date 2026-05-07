@@ -18,6 +18,7 @@ interface Task {
   lead?: { id: string; firstName: string; lastName: string } | null;
   deal?: { id: string; dealNumber: string; lead?: { firstName: string; lastName: string } } | null;
   assignedTo?: { id: string; name: string } | null;
+  assignees?: Array<{ userId: string; isPrimary?: boolean }>;
 }
 
 const TYPE_ICON: Record<string, string> = {
@@ -46,9 +47,18 @@ export default function TaskDashboard() {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [newDueDate, setNewDueDate] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "" });
+  const [addForm, setAddForm] = useState<{ title: string; type: string; priority: string; dueDate: string; notes: string; assigneeIds: string[] }>({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "", assigneeIds: [] });
   const [submitting, setSubmitting] = useState(false);
   const [showAuto, setShowAuto] = useState(true); // toggle: include system-rule tasks
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    axios.get("/api/users")
+      .then((r) => setUsers(Array.isArray(r.data) ? r.data : (r.data?.data || [])))
+      .catch(() => setUsers([]));
+  }, []);
+
+  const userName = (id: string): string => users.find((u) => u.id === id)?.name ?? id.slice(0, 6);
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -98,10 +108,18 @@ export default function TaskDashboard() {
       const me = await axios.get("/api/users/me").catch(() => null);
       const userId = me?.data?.id;
       if (!userId) return;
-      await axios.patch(`/api/tasks/${id}`, { assignedToId: userId });
-      setTasks((prev) => prev.map((t) =>
-        t.id === id ? { ...t, assignedTo: { id: userId, name: me?.data?.name ?? "me" } } : t,
-      ));
+      // Adds caller to the assignees set without displacing other assignees.
+      const updated = await axios.post(`/api/tasks/${id}/assignees`, { userId });
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updated.data } : t));
+    } catch {
+      // silent
+    }
+  };
+
+  const removeAssignee = async (taskId: string, userId: string) => {
+    try {
+      const updated = await axios.delete(`/api/tasks/${taskId}/assignees/${userId}`);
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, ...updated.data } : t));
     } catch {
       // silent
     }
@@ -117,9 +135,10 @@ export default function TaskDashboard() {
         priority: addForm.priority,
         dueDate: new Date(addForm.dueDate).toISOString(),
         notes: addForm.notes || null,
+        assigneeIds: addForm.assigneeIds.length ? addForm.assigneeIds : undefined,
       });
       setTasks((prev) => [...prev, res.data]);
-      setAddForm({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "" });
+      setAddForm({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "", assigneeIds: [] });
       setShowAddForm(false);
     } catch {
       // silent
@@ -157,6 +176,9 @@ export default function TaskDashboard() {
 
   const renderTask = (t: Task) => {
     const isAuto = !!t.source && t.source !== "USER";
+    const assignees = t.assignees && t.assignees.length
+      ? t.assignees
+      : (t.assignedTo ? [{ userId: t.assignedTo.id, isPrimary: true }] : []);
     return (
     <div key={t.id} className={`flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors group ${completingId === t.id ? "opacity-50" : ""}`}>
       <button
@@ -178,6 +200,26 @@ export default function TaskDashboard() {
             {t.priority}
           </span>
         </div>
+        {assignees.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {assignees.map((a) => (
+              <span
+                key={a.userId}
+                className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                  a.isPrimary ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
+                }`}
+                title={a.isPrimary ? "Primary owner" : "Co-assignee"}
+              >
+                {a.isPrimary ? "👤" : "+"} {userName(a.userId)}
+                <button
+                  onClick={() => removeAssignee(t.id, a.userId)}
+                  className="text-slate-400 hover:text-red-500 ml-0.5"
+                  title="Remove assignee"
+                >×</button>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
           {taskLabel(t) && (
             <button onClick={() => jumpTo(t)} className="text-xs text-blue-600 hover:underline font-medium">
@@ -185,11 +227,9 @@ export default function TaskDashboard() {
             </button>
           )}
           <span className="text-xs text-slate-400">{fmtTime(t.dueDate)}</span>
-          {!t.assignedTo && (
-            <button onClick={() => assignToMe(t.id)} className="text-xs text-emerald-600 hover:underline font-medium">
-              Assign to me
-            </button>
-          )}
+          <button onClick={() => assignToMe(t.id)} className="text-xs text-emerald-600 hover:underline font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            + me
+          </button>
           {reschedulingId === t.id ? (
             <span className="flex items-center gap-1.5">
               <input
@@ -301,6 +341,37 @@ export default function TaskDashboard() {
             </select>
             <input type="datetime-local" value={addForm.dueDate} onChange={(e) => setAddForm((f) => ({ ...f, dueDate: e.target.value }))}
               className="border border-slate-200 rounded-lg px-2 py-2 text-sm bg-slate-50 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Assign to (multiple allowed)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {users.map((u) => {
+                const selected = addForm.assigneeIds.includes(u.id);
+                return (
+                  <button
+                    type="button"
+                    key={u.id}
+                    onClick={() => setAddForm((f) => ({
+                      ...f,
+                      assigneeIds: selected
+                        ? f.assigneeIds.filter((id) => id !== u.id)
+                        : [...f.assigneeIds, u.id],
+                    }))}
+                    className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                      selected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-400"
+                    }`}
+                  >
+                    {selected ? "✓ " : "+ "}{u.name}
+                  </button>
+                );
+              })}
+              {users.length === 0 && <span className="text-xs text-slate-400">Loading users…</span>}
+            </div>
+            {addForm.assigneeIds.length > 1 && (
+              <p className="text-[11px] text-slate-400 mt-1">First selection becomes the primary owner.</p>
+            )}
           </div>
           <textarea value={addForm.notes} onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
             placeholder="Notes (optional)"

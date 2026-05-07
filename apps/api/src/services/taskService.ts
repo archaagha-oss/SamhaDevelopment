@@ -34,7 +34,9 @@ export interface CreateTaskInput {
   reservationId?: string | null;
   offerId?:     string | null;
   paymentId?:   string | null;
-  assignedToId?: string | null;
+  // Assignment
+  assignedToId?: string | null;       // legacy: primary owner
+  assigneeIds?:  string[];            // full set; first becomes primary if assignedToId not given
   dueDate:      Date | string;
   slaDueAt?:    Date | string | null;
   notes?:       string | null;
@@ -43,12 +45,36 @@ export interface CreateTaskInput {
   watchers?:    string[];             // user IDs
 }
 
+/**
+ * Reconcile primary + assignees from inputs.
+ * - If `assigneeIds` is given, primary = assignedToId (if in the list) or first id.
+ * - If only `assignedToId` is given, assignees = [assignedToId].
+ * - If neither, returns nulls.
+ */
+function resolveAssignees(input: { assignedToId?: string | null; assigneeIds?: string[] }) {
+  const list = (input.assigneeIds ?? []).filter(Boolean);
+  const dedup = Array.from(new Set(list));
+  if (dedup.length === 0) {
+    if (input.assignedToId) return { primary: input.assignedToId, all: [input.assignedToId] };
+    return { primary: null as string | null, all: [] as string[] };
+  }
+  const primary =
+    input.assignedToId && dedup.includes(input.assignedToId)
+      ? input.assignedToId
+      : dedup[0];
+  // Ensure primary is included in the set (it always should be, but be defensive)
+  if (!dedup.includes(primary)) dedup.unshift(primary);
+  return { primary, all: dedup };
+}
+
 export async function createTask(input: CreateTaskInput): Promise<Task> {
   if (!input.title || !input.dueDate) {
     throw Object.assign(new Error("title and dueDate are required"), {
       code: "MISSING_FIELDS", statusCode: 400,
     });
   }
+
+  const { primary, all } = resolveAssignees(input);
 
   const task = await prisma.task.create({
     data: {
@@ -63,11 +89,14 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
       reservationId: input.reservationId ?? null,
       offerId:      input.offerId  ?? null,
       paymentId:    input.paymentId ?? null,
-      assignedToId: input.assignedToId ?? null,
+      assignedToId: primary,
       dueDate:      new Date(input.dueDate),
       slaDueAt:     input.slaDueAt ? new Date(input.slaDueAt) : null,
       notes:        input.notes    ?? null,
       parentTaskId: input.parentTaskId ?? null,
+      assignees: all.length
+        ? { create: all.map((userId) => ({ userId, isPrimary: userId === primary })) }
+        : undefined,
       watchers: input.watchers && input.watchers.length
         ? { create: input.watchers.map((userId) => ({ userId })) }
         : undefined,
@@ -75,6 +104,78 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
   });
 
   return task;
+}
+
+/**
+ * Replace the assignee set on a task. The first id becomes primary
+ * (or `primaryId` if explicitly given). Idempotent.
+ */
+export async function setTaskAssignees(
+  taskId: string,
+  userIds: string[],
+  primaryId?: string,
+): Promise<Task> {
+  const dedup = Array.from(new Set(userIds.filter(Boolean)));
+  const primary = primaryId && dedup.includes(primaryId)
+    ? primaryId
+    : (dedup[0] ?? null);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.taskAssignee.deleteMany({ where: { taskId } });
+    if (dedup.length) {
+      await tx.taskAssignee.createMany({
+        data: dedup.map((userId) => ({ taskId, userId, isPrimary: userId === primary })),
+      });
+    }
+    return tx.task.update({
+      where: { id: taskId },
+      data:  { assignedToId: primary },
+    });
+  });
+}
+
+export async function addTaskAssignee(taskId: string, userId: string): Promise<void> {
+  await prisma.taskAssignee.upsert({
+    where:  { taskId_userId: { taskId, userId } },
+    update: {},
+    create: { taskId, userId, isPrimary: false },
+  });
+  // If task has no primary, promote this one.
+  const t = await prisma.task.findUnique({ where: { id: taskId }, select: { assignedToId: true } });
+  if (t && !t.assignedToId) {
+    await prisma.$transaction([
+      prisma.taskAssignee.update({
+        where: { taskId_userId: { taskId, userId } },
+        data:  { isPrimary: true },
+      }),
+      prisma.task.update({ where: { id: taskId }, data: { assignedToId: userId } }),
+    ]);
+  }
+}
+
+export async function removeTaskAssignee(taskId: string, userId: string): Promise<void> {
+  await prisma.taskAssignee.delete({
+    where: { taskId_userId: { taskId, userId } },
+  }).catch(() => { /* not present, no-op */ });
+
+  // If we removed the primary, promote another assignee (if any) or clear.
+  const t = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { assignedToId: true, assignees: { select: { userId: true } } },
+  });
+  if (!t) return;
+  if (t.assignedToId === userId) {
+    const next = t.assignees[0]?.userId ?? null;
+    await prisma.$transaction(async (tx) => {
+      if (next) {
+        await tx.taskAssignee.update({
+          where: { taskId_userId: { taskId, userId: next } },
+          data:  { isPrimary: true },
+        });
+      }
+      await tx.task.update({ where: { id: taskId }, data: { assignedToId: next } });
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +194,8 @@ export interface UpsertSystemTaskInput {
   reservationId?: string | null;
   offerId?:      string | null;
   paymentId?:    string | null;
-  assignedToId?: string | null;
+  assignedToId?: string | null;     // primary
+  assigneeIds?:  string[];           // full set
   dueDate:       Date;
   slaDueAt?:     Date | null;
   notes?:        string | null;
@@ -108,9 +210,10 @@ export interface UpsertSystemTaskInput {
 export async function upsertSystemTask(input: UpsertSystemTaskInput): Promise<Task> {
   const dedupeKey = `${input.templateKey}:${input.entityId}`;
   const existing = await prisma.task.findUnique({ where: { dedupeKey } });
+  const { primary, all } = resolveAssignees({ assignedToId: input.assignedToId, assigneeIds: input.assigneeIds });
 
   if (existing && (existing.status === "PENDING" || existing.status === "SNOOZED")) {
-    return prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: existing.id },
       data: {
         title:    input.title,
@@ -118,9 +221,15 @@ export async function upsertSystemTask(input: UpsertSystemTaskInput): Promise<Ta
         dueDate:  input.dueDate,
         slaDueAt: input.slaDueAt ?? existing.slaDueAt,
         notes:    input.notes    ?? existing.notes,
-        assignedToId: input.assignedToId ?? existing.assignedToId,
+        assignedToId: primary ?? existing.assignedToId,
       },
     });
+    // Refresh assignees set only if caller passed one explicitly.
+    if (input.assigneeIds || input.assignedToId) {
+      const desired = all.length ? all : (existing.assignedToId ? [existing.assignedToId] : []);
+      await setTaskAssignees(updated.id, desired, primary ?? existing.assignedToId ?? undefined);
+    }
+    return updated;
   }
 
   if (existing) {
@@ -143,10 +252,13 @@ export async function upsertSystemTask(input: UpsertSystemTaskInput): Promise<Ta
       reservationId: input.reservationId ?? null,
       offerId:       input.offerId       ?? null,
       paymentId:     input.paymentId     ?? null,
-      assignedToId:  input.assignedToId  ?? null,
+      assignedToId:  primary,
       dueDate:       input.dueDate,
       slaDueAt:      input.slaDueAt      ?? null,
       notes:         input.notes         ?? null,
+      assignees: all.length
+        ? { create: all.map((userId) => ({ userId, isPrimary: userId === primary })) }
+        : undefined,
     },
   });
 }

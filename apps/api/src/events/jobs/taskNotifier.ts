@@ -39,6 +39,36 @@ async function recordMarker(task: { id: string; leadId: string | null; dealId: s
   }).catch(() => { /* non-fatal */ });
 }
 
+async function notifyAllAssignees(
+  task: { id: string; title: string; leadId: string | null; dealId: string | null; assignedToId: string | null; assignees: { userId: string }[] },
+  marker: string,
+  message: string,
+  priority: "HIGH" | "URGENT",
+): Promise<void> {
+  const recipients = new Set<string>();
+  if (task.assignedToId) recipients.add(task.assignedToId);
+  for (const a of task.assignees) recipients.add(a.userId);
+  if (recipients.size === 0) return;
+
+  await Promise.all(
+    Array.from(recipients).map((userId) =>
+      prisma.notification.create({
+        data: {
+          userId,
+          message,
+          leadId:     task.leadId,
+          type:       "GENERAL",
+          entityId:   task.id,
+          entityType: "TASK",
+          priority,
+        },
+      }).catch(() => { /* non-fatal */ }),
+    ),
+  );
+
+  await recordMarker(task, marker);
+}
+
 async function sweepDueSoon(): Promise<void> {
   const now = new Date();
   const horizon = new Date(now.getTime() + HOUR);
@@ -46,34 +76,24 @@ async function sweepDueSoon(): Promise<void> {
   const tasks = await prisma.task.findMany({
     where: {
       status: "PENDING",
-      assignedToId: { not: null },
+      OR: [
+        { assignedToId: { not: null } },
+        { assignees: { some: {} } },
+      ],
       dueDate: { gte: now, lte: horizon },
     },
     select: {
       id: true, title: true, leadId: true, dealId: true,
       assignedToId: true, dueDate: true,
+      assignees: { select: { userId: true } },
     },
     take: 200,
   });
 
   for (const t of tasks) {
-    if (!t.assignedToId) continue;
     const marker = "[notify:due-soon]";
     if (await alreadyNotified(t.id, marker)) continue;
-
-    await prisma.notification.create({
-      data: {
-        userId:     t.assignedToId,
-        message:    `Task due soon: ${t.title}`,
-        leadId:     t.leadId,
-        type:       "GENERAL",
-        entityId:   t.id,
-        entityType: "TASK",
-        priority:   "HIGH",
-      },
-    }).catch(() => { /* non-fatal */ });
-
-    await recordMarker(t, marker);
+    await notifyAllAssignees(t, marker, `Task due soon: ${t.title}`, "HIGH");
   }
 }
 
@@ -83,34 +103,24 @@ async function sweepOverdue(): Promise<void> {
   const tasks = await prisma.task.findMany({
     where: {
       status: "PENDING",
-      assignedToId: { not: null },
+      OR: [
+        { assignedToId: { not: null } },
+        { assignees: { some: {} } },
+      ],
       dueDate: { lt: now },
     },
     select: {
       id: true, title: true, leadId: true, dealId: true,
       assignedToId: true, dueDate: true,
+      assignees: { select: { userId: true } },
     },
     take: 200,
   });
 
   for (const t of tasks) {
-    if (!t.assignedToId) continue;
     const marker = "[notify:overdue]";
     if (await alreadyNotified(t.id, marker)) continue;
-
-    await prisma.notification.create({
-      data: {
-        userId:     t.assignedToId,
-        message:    `Task overdue: ${t.title}`,
-        leadId:     t.leadId,
-        type:       "GENERAL",
-        entityId:   t.id,
-        entityType: "TASK",
-        priority:   "URGENT",
-      },
-    }).catch(() => { /* non-fatal */ });
-
-    await recordMarker(t, marker);
+    await notifyAllAssignees(t, marker, `Task overdue: ${t.title}`, "URGENT");
   }
 }
 

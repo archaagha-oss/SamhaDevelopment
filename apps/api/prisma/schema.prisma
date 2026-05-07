@@ -772,6 +772,10 @@ model Task {
   assignedToId String?
   assignedTo   User?   @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
 
+  // Co-assignees (alongside primary `assignedTo`). The set always includes
+  // the primary; the service keeps them in sync.
+  assignees    TaskAssignee[]
+
   // Provenance — distinguishes user-created tasks from system rules
   source      TaskSource @default(USER)
   templateKey String? // e.g. "OQOOD_WARNING_T7"; lets the system update/cancel its own tasks
@@ -820,6 +824,21 @@ model TaskWatcher {
 
   @@id([taskId, userId])
   @@index([userId])
+}
+
+// Many-to-many: users assigned to a task (primary + co-assignees).
+// `Task.assignedToId` remains the single "primary owner" for legacy filters
+// and fast lookups; this pivot stores the full responsible set.
+model TaskAssignee {
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
+  @@index([taskId, isPrimary])
 }
 
 model Notification {

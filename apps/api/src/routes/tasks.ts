@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import {
+  addTaskAssignee,
   cancelTask,
   completeTask,
   createTask,
+  removeTaskAssignee,
   reopenTask,
+  setTaskAssignees,
   snoozeTask,
 } from "../services/taskService";
 import { buildProjectScope } from "../middleware/scope";
@@ -15,6 +18,7 @@ const TASK_INCLUDE = {
   lead:       { select: { id: true, firstName: true, lastName: true } },
   deal:       { select: { id: true, dealNumber: true, lead: { select: { firstName: true, lastName: true } } } },
   assignedTo: { select: { id: true, name: true } },
+  assignees:  true,
   watchers:   true,
 };
 
@@ -30,7 +34,8 @@ router.get("/", async (req, res) => {
   try {
     const {
       status, type, source, priority,
-      assignedToId, leadId, dealId, unitId, paymentId, reservationId, offerId,
+      assignedToId, assigneeId,
+      leadId, dealId, unitId, paymentId, reservationId, offerId,
       dueBefore, dueAfter, q, limit = "100",
     } = req.query;
 
@@ -40,6 +45,8 @@ router.get("/", async (req, res) => {
     if (source)        where.source        = source;
     if (priority)      where.priority      = priority;
     if (assignedToId)  where.assignedToId  = assignedToId;
+    // `assigneeId`: matches primary OR any co-assignee.
+    if (assigneeId)    where.assignees     = { some: { userId: assigneeId } };
     if (leadId)        where.leadId        = leadId;
     if (dealId)        where.dealId        = dealId;
     if (unitId)        where.unitId        = unitId;
@@ -69,12 +76,19 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/tasks/mine — convenience: tasks assigned to the caller
+// GET /api/tasks/mine — tasks where caller is primary OR co-assignee
 router.get("/mine", async (req, res) => {
   if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
   try {
+    const userId = req.auth.userId;
     const tasks = await prisma.task.findMany({
-      where: { assignedToId: req.auth.userId, status: { in: ["PENDING", "SNOOZED"] } },
+      where: {
+        status: { in: ["PENDING", "SNOOZED"] },
+        OR: [
+          { assignedToId: userId },
+          { assignees: { some: { userId } } },
+        ],
+      },
       include: TASK_INCLUDE,
       orderBy: { dueDate: "asc" },
       take: 200,
@@ -115,11 +129,11 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH /api/tasks/:id — generic update
+// PATCH /api/tasks/:id — generic update; supports `assigneeIds` to replace the set
 router.patch("/:id", async (req, res) => {
   try {
     if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    const { title, type, priority, status, dueDate, notes, assignedToId } = req.body;
+    const { title, type, priority, status, dueDate, notes, assignedToId, assigneeIds } = req.body;
     const data: any = {};
     if (title        !== undefined) data.title        = title;
     if (type         !== undefined) data.type         = type;
@@ -128,10 +142,62 @@ router.patch("/:id", async (req, res) => {
     if (dueDate      !== undefined) data.dueDate      = new Date(dueDate);
     if (notes        !== undefined) data.notes        = notes;
     if (assignedToId !== undefined) data.assignedToId = assignedToId;
-    const task = await prisma.task.update({ where: { id: req.params.id }, data, include: TASK_INCLUDE });
+    let task = await prisma.task.update({ where: { id: req.params.id }, data });
+
+    // Replace the assignees set if caller passed one.
+    if (Array.isArray(assigneeIds)) {
+      await setTaskAssignees(req.params.id, assigneeIds, assignedToId ?? undefined);
+    } else if (assignedToId !== undefined) {
+      // Keep pivot in sync: at minimum, primary must be in the set.
+      await addTaskAssignee(req.params.id, assignedToId);
+    }
+
+    task = await prisma.task.findUnique({ where: { id: req.params.id }, include: TASK_INCLUDE }) as any;
     res.json(decorate(task));
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update task", code: "TASK_UPDATE_ERROR", statusCode: 400 });
+  }
+});
+
+// PUT /api/tasks/:id/assignees — replace the full set; body { userIds: [...], primaryId? }
+router.put("/:id/assignees", async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+  try {
+    const { userIds, primaryId } = req.body || {};
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({ error: "userIds (array) required", code: "MISSING_FIELDS", statusCode: 400 });
+    }
+    await setTaskAssignees(req.params.id, userIds, primaryId);
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, include: TASK_INCLUDE });
+    res.json(task ? decorate(task) : null);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to set assignees", code: "ASSIGNEE_SET_ERROR", statusCode: 400 });
+  }
+});
+
+// POST /api/tasks/:id/assignees — add one; body { userId }
+router.post("/:id/assignees", async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+  try {
+    const { userId } = req.body || {};
+    if (!userId) return res.status(400).json({ error: "userId required", code: "MISSING_FIELDS", statusCode: 400 });
+    await addTaskAssignee(req.params.id, userId);
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, include: TASK_INCLUDE });
+    res.status(201).json(task ? decorate(task) : null);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to add assignee", code: "ASSIGNEE_ADD_ERROR", statusCode: 400 });
+  }
+});
+
+// DELETE /api/tasks/:id/assignees/:userId — remove one
+router.delete("/:id/assignees/:userId", async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+  try {
+    await removeTaskAssignee(req.params.id, req.params.userId);
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, include: TASK_INCLUDE });
+    res.json(task ? decorate(task) : null);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to remove assignee", code: "ASSIGNEE_DEL_ERROR", statusCode: 400 });
   }
 });
 
