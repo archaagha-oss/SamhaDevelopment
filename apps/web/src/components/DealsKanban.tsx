@@ -46,15 +46,21 @@ const STAGE_COLORS: Record<string, { bg: string; border: string; text: string }>
 interface Props {
   deals: Deal[];
   isLoading: boolean;
+  selectedStage: string | null;
   onViewDeal: (id: string) => void;
   onNavigate: (path: string) => void;
 }
 
-export default function DealsKanban({ deals, isLoading, onViewDeal, onNavigate }: Props) {
+export default function DealsKanban({ deals, isLoading, selectedStage, onViewDeal, onNavigate }: Props) {
   const queryClient = useQueryClient();
   const [draggingDeal, setDraggingDeal] = useState<string | null>(null);
   const [dragSource, setDragSource] = useState<string | null>(null);
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
+
+  // Determine which stages to display
+  const visibleStages = useMemo(() => {
+    return selectedStage ? [selectedStage] : STAGES;
+  }, [selectedStage]);
 
   // Group deals by stage
   const dealsByStage = useMemo(() => {
@@ -126,7 +132,7 @@ export default function DealsKanban({ deals, isLoading, onViewDeal, onNavigate }
   return (
     <div className="flex-1 overflow-x-auto scrollbar-thin">
       <div className="inline-flex gap-4 p-4 h-full min-w-full">
-        {STAGES.map((stage) => {
+        {visibleStages.map((stage) => {
           const stageDealCount = dealsByStage[stage].length;
           const colors = STAGE_COLORS[stage];
 

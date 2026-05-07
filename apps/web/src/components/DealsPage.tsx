@@ -216,6 +216,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
         <DealsKanban
           deals={deals}
           isLoading={isLoading}
+          selectedStage={selectedStage}
           onViewDeal={(id) => navigate(`/deals/${id}`)}
           onNavigate={navigate}
         />
