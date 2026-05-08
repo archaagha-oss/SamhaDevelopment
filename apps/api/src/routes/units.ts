@@ -68,6 +68,7 @@ router.get("/", async (req, res) => {
 
     const units = await prisma.unit.findMany({
       where,
+      include: search ? { project: { select: { id: true, name: true } } } : undefined,
       orderBy: [{ floor: "asc" }, { unitNumber: "asc" }],
       take: Math.min(1000, parseInt(limit as string) || 500),
       include: {

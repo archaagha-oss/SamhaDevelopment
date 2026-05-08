@@ -8,6 +8,7 @@ interface SearchResult {
   subtitle: string;
   type: "lead" | "unit" | "deal";
   status?: string;
+  projectId?: string;
 }
 
 interface SearchResults {
@@ -45,6 +46,7 @@ function mapUnits(data: any[]): SearchResult[] {
       .join(" · "),
     type: "unit",
     status: u.status,
+    projectId: u.projectId,
   }));
 }
 
@@ -94,11 +96,13 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const [query, setQuery]         = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [results, setResults]     = useState<SearchResults>({ leads: [], units: [], deals: [] });
   const [loading, setLoading]     = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   // Focus input when modal opens, reset state
   useEffect(() => {
@@ -106,17 +110,10 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
       setQuery("");
       setResults({ leads: [], units: [], deals: [] });
       setActiveTab("all");
+      setHighlightedIndex(0);
       setTimeout(() => inputRef.current?.focus(), 40);
     }
   }, [open]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
 
   // Debounced search
   const doSearch = useCallback(async (q: string) => {
@@ -147,15 +144,6 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, doSearch]);
 
-  if (!open) return null;
-
-  const handleSelect = (r: SearchResult) => {
-    onClose();
-    if (r.type === "lead") navigate(`/leads/${r.id}`);
-    else if (r.type === "deal") navigate(`/deals/${r.id}`);
-    else navigate("/units");
-  };
-
   const visible: SearchResult[] =
     activeTab === "all"
       ? [...results.leads, ...results.units, ...results.deals]
@@ -163,6 +151,80 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
 
   const totalCount =
     results.leads.length + results.units.length + results.deals.length;
+
+  // Trim itemRefs to match the visible list length
+  itemRefs.current.length = visible.length;
+
+  const handleSelect = useCallback((r: SearchResult) => {
+    onClose();
+    if (r.type === "lead") navigate(`/leads/${r.id}`);
+    else if (r.type === "deal") navigate(`/deals/${r.id}`);
+    else if (r.type === "unit" && r.projectId) navigate(`/projects/${r.projectId}/units/${r.id}`);
+    else navigate("/units");
+  }, [navigate, onClose]);
+
+  // Reset highlight when results or active tab change
+  useEffect(() => { setHighlightedIndex(0); }, [activeTab, query, totalCount]);
+
+  // Keep highlighted item in view
+  useEffect(() => {
+    itemRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex]);
+
+  // Modal-scoped keyboard handling: Escape, ArrowDown/Up, Enter, Tab cycling tabs
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        if (visible.length === 0) return;
+        e.preventDefault();
+        setHighlightedIndex((i) => (i + 1) % visible.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        if (visible.length === 0) return;
+        e.preventDefault();
+        setHighlightedIndex((i) => (i - 1 + visible.length) % visible.length);
+        return;
+      }
+      if (e.key === "Home" && visible.length > 0) {
+        e.preventDefault();
+        setHighlightedIndex(0);
+        return;
+      }
+      if (e.key === "End" && visible.length > 0) {
+        e.preventDefault();
+        setHighlightedIndex(visible.length - 1);
+        return;
+      }
+      if (e.key === "Enter") {
+        const target = visible[highlightedIndex];
+        if (target) {
+          e.preventDefault();
+          handleSelect(target);
+        }
+        return;
+      }
+      if (e.key === "Tab" && totalCount > 0) {
+        e.preventDefault();
+        const idx = TABS.indexOf(activeTab);
+        const next = e.shiftKey
+          ? TABS[(idx - 1 + TABS.length) % TABS.length]
+          : TABS[(idx + 1) % TABS.length];
+        setActiveTab(next);
+        return;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onClose, visible, highlightedIndex, handleSelect, activeTab, totalCount]);
+
+  if (!open) return null;
 
   return (
     <div
@@ -234,13 +296,19 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
             </div>
           )}
 
-          {visible.map((r) => (
+          {visible.map((r, i) => (
             <button
               key={`${r.type}-${r.id}`}
+              ref={(el) => { itemRefs.current[i] = el; }}
               onClick={() => handleSelect(r)}
-              className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-800 transition-colors text-left group"
+              onMouseEnter={() => setHighlightedIndex(i)}
+              className={`w-full flex items-center gap-4 px-5 py-3.5 transition-colors text-left group ${
+                i === highlightedIndex ? "bg-slate-800" : "hover:bg-slate-800"
+              }`}
             >
-              <span className="text-slate-500 text-lg w-5 text-center flex-shrink-0 group-hover:text-slate-300 transition-colors">
+              <span className={`text-lg w-5 text-center flex-shrink-0 transition-colors ${
+                i === highlightedIndex ? "text-slate-300" : "text-slate-500 group-hover:text-slate-300"
+              }`}>
                 {typeIcon[r.type]}
               </span>
 
