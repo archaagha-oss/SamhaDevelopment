@@ -579,7 +579,7 @@ export default function UnitsTable({ projectId }: Props) {
             />
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[800px]">
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
               <tr>
                 {selectionMode && (

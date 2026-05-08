@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import ContractStatusModal, { ContractDoc, ContractStatus } from "../components/ContractStatusModal";
 import DocumentUploadModal from "../components/DocumentUploadModal";
+import EmptyState from "../components/EmptyState";
+import { Skeleton, SkeletonTableRows } from "../components/Skeleton";
 
 interface Document extends ContractDoc {
   dealId: string;
@@ -46,7 +49,10 @@ export default function ContractsPage() {
     setLoading(true);
     axios.get("/api/documents", { params: { contractStatus: filterStatus === "ALL" ? undefined : filterStatus } })
       .then((r) => setDocuments(r.data.data || []))
-      .catch(console.error)
+      .catch((err: any) => {
+        console.error(err);
+        toast.error(err?.response?.data?.error || "Failed to load documents");
+      })
       .finally(() => setLoading(false));
   }, [filterStatus]);
 
@@ -139,74 +145,146 @@ export default function ContractsPage() {
         <span className="text-xs text-slate-400 ml-auto">{filtered.length} document{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin">
-          {loading ? (
-            <div className="flex items-center justify-center h-40">
-              <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-sm">No documents found</div>
-          ) : (
+      {/* Table (md+) / Card list (mobile) */}
+      {loading ? (
+        <>
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  {["Document", "Type", "Deal", "Buyer", "Unit", "Contract Status", "Uploaded", "Actions"].map((h) => (
-                    <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filtered.map((doc) => {
-                  const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-slate-100 text-slate-600" };
-                  const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-slate-100 text-slate-600" };
-                  return (
-                    <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <p className="font-medium text-slate-800 truncate" title={doc.name}>{doc.name}</p>
-                        <p className="text-xs text-slate-400">{doc.mimeType.split("/")[1]?.toUpperCase()}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeCfg.badge}`}>
-                          {typeCfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{doc.deal.dealNumber}</td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-800">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">{doc.deal.unit.unitNumber}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.badge}`}>
-                          {statusCfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fmtDate(doc.createdAt)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setStatusModal(doc)}
-                            className="text-xs font-medium px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
-                          >
-                            Update Status
-                          </button>
-                          <button
-                            onClick={() => setUploadDealId(doc.dealId)}
-                            className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
-                          >
-                            + Upload
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+              <tbody>
+                <SkeletonTableRows rows={5} cols={8} />
               </tbody>
             </table>
-          )}
-        </div>
-      </div>
+          </div>
+          <div className="md:hidden space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            ))}
+          </div>
+        </>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon="◫"
+          title={search || filterStatus !== "ALL" || filterType !== "ALL" ? "No documents match your filters" : "No documents yet"}
+          description={search || filterStatus !== "ALL" || filterType !== "ALL" ? "Try clearing your filters or search." : "Upload SPA, Oqood, or other contract documents from a deal."}
+        />
+      ) : (
+        <>
+          {/* Desktop / tablet table */}
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-sm min-w-[900px]">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    {["Document", "Type", "Deal", "Buyer", "Unit", "Contract Status", "Uploaded", "Actions"].map((h) => (
+                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filtered.map((doc) => {
+                    const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-slate-100 text-slate-600" };
+                    const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-slate-100 text-slate-600" };
+                    return (
+                      <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-4 py-3 max-w-[200px]">
+                          <p className="font-medium text-slate-800 truncate" title={doc.name}>{doc.name}</p>
+                          <p className="text-xs text-slate-400">{doc.mimeType.split("/")[1]?.toUpperCase()}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeCfg.badge}`}>
+                            {typeCfg.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500">{doc.deal.dealNumber}</td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-slate-800">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{doc.deal.unit.unitNumber}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.badge}`}>
+                            {statusCfg.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fmtDate(doc.createdAt)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setStatusModal(doc)}
+                              className="text-xs font-medium px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                            >
+                              Update Status
+                            </button>
+                            <button
+                              onClick={() => setUploadDealId(doc.dealId)}
+                              className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                              + Upload
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card list */}
+          <ul className="md:hidden space-y-3" aria-label="Documents list">
+            {filtered.map((doc) => {
+              const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-slate-100 text-slate-600" };
+              const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-slate-100 text-slate-600" };
+              return (
+                <li key={doc.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 truncate" title={doc.name}>{doc.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{doc.mimeType.split("/")[1]?.toUpperCase()} · uploaded {fmtDate(doc.createdAt)}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${typeCfg.badge}`}>{typeCfg.label}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-slate-400">Deal</p>
+                      <p className="font-mono text-slate-700">{doc.deal.dealNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Unit</p>
+                      <p className="text-slate-700">{doc.deal.unit.unitNumber}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-slate-400">Buyer</p>
+                      <p className="text-slate-800 font-medium truncate">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.badge}`}>{statusCfg.label}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setStatusModal(doc)}
+                        className="text-xs font-medium px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        Update
+                      </button>
+                      <button
+                        onClick={() => setUploadDealId(doc.dealId)}
+                        className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        + Upload
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
 
       {/* Stage requirements summary */}
       {!loading && documents.length > 0 && (

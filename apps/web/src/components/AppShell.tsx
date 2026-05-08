@@ -6,6 +6,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 import ErrorBoundary from "./ErrorBoundary";
+import { IconSearch, IconBell } from "./Icons";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
@@ -156,14 +157,15 @@ export default function AppShell() {
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0 gap-3">
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors"
+            aria-label="Open global search (⌘K)"
+            className="flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
           >
-            <span>🔍</span>
-            <span>Search…</span>
-            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono">⌘K</kbd>
+            <IconSearch size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">Search…</span>
+            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono hidden sm:inline">⌘K</kbd>
           </button>
 
           <div className="flex items-center gap-3" ref={notifPanelRef}>
@@ -178,12 +180,14 @@ export default function AppShell() {
             <div className="relative">
               <button
                 onClick={() => { setShowNotifPanel((v) => !v); if (!showNotifPanel) fetchNotifications(); }}
-                className="relative p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
-                title="Notifications"
+                className="relative p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                aria-haspopup="true"
+                aria-expanded={showNotifPanel}
               >
-                <span className="text-lg leading-none">🔔</span>
+                <IconBell size={18} aria-hidden="true" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-slate-900" aria-hidden="true">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -255,10 +259,10 @@ export default function AppShell() {
               {showProfileMenu && (
                 <div className="absolute right-0 top-10 w-52 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
+                    <p className="text-sm font-semibold text-slate-900 truncate" title={user?.fullName ?? "User"}>
                       {user?.fullName ?? "User"}
                     </p>
-                    <p className="text-xs text-slate-400 truncate">
+                    <p className="text-xs text-slate-400 truncate" title={user?.primaryEmailAddress?.emailAddress ?? ""}>
                       {user?.primaryEmailAddress?.emailAddress ?? ""}
                     </p>
                   </div>
@@ -281,7 +285,7 @@ export default function AppShell() {
         </header>
 
         <main className="flex-1 overflow-auto bg-background text-foreground">
-          <ErrorBoundary>
+          <ErrorBoundary key={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </main>

@@ -7,6 +7,7 @@ import { useAgents } from "../hooks/useAgents";
 import QuickLeadModal from "./QuickLeadModal";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import Breadcrumbs from "./Breadcrumbs";
 
 interface Lead {
   id: string;
@@ -172,31 +173,40 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Leads Pipeline</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{total} leads total</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search name or phone…"
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-blue-400 bg-slate-50"
-          />
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors flex items-center gap-1.5 ${showFilters || activeFilterCount > 0 ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-          >
-            ⊟ Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">+</span> New Lead
-          </button>
+      <div className="px-4 sm:px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
+        <Breadcrumbs variant="light" className="mb-2" crumbs={[{ label: "Home", path: "/" }, { label: "Leads" }]} />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900">Leads Pipeline</h1>
+            <p className="text-slate-400 text-xs mt-0.5">{total} leads total</p>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial sm:justify-end min-w-0">
+            <input
+              type="text"
+              placeholder="Search name or phone…"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              aria-label="Search leads"
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 flex-1 sm:flex-initial sm:w-52 focus:outline-none focus:border-blue-400 bg-slate-50 min-w-0"
+            />
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              aria-pressed={showFilters}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${showFilters || activeFilterCount > 0 ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            >
+              <span aria-hidden="true">⊟</span>
+              <span className="hidden sm:inline">Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
+              <span className="sm:hidden">{activeFilterCount > 0 ? `(${activeFilterCount})` : ""}</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            >
+              <span className="text-base leading-none" aria-hidden="true">+</span>
+              <span className="hidden sm:inline">New Lead</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -244,7 +254,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       )}
 
       {/* Stage filter chips */}
-      <div className="flex items-center gap-2 px-6 py-2.5 bg-white border-b border-slate-100 flex-shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-white border-b border-slate-100 flex-shrink-0 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter leads by stage">
         {STAGES.map((s) => {
           const active = stageFilter === s;
           const style  = STAGE_STYLE[s];
@@ -252,13 +262,15 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
             <button
               key={s}
               onClick={() => handleStageFilter(s)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${
+              role="tab"
+              aria-selected={active}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
                 active
                   ? `${style.header} border-current shadow-sm`
                   : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} aria-hidden="true" />
               {s.replace(/_/g, " ")}
             </button>
           );
@@ -266,7 +278,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
         {stageFilter && (
           <button
             onClick={() => handleStageFilter(stageFilter)}
-            className="text-xs text-slate-400 hover:text-slate-600 ml-1 underline"
+            className="text-xs text-slate-400 hover:text-slate-600 ml-1 underline shrink-0"
           >
             Clear
           </button>
@@ -274,7 +286,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto scrollbar-thin">
+      <div className="flex-1 overflow-x-auto scrollbar-thin relative" role="region" aria-label="Leads pipeline. Scroll horizontally to see all stages.">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />

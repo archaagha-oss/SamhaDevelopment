@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
+import Modal from "../components/Modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -378,63 +380,64 @@ function CreateTaskModal({ users, onClose, onCreated }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-900 text-sm">Create Task</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
-        </div>
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Title *</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {TASK_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Priority</label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Due Date *</label>
-            <input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Assign To</label>
-            <select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Unassigned</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Optional"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">{error}</div>}
-        </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+    <Modal
+      open
+      onClose={() => { if (!loading) onClose(); }}
+      title="Create Task"
+      size="md"
+      footer={
+        <>
+          <button onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50">Cancel</button>
           <button onClick={submit} disabled={loading}
             className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors">
             {loading ? "Creating..." : "Create Task"}
           </button>
+        </>
+      }
+    >
+      <div className="px-6 py-5 space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Title *</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" autoFocus
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {TASK_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Priority</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Due Date *</label>
+          <input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Assign To</label>
+          <select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Unassigned</option>
+            {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Optional"
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        {error && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">{error}</div>}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -474,8 +477,9 @@ export default function ActivitiesPage() {
       setTasks(((Array.isArray(tRes.data) ? tRes.data : []) as any[]).map((t: any) => ({ ...t, kind: "task" })));
       setActivities(((aRes.data.data || []) as any[]).map((a: any) => ({ ...a, kind: "activity" })));
       setUsers(Array.isArray(uRes.data) ? uRes.data : (uRes.data.data || []));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast.error(err?.response?.data?.error || "Failed to load activities");
     } finally {
       setLoading(false);
     }
@@ -613,15 +617,31 @@ export default function ActivitiesPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-3" role="status" aria-busy="true" aria-label="Loading activities">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse h-20" />
+          ))}
         </div>
       ) : view === "calendar" ? (
         <CalendarView items={allItems} />
       ) : (
         <div className="space-y-6">
           {sortedDates.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 text-sm">No items found</div>
+            <div className="bg-white border border-slate-200 rounded-xl py-16 px-6 text-center">
+              <p className="text-3xl mb-3 opacity-50" aria-hidden="true">◷</p>
+              <h3 className="text-sm font-semibold text-slate-700 mb-1">No items found</h3>
+              <p className="text-xs text-slate-400 max-w-xs leading-relaxed mx-auto">
+                {filterKind !== "ALL" || filterType !== "ALL" || filterStatus !== "ALL" || filterUser !== "ALL"
+                  ? "Try clearing your filters to see more results."
+                  : "Calls, meetings, and tasks will appear here as activity is logged."}
+              </p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                + Create Task
+              </button>
+            </div>
           ) : (
             sortedDates.map((date) => {
               const t = new Date(); t.setHours(0, 0, 0, 0);

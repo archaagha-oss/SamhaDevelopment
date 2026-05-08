@@ -204,11 +204,19 @@ export default function CommissionDashboard() {
                         </div>
                       ) : (
                         <div className="flex gap-1.5">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.spaSignedMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                            SPA {c.spaSignedMet ? "✓" : "✗"}
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.spaSignedMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}
+                            aria-label={`SPA ${c.spaSignedMet ? "signed" : "not signed"}`}
+                            title={c.spaSignedMet ? "SPA signed" : "SPA not yet signed"}
+                          >
+                            SPA {c.spaSignedMet ? "Signed" : "Pending"}
                           </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.oqoodMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                            Oqood {c.oqoodMet ? "✓" : "✗"}
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.oqoodMet ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}
+                            aria-label={`Oqood ${c.oqoodMet ? "registered" : "not registered"}`}
+                            title={c.oqoodMet ? "Oqood registered" : "Oqood not yet registered"}
+                          >
+                            Oqood {c.oqoodMet ? "Done" : "Pending"}
                           </span>
                         </div>
                       )}

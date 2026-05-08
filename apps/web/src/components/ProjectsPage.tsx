@@ -4,6 +4,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import Modal from "./Modal";
+import { SkeletonCard } from "./Skeleton";
 
 interface Project {
   id: string;
@@ -60,7 +62,9 @@ export default function ProjectsPage() {
     setLoading(true);
     axios.get("/api/projects")
       .then((r) => setProjects(r.data.data || r.data || []))
-      .catch(() => {})
+      .catch((err) => {
+        toast.error(err?.response?.data?.error || "Failed to load projects");
+      })
       .finally(() => setLoading(false));
   };
 
@@ -108,8 +112,10 @@ export default function ProjectsPage() {
       };
       if (editProject) {
         await axios.patch(`/api/projects/${editProject.id}`, payload);
+        toast.success(`Updated "${form.name}"`);
       } else {
         await axios.post("/api/projects", payload);
+        toast.success(`Created "${form.name}"`);
       }
       setShowForm(false);
       load();
@@ -132,6 +138,7 @@ export default function ProjectsPage() {
     setDeleting(p.id);
     try {
       await axios.delete(`/api/projects/${p.id}`);
+      toast.success(`Deleted "${p.name}"`);
       load();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to delete project");
@@ -146,6 +153,7 @@ export default function ProjectsPage() {
     setCloning(p.id);
     try {
       await axios.post(`/api/projects/${p.id}/clone`, { includeUnits: false });
+      toast.success(`Cloned "${p.name}"`);
       load();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to clone project");
@@ -195,8 +203,8 @@ export default function ProjectsPage() {
       {/* Grid */}
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : projects.length === 0 ? (
           <EmptyState
@@ -286,14 +294,13 @@ export default function ProjectsPage() {
       </div>
 
       {/* Create / Edit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-              <h2 className="font-bold text-slate-900">{editProject ? "Edit Project" : "New Project"}</h2>
-              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
-            </div>
-            <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto">
+      <Modal
+        open={showForm}
+        onClose={() => { if (!submitting) setShowForm(false); }}
+        title={editProject ? "Edit Project" : "New Project"}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
               <div>
                 <label className={lbl}>Project Name *</label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Samha Tower" className={inp} />
@@ -347,19 +354,17 @@ export default function ProjectsPage() {
                   <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className={inp} />
                 </div>
               </div>
-              {formError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
-                  Cancel
-                </button>
-                <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
-                  {submitting ? "Saving…" : editProject ? "Save Changes" : "Create Project"}
-                </button>
-              </div>
-            </form>
+          {formError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg" role="alert">{formError}</p>}
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={() => setShowForm(false)} disabled={submitting} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
+              {submitting ? "Saving…" : editProject ? "Save Changes" : "Create Project"}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmDeleteProject}

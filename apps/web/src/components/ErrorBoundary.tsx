@@ -1,60 +1,59 @@
-import { Component, ReactNode } from "react";
+import { Component, ReactNode, ErrorInfo } from "react";
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: (error: Error, reset: () => void) => ReactNode;
 }
 
 interface State {
-  hasError: boolean;
-  error?: Error;
+  error: Error | null;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { error };
   }
 
-  componentDidCatch(error: Error, info: unknown) {
-    // Surface for debugging; production would forward to a logger.
-    console.error("ErrorBoundary caught:", error, info);
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    if (typeof console !== "undefined") {
+      console.error("[ErrorBoundary]", error, info.componentStack);
+    }
   }
 
-  reset = () => this.setState({ hasError: false, error: undefined });
+  reset = () => this.setState({ error: null });
 
   render() {
-    if (!this.state.hasError) return this.props.children;
-    if (this.props.fallback) return this.props.fallback;
+    const { error } = this.state;
+    if (!error) return this.props.children;
+
+    if (this.props.fallback) return this.props.fallback(error, this.reset);
 
     return (
-      <div className="min-h-[400px] flex items-center justify-center p-8">
-        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-6 text-center shadow-sm">
-          <div className="text-4xl mb-3">⚠️</div>
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Something went wrong</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            The page hit an unexpected error. The team has been notified — try again or
-            return to the dashboard.
+      <div role="alert" className="min-h-[60vh] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white border border-red-200 rounded-xl shadow-sm p-6">
+          <h2 className="text-base font-semibold text-red-700">Something went wrong</h2>
+          <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">
+            The page hit an unexpected error. You can retry or return to the dashboard.
           </p>
-          {this.state.error?.message && (
-            <pre className="text-[11px] text-left bg-slate-50 border border-slate-100 rounded-lg p-2 mb-4 overflow-x-auto text-slate-600">
-              {this.state.error.message}
-            </pre>
-          )}
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={this.reset}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
-            >
-              Try Again
-            </button>
+          <pre className="mt-3 max-h-32 overflow-auto rounded bg-slate-50 border border-slate-200 p-2 text-[11px] text-slate-700 whitespace-pre-wrap break-words">
+            {error.message}
+          </pre>
+          <div className="mt-4 flex gap-2 justify-end">
             <a
               href="/"
-              className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200"
+              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              Go Home
+              Go home
             </a>
+            <button
+              type="button"
+              onClick={this.reset}
+              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              Try again
+            </button>
           </div>
         </div>
       </div>
