@@ -1,12 +1,14 @@
-import { useState, ComponentType } from "react";
+import { useState, useEffect, ComponentType } from "react";
+import axios from "axios";
 import {
   IconDashboard, IconBuilding, IconGrid, IconUsers, IconUser, IconHandshake,
   IconCheck, IconBookmark, IconTag, IconFile, IconBriefcase, IconCard, IconList,
   IconCoin, IconChart, IconSettings, IconChevronLeft, IconChevronRight,
 } from "./Icons";
 import { useSettings } from "../contexts/SettingsContext";
+import { useEventStream } from "../hooks/useEventStream";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
 type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
 
@@ -26,6 +28,7 @@ const salesItems: { page: Page; label: string; Icon: IconType }[] = [
   { page: "leads",         label: "Leads",        Icon: IconUser },
   { page: "deals",         label: "Deals",        Icon: IconHandshake },
   { page: "tasks",         label: "Activities",   Icon: IconCheck },
+  { page: "inbox",         label: "Hot Inbox",    Icon: IconBookmark },
   { page: "reservations",  label: "Reservations", Icon: IconBookmark },
   { page: "offers-list",   label: "Offers",       Icon: IconTag },
   { page: "contracts",     label: "Contracts",    Icon: IconFile },
@@ -43,6 +46,7 @@ const financeItems: { page: Page; label: string; Icon: IconType }[] = [
 ];
 
 const adminItems: { page: Page; label: string; Icon: IconType }[] = [
+  { page: "compliance",    label: "Compliance",   Icon: IconFile },
   { page: "team",          label: "Team",         Icon: IconUsers },
   { page: "settings",      label: "Settings",     Icon: IconSettings },
 ];
@@ -58,19 +62,20 @@ function visibleSections(role: Role | undefined) {
   return { sales: true, finance: true, admin: true };
 }
 
-function NavItem({ page, label, Icon, active, collapsed, onNavigate }: {
+function NavItem({ page, label, Icon, active, collapsed, onNavigate, badge }: {
   page: Page; label: string; Icon: IconType; active: boolean;
   collapsed: boolean; onNavigate: (page: Page) => void;
+  badge?: number;
 }) {
   return (
     <button
       type="button"
       onClick={() => onNavigate(page)}
-      title={collapsed ? label : undefined}
-      aria-label={collapsed ? label : undefined}
+      title={collapsed ? `${label}${badge ? ` (${badge})` : ""}` : undefined}
+      aria-label={collapsed ? `${label}${badge ? ` (${badge})` : ""}` : undefined}
       aria-current={active ? "page" : undefined}
       style={active ? { backgroundColor: "var(--brand-primary)" } : undefined}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 ${
+      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 ${
         active
           ? "text-white shadow-sm"
           : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
@@ -79,7 +84,14 @@ function NavItem({ page, label, Icon, active, collapsed, onNavigate }: {
       <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center" aria-hidden="true">
         <Icon size={18} />
       </span>
-      {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+      {!!badge && badge > 0 && (
+        <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+          active ? "bg-white/20 text-white" : "bg-amber-500 text-white"
+        } ${collapsed ? "absolute -mt-4 ml-4" : ""}`}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -100,6 +112,28 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
 
   const brandName = settings.companyName?.trim() || "Samha CRM";
   const brandInitial = brandName.charAt(0).toUpperCase();
+
+  const [inboxCount, setInboxCount] = useState(0);
+
+  // Initial load + slow safety-net poll. Real-time updates arrive via SSE below.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const r = await axios.get("/api/triage/counts");
+        if (!cancelled) setInboxCount(r.data?.unclaimed ?? 0);
+      } catch {
+        // silent — endpoint may not be available in dev
+      }
+    };
+    fetchCount();
+    const id = setInterval(fetchCount, 5 * 60_000); // 5 min as a safety net
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  useEventStream("triage.counts", (data: { unclaimed: number; claimed: number }) => {
+    if (typeof data?.unclaimed === "number") setInboxCount(data.unclaimed);
+  });
 
   return (
     <aside
@@ -139,7 +173,8 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
             <SectionLabel label="Sales" collapsed={collapsed} />
             {salesItems.map(({ page, label, Icon }) => (
               <NavItem key={page} page={page} label={label} Icon={Icon}
-                active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
+                active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate}
+                badge={page === "inbox" ? inboxCount : undefined} />
             ))}
           </>
         )}

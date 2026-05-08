@@ -404,14 +404,11 @@ model Project {
   pricingRules       PricingRule[]
   images             ProjectImage[]
   stageDocumentRules StageDocumentRule[]
-<<<<<<< HEAD
   bankAccounts       ProjectBankAccount[]
   specifications     ProjectSpecification[]
-=======
   documents          Document[]
   statusHistory      ProjectStatusHistory[]
   updates            ProjectUpdate[]
->>>>>>> origin/claude/unit-sharing-document-sync-AIzqa
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -705,6 +702,7 @@ model Lead {
   offers       Offer[]
   documents    Document[]
   dealPurchasers DealPurchaser[]
+  communicationPreference CommunicationPreference?
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())
@@ -764,12 +762,17 @@ model Activity {
   contactId String?
   contact   Contact? @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
 
-  type    String  // CALL, EMAIL, WHATSAPP, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
+  type    String  // CALL, EMAIL, WHATSAPP, SMS, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
   summary String  @db.Text
   outcome String? @db.Text
 
   callDuration Int?    // minutes
-  messageId    String? // WhatsApp message ID
+  messageId    String? // legacy WhatsApp message ID — superseded by providerMessageSid
+
+  // Communication channel metadata (for EMAIL | WHATSAPP | SMS activities)
+  direction          String?  // INBOUND | OUTBOUND (null for non-comm activities)
+  providerMessageSid String?  @unique // Twilio Sid, SMTP message-id, etc — used for inbound webhook idempotency
+  deliveryStatus     String?  // queued | sent | delivered | read | failed
 
   // For SITE_VISIT activities: which unit was physically visited
   siteVisitUnitId String?
@@ -857,8 +860,10 @@ model BrokerCompany {
   reraLicenseNumber  String?
   reraLicenseExpiry  DateTime?
   tradeLicenseNumber String?
+  tradeLicenseExpiry DateTime?
   tradeLicenseCopyUrl   String?
   vatCertificateNo      String?
+  vatCertificateExpiry  DateTime?
   vatCertificateUrl     String?
   corporateTaxCertUrl   String?
   officeRegistrationNo  String?
@@ -881,6 +886,8 @@ model BrokerCompany {
 
   @@index([name])
   @@index([reraLicenseExpiry])
+  @@index([tradeLicenseExpiry])
+  @@index([vatCertificateExpiry])
 }
 
 model BrokerAgent {
@@ -1259,11 +1266,17 @@ model ReminderLog {
 
   ruleType  ReminderRuleType
   sentAt    DateTime          @default(now())
-  email     String?           // email it was sent to (null = no email, notification only)
-  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
+
+  channel   String            @default("EMAIL") // EMAIL | WHATSAPP | SMS
+  email     String?           // email address it was sent to (null when channel != EMAIL)
+  phoneE164 String?           // E.164 phone (when channel = WHATSAPP | SMS)
+  providerMessageId String?   // SMTP message-id, Twilio sid, etc.
+  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_RECIPIENT | SKIPPED_PAUSED | SKIPPED_OPTOUT
+  failureReason String?       @db.Text
 
   @@index([paymentId])
   @@index([paymentId, ruleType])
+  @@index([channel])
 }
 
 // ============================================================
@@ -1542,17 +1555,17 @@ model DomainEvent {
 }
 
 model BackgroundJob {
-  id          String    @id @default(cuid())
-  type        String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
-  payload     Json
-  status      JobStatus @default(PENDING)
-  scheduledAt DateTime
-  startedAt   DateTime?
-  completedAt DateTime?
-  failedAt    DateTime?
-  error       String?   @db.Text
-  retryCount  Int       @default(0)
-  maxRetries  Int       @default(3)
+  id           String    @id @default(cuid())
+  type         String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
+  payload      Json
+  status       JobStatus @default(PENDING)
+  scheduledAt  DateTime
+  startedAt    DateTime?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  errorMessage String?   @db.Text
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
 
   createdAt DateTime @default(now())
 
@@ -1593,6 +1606,21 @@ model AppSettings {
   smtpUsername String?
   smtpPassword String?
 
+  // Twilio public config (operator-managed, non-secret).
+  // Secrets (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WEBHOOK_SIGNING_SECRET) live in env vars.
+  twilioWhatsappFrom              String? // e.g. "whatsapp:+14155238886"
+  twilioMessagingServiceSid       String? // SMS messaging-service for number pool
+  twilioWhatsappContentSidBeforeDue   String?
+  twilioWhatsappContentSidOnDue       String?
+  twilioWhatsappContentSidOverdue7    String?
+  twilioWhatsappContentSidOverdue30   String?
+
+  // Inbound capture (Phase D). Operator-managed so secrets/domains can be
+  // rotated from the Settings UI without a redeploy. Env vars
+  // (INBOUND_EMAIL_DOMAIN / SENDGRID_INBOUND_TOKEN) remain a fallback.
+  inboundEmailDomain   String? // e.g. "inbound.samha.ae" — used in Reply-To: reply+<activityId>@<domain>
+  sendgridInboundToken String? // path token guarding /api/webhooks/email/inbound/:token
+
   // Finance — payment instructions injected into invoices and reminder emails
   paymentInstructions String? @db.Text
 
@@ -1628,6 +1656,7 @@ model Contact {
   tags        String?       // comma-separated
 
   activities Activity[] @relation("ContactActivities")
+  communicationPreference CommunicationPreference?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1637,3 +1666,87 @@ model Contact {
   @@index([phone])
   @@index([firstName])
 }
+
+// ============================================================
+// SECTION 18: COMMUNICATION PREFERENCE
+// ============================================================
+// One row per recipient (Lead xor Contact). Tracks per-channel signal
+// counts so the channel-picker can choose where to deliver reminders.
+
+model CommunicationPreference {
+  id        String   @id @default(cuid())
+  leadId    String?  @unique
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contactId String?  @unique
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  preferredChannel String?   // EMAIL | WHATSAPP | SMS — null = auto-pick
+  emailOptOut      Boolean   @default(false)
+  whatsappOptOut   Boolean   @default(false)
+  smsOptOut        Boolean   @default(false)
+
+  // Outbound counters
+  emailSent        Int @default(0)
+  whatsappSent     Int @default(0)
+  smsSent          Int @default(0)
+
+  // Engagement signals
+  emailOpens       Int @default(0)
+  emailClicks      Int @default(0)
+  emailReplies     Int @default(0)
+  whatsappReads    Int @default(0)
+  whatsappReplies  Int @default(0)
+  smsReplies       Int @default(0)
+
+  lastEmailReplyAt    DateTime?
+  lastWhatsappReplyAt DateTime?
+  lastSmsReplyAt      DateTime?
+
+  // Average response latency in seconds (rolling)
+  avgResponseLatencyEmailSec    Int?
+  avgResponseLatencyWhatsappSec Int?
+  avgResponseLatencySmsSec      Int?
+
+  consentGivenAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([contactId])
+}
+
+// ============================================================
+// SECTION 19: INBOUND TRIAGE
+// ============================================================
+// Inbound messages (WhatsApp / SMS / email) that we couldn't auto-match
+// to a Lead/Contact land here. The Hot Inbox UI surfaces UNCLAIMED rows
+// so an agent can attach them to the right lead.
+
+model InboundTriage {
+  id          String   @id @default(cuid())
+
+  channel     String   // EMAIL | WHATSAPP | SMS
+  direction   String   @default("INBOUND")
+  fromAddress String   // E.164 phone or email
+  toAddress   String?
+  subject     String?  @db.Text
+  body        String?  @db.Text
+  mediaUrls   Json?    // string[]
+
+  providerMessageId String? @unique // Twilio MessageSid or email Message-ID — idempotency
+  rawHeaders        Json?
+
+  status      String   @default("UNCLAIMED") // UNCLAIMED | CLAIMED | RESOLVED | DISCARDED
+  claimedById String?
+  claimedAt   DateTime?
+  resolvedActivityId String?  // if claim attached it to an Activity, link back
+
+  receivedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([status, receivedAt])
+  @@index([fromAddress])
+  @@index([channel])
+}
+

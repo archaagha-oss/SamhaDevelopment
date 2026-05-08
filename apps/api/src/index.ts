@@ -29,6 +29,11 @@ import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
 import publicShareRoutes from "./routes/publicShare";
 import feedRoutes from "./routes/feeds";
+import webhookRoutes from "./routes/webhooks";
+import triageRoutes from "./routes/triage";
+import communicationsRoutes from "./routes/communications";
+import streamRoutes from "./routes/stream";
+import complianceRoutes from "./routes/compliance";
 
 dotenv.config();
 
@@ -55,6 +60,12 @@ app.use((_req, res, next) => {
   res.removeHeader("X-Powered-By");
   next();
 });
+
+// ── Webhooks (mounted BEFORE rate-limit + auth + json parser) ──────────────
+// Webhooks come from external providers (Twilio, SendGrid). They install
+// their own per-route body parsers and bypass the user-targeted rate limiter
+// so a burst of inbound messages doesn't push real users over the limit.
+app.use("/api/webhooks", webhookRoutes);
 
 // ── Rate limiting (100 req / min per IP) ──────────────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -147,6 +158,10 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/feeds", feedRoutes);
+app.use("/api/triage", triageRoutes);
+app.use("/api/communications", communicationsRoutes);
+app.use("/api/stream", streamRoutes);
+app.use("/api/compliance", complianceRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

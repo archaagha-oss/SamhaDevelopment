@@ -4,6 +4,12 @@ import { createLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
 import { createDeal as createDealService } from "../services/dealService";
+import {
+  setPreferredChannel,
+  setOptOut,
+  getPreference,
+  type Channel,
+} from "../services/communicationPreferenceService";
 
 const router = Router();
 
@@ -120,7 +126,8 @@ router.get("/:id", async (req, res) => {
           orderBy: { createdAt: "desc" },
         },
         stageHistory: { orderBy: { changedAt: "desc" } },
-      },
+        communicationPreference: true,
+      } as any,
     });
 
     if (!lead) {
@@ -175,6 +182,43 @@ router.patch("/:id/stage", async (req, res) => {
     res.json(lead);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update stage", code: "LEAD_STAGE_ERROR", statusCode: 400 });
+  }
+});
+
+// ─── Communication preference (channel learning) ────────────────────────────
+
+router.get("/:id/communication-preference", async (req, res) => {
+  try {
+    const pref = await getPreference({ leadId: req.params.id });
+    res.json(pref ?? null);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch preference", code: "PREFERENCE_FETCH_ERROR", statusCode: 500 });
+  }
+});
+
+router.patch("/:id/communication-preference", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+
+    const { preferredChannel, emailOptOut, whatsappOptOut, smsOptOut } = req.body;
+    const validChannels = ["EMAIL", "WHATSAPP", "SMS"];
+
+    if (preferredChannel !== undefined) {
+      if (preferredChannel !== null && !validChannels.includes(preferredChannel)) {
+        return res.status(400).json({ error: "preferredChannel must be EMAIL, WHATSAPP, SMS, or null", code: "INVALID_CHANNEL", statusCode: 400 });
+      }
+      await setPreferredChannel({ leadId: req.params.id, channel: preferredChannel as Channel | null });
+    }
+    if (typeof emailOptOut    === "boolean") await setOptOut({ leadId: req.params.id, channel: "EMAIL",    optOut: emailOptOut });
+    if (typeof whatsappOptOut === "boolean") await setOptOut({ leadId: req.params.id, channel: "WHATSAPP", optOut: whatsappOptOut });
+    if (typeof smsOptOut      === "boolean") await setOptOut({ leadId: req.params.id, channel: "SMS",      optOut: smsOptOut });
+
+    const updated = await getPreference({ leadId: req.params.id });
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to update preference", code: "PREFERENCE_UPDATE_ERROR", statusCode: 500 });
   }
 });
 

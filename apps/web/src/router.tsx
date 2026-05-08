@@ -43,6 +43,8 @@ import CommissionTiersPage from "./pages/CommissionTiersPage";
 import LeadKycPage from "./pages/LeadKycPage";
 import DealJointOwnersPage from "./pages/DealJointOwnersPage";
 import PublicUnitView from "./components/PublicUnitView";
+import HotInboxPage from "./pages/HotInboxPage";
+import CompliancePage from "./pages/CompliancePage";
 
 export const router = createBrowserRouter([
   // Standalone pages (no app shell — full-page layout)
@@ -75,7 +77,8 @@ export const router = createBrowserRouter([
       { path: "commissions",                              element: <CommissionDashboard /> },
       { path: "finance",                                  element: <FinanceDashboard /> },
       { path: "tasks",                                     element: <ActivitiesPage /> },
-      { path: "finance",                                  element: <FinanceDashboard /> },
+      { path: "inbox",                                     element: <HotInboxPage /> },
+      { path: "compliance",                                element: <CompliancePage /> },
       { path: "payments",                                  element: <PaymentReportPage /> },
       { path: "contracts",                                 element: <ContractsPage /> },
       { path: "payment-plans",                            element: <PaymentPlansPage /> },

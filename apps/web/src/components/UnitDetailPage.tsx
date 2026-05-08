@@ -17,6 +17,7 @@ import ActiveDealSummaryCard from "./ActiveDealSummaryCard";
 import PaymentPlanCard from "./PaymentPlanCard";
 import UnitShareLinkPanel from "./UnitShareLinkPanel";
 import { useUnitDocuments } from "../hooks/useUnitDocuments";
+import ShareUnitModal from "./ShareUnitModal";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 
@@ -34,6 +35,7 @@ export default function UnitDetailPage() {
   const [apiError, setApiError]       = useState<ApiError | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [viewingImage, setViewingImage]       = useState<UnitImage | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Inline price editing
   const [editingPrice, setEditingPrice] = useState(false);
@@ -210,6 +212,17 @@ export default function UnitDetailPage() {
                   onUpload={() => setShowUploadModal(true)}
                 />
               )}
+            </div>
+
+            {/* Quick actions */}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 flex items-center gap-1.5"
+                title="Pre-fill a WhatsApp/Email/SMS to a lead with this unit's details"
+              >
+                💬 Share with lead
+              </button>
             </div>
 
             {/* 3. Key Info Bar */}
@@ -654,6 +667,21 @@ export default function UnitDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showShareModal && (
+        <ShareUnitModal
+          unit={{
+            unitNumber: unit.unitNumber,
+            type:       unit.type,
+            price:      unit.price,
+            area:       unit.area,
+            view:       unit.view ?? null,
+            floor:      unit.floor,
+            projectName: unit.project?.name,
+          }}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
     </div>
   );

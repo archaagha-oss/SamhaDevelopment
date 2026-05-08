@@ -78,7 +78,7 @@ router.get("/:id", async (req, res) => {
     const deal = await prisma.deal.findUnique({
       where: { id: req.params.id },
       include: {
-        lead: true,
+        lead: { include: { communicationPreference: true } },
         unit: {
           include: {
             project: {
