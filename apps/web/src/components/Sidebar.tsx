@@ -4,6 +4,7 @@ import {
   IconCheck, IconBookmark, IconTag, IconFile, IconBriefcase, IconCard, IconList,
   IconCoin, IconChart, IconSettings, IconChevronLeft, IconChevronRight,
 } from "./Icons";
+import { useSettings } from "../contexts/SettingsContext";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers";
 
@@ -68,9 +69,10 @@ function NavItem({ page, label, Icon, active, collapsed, onNavigate }: {
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
+      style={active ? { backgroundColor: "var(--brand-primary)" } : undefined}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 ${
         active
-          ? "bg-blue-600 text-white shadow-sm"
+          ? "text-white shadow-sm"
           : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
       } ${collapsed ? "justify-center" : ""}`}
     >
@@ -94,6 +96,10 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const sections = visibleSections(role);
+  const { settings } = useSettings();
+
+  const brandName = settings.companyName?.trim() || "Samha CRM";
+  const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
     <aside
@@ -102,10 +108,25 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
     >
       {/* Brand */}
       <div className={`px-3 py-4 border-b border-slate-800 flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
-        <div className="w-7 h-7 rounded-lg bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" aria-hidden="true">S</div>
+        {settings.logoUrl ? (
+          <img
+            src={settings.logoUrl}
+            alt={brandName}
+            className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div
+            style={{ backgroundColor: "var(--brand-primary)" }}
+            className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+            aria-hidden="true"
+          >
+            {brandInitial}
+          </div>
+        )}
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-white font-semibold text-sm leading-tight truncate">Samha CRM</p>
+            <p className="text-white font-semibold text-sm leading-tight truncate">{brandName}</p>
             <p className="text-slate-500 text-xs truncate">Real Estate Pipeline</p>
           </div>
         )}

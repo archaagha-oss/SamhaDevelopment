@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { router } from "./router";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -21,8 +22,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster position="bottom-right" richColors closeButton />
+        <SettingsProvider>
+          <RouterProvider router={router} />
+          <Toaster position="bottom-right" richColors closeButton />
+        </SettingsProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </React.StrictMode>
