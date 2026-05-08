@@ -72,7 +72,7 @@ router.get("/:id", async (req, res) => {
     const deal = await prisma.deal.findUnique({
       where: { id: req.params.id },
       include: {
-        lead: true,
+        lead: { include: { communicationPreference: true } },
         unit: { include: { project: true } },
         paymentPlan: { include: { milestones: true } },
         payments: { orderBy: { dueDate: "asc" }, include: { auditLog: true } },
@@ -81,7 +81,7 @@ router.get("/:id", async (req, res) => {
         stageHistory: { orderBy: { changedAt: "desc" } },
         brokerCompany: true,
         brokerAgent: true,
-      },
+      } as any,
     });
 
     if (!deal) {

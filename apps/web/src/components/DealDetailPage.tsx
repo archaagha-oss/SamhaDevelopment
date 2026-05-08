@@ -8,6 +8,7 @@ import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
+import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -84,27 +85,6 @@ function timeAgo(dateStr: string): string {
   if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
   if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
   return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function activityIcon(type: string, summary: string): string {
-  if (type === "CALL")       return "📞";
-  if (type === "EMAIL")      return "✉️";
-  if (type === "WHATSAPP")   return "💬";
-  if (type === "MEETING")    return "🤝";
-  if (type === "SITE_VISIT") return "🏢";
-  const s = summary.toLowerCase();
-  if (s.includes("reserved"))                   return "🔒";
-  if (s.includes("generated") || s.includes("document")) return "📄";
-  if (s.includes("stage changed") || s.includes("→"))    return "🔄";
-  if (s.includes("created"))                    return "✅";
-  if (s.includes("unit") && (s.includes("assign") || s.includes("changed"))) return "🏠";
-  return "📝";
-}
-
-const SYSTEM_PATTERNS = ["generated for", "reserved for", "stage changed", "deal created", "unit assigned", "unit changed", "notes updated"];
-function isSystemActivity(summary: string): boolean {
-  const s = summary.toLowerCase();
-  return SYSTEM_PATTERNS.some((p) => s.includes(p));
 }
 
 export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
@@ -1418,47 +1398,28 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <div className="flex items-center justify-center h-24">
                     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                   </div>
-                ) : activities.length === 0 ? (
-                  <p className="px-5 py-10 text-center text-sm text-slate-400">No activities yet — log the first one above</p>
                 ) : (
-                  <div className="px-5 pt-3 pb-2">
-                    {activities.map((a: any, i: number) => {
-                      const icon   = activityIcon(a.type, a.summary);
-                      const isSystem = a.type === "NOTE" && isSystemActivity(a.summary);
-                      return (
-                        <div key={a.id} className="flex gap-3">
-                          {/* Left connector */}
-                          <div className="flex flex-col items-center flex-shrink-0 w-8">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 ${isSystem ? "bg-slate-100" : "bg-blue-50"}`}>
-                              {icon}
-                            </div>
-                            {i < activities.length - 1 && (
-                              <div className="w-0.5 bg-slate-100 flex-1 my-1" style={{ minHeight: "1.25rem" }} />
-                            )}
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 min-w-0 pb-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{a.type.replace("_", " ")}</span>
-                                {isSystem && (
-                                  <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">auto</span>
-                                )}
-                              </div>
-                              <span className="text-xs text-slate-400 flex-shrink-0">{timeAgo(a.activityDate || a.createdAt)}</span>
-                            </div>
-                            <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{a.summary}</p>
-                            {a.outcome && <p className="text-xs text-slate-500 mt-1 italic">{a.outcome}</p>}
-                            {a.followUpDate && (
-                              <p className="text-xs text-amber-600 mt-0.5">Follow-up: {fmtDate(a.followUpDate)}</p>
-                            )}
-                            <p className="text-xs text-slate-400 mt-1">{a.createdBy}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <ConversationThread
+                    activities={activities}
+                    emptyMessage="No activities yet — log the first one above"
+                  />
                 )}
+                <ConversationReplyBox
+                  leadId={deal.lead.id}
+                  dealId={deal.id}
+                  availableChannels={(() => {
+                    const out: ("EMAIL" | "WHATSAPP" | "SMS")[] = [];
+                    const pref = (deal.lead as any)?.communicationPreference;
+                    if (deal.lead.email && !pref?.emailOptOut) out.push("EMAIL");
+                    if (deal.lead.phone && !pref?.whatsappOptOut) out.push("WHATSAPP");
+                    if (deal.lead.phone && !pref?.smsOptOut) out.push("SMS");
+                    return out;
+                  })()}
+                  onSent={async () => {
+                    const r = await axios.get(`/api/deals/${dealId}/activities`);
+                    setActivities(r.data);
+                  }}
+                />
               </div>
             )}
 

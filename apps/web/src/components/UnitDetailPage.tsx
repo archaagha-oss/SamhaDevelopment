@@ -14,6 +14,7 @@ import UnitFloorPlans from "./UnitFloorPlans";
 import UnitActivityLogger from "./UnitActivityLogger";
 import UnitSimilarUnits from "./UnitSimilarUnits";
 import ImageUploadModal from "./ImageUploadModal";
+import ShareUnitModal from "./ShareUnitModal";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 
@@ -27,6 +28,7 @@ export default function UnitDetailPage() {
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [viewingFloorPlan, setViewingFloorPlan] = useState<UnitImage | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Inline price editing
   const [editingPrice, setEditingPrice] = useState(false);
@@ -123,6 +125,17 @@ export default function UnitDetailPage() {
 
           {/* ── LEFT COLUMN (2/3) ── */}
           <div className="col-span-2 space-y-4">
+
+            {/* Quick actions */}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 flex items-center gap-1.5"
+                title="Pre-fill a WhatsApp/Email/SMS to a lead with this unit's details"
+              >
+                💬 Share with lead
+              </button>
+            </div>
 
             {/* Key Info Bar */}
             <div className="bg-white rounded-lg border border-slate-200 px-5 py-4">
@@ -499,6 +512,21 @@ export default function UnitDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showShareModal && (
+        <ShareUnitModal
+          unit={{
+            unitNumber: unit.unitNumber,
+            type:       unit.type,
+            price:      unit.price,
+            area:       unit.area,
+            view:       unit.view ?? null,
+            floor:      unit.floor,
+            projectName: unit.project?.name,
+          }}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
     </div>
   );
