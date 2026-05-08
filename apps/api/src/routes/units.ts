@@ -70,6 +70,15 @@ router.get("/", async (req, res) => {
       where,
       orderBy: [{ floor: "asc" }, { unitNumber: "asc" }],
       take: Math.min(1000, parseInt(limit as string) || 500),
+      include: {
+        // Single floor-plan thumbnail per unit for the inventory table preview
+        images: {
+          where: { type: "FLOOR_PLAN" },
+          orderBy: { sortOrder: "asc" },
+          take: 1,
+          select: { id: true, url: true, caption: true, type: true, sortOrder: true },
+        },
+      },
     });
     res.json({ data: units });
   } catch (error) {

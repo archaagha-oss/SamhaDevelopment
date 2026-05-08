@@ -27,6 +27,22 @@ import activityRoutes from "./routes/activities";
 import offerRoutes from "./routes/offers";
 import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
+// Phase 2: sales-workflow expansion
+import kycRoutes from "./routes/kyc";
+import dealPartiesRoutes from "./routes/dealParties";
+import handoverRoutes from "./routes/handover";
+import snagRoutes from "./routes/snags";
+import titleDeedRoutes from "./routes/titleDeeds";
+import constructionRoutes from "./routes/construction";
+import phaseRoutes from "./routes/phases";
+import unitTypePlanRoutes from "./routes/unitTypePlans";
+import spaRoutes from "./routes/spa";
+// Phase 3: financial expansion
+import invoiceRoutes from "./routes/invoices";
+import receiptRoutes from "./routes/receipts";
+import refundRoutes from "./routes/refunds";
+import escrowRoutes from "./routes/escrow";
+import commissionTierRoutes from "./routes/commissionTiers";
 
 dotenv.config();
 
@@ -40,6 +56,23 @@ setInterval(() => {
     console.error("[Cron] ON_HOLD expiry sweep error:", err);
   });
 }, 60 * 60 * 1000);
+
+// Daily sweeps: late-fee runner, KYC expiry, RERA expiry
+async function runDailySweeps() {
+  try {
+    const { runLateFeeEngine } = await import("./services/lateFeeService");
+    const { checkExpiringKYC } = await import("./services/kycService");
+    const lateFee = await runLateFeeEngine();
+    const kyc = await checkExpiringKYC(30);
+    logger.info("Daily sweeps completed", { lateFee, kycExpiringAlerts: kyc });
+  } catch (err) {
+    logger.error("Daily sweeps failed", { error: (err as Error).message });
+  }
+}
+// Run once at startup (after a short delay so DB connection is ready),
+// then once every 24 h.
+setTimeout(() => { void runDailySweeps(); }, 30_000);
+setInterval(() => { void runDailySweeps(); }, 24 * 60 * 60 * 1000);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -128,6 +161,22 @@ app.use("/api/activities", activityRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
+// Phase 2: sales-workflow expansion
+app.use("/api/kyc", kycRoutes);
+app.use("/api/deal-parties", dealPartiesRoutes);
+app.use("/api/handover", handoverRoutes);
+app.use("/api/snags", snagRoutes);
+app.use("/api/title-deeds", titleDeedRoutes);
+app.use("/api/construction", constructionRoutes);
+app.use("/api/phases", phaseRoutes);
+app.use("/api/unit-type-plans", unitTypePlanRoutes);
+app.use("/api/spa", spaRoutes);
+// Phase 3: financial expansion
+app.use("/api/invoices", invoiceRoutes);
+app.use("/api/receipts", receiptRoutes);
+app.use("/api/refunds", refundRoutes);
+app.use("/api/escrow", escrowRoutes);
+app.use("/api/commission-tiers", commissionTierRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

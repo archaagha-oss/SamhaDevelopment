@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -7,21 +7,15 @@ import { formatAreaShort } from "../utils/formatArea";
 import UnitModal from "./UnitModal";
 import UnitFormModal from "./UnitFormModal";
 import BulkUnitModal from "./BulkUnitModal";
-import ConfirmDialog from "./ConfirmDialog";
-import EmptyState from "./EmptyState";
-import UnitGrid from "./UnitGrid";
+import HoverPreview from "./HoverPreview";
 
-// Solid background colors for matrix cells (different from the badge styling)
-const CELL_BG: Record<string, string> = {
-  NOT_RELEASED: "bg-slate-300",
-  AVAILABLE:    "bg-emerald-400",
-  ON_HOLD:      "bg-orange-400",
-  RESERVED:     "bg-amber-400",
-  BOOKED:       "bg-sky-400",
-  SOLD:         "bg-rose-400",
-  HANDED_OVER:  "bg-teal-400",
-  BLOCKED:      "bg-slate-400",
-};
+interface UnitImageLite {
+  id: string;
+  url: string;
+  caption?: string;
+  type: "PHOTO" | "FLOOR_PLAN" | "FLOOR_MAP";
+  sortOrder: number;
+}
 
 interface Unit {
   id: string;
@@ -35,7 +29,27 @@ interface Unit {
   status: string;
   assignedAgentId?: string;
   projectId: string;
+  images?: UnitImageLite[]; // first FLOOR_PLAN included by GET /api/units
 }
+
+type ColumnKey = "plan" | "project" | "unitNumber" | "floor" | "type" | "area" | "view" | "price" | "status" | "agent";
+
+const COLUMN_LABELS: Record<ColumnKey, string> = {
+  plan:       "Plan",
+  project:    "Project",
+  unitNumber: "Unit No.",
+  floor:      "Floor",
+  type:       "Type",
+  area:       "Area",
+  view:       "View",
+  price:      "Price",
+  status:     "Status",
+  agent:      "Agent",
+};
+
+const ALWAYS_VISIBLE: ColumnKey[] = ["unitNumber", "price", "status"];
+const DEFAULT_HIDDEN: ColumnKey[] = []; // all visible by default
+const COLUMN_PREF_KEY = "samha.unitsTable.hiddenColumns";
 
 interface Project { id: string; name: string; }
 interface Agent { id: string; name: string; }
@@ -89,9 +103,6 @@ export default function UnitsTable({ projectId }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>(isGlobal ? "project" : "unitNumber");
   const [sortAsc, setSortAsc] = useState(true);
 
-  // View mode (Matrix is default for project-scoped view)
-  const [viewMode, setViewMode] = useState<"matrix" | "list">(isGlobal ? "list" : "matrix");
-
   // Inline price edit
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState("");
@@ -110,9 +121,44 @@ export default function UnitsTable({ projectId }: Props) {
   // Modals
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
-  const [confirmDeleteUnit, setConfirmDeleteUnit] = useState<Unit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // Column visibility (persisted in localStorage)
+  const [hiddenColumns, setHiddenColumns] = useState<Set<ColumnKey>>(() => {
+    if (typeof window === "undefined") return new Set(DEFAULT_HIDDEN);
+    try {
+      const raw = window.localStorage.getItem(COLUMN_PREF_KEY);
+      if (!raw) return new Set(DEFAULT_HIDDEN);
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr.filter((k: string) => !ALWAYS_VISIBLE.includes(k as ColumnKey)) as ColumnKey[]);
+    } catch {/* ignore */}
+    return new Set(DEFAULT_HIDDEN);
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(COLUMN_PREF_KEY, JSON.stringify(Array.from(hiddenColumns))); }
+    catch {/* ignore */}
+  }, [hiddenColumns]);
+  const isVisible = (k: ColumnKey) => !hiddenColumns.has(k);
+  const toggleColumn = (k: ColumnKey) => {
+    if (ALWAYS_VISIBLE.includes(k)) return;
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  };
+
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const columnMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!columnMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target as Node)) setColumnMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [columnMenuOpen]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -286,21 +332,6 @@ export default function UnitsTable({ projectId }: Props) {
   return (
     <div className="flex flex-col h-full">
 
-      {/* ── Quick stats strip ── */}
-      {!loading && units.length > 0 && (
-        <div className="flex items-center gap-2 px-6 py-2 bg-white border-b border-slate-100 text-xs text-slate-600 flex-shrink-0">
-          <span className="font-semibold text-slate-700">Total {units.length}</span>
-          <span className="text-slate-300">·</span>
-          <span>Available <span className="font-semibold text-emerald-600">{byStatus.AVAILABLE || 0}</span></span>
-          <span className="text-slate-300">·</span>
-          <span>Reserved <span className="font-semibold text-amber-600">{byStatus.RESERVED || 0}</span></span>
-          <span className="text-slate-300">·</span>
-          <span>Booked <span className="font-semibold text-sky-600">{byStatus.BOOKED || 0}</span></span>
-          <span className="text-slate-300">·</span>
-          <span>Sold <span className="font-semibold text-rose-600">{byStatus.SOLD || 0}</span></span>
-        </div>
-      )}
-
       {/* ── Action bar ── */}
       <div className="flex items-center gap-2 px-6 py-3 bg-white border-b border-slate-100 flex-shrink-0 flex-wrap">
         {!selectionMode ? (
@@ -330,25 +361,52 @@ export default function UnitsTable({ projectId }: Props) {
               ☑ Select
             </button>
 
-            {/* View toggle (project mode only — matrix needs a single project) */}
-            {!isGlobal && (
-              <div className="inline-flex border border-slate-200 rounded-lg overflow-hidden text-xs">
-                <button
-                  onClick={() => setViewMode("matrix")}
-                  className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "matrix" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-                  title="Matrix view"
-                >
-                  ▦ Matrix
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-                  title="List view"
-                >
-                  ☰ List
-                </button>
-              </div>
-            )}
+            {/* Column picker */}
+            <div className="relative" ref={columnMenuRef}>
+              <button
+                onClick={() => setColumnMenuOpen((v) => !v)}
+                className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                title="Show / hide columns"
+                aria-haspopup="menu"
+                aria-expanded={columnMenuOpen}
+              >
+                ⋯ Columns{hiddenColumns.size > 0 ? ` (${hiddenColumns.size} hidden)` : ""}
+              </button>
+              {columnMenuOpen && (
+                <div className="absolute left-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-lg shadow-lg py-2 w-48" role="menu">
+                  {(Object.keys(COLUMN_LABELS) as ColumnKey[])
+                    .filter((k) => k !== "project" || isGlobal) // Project column only in global mode
+                    .map((k) => {
+                      const locked = ALWAYS_VISIBLE.includes(k);
+                      return (
+                        <label
+                          key={k}
+                          className={`flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer ${locked ? "text-slate-400 cursor-not-allowed" : "text-slate-700 hover:bg-slate-50"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isVisible(k)}
+                            disabled={locked}
+                            onChange={() => toggleColumn(k)}
+                            className="rounded"
+                          />
+                          {COLUMN_LABELS[k]}
+                          {locked && <span className="ml-auto text-[10px] text-slate-400">always</span>}
+                        </label>
+                      );
+                    })}
+                  {hiddenColumns.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHiddenColumns(new Set())}
+                      className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 border-t border-slate-100 mt-1"
+                    >
+                      Show all columns
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="h-5 w-px bg-slate-200 mx-1" />
 
@@ -480,8 +538,13 @@ export default function UnitsTable({ projectId }: Props) {
             <input
               value={bulkReason}
               onChange={(e) => setBulkReason(e.target.value)}
-              placeholder={bulkOp === "BLOCK" ? "Reason (required)" : "Reason (optional)"}
-              className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-56"
+              placeholder={
+                bulkOp === "BLOCK"   ? "Reason — why are these blocked? (required)" :
+                bulkOp === "RELEASE" ? "Reason — release note for audit (required)" :
+                bulkOp === "UNBLOCK" ? "Reason — why unblocking now? (required)" :
+                "Reason"
+              }
+              className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-72"
             />
           )}
           {bulkOp === "PRICE_UPDATE" && (
@@ -512,8 +575,17 @@ export default function UnitsTable({ projectId }: Props) {
           )}
           <button
             onClick={runBulkOp}
-            disabled={bulkSubmitting || selectedIds.size === 0 || (bulkOp === "BLOCK" && !bulkReason)}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={
+              bulkSubmitting ||
+              selectedIds.size === 0 ||
+              ((bulkOp === "BLOCK" || bulkOp === "RELEASE" || bulkOp === "UNBLOCK") && !bulkReason.trim())
+            }
+            title={
+              ((bulkOp === "BLOCK" || bulkOp === "RELEASE" || bulkOp === "UNBLOCK") && !bulkReason.trim())
+                ? "Reason is required for this operation"
+                : undefined
+            }
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {bulkSubmitting ? "Running…" : `Apply to ${selectedIds.size}`}
           </button>
@@ -555,31 +627,11 @@ export default function UnitsTable({ projectId }: Props) {
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          units.length === 0 ? (
-            <EmptyState
-              icon="🏢"
-              title="No units yet"
-              description="Add units one at a time, or import a full floor in bulk."
-              action={!isGlobal ? { label: "Import Units", onClick: () => setShowBulkModal(true) } : undefined}
-            />
-          ) : (
-            <EmptyState
-              icon="🔍"
-              title="No units match the current filters"
-              description="Try clearing the search or status filters."
-            />
-          )
-        ) : viewMode === "matrix" && !isGlobal ? (
-          <div className="p-4">
-            <UnitGrid
-              units={filtered as any}
-              statusColors={CELL_BG}
-              statusLabels={STATUS_LABELS}
-              onRefresh={load}
-            />
+          <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+            <p>{units.length === 0 ? "No units yet — add your first unit above" : "No units match the current filters"}</p>
           </div>
         ) : (
-          <table className="w-full text-sm min-w-[800px]">
+          <table className="w-full text-sm" style={{ minWidth: "960px" }}>
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
               <tr>
                 {selectionMode && (
@@ -592,15 +644,16 @@ export default function UnitsTable({ projectId }: Props) {
                     />
                   </th>
                 )}
-                {isGlobal && <Th label="Project" sk="project" />}
-                <Th label="Unit No." sk="unitNumber" />
-                <Th label="Floor" sk="floor" />
-                <Th label="Type" sk="type" />
-                <Th label="Area (sqft)" sk="area" />
-                <Th label="View" sk="view" />
-                <Th label="Price (AED)" sk="price" align="right" />
-                <Th label="Status" sk="status" />
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500">Agent</th>
+                {isVisible("plan")       && <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500" style={{ minWidth: 56, width: 56 }}>Plan</th>}
+                {isGlobal && isVisible("project")    && <Th label="Project"     sk="project" />}
+                {isVisible("unitNumber") && <Th label="Unit No."    sk="unitNumber" />}
+                {isVisible("floor")      && <Th label="Floor"       sk="floor" />}
+                {isVisible("type")       && <Th label="Type"        sk="type" />}
+                {isVisible("area")       && <Th label="Area (sqft)" sk="area" />}
+                {isVisible("view")       && <Th label="View"        sk="view" />}
+                {isVisible("price")      && <Th label="Price (AED)" sk="price" align="right" />}
+                {isVisible("status")     && <Th label="Status"      sk="status" />}
+                {isVisible("agent")      && <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500" style={{ minWidth: 140 }}>Agent</th>}
                 {!selectionMode && <th className="px-4 py-2.5 w-16" />}
               </tr>
             </thead>
@@ -609,6 +662,7 @@ export default function UnitsTable({ projectId }: Props) {
                 const c = getStatusColor(unit.status);
                 const isSelected = selectedIds.has(unit.id);
                 const canEdit = !isGlobal && ["AVAILABLE", "BLOCKED", "NOT_RELEASED"].includes(unit.status);
+                const floorPlan = unit.images?.[0];
                 return (
                   <tr
                     key={unit.id}
@@ -624,9 +678,40 @@ export default function UnitsTable({ projectId }: Props) {
                       </td>
                     )}
 
+                    {/* Floor-plan thumbnail with hover-zoom preview */}
+                    {isVisible("plan") && (
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()} style={{ width: 56 }}>
+                        {floorPlan ? (
+                          <HoverPreview src={floorPlan.url} caption={floorPlan.caption || `Floor plan — ${unit.unitNumber}`} size={360}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/projects/${unit.projectId}/units/${unit.id}`)}
+                              className="w-10 h-10 rounded-md overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors bg-slate-50 align-middle"
+                              title="Hover to enlarge · click to open unit"
+                              aria-label="Open unit"
+                            >
+                              <img
+                                src={floorPlan.url}
+                                alt={floorPlan.caption || "Floor plan"}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </button>
+                          </HoverPreview>
+                        ) : (
+                          <span
+                            className="inline-flex items-center justify-center w-10 h-10 rounded-md border border-dashed border-slate-300 text-slate-400 text-base"
+                            title="No floor plan uploaded"
+                          >
+                            📐
+                          </span>
+                        )}
+                      </td>
+                    )}
+
                     {/* Project column (global mode) */}
-                    {isGlobal && (
-                      <td className="px-4 py-3">
+                    {isGlobal && isVisible("project") && (
+                      <td className="px-4 py-3" style={{ minWidth: 120 }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/projects/${unit.projectId}`); }}
                           className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium"
@@ -636,62 +721,70 @@ export default function UnitsTable({ projectId }: Props) {
                       </td>
                     )}
 
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/projects/${unit.projectId}/units/${unit.id}`);
-                        }}
-                        className="font-mono font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
-                      >
-                        {unit.unitNumber}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">F{unit.floor}</td>
-                    <td className="px-4 py-3 text-slate-700 text-xs">{unit.type.replace(/_/g, " ")}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{formatAreaShort(unit.area)}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{unit.view}</td>
-
-                    {/* Inline price edit */}
-                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      {editingPriceId === unit.id ? (
-                        <input
-                          type="number"
-                          value={editingPrice}
-                          autoFocus
-                          onChange={(e) => setEditingPrice(e.target.value)}
-                          onBlur={() => editingPrice && parseInt(editingPrice) > 0 ? savePrice(unit.id, parseInt(editingPrice)) : setEditingPriceId(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && editingPrice && parseInt(editingPrice) > 0) savePrice(unit.id, parseInt(editingPrice));
-                            if (e.key === "Escape") setEditingPriceId(null);
-                          }}
-                          disabled={savingPrice}
-                          className="w-28 px-2 py-1 border border-blue-400 rounded text-right text-xs font-semibold bg-blue-50"
-                        />
-                      ) : (
+                    {isVisible("unitNumber") && (
+                      <td className="px-4 py-3" style={{ minWidth: 88 }}>
                         <button
-                          onClick={() => { setEditingPriceId(unit.id); setEditingPrice(unit.price.toString()); }}
-                          className="font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
-                          title="Click to edit price"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/projects/${unit.projectId}/units/${unit.id}`);
+                          }}
+                          className="font-mono font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
                         >
-                          {unit.price.toLocaleString("en-AE")}
+                          {unit.unitNumber}
                         </button>
-                      )}
-                    </td>
+                      </td>
+                    )}
+                    {isVisible("floor") && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 56 }}>F{unit.floor}</td>}
+                    {isVisible("type")  && <td className="px-4 py-3 text-slate-700 text-xs" style={{ minWidth: 96 }}>{unit.type.replace(/_/g, " ")}</td>}
+                    {isVisible("area")  && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 88 }}>{formatAreaShort(unit.area)}</td>}
+                    {isVisible("view")  && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 88 }}>{unit.view}</td>}
 
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
-                        {STATUS_LABELS[unit.status] || unit.status}
-                      </span>
-                    </td>
+                    {/* Inline price edit (always visible) */}
+                    {isVisible("price") && (
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()} style={{ minWidth: 128 }}>
+                        {editingPriceId === unit.id ? (
+                          <input
+                            type="number"
+                            value={editingPrice}
+                            autoFocus
+                            onChange={(e) => setEditingPrice(e.target.value)}
+                            onBlur={() => editingPrice && parseInt(editingPrice) > 0 ? savePrice(unit.id, parseInt(editingPrice)) : setEditingPriceId(null)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && editingPrice && parseInt(editingPrice) > 0) savePrice(unit.id, parseInt(editingPrice));
+                              if (e.key === "Escape") setEditingPriceId(null);
+                            }}
+                            disabled={savingPrice}
+                            className="w-28 px-2 py-1 border border-blue-400 rounded text-right text-xs font-semibold bg-blue-50"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { setEditingPriceId(unit.id); setEditingPrice(unit.price.toString()); }}
+                            className="font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
+                            title="Click to edit price"
+                          >
+                            {unit.price.toLocaleString("en-AE")}
+                          </button>
+                        )}
+                      </td>
+                    )}
 
-                    <td className="px-4 py-3 text-xs text-slate-500">
-                      {unit.assignedAgentId ? agentMap[unit.assignedAgentId] || "—" : "—"}
-                    </td>
+                    {isVisible("status") && (
+                      <td className="px-4 py-3" style={{ minWidth: 110 }}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
+                          {STATUS_LABELS[unit.status] || unit.status}
+                        </span>
+                      </td>
+                    )}
 
-                    {/* Edit + Delete buttons (hover) */}
+                    {isVisible("agent") && (
+                      <td className="px-4 py-3 text-xs text-slate-500" style={{ minWidth: 140 }}>
+                        {unit.assignedAgentId ? agentMap[unit.assignedAgentId] || "—" : "—"}
+                      </td>
+                    )}
+
+                    {/* Edit only — Delete now lives in the unit detail page Danger zone */}
                     {!selectionMode && (
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()} style={{ width: 64 }}>
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {canEdit && (
                             <button
@@ -699,14 +792,6 @@ export default function UnitsTable({ projectId }: Props) {
                               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                             >
                               Edit
-                            </button>
-                          )}
-                          {["AVAILABLE", "NOT_RELEASED", "BLOCKED"].includes(unit.status) && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteUnit(unit); }}
-                              className="text-xs text-red-400 hover:text-red-600 font-medium"
-                            >
-                              Delete
                             </button>
                           )}
                         </div>
@@ -747,25 +832,6 @@ export default function UnitsTable({ projectId }: Props) {
         />
       )}
 
-      <ConfirmDialog
-        open={!!confirmDeleteUnit}
-        title="Delete Unit"
-        message={`Delete unit ${confirmDeleteUnit?.unitNumber}? This cannot be undone.`}
-        confirmLabel="Delete"
-        variant="danger"
-        onConfirm={async () => {
-          const unit = confirmDeleteUnit;
-          if (!unit) return;
-          setConfirmDeleteUnit(null);
-          try {
-            await axios.delete(`/api/units/${unit.id}`);
-            load();
-          } catch (err: any) {
-            toast.error(err.response?.data?.error || "Failed to delete unit");
-          }
-        }}
-        onCancel={() => setConfirmDeleteUnit(null)}
-      />
     </div>
   );
 }

@@ -578,6 +578,300 @@ async function seed() {
   ]);
   console.log(`✓ ${brokerCompanies.length} broker companies created`);
 
+  // ============================================================
+  // Phase 1 expansion: phases, unit type plans, KYC, joint owners,
+  // construction milestones, escrow, snag list, handover, etc.
+  // ============================================================
+  console.log("\n--- Phase 1 expansion seeds ---");
+
+  // Phases (single tower, three staged releases by floor band)
+  const phaseLow = await prisma.phase.create({
+    data: {
+      projectId: project.id,
+      name: "Phase 1 — Floors 1-7",
+      code: "P1",
+      sortOrder: 1,
+      floorFrom: 1,
+      floorTo: 7,
+      releaseStage: "PUBLIC",
+      releaseStageAt: new Date(),
+    },
+  });
+  const phaseMid = await prisma.phase.create({
+    data: {
+      projectId: project.id,
+      name: "Phase 2 — Floors 8-13",
+      code: "P2",
+      sortOrder: 2,
+      floorFrom: 8,
+      floorTo: 13,
+      releaseStage: "BROKER_PREVIEW",
+      releaseStageAt: new Date(),
+    },
+  });
+  const phaseHigh = await prisma.phase.create({
+    data: {
+      projectId: project.id,
+      name: "Phase 3 — Floors 14-19 + Penthouses",
+      code: "P3",
+      sortOrder: 3,
+      floorFrom: 14,
+      floorTo: 19,
+      releaseStage: "INTERNAL",
+      releaseStageAt: new Date(),
+    },
+  });
+  console.log(`✓ 3 phases created`);
+
+  // Backfill phaseId on existing units based on floor
+  await prisma.unit.updateMany({
+    where: { projectId: project.id, floor: { gte: 1, lte: 7 } },
+    data: { phaseId: phaseLow.id, tenure: "FREEHOLD" },
+  });
+  await prisma.unit.updateMany({
+    where: { projectId: project.id, floor: { gte: 8, lte: 13 } },
+    data: { phaseId: phaseMid.id, tenure: "FREEHOLD" },
+  });
+  await prisma.unit.updateMany({
+    where: { projectId: project.id, floor: { gte: 14 } },
+    data: { phaseId: phaseHigh.id, tenure: "FREEHOLD" },
+  });
+  console.log(`✓ Units backfilled with phase + tenure`);
+
+  // Unit type plans
+  const typePlan1BR = await prisma.unitTypePlan.create({
+    data: {
+      projectId: project.id,
+      code: "1BR-A",
+      name: "1 Bedroom — Standard",
+      type: "ONE_BR",
+      area: 77,
+      internalArea: 69.5,
+      externalArea: 7.5,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      basePrice: 1100000,
+    },
+  });
+  const typePlan2BR = await prisma.unitTypePlan.create({
+    data: {
+      projectId: project.id,
+      code: "2BR-A",
+      name: "2 Bedroom — Premium",
+      type: "TWO_BR",
+      area: 114,
+      internalArea: 95.7,
+      externalArea: 18.3,
+      bathrooms: 2,
+      parkingSpaces: 1,
+      basePrice: 1850000,
+    },
+  });
+  const typePlanPent = await prisma.unitTypePlan.create({
+    data: {
+      projectId: project.id,
+      code: "PENT-A",
+      name: "Penthouse",
+      type: "FOUR_BR",
+      area: 165,
+      internalArea: 92.8,
+      externalArea: 71.6,
+      bathrooms: 3,
+      parkingSpaces: 2,
+      basePrice: 4500000,
+    },
+  });
+  console.log(`✓ 3 unit type plans created`);
+
+  // KYC for the first lead (if any leads exist)
+  if (leads[0]) {
+    await prisma.kYCRecord.create({
+      data: {
+        leadId: leads[0].id,
+        status: "APPROVED",
+        riskRating: "LOW",
+        idType: "PASSPORT",
+        idNumber: "P12345678",
+        idIssuingCountry: "AE",
+        idIssueDate: new Date("2020-01-15"),
+        idExpiryDate: new Date("2030-01-14"),
+        nationality: leads[0].nationality ?? "AE",
+        residencyStatus: "RESIDENT",
+        occupation: "Business Owner",
+        sourceOfFunds: "Salary and savings; KYC completed at on-boarding.",
+        addressLine1: "Marina Plaza, 12th Floor",
+        city: "Dubai",
+        country: "AE",
+        reviewedAt: new Date(),
+        reviewedBy: users[0].email,
+      },
+    });
+    console.log(`✓ KYC record seeded for first lead`);
+  }
+
+  // Joint owners on the first deal (if any deals exist)
+  if (deals[0] && leads[0]) {
+    await prisma.dealParty.create({
+      data: {
+        dealId: deals[0].id,
+        leadId: leads[0].id,
+        role: "PRIMARY",
+        ownershipPercentage: 100,
+      },
+    });
+    console.log(`✓ Primary deal party seeded`);
+  }
+
+  // Construction milestones
+  const consMilestones = await Promise.all([
+    prisma.constructionMilestone.create({
+      data: {
+        projectId: project.id,
+        phaseId: phaseLow.id,
+        stage: "FOUNDATION",
+        label: "Foundation Complete",
+        percentComplete: 100,
+        achievedDate: new Date("2025-06-01"),
+      },
+    }),
+    prisma.constructionMilestone.create({
+      data: {
+        projectId: project.id,
+        phaseId: phaseMid.id,
+        stage: "STRUCTURE",
+        label: "Structural Frame",
+        percentComplete: 60,
+        expectedDate: new Date("2026-08-01"),
+      },
+    }),
+    prisma.constructionMilestone.create({
+      data: {
+        projectId: project.id,
+        phaseId: phaseHigh.id,
+        stage: "EXCAVATION",
+        label: "Excavation Started",
+        percentComplete: 25,
+        expectedDate: new Date("2026-11-01"),
+      },
+    }),
+  ]);
+  console.log(`✓ ${consMilestones.length} construction milestones`);
+
+  // Escrow + trustee account
+  const trustee = await prisma.trusteeAccount.create({
+    data: {
+      projectId: project.id,
+      trusteeName: "Emirates Real Estate Trustee",
+      registrationNo: "TRU-2026-0001",
+      contactEmail: "trustee@example.ae",
+    },
+  });
+  const escrow = await prisma.escrowAccount.create({
+    data: {
+      projectId: project.id,
+      bankName: "Emirates NBD",
+      branch: "Dubai Marina",
+      accountName: "Samha Tower Escrow",
+      accountNo: "0123456789",
+      iban: "AE070331234567890123456",
+      currency: "AED",
+      trusteeAccountId: trustee.id,
+    },
+  });
+  await prisma.escrowLedgerEntry.createMany({
+    data: [
+      {
+        accountId: escrow.id,
+        direction: "CREDIT",
+        reason: "OPENING_BALANCE",
+        amount: 0,
+        currency: "AED",
+        postedBy: users[0].email,
+        notes: "Account opening",
+      },
+    ],
+  });
+  console.log(`✓ Escrow + trustee accounts seeded`);
+
+  // Tiered commission rule
+  const tieredRule = await prisma.tieredCommissionRule.create({
+    data: {
+      projectId: project.id,
+      name: "Volume-tiered Commission",
+      description: "Higher rate for larger deals.",
+      isActive: true,
+      priority: 0,
+      tiers: {
+        create: [
+          { minSalePrice: 0,        maxSalePrice: 1000000, ratePercent: 2.5, sortOrder: 1 },
+          { minSalePrice: 1000000,  maxSalePrice: 2500000, ratePercent: 3.0, sortOrder: 2 },
+          { minSalePrice: 2500000,  maxSalePrice: 5000000, ratePercent: 3.5, sortOrder: 3 },
+          { minSalePrice: 5000000,                          ratePercent: 4.0, flatBonus: 25000, sortOrder: 4 },
+        ],
+      },
+    },
+  });
+  console.log(`✓ Tiered commission rule seeded (id=${tieredRule.id})`);
+
+  // Sample snag list on a sold unit (if any)
+  const soldUnit = units.find((u: any) => u.status === "SOLD");
+  if (soldUnit) {
+    const snagList = await prisma.snagList.create({
+      data: {
+        unitId: soldUnit.id,
+        label: "Pre-handover walk-through",
+      },
+    });
+    await prisma.snagItem.create({
+      data: {
+        listId: snagList.id,
+        room: "Living Room",
+        category: "Paint",
+        description: "Touch-up required on north wall near skirting.",
+        severity: "COSMETIC",
+        status: "RAISED",
+        raisedBy: users[1].email,
+      },
+    });
+    console.log(`✓ Snag list seeded for unit ${soldUnit.unitNumber}`);
+  }
+
+  // Sample handover checklist for the first deal if it's late-stage
+  if (deals[0]) {
+    const checklist = await prisma.handoverChecklist.create({
+      data: {
+        dealId: deals[0].id,
+        unitId: deals[0].unitId,
+      },
+    });
+    const items = [
+      { code: "FINAL_PAYMENT", label: "Final payment received", sortOrder: 1 },
+      { code: "NOC_SERVICE_CHARGE", label: "Service charge NOC obtained", sortOrder: 2 },
+      { code: "UTILITIES_TRANSFERRED", label: "DEWA / cooling transferred", sortOrder: 3 },
+      { code: "WALK_THROUGH", label: "Walk-through completed with buyer", sortOrder: 4 },
+      { code: "KEY_HANDOVER", label: "Keys + access cards issued", sortOrder: 5 },
+      { code: "CUSTOMER_SIGN_OFF", label: "Customer sign-off form signed", sortOrder: 6 },
+    ];
+    await prisma.handoverChecklistItem.createMany({
+      data: items.map((it) => ({ checklistId: checklist.id, ...it })),
+    });
+    console.log(`✓ Handover checklist (${items.length} items) seeded`);
+  }
+
+  // Org number sequences for invoices and receipts (current year)
+  const fy = new Date().getFullYear();
+  if (project.organizationId) {
+    await prisma.orgNumberSequence.createMany({
+      data: [
+        { organizationId: project.organizationId, sequenceKey: "INVOICE", fiscalYear: fy, prefix: "INV-", nextValue: 1, width: 5 },
+        { organizationId: project.organizationId, sequenceKey: "RECEIPT", fiscalYear: fy, prefix: "RCP-", nextValue: 1, width: 5 },
+        { organizationId: project.organizationId, sequenceKey: "REFUND",  fiscalYear: fy, prefix: "RFD-", nextValue: 1, width: 5 },
+      ],
+      skipDuplicates: true,
+    });
+    console.log(`✓ Org number sequences (INVOICE/RECEIPT/REFUND) for FY${fy} seeded`);
+  }
+
   console.log("\n✅ Database seeding complete!");
   console.log(`Project: ${project.name}`);
   console.log(`Location: ${project.location}`);

@@ -28,12 +28,18 @@ export function useUpdateUnit(unitId: string) {
   });
 }
 
+export interface ChangeStatusInput {
+  newStatus: string;
+  reason?: string;
+}
+
 export function useChangeStatus(unitId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newStatus: string) => {
-      const res = await axios.patch(`/api/units/${unitId}/status`, { newStatus });
+    mutationFn: async (input: ChangeStatusInput | string) => {
+      const body = typeof input === 'string' ? { newStatus: input } : input;
+      const res = await axios.patch(`/api/units/${unitId}/status`, body);
       return res.data as Unit;
     },
     onSuccess: (updatedUnit) => {
@@ -45,6 +51,24 @@ export function useChangeStatus(unitId: string) {
       queryClient.invalidateQueries({
         queryKey: ['units'],
       });
+    },
+    onError: (err: any) => {
+      const apiError = classifyError(err);
+      throw apiError;
+    },
+  });
+}
+
+export function useDeleteUnit(unitId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await axios.delete(`/api/units/${unitId}`);
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['unit', unitId] });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
     },
     onError: (err: any) => {
       const apiError = classifyError(err);

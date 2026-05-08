@@ -5,7 +5,7 @@ import {
   IconCoin, IconChart, IconSettings, IconChevronLeft, IconChevronRight,
 } from "./Icons";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers";
 
 type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
 
@@ -32,11 +32,13 @@ const salesItems: { page: Page; label: string; Icon: IconType }[] = [
 ];
 
 const financeItems: { page: Page; label: string; Icon: IconType }[] = [
-  { page: "finance",       label: "Finance",      Icon: IconChart },
-  { page: "payments",      label: "Payments",     Icon: IconCard },
-  { page: "payment-plans", label: "Pay. Plans",   Icon: IconList },
-  { page: "commissions",   label: "Commissions",  Icon: IconCoin },
-  { page: "reports",       label: "Reports",      Icon: IconChart },
+  { page: "finance",           label: "Finance",       Icon: IconChart },
+  { page: "payments",          label: "Payments",      Icon: IconCard },
+  { page: "payment-plans",     label: "Pay. Plans",    Icon: IconList },
+  { page: "commissions",       label: "Commissions",   Icon: IconCoin },
+  { page: "commission-tiers",  label: "Comm. Tiers",   Icon: IconCoin },
+  { page: "refunds",           label: "Refunds",       Icon: IconCard },
+  { page: "reports",           label: "Reports",       Icon: IconChart },
 ];
 
 const adminItems: { page: Page; label: string; Icon: IconType }[] = [

@@ -1,9 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
-import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUnit } from "../hooks/useUnit";
-import { useUpdateUnit } from "../hooks/useUpdateUnit";
+import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
 import { formatArea } from "../utils/formatArea";
 import { useAgents } from "../hooks/useAgents";
 import UnitHeader from "./UnitHeader";
@@ -11,12 +10,15 @@ import UnitStatusActions from "./UnitStatusActions";
 import UnitCommercialPanel from "./UnitCommercialPanel";
 import UnitHistory from "./UnitHistory";
 import UnitGallery from "./UnitGallery";
-import UnitFloorPlans from "./UnitFloorPlans";
 import UnitActivityLogger from "./UnitActivityLogger";
 import UnitSimilarUnits from "./UnitSimilarUnits";
 import ImageUploadModal from "./ImageUploadModal";
+import ActiveDealSummaryCard from "./ActiveDealSummaryCard";
+import PaymentPlanCard from "./PaymentPlanCard";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
+
+const DELETE_BLOCKING_STATUSES = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"] as const;
 
 export default function UnitDetailPage() {
   const { projectId, unitId } = useParams<{ projectId: string; unitId: string }>();
@@ -24,22 +26,23 @@ export default function UnitDetailPage() {
   const { data: unit, isLoading, error: queryError, refetch } = useUnit(unitId!);
   const { data: agents = [] } = useAgents();
   const updateUnit = useUpdateUnit(unitId!);
+  const deleteUnit = useDeleteUnit(unitId!);
 
-  const [apiError, setApiError] = useState<ApiError | null>(null);
+  const [apiError, setApiError]       = useState<ApiError | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [viewingFloorPlan, setViewingFloorPlan] = useState<UnitImage | null>(null);
+  const [viewingImage, setViewingImage]       = useState<UnitImage | null>(null);
 
   // Inline price editing
   const [editingPrice, setEditingPrice] = useState(false);
-  const [priceValue, setPriceValue] = useState("");
+  const [priceValue, setPriceValue]     = useState("");
 
   // Inline notes editing
   const [editingNotes, setEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
+  const [notesValue, setNotesValue]     = useState("");
 
-  // Inline payment plan editing
-  const [editingPlan, setEditingPlan] = useState(false);
-  const [planValue, setPlanValue] = useState("");
+  // Delete confirmation
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteAck, setDeleteAck]               = useState("");
 
   if (isLoading) {
     return (
@@ -73,14 +76,10 @@ export default function UnitDetailPage() {
 
   const handleSavePrice = async () => {
     const parsed = parseInt(priceValue.replace(/,/g, ""));
-    if (!parsed || parsed <= 0) {
-      toast.error("Enter a valid price");
-      return;
-    }
+    if (!parsed || parsed <= 0) return;
     try {
       await updateUnit.mutateAsync({ price: parsed });
       setEditingPrice(false);
-      toast.success("Price updated");
     } catch (err: any) {
       setApiError(err);
     }
@@ -90,20 +89,6 @@ export default function UnitDetailPage() {
     try {
       await updateUnit.mutateAsync({ internalNotes: notesValue });
       setEditingNotes(false);
-      toast.success("Notes saved");
-    } catch (err: any) {
-      setApiError(err);
-    }
-  };
-
-  const handleSavePlan = async () => {
-    const trimmed = planValue.trim();
-    if (!trimmed) return;
-    try {
-      await updateUnit.mutateAsync({ paymentPlan: trimmed });
-      setEditingPlan(false);
-      setPlanValue("");
-      toast.success("Payment plan saved");
     } catch (err: any) {
       setApiError(err);
     }
@@ -117,10 +102,31 @@ export default function UnitDetailPage() {
     }
   };
 
-  const agentName = agents.find((a) => a.id === unit.assignedAgentId)?.name;
+  const handleDelete = async () => {
+    try {
+      await deleteUnit.mutateAsync();
+      navigate(`/projects/${projectId}`);
+    } catch (err: any) {
+      setApiError(err);
+      setConfirmingDelete(false);
+    }
+  };
+
+  const agentName  = agents.find((a) => a.id === unit.assignedAgentId)?.name;
   const priceTrend = unit.basePrice && unit.basePrice !== unit.price
     ? ((unit.price - unit.basePrice) / unit.basePrice * 100).toFixed(1)
     : null;
+
+  // Media: floor plan first as hero
+  const images       = unit.images ?? [];
+  const floorPlans   = images.filter((i) => i.type === "FLOOR_PLAN");
+  const photos       = images.filter((i) => i.type === "PHOTO");
+  const heroImage    = floorPlans[0] ?? photos[0] ?? null;
+  const heroIsPlan   = !!floorPlans[0];
+
+  const deleteBlocked = DELETE_BLOCKING_STATUSES.includes(unit.status as typeof DELETE_BLOCKING_STATUSES[number])
+                     || (unit.deals?.length ?? 0) > 0
+                     || (unit.reservations?.length ?? 0) > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -147,7 +153,63 @@ export default function UnitDetailPage() {
           {/* ── LEFT COLUMN (2/3) ── */}
           <div className="col-span-2 space-y-4">
 
-            {/* Key Info Bar */}
+            {/* 1. Active deal / reservation / interest summary — top-of-page primary context */}
+            <ActiveDealSummaryCard unit={unit} />
+
+            {/* 2. Floor-plan hero (or photo fallback with "Add floor plan" CTA) */}
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              {heroImage ? (
+                <button
+                  type="button"
+                  onClick={() => setViewingImage(heroImage)}
+                  className="relative block w-full group"
+                  title="Click to view full size"
+                >
+                  <img
+                    src={heroImage.url}
+                    alt={heroImage.caption || (heroIsPlan ? "Floor plan" : "Unit photo")}
+                    className="w-full h-[420px] object-contain bg-slate-50"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900/75 text-white">
+                    {heroIsPlan ? "📐 Floor plan" : "📷 Photo"}
+                  </span>
+                  <span className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/85 text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to enlarge
+                  </span>
+                  {!heroIsPlan && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setShowUploadModal(true); }}
+                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-md"
+                    >
+                      + Add floor plan
+                    </button>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(true)}
+                  className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/40 transition-colors"
+                >
+                  <span className="text-4xl">📐</span>
+                  <span className="text-sm font-semibold text-slate-700">Add floor plan</span>
+                  <span className="text-xs text-slate-400">Floor plan helps clients picture the unit fastest</span>
+                </button>
+              )}
+
+              {/* Photo carousel below hero */}
+              {images.length > 0 && (
+                <UnitGallery
+                  images={images}
+                  onDelete={handleDeleteImage}
+                  onUpload={() => setShowUploadModal(true)}
+                />
+              )}
+            </div>
+
+            {/* 3. Key Info Bar */}
             <div className="bg-white rounded-lg border border-slate-200 px-5 py-4">
               <div className="grid grid-cols-5 divide-x divide-slate-100">
                 <div className="px-3 first:pl-0">
@@ -175,7 +237,7 @@ export default function UnitDetailPage() {
               </div>
             </div>
 
-            {/* Property Specs */}
+            {/* 4. Property Specs */}
             <div className="bg-white rounded-lg border border-slate-200 p-5">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Property Specs</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -198,55 +260,6 @@ export default function UnitDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Payment Plan</p>
-                  {editingPlan ? (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <input
-                        type="text"
-                        value={planValue}
-                        onChange={(e) => setPlanValue(e.target.value)}
-                        placeholder="e.g. 60/40"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSavePlan();
-                          if (e.key === "Escape") { setEditingPlan(false); setPlanValue(""); }
-                        }}
-                        className="flex-1 min-w-0 border border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        onClick={handleSavePlan}
-                        disabled={updateUnit.isPending || !planValue.trim()}
-                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded disabled:opacity-50"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => { setEditingPlan(false); setPlanValue(""); }}
-                        className="px-2 py-1 border border-slate-200 text-xs rounded hover:bg-slate-50"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : unit.paymentPlan ? (
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-800">{unit.paymentPlan}</p>
-                      <button
-                        onClick={() => { setEditingPlan(true); setPlanValue(unit.paymentPlan!); }}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setEditingPlan(true); setPlanValue(""); }}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      + Add
-                    </button>
-                  )}
-                </div>
-                <div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Project</p>
                   <p className="text-sm font-semibold text-slate-800">{unit.project?.name ?? "—"}</p>
                 </div>
@@ -261,7 +274,7 @@ export default function UnitDetailPage() {
               </div>
             </div>
 
-            {/* Pricing */}
+            {/* 5. Pricing */}
             <div className="bg-white rounded-lg border border-slate-200 p-5">
               <div className="flex items-start justify-between mb-1">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Price</p>
@@ -316,37 +329,10 @@ export default function UnitDetailPage() {
               )}
             </div>
 
-            {/* Gallery */}
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-              {unit.images && unit.images.length > 0 ? (
-                <UnitGallery
-                  images={unit.images}
-                  onDelete={handleDeleteImage}
-                  onUpload={() => setShowUploadModal(true)}
-                />
-              ) : (
-                <div className="p-8 text-center">
-                  <p className="text-2xl mb-2">📸</p>
-                  <p className="text-sm text-slate-500 mb-3">No images yet</p>
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                  >
-                    Upload First Image
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* 6. Payment plan decomposition */}
+            <PaymentPlanCard unitId={unit.id} paymentPlan={unit.paymentPlan} price={unit.price} />
 
-            {/* Floor Plans */}
-            {unit.images && unit.images.length > 0 && (
-              <UnitFloorPlans
-                images={unit.images}
-                onOpenFloorPlan={setViewingFloorPlan}
-              />
-            )}
-
-            {/* Physical Details */}
+            {/* 7. Physical Details */}
             {(unit.bathrooms || unit.parkingSpaces !== undefined || unit.internalArea || unit.externalArea) && (
               <div className="bg-white rounded-lg border border-slate-200 p-5">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Physical Details</p>
@@ -379,7 +365,7 @@ export default function UnitDetailPage() {
               </div>
             )}
 
-            {/* Tags & Notes */}
+            {/* 8. Tags & Notes */}
             <div className="bg-white rounded-lg border border-slate-200 p-5 space-y-4">
               {unit.tags && unit.tags.length > 0 && (
                 <div>
@@ -433,11 +419,37 @@ export default function UnitDetailPage() {
               </div>
             </div>
 
-            {/* History */}
+            {/* 9. History */}
             <UnitHistory unitId={unit.id} createdAt={unit.createdAt} />
 
-            {/* Activity Logger */}
+            {/* 10. Activity Logger */}
             <UnitActivityLogger unitId={unit.id} interests={unit.interests ?? []} />
+
+            {/* 11. Danger Zone — delete moved out of the table per UX call */}
+            <div className="bg-white rounded-lg border border-red-200 p-5">
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 text-lg leading-none mt-0.5">⚠</span>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Danger zone</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Permanently remove this unit. Allowed only when there's no active deal or reservation.
+                  </p>
+                  {deleteBlocked && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2 inline-block">
+                      Locked — unit is {unit.status.replace(/_/g, " ").toLowerCase()}{(unit.deals?.length ?? 0) > 0 ? " and has an active deal" : ""}.
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmingDelete(true); setDeleteAck(""); }}
+                  disabled={deleteBlocked || deleteUnit.isPending}
+                  className="px-3 py-2 border border-red-300 text-red-700 text-xs font-semibold rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Delete unit
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* ── RIGHT COLUMN (1/3) ── */}
@@ -446,7 +458,7 @@ export default function UnitDetailPage() {
             {/* 1. Status Actions */}
             <UnitStatusActions unit={unit} onError={setApiError} />
 
-            {/* 2. Commercial Context (Deal / Reservation / Leads) */}
+            {/* 2. Commercial Context (interested leads, create-deal CTA) */}
             <UnitCommercialPanel unit={unit} />
 
             {/* 3. Agent Assignment */}
@@ -530,28 +542,81 @@ export default function UnitDetailPage() {
         />
       )}
 
-      {/* Floor Plan Viewer */}
-      {viewingFloorPlan && (
+      {/* Hero / floor-plan / image lightbox */}
+      {viewingImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          onClick={() => setViewingFloorPlan(null)}
+          onClick={() => setViewingImage(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={viewingImage.caption || "Unit image"}
         >
-          <div className="bg-black rounded-lg max-w-4xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-black rounded-lg max-w-5xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="relative">
               <img
-                src={viewingFloorPlan.url}
-                alt={viewingFloorPlan.caption || "Floor Plan"}
-                className="w-full h-auto max-h-[80vh] object-contain"
+                src={viewingImage.url}
+                alt={viewingImage.caption || "Unit image"}
+                className="w-full h-auto max-h-[85vh] object-contain"
               />
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-900/70 text-white">
+                {viewingImage.type === "PHOTO" ? "📷 Photo" : viewingImage.type === "FLOOR_PLAN" ? "📐 Floor plan" : "📍 Floor map"}
+              </span>
               <button
-                onClick={() => setViewingFloorPlan(null)}
+                type="button"
+                onClick={() => setViewingImage(null)}
                 className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
+                aria-label="Close"
               >
                 ✕
               </button>
-              {viewingFloorPlan.caption && (
-                <div className="bg-slate-900 px-4 py-3 text-sm text-slate-100">{viewingFloorPlan.caption}</div>
+              {viewingImage.caption && (
+                <div className="bg-slate-900 px-4 py-3 text-sm text-slate-100">{viewingImage.caption}</div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmingDelete && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => !deleteUnit.isPending && setConfirmingDelete(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+        >
+          <div className="bg-white rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <p id="delete-confirm-title" className="text-base font-semibold text-slate-900">Delete unit {unit.unitNumber}?</p>
+            <p className="text-sm text-slate-600 mt-2">
+              This will permanently remove the unit, its images, status history, and activities.
+              Type <span className="font-mono font-semibold">{unit.unitNumber}</span> to confirm.
+            </p>
+            <input
+              type="text"
+              value={deleteAck}
+              onChange={(e) => setDeleteAck(e.target.value)}
+              placeholder={unit.unitNumber}
+              className="mt-3 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:border-red-400"
+              autoFocus
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleteUnit.isPending}
+                className="px-3 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteUnit.isPending || deleteAck !== unit.unitNumber}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteUnit.isPending ? "Deleting…" : "Delete unit"}
+              </button>
             </div>
           </div>
         </div>

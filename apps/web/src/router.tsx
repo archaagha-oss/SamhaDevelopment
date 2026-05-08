@@ -30,6 +30,17 @@ import ReservationsPage from "./components/ReservationsPage";
 import OffersPage from "./components/OffersPage";
 import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
+// Phase 4 expansion pages
+import PhasesPage from "./pages/PhasesPage";
+import UnitTypePlansPage from "./pages/UnitTypePlansPage";
+import ConstructionProgressPage from "./pages/ConstructionProgressPage";
+import SnagListPage from "./pages/SnagListPage";
+import HandoverChecklistPage from "./pages/HandoverChecklistPage";
+import RefundsPage from "./pages/RefundsPage";
+import EscrowPage from "./pages/EscrowPage";
+import CommissionTiersPage from "./pages/CommissionTiersPage";
+import LeadKycPage from "./pages/LeadKycPage";
+import DealJointOwnersPage from "./pages/DealJointOwnersPage";
 
 export const router = createBrowserRouter([
   // Standalone print pages (no app shell — full-page printable layout)
@@ -66,6 +77,17 @@ export const router = createBrowserRouter([
       { path: "reports",                                   element: <ReportsPage /> },
       { path: "contacts",                                  element: <ContactsPage /> },
       { path: "settings",                                  element: <SettingsPage /> },
+      // Phase 4 expansion routes
+      { path: "projects/:projectId/phases",                element: <PhasesPage /> },
+      { path: "projects/:projectId/type-plans",            element: <UnitTypePlansPage /> },
+      { path: "projects/:projectId/construction",          element: <ConstructionProgressPage /> },
+      { path: "projects/:projectId/escrow",                element: <EscrowPage /> },
+      { path: "units/:unitId/snags",                       element: <SnagListPage /> },
+      { path: "deals/:dealId/handover",                    element: <HandoverChecklistPage /> },
+      { path: "deals/:dealId/parties",                     element: <DealJointOwnersPage /> },
+      { path: "leads/:leadId/kyc",                         element: <LeadKycPage /> },
+      { path: "refunds",                                   element: <RefundsPage /> },
+      { path: "commission-tiers",                          element: <CommissionTiersPage /> },
       { path: "*",                                        element: <NotFoundPage /> },
     ],
   },

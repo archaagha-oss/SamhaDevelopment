@@ -173,6 +173,7 @@ enum MilestoneTrigger {
   ON_SPA_SIGNING         // dueDate auto-set when deal reaches SPA_SIGNED
   ON_OQOOD               // dueDate auto-set when deal reaches OQOOD_REGISTERED
   ON_HANDOVER            // dueDate auto-set when deal reaches HANDOVER_PENDING
+  ON_CONSTRUCTION_PCT    // dueDate auto-set when project's construction reaches triggerConstructionPct
 }
 
 // ----- Commission -----
@@ -300,6 +301,151 @@ enum NotificationPriority {
   URGENT
 }
 
+// ----- Phase 1: domain expansions -----
+
+enum Tenure {
+  FREEHOLD
+  LEASEHOLD
+}
+
+enum ReleaseStage {
+  INTERNAL        // not yet visible to brokers or public
+  BROKER_PREVIEW  // brokers can reserve on behalf of leads
+  PUBLIC          // open for public sale
+}
+
+enum KYCStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  EXPIRED
+  REJECTED
+}
+
+enum RiskRating {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PartyRole {
+  PRIMARY     // primary buyer (must be exactly one per deal)
+  CO_BUYER    // joint owner
+  GUARANTOR   // legally responsible but not on title
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+  CREDITED
+}
+
+enum InvoiceLineKind {
+  UNIT_PRICE
+  DLD_FEE
+  ADMIN_FEE
+  REGISTRATION_FEE
+  VAT
+  ADJUSTMENT
+  OTHER
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
+  CANCELLED
+}
+
+enum EscrowEntryDirection {
+  CREDIT  // money in (customer payment)
+  DEBIT   // money out (developer drawdown / refund / fees)
+}
+
+enum EscrowEntryReason {
+  CUSTOMER_PAYMENT
+  DEVELOPER_DRAWDOWN
+  REFUND
+  BANK_FEE
+  TRANSFER
+  OPENING_BALANCE
+  ADJUSTMENT
+}
+
+enum SnagSeverity {
+  COSMETIC
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum SnagStatus {
+  RAISED
+  ACKNOWLEDGED
+  IN_PROGRESS
+  FIXED
+  REJECTED
+  CLOSED
+}
+
+enum HandoverItemStatus {
+  PENDING
+  COMPLETED
+  WAIVED
+  NOT_APPLICABLE
+}
+
+enum TitleDeedStatus {
+  PENDING
+  IN_PROGRESS
+  ISSUED
+  TRANSFERRED
+  CANCELLED
+}
+
+enum ConstructionStage {
+  EXCAVATION
+  FOUNDATION
+  STRUCTURE
+  ENCLOSURE
+  MEP
+  FINISHES
+  HANDOVER_READY
+  COMPLETED
+}
+
+enum CommissionSplitParty {
+  COMPANY
+  AGENT
+  SUB_AGENT
+  REFERRER
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  RENEWED
+}
+
+enum ResaleStatus {
+  ACTIVE
+  WITHDRAWN
+  SOLD
+  EXPIRED
+}
+
+enum FacilityWorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 // ============================================================
 // SECTION 2: ORGANIZATION & PROJECT
 // ============================================================
@@ -349,6 +495,14 @@ model Project {
   images             ProjectImage[]
   stageDocumentRules StageDocumentRule[]
 
+  // Phase 1 expansions
+  phases                Phase[]
+  unitTypePlans         UnitTypePlan[]
+  constructionMilestones ConstructionMilestone[]
+  escrowAccounts        EscrowAccount[]
+  trusteeAccounts       TrusteeAccount[]
+  tieredCommissionRules TieredCommissionRule[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -389,6 +543,12 @@ model ProjectConfig {
   defaultArea      Float?  @default(750)
   defaultView      String? @default("GARDEN")
   defaultPrice     Float?
+
+  // Phase 1 expansions
+  taxRegistrationNumber String? // TRN — printed on tax invoices
+  fiscalYearStartMonth  Int     @default(1) // 1=January
+  defaultDlpMonths      Int     @default(12) // Defect Liability Period after handover
+  baseCurrency          String  @default("AED")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -474,6 +634,31 @@ model Unit {
   assignedAgent   User?   @relation("AssignedUnits", fields: [assignedAgentId], references: [id])
   assignedAgentId String?
 
+  // ----- Domain extensions (Phase 1) -----
+  tenure              Tenure?           // FREEHOLD | LEASEHOLD
+  makaniNumber        String?           // Dubai address code
+  dldUnitId           String?           // DLD-issued unit identifier
+  plotNumber          String?
+  titleDeedNumber     String?           // populated post-handover
+  orientation         String?           // N/NE/E/SE/S/SW/W/NW
+
+  // Pricing premium components (structured inputs to the rule engine)
+  floorPremium        Float?            // AED added per unit because of floor
+  viewPremium         Float?            // AED added per unit because of view
+  cornerPremium       Float?            // AED added if a corner unit
+  orientationPremium  Float?            // AED added per orientation
+
+  // Additional area dimensions
+  terraceArea         Float?            // sq metres
+  gardenArea          Float?            // sq metres
+  plotArea            Float?            // sq metres (relevant for villas/townhouses)
+
+  // Master template + staged release
+  unitTypePlanId      String?
+  unitTypePlan        UnitTypePlan?     @relation(fields: [unitTypePlanId], references: [id])
+  phaseId             String?
+  phase               Phase?            @relation(fields: [phaseId], references: [id])
+
   // Relations
   interests    LeadUnitInterest[]
   deals        Deal[]
@@ -482,6 +667,18 @@ model Unit {
   priceHistory UnitPriceHistory[]
   activities   Activity[]         @relation("UnitActivities")
   images       UnitImage[]
+
+  // New post-handover relations
+  snagLists            SnagList[]
+  handoverChecklists   HandoverChecklist[]
+  defectLiabilityPeriod DefectLiabilityPeriod?
+  titleDeedTransfers   TitleDeedTransfer[]
+
+  // Lifecycle (schema-only placeholders for future)
+  leases        Lease[]
+  resaleListings ResaleListing[]
+  serviceChargeAllocations ServiceChargeAllocation[]
+  facilityWorkOrders FacilityWorkOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -495,6 +692,8 @@ model Unit {
   @@index([projectId, status])
   @@index([projectId, type])
   @@index([projectId, price])
+  @@index([phaseId])
+  @@index([unitTypePlanId])
 }
 
 model UnitStatusHistory {
@@ -565,6 +764,10 @@ model Lead {
   reservations Reservation[]
   offers       Offer[]
   documents    Document[]
+
+  // Phase 1: structured KYC + joint-owner participation
+  kycRecords   KYCRecord[]
+  dealParties  DealParty[]
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())
@@ -740,6 +943,9 @@ model BrokerCompany {
   bankSwiftCode         String?
   commissionRate     Float    @default(4)
 
+  // RERA expiry alert tracking — set when monitor job emits an alert so it doesn't double-fire
+  licenseExpiryAlertedAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([name])
@@ -774,6 +980,9 @@ model BrokerAgent {
 
   leads Lead[]
   deals Deal[]
+
+  // RERA card expiry alert tracking
+  licenseExpiryAlertedAt DateTime?
 
   createdAt DateTime @default(now())
 
@@ -875,9 +1084,10 @@ model PaymentPlanMilestone {
   isDLDFee   Boolean @default(false)
   isAdminFee Boolean @default(false)
 
-  daysFromReservation Int?       // used when triggerType = DAYS_FROM_RESERVATION
-  fixedDate           DateTime?  // used when triggerType = FIXED_DATE
-  sortOrder           Int
+  daysFromReservation     Int?       // used when triggerType = DAYS_FROM_RESERVATION
+  fixedDate               DateTime?  // used when triggerType = FIXED_DATE
+  triggerConstructionPct  Float?     // used when triggerType = ON_CONSTRUCTION_PCT (0..100)
+  sortOrder               Int
 
   createdAt DateTime @default(now())
 
@@ -950,6 +1160,28 @@ model Deal {
   remindersPaused       Boolean   @default(false)
   remindersPausedReason String?   @db.Text
   remindersPausedUntil  DateTime?
+
+  // ----- Phase 1 expansions -----
+  // Multi-currency snapshot (manual FX entry by finance)
+  currency       String?   @default("AED")
+  fxRate         Float?    // 1 unit of `currency` = fxRate * AED at signing
+  fxSnapshotAt   DateTime?
+
+  // Structured DLD / Oqood references (replaces ad-hoc note fields)
+  dldRegistrationNumber String?
+  oqoodNumber           String?
+  formIIssuedDate       DateTime?
+
+  // Joint owners
+  parties        DealParty[]
+
+  // Post-handover relations
+  handoverChecklists HandoverChecklist[]
+  refundRequests     RefundRequest[]
+  invoices           Invoice[]
+  receipts           Receipt[]
+  titleDeedTransfers TitleDeedTransfer[]
+  commissionSplits   CommissionSplit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1025,6 +1257,25 @@ model Payment {
   lastReminderSentAt DateTime?
   reminderCount      Int       @default(0)
 
+  // ----- Phase 1 expansions -----
+  // Multi-currency snapshot at the moment money was received
+  currency       String?   @default("AED")
+  fxRate         Float?    // 1 unit of `currency` = fxRate AED
+  fxSnapshotAt   DateTime?
+
+  // Construction-progress trigger linkage
+  triggerConstructionPct  Float?           // mirror of plan milestone if scheduleTrigger=ON_CONSTRUCTION_PCT
+  constructionMilestoneId String?
+  constructionMilestone   ConstructionMilestone? @relation(fields: [constructionMilestoneId], references: [id])
+
+  // Late-fee accumulation
+  lateFeeApplied         Float    @default(0)
+  lateFeeLastAppliedAt   DateTime?
+
+  // Document linkage
+  invoices Invoice[]
+  receipts Receipt[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1032,6 +1283,7 @@ model Payment {
   @@index([status])
   @@index([dueDate])
   @@index([dealId, status])
+  @@index([constructionMilestoneId])
 }
 
 model PartialPayment {
@@ -1365,4 +1617,833 @@ model Contact {
   @@index([email])
   @@index([phone])
   @@index([firstName])
+}
+
+// ============================================================
+// SECTION 18: PHASE & UNIT TYPE PLAN (Phase 1 — master data)
+// ============================================================
+
+// A Phase models a staged release inside a single tower (e.g. lower floors first,
+// then upper floors, then penthouses).  Multi-tower hierarchy is intentionally
+// not modelled — each Project is one tower.
+model Phase {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String     // e.g. "Phase 1 — Floors 1-15"
+  code        String?    // short code, e.g. "P1"
+  description String?    @db.Text
+  sortOrder   Int        @default(0)
+
+  // Floor band this phase covers (inclusive). Null = phase scope decided by unit assignment only.
+  floorFrom   Int?
+  floorTo     Int?
+
+  releaseStage     ReleaseStage @default(INTERNAL)
+  releaseStageAt   DateTime?    // when the current releaseStage was entered
+  publicLaunchDate DateTime?    // optional planned date for PUBLIC release
+
+  units                Unit[]
+  releaseHistory       PhaseReleaseHistory[]
+  constructionMilestones ConstructionMilestone[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([releaseStage])
+}
+
+model PhaseReleaseHistory {
+  id      String  @id @default(cuid())
+  phaseId String
+  phase   Phase   @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  oldStage  ReleaseStage
+  newStage  ReleaseStage
+  changedBy String
+  reason    String?
+
+  changedAt DateTime @default(now())
+
+  @@index([phaseId])
+  @@index([changedAt])
+}
+
+// Master template for unit instances of the same layout (e.g. "1BR-A", "2BR-Premium").
+// A Unit references its UnitTypePlan; default values are inherited at creation time.
+model UnitTypePlan {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  code        String         // unique within project, e.g. "1BR-A"
+  name        String         // human-readable name
+  type        UnitType
+  description String?        @db.Text
+
+  // Default geometry
+  area              Float?    // total sq metres
+  internalArea      Float?
+  externalArea      Float?
+  bathrooms         Int?
+  parkingSpaces     Int?
+  terraceArea       Float?
+  gardenArea        Float?
+
+  // Default pricing inputs
+  basePrice         Float?
+
+  // Marketing
+  floorPlanUrl      String?   @db.Text
+  brochureUrl       String?   @db.Text
+
+  units Unit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, code])
+  @@index([projectId])
+  @@index([type])
+}
+
+// ============================================================
+// SECTION 19: KYC (Phase 1 — structured customer due diligence)
+// ============================================================
+
+// One KYCRecord per Lead per identity-document set. We support multiple records
+// per Lead so the data scales for joint-owner deals (each party can have its own KYC).
+model KYCRecord {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  status     KYCStatus  @default(PENDING)
+  riskRating RiskRating @default(LOW)
+
+  // Identity document fields
+  idType         String?    // PASSPORT | EMIRATES_ID | OTHER
+  idNumber       String?
+  idIssueDate    DateTime?
+  idExpiryDate   DateTime?
+  idIssuingCountry String?
+
+  // Demographics
+  nationality       String?
+  residencyStatus   String?    // RESIDENT | NON_RESIDENT | CITIZEN
+  visaNumber        String?
+  visaExpiryDate    DateTime?
+  occupation        String?
+  employer          String?
+  pepFlag           Boolean    @default(false)
+  pepNotes          String?    @db.Text
+
+  // Source-of-funds declaration (no live AML provider — text declaration only)
+  sourceOfFunds        String?  @db.Text
+  sourceOfFundsDocKey  String?  // S3 key if a supporting document was uploaded
+
+  // Address
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  country        String?
+  postalCode     String?
+
+  // Periodic refresh tracking
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  expiresAt    DateTime?       // soonest of idExpiryDate / visaExpiryDate / annual review
+  expiryAlertedAt DateTime?
+
+  notes      String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+  @@index([riskRating])
+  @@index([expiresAt])
+}
+
+// ============================================================
+// SECTION 20: DEAL PARTIES (Phase 1 — joint owners)
+// ============================================================
+
+// A DealParty links a Lead to a Deal with an ownership percentage and role.
+// Application-layer invariant: per Deal, sum of ownershipPercentage = 100,
+// and exactly one party has role = PRIMARY.
+model DealParty {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  role                 PartyRole @default(PRIMARY)
+  ownershipPercentage  Float     // 0..100
+
+  // Per-party signature snapshot when SPA is generated
+  signedAt    DateTime?
+  signedName  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dealId, leadId])
+  @@index([dealId])
+  @@index([leadId])
+}
+
+// ============================================================
+// SECTION 21: INVOICE & RECEIPT (Phase 1 — financial primitives)
+// ============================================================
+
+// Sequential numbering source. One row per (organizationId, sequenceKey, fiscalYear).
+// Use a transactional UPDATE to obtain the next value to guarantee gap-free numbers.
+model OrgNumberSequence {
+  id             String @id @default(cuid())
+  organizationId String
+  sequenceKey    String   // e.g. "INVOICE", "RECEIPT", "REFUND"
+  fiscalYear     Int      // e.g. 2026
+  prefix         String   @default("")
+  nextValue      Int      @default(1)
+  width          Int      @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, sequenceKey, fiscalYear])
+  @@index([organizationId])
+}
+
+model Invoice {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  invoiceNumber String   @unique // generated via OrgNumberSequence
+  fiscalYear    Int
+
+  status     InvoiceStatus @default(DRAFT)
+  issuedAt   DateTime?
+  dueDate    DateTime?
+
+  currency   String  @default("AED")
+  fxRate     Float?
+  fxSnapshotAt DateTime?
+
+  subtotal   Float
+  vatTotal   Float   @default(0)
+  total      Float
+
+  // Snapshot of payee identity at issue time
+  buyerName       String?
+  buyerAddress    String?  @db.Text
+  trnNumber       String?  // tax registration number printed
+
+  pdfKey     String?  // S3 key of generated PDF (Handlebars + Puppeteer)
+  notes      String?  @db.Text
+
+  lines      InvoiceLine[]
+  receipts   Receipt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([paymentId])
+  @@index([status])
+  @@index([fiscalYear])
+}
+
+model InvoiceLine {
+  id        String @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  kind        InvoiceLineKind @default(OTHER)
+  description String
+  quantity    Float           @default(1)
+  unitPrice   Float
+  vatPercent  Float           @default(0)
+  vatAmount   Float           @default(0)
+  amount      Float           // (unitPrice * quantity) net of VAT
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Receipt {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  receiptNumber String   @unique
+  fiscalYear    Int
+
+  amount        Float
+  currency      String   @default("AED")
+  fxRate        Float?
+  fxSnapshotAt  DateTime?
+
+  paymentMethod String?
+  paidDate      DateTime
+  paidBy        String?  // userId who recorded
+  payerName     String?
+
+  pdfKey        String?
+  notes         String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@index([fiscalYear])
+}
+
+// ============================================================
+// SECTION 22: REFUND (Phase 1 — financial primitives)
+// ============================================================
+
+model RefundRequest {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  amount     Float
+  currency   String       @default("AED")
+  reason     String       @db.Text
+  status     RefundStatus @default(REQUESTED)
+
+  requestedBy String
+  requestedAt DateTime  @default(now())
+
+  approvedBy String?
+  approvedAt DateTime?
+  rejectedReason String? @db.Text
+
+  processedBy String?
+  processedAt DateTime?
+  processedReference String? // bank ref / cheque number entered manually
+
+  notes      String?  @db.Text
+
+  approvals  RefundApproval[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([status])
+}
+
+model RefundApproval {
+  id        String @id @default(cuid())
+  refundId  String
+  refund    RefundRequest @relation(fields: [refundId], references: [id], onDelete: Cascade)
+
+  decision   String      // APPROVED | REJECTED
+  decidedBy  String
+  decidedAt  DateTime    @default(now())
+  comment    String?     @db.Text
+
+  @@index([refundId])
+}
+
+// ============================================================
+// SECTION 23: ESCROW (Phase 1 — RERA record-keeping)
+// ============================================================
+
+model EscrowAccount {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  bankName    String
+  branch      String?
+  accountName String
+  accountNo   String
+  iban        String?
+  swift       String?
+  currency    String   @default("AED")
+
+  trusteeAccountId String?
+  trusteeAccount   TrusteeAccount? @relation(fields: [trusteeAccountId], references: [id])
+
+  isActive  Boolean  @default(true)
+  openedAt  DateTime @default(now())
+  closedAt  DateTime?
+
+  ledger    EscrowLedgerEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([trusteeAccountId])
+}
+
+model TrusteeAccount {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  trusteeName       String
+  registrationNo    String?
+  contactEmail      String?
+  contactPhone      String?
+  notes             String? @db.Text
+
+  escrowAccounts EscrowAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model EscrowLedgerEntry {
+  id        String        @id @default(cuid())
+  accountId String
+  account   EscrowAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  direction EscrowEntryDirection
+  reason    EscrowEntryReason
+  amount    Float
+  currency  String  @default("AED")
+
+  // Optional links (we don't add reverse relations to Payment/RefundRequest to keep
+  // the existing models clean — this is a one-way reference for traceability).
+  paymentId      String?
+  refundRequestId String?
+  externalRef    String?  // bank statement reference or developer drawdown ref
+
+  postedAt   DateTime @default(now())
+  postedBy   String
+  notes      String?  @db.Text
+
+  @@index([accountId])
+  @@index([postedAt])
+  @@index([paymentId])
+  @@index([refundRequestId])
+}
+
+// ============================================================
+// SECTION 24: CONSTRUCTION MILESTONES (Phase 1)
+// ============================================================
+
+// Construction progress is tracked at the Phase level (or Project level if a phase
+// is not assigned). Ops update percentComplete manually; when the percentage crosses
+// the threshold of a PaymentPlanMilestone with triggerType=ON_CONSTRUCTION_PCT,
+// the matching Payment.dueDate is set.
+model ConstructionMilestone {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  phaseId   String?
+  phase     Phase?  @relation(fields: [phaseId], references: [id])
+
+  stage             ConstructionStage
+  label             String
+  description       String?  @db.Text
+  percentComplete   Float    @default(0)
+  certificateKey    String?  // S3 key of consultant's certificate
+  consultantName    String?
+  expectedDate      DateTime?
+  achievedDate      DateTime?
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([phaseId])
+  @@index([stage])
+}
+
+// ============================================================
+// SECTION 25: HANDOVER CHECKLIST (Phase 1)
+// ============================================================
+
+model HandoverChecklist {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  completedBy String?
+
+  customerSignedOffAt DateTime?
+  customerSignedName  String?
+  customerSignatureKey String?  // S3 key for signature image / signed sheet
+
+  notes String? @db.Text
+
+  items HandoverChecklistItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([unitId])
+}
+
+model HandoverChecklistItem {
+  id          String @id @default(cuid())
+  checklistId String
+  checklist   HandoverChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  // Stable code so seed templates can be re-used (e.g. KEY_HANDOVER, NOC_SERVICE_CHARGE)
+  code     String
+  label    String
+  required Boolean @default(true)
+
+  status     HandoverItemStatus @default(PENDING)
+  completedAt DateTime?
+  completedBy String?
+  evidenceKey String?            // S3 key of supporting document
+  notes       String?            @db.Text
+  sortOrder   Int                @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([checklistId, code])
+  @@index([checklistId])
+  @@index([status])
+}
+
+// ============================================================
+// SECTION 26: SNAGGING & DLP (Phase 1)
+// ============================================================
+
+model SnagList {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  // A unit may have multiple snag lists over time (pre-handover walk-through, post-handover, end-of-DLP).
+  label       String   @default("Snag List")
+  raisedAt    DateTime @default(now())
+  closedAt    DateTime?
+
+  items SnagItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+}
+
+model SnagItem {
+  id     String @id @default(cuid())
+  listId String
+  list   SnagList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  room        String?     // e.g. "Master Bedroom", "Kitchen"
+  category    String?     // e.g. "Paint", "Plumbing", "Electrical"
+  description String      @db.Text
+  severity    SnagSeverity @default(MINOR)
+  status      SnagStatus  @default(RAISED)
+
+  contractorName  String?
+  contractorEmail String?
+
+  dueDate    DateTime?
+  fixedDate  DateTime?
+  closedDate DateTime?
+
+  raisedBy   String      // userId
+  fixedBy    String?
+
+  rejectionReason String? @db.Text
+
+  photos SnagPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listId])
+  @@index([status])
+  @@index([severity])
+}
+
+model SnagPhoto {
+  id     String @id @default(cuid())
+  itemId String
+  item   SnagItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  s3Key   String   @db.Text
+  caption String?
+  takenAt DateTime @default(now())
+
+  // BEFORE = before fix, AFTER = after fix
+  kind    String   @default("BEFORE")
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+}
+
+model DefectLiabilityPeriod {
+  id     String @id @default(cuid())
+  unitId String @unique
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  startDate   DateTime
+  endDate     DateTime
+  months      Int
+  notes       String?  @db.Text
+  closed      Boolean  @default(false)
+  closedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([endDate])
+}
+
+// ============================================================
+// SECTION 27: TITLE DEED (Phase 1)
+// ============================================================
+
+model TitleDeedTransfer {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  dealId String?
+  deal   Deal?  @relation(fields: [dealId], references: [id])
+
+  status        TitleDeedStatus @default(PENDING)
+  deedNumber    String?
+  registryRef   String?
+  issuedDate    DateTime?
+  transferredAt DateTime?
+
+  buyerName     String?
+  sellerName    String?
+  notes         String?  @db.Text
+
+  documentKey   String?  // S3 key of scanned title deed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([dealId])
+  @@index([status])
+}
+
+// ============================================================
+// SECTION 28: TIERED COMMISSION (Phase 1)
+// ============================================================
+
+model TieredCommissionRule {
+  id        String  @id @default(cuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  name        String
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0)
+
+  validFrom   DateTime?
+  validUntil  DateTime?
+
+  tiers CommissionTier[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([isActive])
+}
+
+model CommissionTier {
+  id     String @id @default(cuid())
+  ruleId String
+  rule   TieredCommissionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  // Tier band by deal sale price
+  minSalePrice Float?
+  maxSalePrice Float?
+  // Or by units-sold-by-broker count
+  minUnitsSold Int?
+  maxUnitsSold Int?
+
+  ratePercent Float
+  flatBonus   Float @default(0)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([ruleId])
+}
+
+// Per-deal commission split between company / agent / sub-agent / referrer.
+model CommissionSplit {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  party       CommissionSplitParty
+  partyName   String?    // free-form (sub-agent name, referrer name)
+  partyId     String?    // optional FK-as-string (BrokerAgent.id, etc.)
+  percentage  Float      // % of total commission
+  amount      Float?     // computed when commission is approved
+  status      String     @default("PENDING") // PENDING | APPROVED | PAID
+  paidAt      DateTime?
+  paidVia     String?
+  notes       String?    @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([party])
+}
+
+// ============================================================
+// SECTION 29: LIFECYCLE PLACEHOLDERS (schema only — no services / UI yet)
+// ============================================================
+
+model Lease {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  status         LeaseStatus @default(DRAFT)
+  startDate      DateTime
+  endDate        DateTime
+  annualRent     Float
+  currency       String      @default("AED")
+  securityDeposit Float      @default(0)
+  ejariNumber    String?     // populated when registered with Ejari
+  notes          String?     @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Tenant {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String?
+  email     String?
+  phone     String?
+  emiratesId String?
+  passportNo String?
+  nationality String?
+
+  leases Lease[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([email])
+}
+
+model ServiceCharge {
+  id        String @id @default(cuid())
+  // tied to a project; per-unit allocations live in ServiceChargeAllocation
+  projectId String
+
+  fiscalYear Int
+  ratePerSqm Float
+  totalBudget Float?
+  notes      String? @db.Text
+
+  allocations ServiceChargeAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([fiscalYear])
+}
+
+model ServiceChargeAllocation {
+  id              String @id @default(cuid())
+  serviceChargeId String
+  serviceCharge   ServiceCharge @relation(fields: [serviceChargeId], references: [id], onDelete: Cascade)
+
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  amount      Float
+  paid        Boolean @default(false)
+  paidAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceChargeId, unitId])
+  @@index([unitId])
+}
+
+model FacilityWorkOrder {
+  id     String @id @default(cuid())
+  unitId String?
+  unit   Unit?  @relation(fields: [unitId], references: [id])
+
+  category    String
+  description String  @db.Text
+  status      FacilityWorkOrderStatus @default(OPEN)
+  raisedBy    String  // user or tenant id
+  assignedTo  String?
+  raisedAt    DateTime @default(now())
+  resolvedAt  DateTime?
+  notes       String?  @db.Text
+
+  @@index([unitId])
+  @@index([status])
+}
+
+model ResaleListing {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  askingPrice Float
+  currency    String  @default("AED")
+  status      ResaleStatus @default(ACTIVE)
+  listedAt    DateTime @default(now())
+  withdrawnAt DateTime?
+  soldAt      DateTime?
+  notes       String?  @db.Text
+
+  @@index([unitId])
+  @@index([status])
 }

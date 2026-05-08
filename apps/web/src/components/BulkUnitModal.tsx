@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface Props {
   projectId: string;
@@ -19,7 +20,7 @@ interface UnitRow {
 const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];
 const UNIT_VIEWS = ["SEA", "GARDEN", "STREET", "BACK", "SIDE", "AMENITIES"];
 
-const inp = "border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 focus:outline-none focus:border-blue-400 w-full";
+const inp = "border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 w-full";
 
 function buildRows(count: number, defaultType: string, defaultView: string, defaultArea: string, defaultPrice: string): UnitRow[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -32,6 +33,8 @@ function buildRows(count: number, defaultType: string, defaultView: string, defa
   }));
 }
 
+type Step = "config" | "layout" | "preview" | "result";
+
 export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) {
   const [floor, setFloor] = useState("");
   const [defaultType, setDefaultType] = useState("TWO_BR");
@@ -40,10 +43,16 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
   const [defaultPrice, setDefaultPrice] = useState("");
   const [configCount, setConfigCount] = useState(8);
   const [rows, setRows] = useState<UnitRow[]>([]);
-  const [step, setStep] = useState<"config" | "layout" | "result">("config");
+  const [step, setStep] = useState<Step>("config");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ created: number; skipped: number; units: any[] } | null>(null);
+
+  // Numeric apply-all UI state
+  const [bulkPriceMode, setBulkPriceMode] = useState<"SET" | "PERCENT" | "DELTA">("SET");
+  const [bulkPriceValue, setBulkPriceValue] = useState("");
+  const [bulkAreaMode, setBulkAreaMode]     = useState<"SET" | "PERCENT" | "DELTA">("SET");
+  const [bulkAreaValue, setBulkAreaValue]   = useState("");
 
   // Load defaults from project config
   useEffect(() => {
@@ -65,38 +74,72 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
     setError(null);
   };
 
-  const updateRow = (idx: number, field: keyof UnitRow, value: string | boolean) =>
+  const updateRow = (idx: number, field: keyof UnitRow, value: string | boolean) => {
     setRows((r) => r.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+    if (error) setError(null); // clear validation error as soon as user edits anything
+  };
 
   // Apply a column value to all included rows
-  const applyToAll = (field: "type" | "view" | "area" | "price", value: string) =>
+  const applyToAll = (field: "type" | "view", value: string, label?: string) => {
+    if (!value) return;
+    const count = rows.filter((r) => r.include).length;
     setRows((r) => r.map((row) => row.include ? { ...row, [field]: value } : row));
+    toast.success(`Set ${label ?? field} to ${value.replace(/_/g, " ")} on ${count} unit${count !== 1 ? "s" : ""}`);
+    if (error) setError(null);
+  };
+
+  const applyNumericAll = (field: "area" | "price", mode: "SET" | "PERCENT" | "DELTA", rawValue: string) => {
+    const value = parseFloat(rawValue);
+    if (!Number.isFinite(value)) {
+      toast.error("Enter a number first");
+      return;
+    }
+    let count = 0;
+    setRows((r) => r.map((row) => {
+      if (!row.include) return row;
+      const current = parseFloat(row[field] || "0");
+      let next: number;
+      if (mode === "SET")          next = value;
+      else if (mode === "PERCENT") next = current * (1 + value / 100);
+      else                         next = current + value;
+      if (next <= 0) return row;
+      count += 1;
+      return { ...row, [field]: String(field === "area" ? Math.round(next * 10) / 10 : Math.round(next)) };
+    }));
+    const verb = mode === "SET" ? `set to ${value}` :
+                 mode === "PERCENT" ? `${value >= 0 ? "+" : ""}${value}%` :
+                 `${value >= 0 ? "+" : ""}${value}`;
+    toast.success(`${field === "area" ? "Area" : "Price"} ${verb} on ${count} unit${count !== 1 ? "s" : ""}`);
+    if (error) setError(null);
+  };
+
+  const validateAndPreview = () => {
+    const toCreate = rows.filter((r) => r.include);
+    if (toCreate.length === 0) { setError("Select at least one unit to create"); return; }
+    const floorNum = parseInt(floor);
+    if (!floorNum) { setError("Invalid floor number — go back to step 1"); return; }
+    for (const row of toCreate) {
+      if (!row.area  || parseFloat(row.area)  <= 0) { setError(`Unit ${floorNum}-${String(row.suffix).padStart(2, "0")}: area must be greater than 0`);  return; }
+      if (!row.price || parseFloat(row.price) <= 0) { setError(`Unit ${floorNum}-${String(row.suffix).padStart(2, "0")}: price must be greater than 0`); return; }
+    }
+    setError(null);
+    setStep("preview");
+  };
 
   const handleSubmit = async () => {
     const toCreate = rows.filter((r) => r.include);
-    if (toCreate.length === 0) return;
-
     const floorNum = parseInt(floor);
-    if (!floorNum) { setError("Invalid floor number"); return; }
-
-    // Validate all rows have valid area and price
-    for (const row of toCreate) {
-      if (!row.area || parseFloat(row.area) <= 0) { setError(`Unit ${floorNum}-${String(row.suffix).padStart(2, "0")}: area must be > 0`); return; }
-      if (!row.price || parseFloat(row.price) <= 0) { setError(`Unit ${floorNum}-${String(row.suffix).padStart(2, "0")}: price must be > 0`); return; }
-    }
-
     setSubmitting(true);
     setError(null);
     try {
-      // Single transactional bulk request — all or none
       const r = await axios.post("/api/units/bulk", {
         projectId,
         units: toCreate.map((row) => ({
           unitNumber: `${floorNum}-${String(row.suffix).padStart(2, "0")}`,
           floor: floorNum,
-          type: row.type,
-          view: row.view,
-          area: parseFloat(row.area),
+          type:  row.type,
+          view:  row.view,
+          area:  parseFloat(row.area),
           price: parseFloat(row.price),
         })),
       });
@@ -105,27 +148,45 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
       onCreated();
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to create units. Check values and try again.");
+      setStep("layout");
     } finally {
       setSubmitting(false);
     }
   };
 
   const activeRows = rows.filter((r) => r.include).length;
+  const floorNum = parseInt(floor) || 0;
+
+  // Preview-step aggregations
+  const previewSummary = useMemo(() => {
+    const inc = rows.filter((r) => r.include);
+    const byType: Record<string, number> = {};
+    const byView: Record<string, number> = {};
+    let totalArea = 0, totalPrice = 0;
+    inc.forEach((r) => {
+      byType[r.type] = (byType[r.type] ?? 0) + 1;
+      byView[r.view] = (byView[r.view] ?? 0) + 1;
+      totalArea += parseFloat(r.area || "0");
+      totalPrice += parseFloat(r.price || "0");
+    });
+    return { count: inc.length, byType, byView, totalArea, totalPrice };
+  }, [rows]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
             <h2 className="font-bold text-slate-900">Add Floor</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              {step === "config" && "Set floor number and shared defaults"}
-              {step === "layout" && `Customize each unit — ${activeRows} of ${rows.length} selected`}
-              {step === "result" && "Units created"}
+              {step === "config"  && "Step 1 of 3 — Set floor number and shared defaults"}
+              {step === "layout"  && `Step 2 of 3 — Customise each unit · ${activeRows} of ${rows.length} selected`}
+              {step === "preview" && `Step 3 of 3 — Review before creating ${activeRows} unit${activeRows !== 1 ? "s" : ""}`}
+              {step === "result"  && "Done"}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none" aria-label="Close">×</button>
         </div>
 
         {/* Step 1 — Config */}
@@ -170,7 +231,7 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default Area (sqm) *  <span className="text-blue-500 font-normal">shown as sqft</span></label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default Area (sqm) *</label>
                   <input required type="number" min="1" step="0.1" value={defaultArea} onChange={(e) => setDefaultArea(e.target.value)}
                     placeholder="e.g. 85"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
@@ -196,35 +257,68 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
         {/* Step 2 — Per-unit layout */}
         {step === "layout" && (
           <>
-            {/* "Apply to all" row */}
-            <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
+            {/* "Apply to all" — categorical */}
+            <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex-shrink-0 space-y-1.5">
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="font-semibold w-16 shrink-0">Apply all:</span>
-                <select onChange={(e) => applyToAll("type", e.target.value)} defaultValue=""
+                <span className="font-semibold w-20 shrink-0">Apply all:</span>
+                <select onChange={(e) => { applyToAll("type", e.target.value, "Type"); e.currentTarget.value = ""; }} defaultValue=""
                   className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
                   <option value="" disabled>Set type…</option>
                   {UNIT_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                 </select>
-                <select onChange={(e) => applyToAll("view", e.target.value)} defaultValue=""
+                <select onChange={(e) => { applyToAll("view", e.target.value, "View"); e.currentTarget.value = ""; }} defaultValue=""
                   className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
                   <option value="" disabled>Set view…</option>
                   {UNIT_VIEWS.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
                 <span className="ml-auto text-slate-400">{activeRows} units will be created</span>
               </div>
+
+              {/* "Apply to all" — numeric */}
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-semibold w-20 shrink-0">Price:</span>
+                <select value={bulkPriceMode} onChange={(e) => setBulkPriceMode(e.target.value as any)}
+                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  <option value="SET">Set to</option>
+                  <option value="PERCENT">% change</option>
+                  <option value="DELTA">+/− AED</option>
+                </select>
+                <input type="number" value={bulkPriceValue} onChange={(e) => setBulkPriceValue(e.target.value)}
+                  placeholder={bulkPriceMode === "PERCENT" ? "e.g. 5 or -3" : bulkPriceMode === "DELTA" ? "e.g. 50000" : "e.g. 1200000"}
+                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none w-32" />
+                <button type="button" onClick={() => applyNumericAll("price", bulkPriceMode, bulkPriceValue)}
+                  className="px-2 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                  Apply
+                </button>
+
+                <span className="font-semibold w-12 shrink-0 ml-3">Area:</span>
+                <select value={bulkAreaMode} onChange={(e) => setBulkAreaMode(e.target.value as any)}
+                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  <option value="SET">Set to</option>
+                  <option value="PERCENT">% change</option>
+                  <option value="DELTA">+/− sqm</option>
+                </select>
+                <input type="number" value={bulkAreaValue} onChange={(e) => setBulkAreaValue(e.target.value)}
+                  placeholder={bulkAreaMode === "PERCENT" ? "e.g. 5" : "e.g. 85"}
+                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none w-24" />
+                <button type="button" onClick={() => applyNumericAll("area", bulkAreaMode, bulkAreaValue)}
+                  className="px-2 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                  Apply
+                </button>
+              </div>
             </div>
 
             {/* Unit rows */}
             <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white border-b border-slate-100">
                   <tr>
                     <th className="px-3 py-2 text-left text-slate-500 w-8"></th>
                     <th className="px-3 py-2 text-left text-slate-500 w-20">Unit No.</th>
                     <th className="px-3 py-2 text-left text-slate-500">Type</th>
                     <th className="px-3 py-2 text-left text-slate-500">View</th>
-                    <th className="px-3 py-2 text-left text-slate-500 w-24">Area (sqm)</th>
-                    <th className="px-3 py-2 text-left text-slate-500 w-28">Price (AED)</th>
+                    <th className="px-3 py-2 text-left text-slate-500 w-28">Area (sqm)</th>
+                    <th className="px-3 py-2 text-left text-slate-500 w-32">Price (AED)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -264,22 +358,124 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
               </table>
             </div>
 
-            {error && <p className="mx-6 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+            {error && <p className="mx-6 my-2 text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>}
 
             <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
               <button onClick={() => setStep("config")} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">← Back</button>
               <button
-                onClick={handleSubmit}
-                disabled={submitting || activeRows === 0}
+                onClick={validateAndPreview}
+                disabled={activeRows === 0}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
               >
-                {submitting ? "Creating…" : `Create ${activeRows} Unit${activeRows !== 1 ? "s" : ""} on Floor ${floor}`}
+                Preview {activeRows} unit{activeRows !== 1 ? "s" : ""} →
               </button>
             </div>
           </>
         )}
 
-        {/* Step 3 — Result */}
+        {/* Step 3 — Preview before submit */}
+        {step === "preview" && (
+          <>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Summary cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <p className="text-3xl font-bold text-blue-700">{previewSummary.count}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">Units to create on F{floorNum}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-slate-800">
+                    {Math.round(previewSummary.totalArea).toLocaleString("en-AE")}
+                    <span className="text-sm font-medium text-slate-500 ml-1">sqm</span>
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Total area</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-emerald-700">
+                    AED {(previewSummary.totalPrice / 1_000_000).toLocaleString("en-AE", { maximumFractionDigits: 2 })}M
+                  </p>
+                  <p className="text-xs text-emerald-700 font-medium mt-1">Combined list price</p>
+                </div>
+              </div>
+
+              {/* Type / view chips */}
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="font-semibold text-slate-600 mb-1.5">Mix by type</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(previewSummary.byType).map(([t, c]) => (
+                      <span key={t} className="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                        {t.replace(/_/g, " ")} <span className="font-bold ml-1">{c}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-600 mb-1.5">Mix by view</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(previewSummary.byView).map(([v, c]) => (
+                      <span key={v} className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                        {v} <span className="font-bold ml-1">{c}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit list */}
+              <div>
+                <p className="font-semibold text-slate-600 text-xs mb-2">Units to be created (atomic — all or nothing)</p>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-slate-100 text-slate-500">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left font-semibold">Unit No.</th>
+                        <th className="px-3 py-1.5 text-left font-semibold">Type</th>
+                        <th className="px-3 py-1.5 text-left font-semibold">View</th>
+                        <th className="px-3 py-1.5 text-right font-semibold">Area</th>
+                        <th className="px-3 py-1.5 text-right font-semibold">Price (AED)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {rows.filter((r) => r.include).map((r) => (
+                        <tr key={r.suffix}>
+                          <td className="px-3 py-1.5 font-mono font-semibold text-slate-700">{floorNum}-{String(r.suffix).padStart(2, "0")}</td>
+                          <td className="px-3 py-1.5 text-slate-700">{r.type.replace(/_/g, " ")}</td>
+                          <td className="px-3 py-1.5 text-slate-600">{r.view}</td>
+                          <td className="px-3 py-1.5 text-right text-slate-600">{r.area} sqm</td>
+                          <td className="px-3 py-1.5 text-right text-slate-700 font-medium">{Number(r.price).toLocaleString("en-AE")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {error && <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setStep("layout")}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
+              >
+                ← Back to edit
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+              >
+                {submitting ? "Creating…" : `Create ${previewSummary.count} unit${previewSummary.count !== 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Step 4 — Result */}
         {step === "result" && result && (
           <div className="px-6 py-6 space-y-4">
             <div className="flex gap-4">
