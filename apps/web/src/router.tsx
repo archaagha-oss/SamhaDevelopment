@@ -10,8 +10,9 @@ import DealsPage from "./components/DealsPage";
 import DealDetailPage from "./components/DealDetailPage";
 import BrokerPage from "./components/BrokerPage";
 import CommissionDashboard from "./components/CommissionDashboard";
-import PaymentReportPage from "./components/PaymentReportPage";
 import FinanceDashboard from "./components/FinanceDashboard";
+import PaymentReportPage from "./components/PaymentReportPage";
+import BrokerOnboarding from "./components/BrokerOnboarding";
 import ContractsPage from "./pages/ContractsPage";
 import NotFoundPage from "./components/NotFoundPage";
 import ProjectsPage from "./components/ProjectsPage";
@@ -43,6 +44,9 @@ import LeadKycPage from "./pages/LeadKycPage";
 import DealJointOwnersPage from "./pages/DealJointOwnersPage";
 
 export const router = createBrowserRouter([
+  // Standalone pages (no app shell — full-page layout)
+  { path: "/broker-onboarding",                          element: <BrokerOnboarding /> },
+
   // Standalone print pages (no app shell — full-page printable layout)
   { path: "/offers/:offerId",                            element: <OfferPrintPage /> },
   { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
@@ -66,6 +70,7 @@ export const router = createBrowserRouter([
       { path: "deals/:dealId",                            element: <DealDetailPage /> },
       { path: "brokers",                                  element: <BrokerPage /> },
       { path: "commissions",                              element: <CommissionDashboard /> },
+      { path: "finance",                                  element: <FinanceDashboard /> },
       { path: "tasks",                                     element: <ActivitiesPage /> },
       { path: "finance",                                  element: <FinanceDashboard /> },
       { path: "payments",                                  element: <PaymentReportPage /> },
