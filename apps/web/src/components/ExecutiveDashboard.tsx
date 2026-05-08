@@ -1,228 +1,669 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { LEAD_STAGE_HEX } from "@/components/ui/stage-badge";
-import { Skeleton, SkeletonKpi } from "./Skeleton";
-import { IconRefresh } from "./Icons";
+import {
+  Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from "recharts";
 
-function timeAgo(d: Date | null): string {
-  if (!d) return "—";
-  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diff < 5) return "just now";
-  if (diff < 60) return `${diff}s ago`;
-  const m = Math.floor(diff / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
+// ===== Types =====
 interface Overview {
   unitsSold: number; totalUnits: number; soldPercentage: number | string;
   revenueCollected: number; pipelineValue: number; overduePayments: number;
   totalLeads: number; totalDeals: number;
+  developerIncentives?: { dldWaivedTotal: number; adminFeeWaivedCount: number };
 }
 interface LeadsReport {
   byStage: Record<string, number>; bySource: Record<string, number>;
   conversionRate: number | string; totalLeads: number; convertedToDeals: number;
 }
 interface UnitStatus { [key: string]: number; }
-const fmtM = (n: number) => `${(n / 1_000_000).toFixed(2)}M`;
-const fmtK = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(0)}K` : String(n);
+interface MonthlyRevenue { key: string; label: string; collected: number; expected: number; }
+interface CollectionsData {
+  overdue: { count: number; total: number };
+  aging: { range: string; count: number; amount: number }[];
+  upcoming: {
+    next7Days:  { count: number; total: number; payments: any[] };
+    next30Days: { count: number; total: number; payments: any[] };
+  };
+}
+interface AgentSummary {
+  agentId: string; agentName: string; role: string;
+  totalLeads: number; closedLeads: number; closeRate: string;
+  totalDeals: number; dealRevenue: number; commissionEarned: number;
+}
+interface InventoryProject {
+  projectId: string; projectName: string; total: number;
+  byStatus: Record<string, number>; totalValue: number; availableRate: string;
+}
+interface Task {
+  id: string; title: string; type: string; priority: string; status: string;
+  dueDate: string;
+  lead?: { id: string; firstName: string; lastName: string } | null;
+  deal?: { id: string; dealNumber: string } | null;
+}
+interface ProjectOption { id: string; name: string; }
 
-const STAGE_COLORS = LEAD_STAGE_HEX;
-const BAR_COLORS = ["#2563eb","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899"];
+// ===== Time period filter =====
+type PeriodKey = "1M" | "3M" | "6M" | "12M" | "YTD" | "ALL";
+const PERIOD_OPTIONS: { key: PeriodKey; label: string; months: number }[] = [
+  { key: "1M",  label: "Last 30d", months: 1  },
+  { key: "3M",  label: "Last 3mo", months: 3  },
+  { key: "6M",  label: "Last 6mo", months: 6  },
+  { key: "12M", label: "Last 12mo", months: 12 },
+  { key: "YTD", label: "Year to date", months: 0 },
+  { key: "ALL", label: "All time",  months: 0 },
+];
 
+function periodToRange(p: PeriodKey): { from?: Date; months: number } {
+  const now = new Date();
+  switch (p) {
+    case "1M":  return { from: new Date(now.getTime() - 30  * 86400000), months: 1  };
+    case "3M":  return { from: new Date(now.getTime() - 90  * 86400000), months: 3  };
+    case "6M":  return { from: new Date(now.getTime() - 180 * 86400000), months: 6  };
+    case "12M": return { from: new Date(now.getTime() - 365 * 86400000), months: 12 };
+    case "YTD": return { from: new Date(now.getFullYear(), 0, 1),        months: now.getMonth() + 1 };
+    case "ALL": return { months: 24 };
+  }
+}
+
+// ===== Formatters =====
+const fmtAED = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M`
+  : n >= 1_000   ? `${(n / 1_000).toFixed(0)}K`
+  : `${Math.round(n)}`;
+
+const fmtNum = (n: number) => n.toLocaleString();
+
+// ===== Color tokens =====
+const STAGE_COLORS: Record<string, string> = {
+  NEW: "#64748b", CONTACTED: "#3b82f6", QUALIFIED: "#0ea5e9",
+  OFFER_SENT: "#8b5cf6", SITE_VISIT: "#06b6d4", NEGOTIATING: "#f59e0b",
+  CLOSED_WON: "#10b981", CLOSED_LOST: "#ef4444",
+};
+const UNIT_COLORS: Record<string, string> = {
+  AVAILABLE: "#10b981", INTERESTED: "#06b6d4", RESERVED: "#8b5cf6",
+  BOOKED: "#3b82f6", SOLD: "#22c55e", BLOCKED: "#ef4444", HANDED_OVER: "#0ea5e9",
+};
+
+// ===== Component =====
 export default function ExecutiveDashboard(): React.ReactNode {
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [unitStatus, setUnitStatus] = useState<UnitStatus>({});
   const [leadsReport, setLeadsReport] = useState<LeadsReport | null>(null);
+  const [monthly, setMonthly] = useState<MonthlyRevenue[]>([]);
+  const [collections, setCollections] = useState<CollectionsData | null>(null);
+  const [agents, setAgents] = useState<AgentSummary[]>([]);
+  const [inventory, setInventory] = useState<InventoryProject[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
-  const [, setNowTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchDashboardData = () => {
-    setLoading(true);
+  // Filters
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [projectId, setProjectId] = useState<string>("all"); // "all" or project id
+  const [period, setPeriod] = useState<PeriodKey>("12M");
+
+  // Load projects once for the dropdown
+  useEffect(() => {
+    axios.get("/api/projects")
+      .then((res) => {
+        const list: ProjectOption[] = (res.data || []).map((p: any) => ({ id: p.id, name: p.name }));
+        setProjects(list);
+      })
+      .catch(() => setProjects([]));
+  }, []);
+
+  const fetchAll = useCallback((silent = false) => {
+    if (silent) setRefreshing(true); else setLoading(true);
     setError(null);
+
+    const { from, months } = periodToRange(period);
+    const baseParams: Record<string, string> = {};
+    if (projectId !== "all") baseParams.projectId = projectId;
+    if (from) baseParams.from = from.toISOString();
+
     Promise.all([
-      axios.get("/api/reports/overview"),
-      axios.get("/api/reports/units-by-status"),
-      axios.get("/api/reports/leads"),
-    ]).then(([o, u, l]) => {
+      axios.get("/api/reports/overview",         { params: baseParams }),
+      axios.get("/api/reports/units-by-status",  { params: { projectId: baseParams.projectId } }),
+      axios.get("/api/reports/leads",            { params: baseParams }),
+      axios.get("/api/reports/revenue/monthly",  { params: { projectId: baseParams.projectId, months } }),
+      axios.get("/api/reports/collections",      { params: { projectId: baseParams.projectId } }),
+      axios.get("/api/reports/agents/summary"),
+      axios.get("/api/reports/inventory"),
+      axios.get("/api/tasks", { params: { status: "PENDING", limit: 8 } }),
+    ]).then(([o, u, l, m, c, a, i, t]) => {
       setOverview(o.data);
       setUnitStatus(u.data);
       setLeadsReport(l.data);
-      setLastFetched(new Date());
+      setMonthly(m.data || []);
+      setCollections(c.data);
+      setAgents(a.data || []);
+      setInventory(i.data || []);
+      setTasks(Array.isArray(t.data) ? t.data : (t.data?.data || []));
     }).catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
-      .finally(() => setLoading(false));
-  };
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  }, [projectId, period]);
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  // Refetch whenever filters change (silent so the page doesn't blank out)
+  useEffect(() => { fetchAll(overview !== null); /* eslint-disable-next-line */ }, [projectId, period]);
 
-  // Re-render the "Updated Xm ago" label every 30s without refetching.
-  useEffect(() => {
-    const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
+  const activeProjectName = projectId === "all"
+    ? "All projects"
+    : projects.find((p) => p.id === projectId)?.name || "All projects";
+  const activePeriodLabel = PERIOD_OPTIONS.find((p) => p.key === period)?.label || "Last 12mo";
 
-  if (loading && !overview) return (
-    <div className="p-6 space-y-6" role="status" aria-busy="true" aria-label="Loading dashboard">
-      <div>
-        <Skeleton className="h-6 w-44" />
-        <Skeleton className="h-3 w-72 mt-2" />
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => <SkeletonKpi key={i} />)}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => <SkeletonKpi key={i} />)}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-64 w-full" rounded="xl" />
-        <Skeleton className="h-64 w-full" rounded="xl" />
-      </div>
+  // Derived data
+  const unitChartData = useMemo(
+    () => Object.entries(unitStatus).map(([status, count]) => ({
+      name: status.replace(/_/g, " "),
+      value: count,
+      fill: UNIT_COLORS[status] || "#94a3b8",
+    })),
+    [unitStatus],
+  );
+
+  const stageEntries = useMemo(
+    () => leadsReport ? Object.entries(leadsReport.byStage) : [],
+    [leadsReport],
+  );
+  const totalStageLeads = stageEntries.reduce((s, [, v]) => s + v, 0);
+
+  // Overdue payments needing action (top 3)
+  const overdueAlertsCount = collections?.overdue.count ?? 0;
+  const oqoodDueSoon = useMemo(() => {
+    // tasks with type containing "OQOOD" or "DEADLINE" or due within 7 days
+    const inOneWeek = Date.now() + 7 * 86400000;
+    return tasks.filter((t) =>
+      (t.type || "").toUpperCase().includes("OQOOD") ||
+      (t.priority === "URGENT" || t.priority === "HIGH") ||
+      (new Date(t.dueDate).getTime() < inOneWeek),
+    ).slice(0, 5);
+  }, [tasks]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-full bg-slate-950">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
   if (error) return (
-    <div className="p-6 flex flex-col items-center justify-center h-64 gap-3">
-      <p className="text-red-500 font-medium">{error}</p>
-      <button onClick={fetchDashboardData} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">Retry</button>
+    <div className="p-6 flex flex-col items-center justify-center h-full gap-3 bg-slate-950">
+      <p className="text-red-400 font-medium">{error}</p>
+      <button onClick={() => fetchAll()} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">Retry</button>
     </div>
   );
-  if (!overview || !leadsReport) return null;
+  if (!overview || !leadsReport || !collections) return null;
 
-  const unitChartData = Object.entries(unitStatus).map(([status, count], i) => ({
-    name: status.replace(/_/g, " "), value: count, fill: BAR_COLORS[i % BAR_COLORS.length],
-  }));
-
-  const stageEntries = Object.entries(leadsReport.byStage);
-  const totalStageLeads = stageEntries.reduce((s, [, v]) => s + v, 0);
-
+  // ===== KPIs (top strip) =====
   const kpis = [
-    { label: "Revenue Collected", value: fmtM(overview.revenueCollected), sub: "AED",              color: "bg-blue-600",   icon: "↑", to: "/payments" },
-    { label: "Pipeline Value",     value: fmtM(overview.pipelineValue),    sub: "AED in pipeline",  color: "bg-indigo-600", icon: "◈", to: "/deals" },
-    { label: "Units Sold",         value: `${overview.unitsSold}/${overview.totalUnits}`, sub: `${overview.soldPercentage}% sold`, color: "bg-emerald-600", icon: "⊞", to: "/units" },
-    { label: "Overdue Payments",   value: fmtK(overview.overduePayments),  sub: "AED overdue",      color: "bg-red-500",    icon: "!", to: "/payments" },
+    {
+      label: "Revenue Collected",
+      value: `AED ${fmtAED(overview.revenueCollected)}`,
+      sub: period === "ALL" ? "All time" : activePeriodLabel,
+      tone: "from-emerald-500/15 to-emerald-500/5", accent: "text-emerald-400", icon: "↑",
+    },
+    {
+      label: "Pipeline Value",
+      value: `AED ${fmtAED(overview.pipelineValue)}`,
+      sub: `${overview.totalDeals} active deals`,
+      tone: "from-blue-500/15 to-blue-500/5", accent: "text-blue-400", icon: "◈",
+    },
+    {
+      label: "Units Sold",
+      value: `${overview.unitsSold} / ${overview.totalUnits}`,
+      sub: `${overview.soldPercentage}% sold`,
+      tone: "from-indigo-500/15 to-indigo-500/5", accent: "text-indigo-400", icon: "⊞",
+    },
+    {
+      label: "Conversion Rate",
+      value: `${leadsReport.conversionRate}%`,
+      sub: `${leadsReport.convertedToDeals} of ${leadsReport.totalLeads} leads`,
+      tone: "from-purple-500/15 to-purple-500/5", accent: "text-purple-400", icon: "↗",
+    },
+    {
+      label: "Overdue Payments",
+      value: `AED ${fmtAED(overview.overduePayments)}`,
+      sub: `${overdueAlertsCount} payment${overdueAlertsCount === 1 ? "" : "s"}`,
+      tone: "from-red-500/15 to-red-500/5", accent: "text-red-400", icon: "!",
+      onClick: () => navigate("/payments"),
+    },
   ];
 
+  // Action items count
+  const actionItemsCount =
+    overdueAlertsCount +
+    (collections.upcoming.next7Days.count) +
+    oqoodDueSoon.length;
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="p-6 space-y-6 bg-slate-950 min-h-full">
+      {/* ===== Header ===== */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Command Center</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Real-time sales pipeline overview</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Command Center</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            <span className="text-slate-300">{activeProjectName}</span>
+            <span className="mx-1.5 text-slate-600">·</span>
+            <span className="text-slate-300">{activePeriodLabel}</span>
+            <span className="mx-1.5 text-slate-600">·</span>
+            {new Date().toLocaleDateString("en-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className="text-xs text-slate-400"
-            title={lastFetched ? lastFetched.toLocaleString() : ""}
-            aria-live="polite"
-          >
-            Updated {timeAgo(lastFetched)}
-          </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Project filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg pl-3 pr-1 py-1">
+            <span className="text-xs text-slate-500">Project</span>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="bg-slate-900 text-slate-100 text-xs font-medium px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[160px]"
+            >
+              <option value="all">All projects</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          {/* Period filter */}
+          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+            {PERIOD_OPTIONS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                  period === p.key ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+                title={p.label}
+              >
+                {p.key}
+              </button>
+            ))}
+          </div>
+
           <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-            aria-label="Refresh dashboard"
+            onClick={() => fetchAll(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 transition-colors disabled:opacity-50"
+            title="Refresh"
           >
-            <IconRefresh size={12} aria-hidden="true" className={loading ? "animate-spin" : ""} />
-            <span>Refresh</span>
+            <span className={refreshing ? "animate-spin inline-block" : "inline-block"}>↻</span>
+          </button>
+          <button
+            onClick={() => navigate("/reports")}
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            View Reports
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ===== KPI Strip ===== */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {kpis.map((k) => (
-          <Link
+          <button
             key={k.label}
-            to={k.to}
-            className={`${k.color} rounded-xl p-4 text-white block hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all`}
-            aria-label={`${k.label}: ${k.value}. View ${k.to.replace("/", "")}.`}
+            onClick={k.onClick}
+            disabled={!k.onClick}
+            className={`text-left bg-gradient-to-br ${k.tone} bg-slate-900 border border-slate-800 rounded-xl p-4 ${k.onClick ? "hover:border-slate-700 cursor-pointer" : "cursor-default"} transition-colors`}
           >
             <div className="flex items-start justify-between mb-2">
-              <p className="text-xs font-medium opacity-80">{k.label}</p>
-              <span className="text-lg opacity-60 leading-none" aria-hidden="true">{k.icon}</span>
+              <p className="text-xs font-medium text-slate-400">{k.label}</p>
+              <span className={`text-base ${k.accent} leading-none`}>{k.icon}</span>
             </div>
-            <p className="text-2xl font-bold tracking-tight">{k.value}</p>
-            <p className="text-xs opacity-70 mt-0.5">{k.sub}</p>
-          </Link>
+            <p className="text-xl font-bold text-white tracking-tight">{k.value}</p>
+            <p className="text-xs text-slate-500 mt-1 truncate">{k.sub}</p>
+          </button>
         ))}
       </div>
 
-      {/* Secondary metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: "Total Leads",      value: overview.totalLeads,   color: "text-blue-600",    to: "/leads" },
-          { label: "Active Deals",     value: overview.totalDeals,   color: "text-emerald-600", to: "/deals" },
-          { label: "Conversion Rate",  value: `${leadsReport.conversionRate}%`, color: "text-purple-600", to: "/reports" },
-        ].map((m) => (
-          <Link
-            key={m.label}
-            to={m.to}
-            className="bg-white rounded-xl border border-slate-200 p-4 block hover:border-slate-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-          >
-            <p className="text-slate-500 text-xs mb-1">{m.label}</p>
-            <p className={`text-2xl font-bold ${m.color}`}>{m.value}</p>
-          </Link>
-        ))}
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Units by status */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">Units by Status</h2>
-          {unitChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={unitChartData} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} angle={-30} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <Tooltip contentStyle={{ fontSize: 12, border: "1px solid #e2e8f0", borderRadius: 8 }} />
-                <Bar dataKey="value" radius={[4,4,0,0]}>
-                  {unitChartData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : <p className="text-slate-400 text-sm">No data</p>}
+      {/* ===== Action Items / Alerts ===== */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400">⚠</span>
+            <h2 className="text-sm font-semibold text-white">Action Items</h2>
+            {actionItemsCount > 0 && (
+              <span className="px-2 py-0.5 bg-amber-500/15 text-amber-400 text-xs font-bold rounded-full">
+                {actionItemsCount}
+              </span>
+            )}
+          </div>
+          <button onClick={() => navigate("/tasks")} className="text-xs text-blue-400 hover:text-blue-300">View all →</button>
         </div>
 
-        {/* Leads by stage */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">Lead Pipeline</h2>
-          <div className="space-y-2.5">
-            {stageEntries.map(([stage, count]) => {
-              const pct = totalStageLeads > 0 ? Math.round((count / totalStageLeads) * 100) : 0;
-              const color = STAGE_COLORS[stage] || "#94a3b8";
-              return (
-                <div key={stage}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-600 font-medium">{stage.replace(/_/g, " ")}</span>
-                    <span className="text-slate-500">{count} ({pct}%)</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-                  </div>
-                </div>
-              );
-            })}
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+          {/* Overdue */}
+          <button
+            onClick={() => navigate("/payments")}
+            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Overdue Payments</p>
+            </div>
+            <p className="text-2xl font-bold text-white">{collections.overdue.count}</p>
+            <p className="text-xs text-red-400 mt-1">AED {fmtAED(collections.overdue.total)} past due</p>
+          </button>
+
+          {/* Upcoming 7 days */}
+          <button
+            onClick={() => navigate("/payments")}
+            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Due in 7 Days</p>
+            </div>
+            <p className="text-2xl font-bold text-white">{collections.upcoming.next7Days.count}</p>
+            <p className="text-xs text-amber-400 mt-1">AED {fmtAED(collections.upcoming.next7Days.total)} expected</p>
+          </button>
+
+          {/* Pending Tasks */}
+          <button
+            onClick={() => navigate("/tasks")}
+            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pending Tasks</p>
+            </div>
+            <p className="text-2xl font-bold text-white">{tasks.length}</p>
+            <p className="text-xs text-blue-400 mt-1">{oqoodDueSoon.length} urgent / due soon</p>
+          </button>
+        </div>
+      </div>
+
+      {/* ===== Revenue Trend ===== */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="flex items-baseline justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Revenue Trend</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Collected vs expected · {activePeriodLabel.toLowerCase()} · {activeProjectName}
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+              <span className="text-slate-400">Collected</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-blue-500/50" />
+              <span className="text-slate-400">Expected</span>
+            </div>
           </div>
         </div>
+        {monthly.length > 0 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={monthly} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colCollected" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colExpected" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#64748b" }}
+                axisLine={false} tickLine={false}
+                tickFormatter={(v) => fmtAED(v)}
+              />
+              <Tooltip
+                contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: "#cbd5e1" }}
+                formatter={(v) => `AED ${fmtAED(Number(v) || 0)}`}
+              />
+              <Area type="monotone" dataKey="expected"  stroke="#3b82f6" strokeWidth={2} fill="url(#colExpected)"  />
+              <Area type="monotone" dataKey="collected" stroke="#10b981" strokeWidth={2} fill="url(#colCollected)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : <p className="text-slate-500 text-sm py-8 text-center">No revenue data yet</p>}
       </div>
 
-      {/* Summary */}
-      <div className="bg-slate-900 rounded-xl p-5 text-white">
-        <h2 className="text-sm font-semibold mb-3 text-slate-300">Summary</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-slate-400 text-xs">Sold Rate</p><p className="font-bold text-lg">{overview.soldPercentage}%</p></div>
-          <div><p className="text-slate-400 text-xs">Collected</p><p className="font-bold text-lg">AED {fmtM(overview.revenueCollected)}</p></div>
-          <div><p className="text-slate-400 text-xs">Leads → Deals</p><p className="font-bold text-lg">{leadsReport.conversionRate}%</p></div>
-          <div><p className="text-slate-400 text-xs">Overdue</p><p className="font-bold text-lg text-red-400">AED {fmtK(overview.overduePayments)}</p></div>
+      {/* ===== Inventory + Lead Pipeline ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Inventory donut */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Unit Inventory</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{activeProjectName}</p>
+            </div>
+            <button onClick={() => navigate("/units")} className="text-xs text-blue-400 hover:text-blue-300">Manage →</button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-40 h-40 flex-shrink-0">
+              {unitChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={unitChartData}
+                      dataKey="value"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {unitChartData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
+                      labelStyle={{ color: "#cbd5e1" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">No data</div>}
+            </div>
+            <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-3 gap-y-1.5">
+              {unitChartData.map((u) => (
+                <div key={u.name} className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: u.fill }} />
+                  <span className="text-xs text-slate-400 truncate">{u.name}</span>
+                  <span className="text-xs font-semibold text-white ml-auto">{u.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Per-project mini-rows (hidden when a single project is filtered) */}
+          {projectId === "all" && inventory.length > 1 && (
+            <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Sold rate by project</p>
+              {inventory.slice(0, 4).map((p) => {
+                const sold = p.byStatus["SOLD"] || 0;
+                const pct = p.total > 0 ? Math.round((sold / p.total) * 100) : 0;
+                return (
+                  <button
+                    key={p.projectId}
+                    onClick={() => setProjectId(p.projectId)}
+                    className="w-full flex items-center gap-3 hover:bg-slate-800/40 rounded -mx-2 px-2 py-1 transition-colors"
+                  >
+                    <span className="text-xs text-slate-300 truncate w-24 text-left">{p.projectName}</span>
+                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-slate-400 w-16 text-right">{sold}/{p.total}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Lead pipeline */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white">Lead Pipeline</h2>
+            <button onClick={() => navigate("/leads")} className="text-xs text-blue-400 hover:text-blue-300">View leads →</button>
+          </div>
+          {stageEntries.length > 0 ? (
+            <div className="space-y-3">
+              {stageEntries.map(([stage, count]) => {
+                const pct = totalStageLeads > 0 ? Math.round((count / totalStageLeads) * 100) : 0;
+                const color = STAGE_COLORS[stage] || "#94a3b8";
+                return (
+                  <div key={stage}>
+                    <div className="flex justify-between items-baseline text-xs mb-1.5">
+                      <span className="text-slate-300 font-medium">{stage.replace(/_/g, " ")}</span>
+                      <span className="text-slate-500">
+                        <span className="text-white font-semibold">{count}</span> · {pct}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, background: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <p className="text-slate-500 text-sm py-8 text-center">No leads yet</p>}
+        </div>
+      </div>
+
+      {/* ===== Top Agents + Today's Tasks ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top agents leaderboard */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="flex items-baseline justify-between px-5 py-3 border-b border-slate-800">
+            <h2 className="text-sm font-semibold text-white">Top Performers</h2>
+            <button onClick={() => navigate("/team")} className="text-xs text-blue-400 hover:text-blue-300">Team →</button>
+          </div>
+          {agents.length > 0 ? (
+            <div className="divide-y divide-slate-800">
+              {agents.slice(0, 5).map((a, i) => (
+                <div key={a.agentId} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
+                    ${i === 0 ? "bg-amber-500/20 text-amber-400"
+                    : i === 1 ? "bg-slate-500/20 text-slate-300"
+                    : i === 2 ? "bg-orange-700/20 text-orange-400"
+                    : "bg-slate-800 text-slate-500"}`}>
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{a.agentName}</p>
+                    <p className="text-xs text-slate-500">
+                      {a.totalDeals} deals · {a.closeRate}% close rate
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-emerald-400">AED {fmtAED(a.dealRevenue)}</p>
+                    <p className="text-xs text-slate-500">revenue</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-slate-500 text-sm py-12 text-center">No agent activity yet</p>}
+        </div>
+
+        {/* Tasks */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="flex items-baseline justify-between px-5 py-3 border-b border-slate-800">
+            <h2 className="text-sm font-semibold text-white">Open Tasks</h2>
+            <button onClick={() => navigate("/tasks")} className="text-xs text-blue-400 hover:text-blue-300">All tasks →</button>
+          </div>
+          {tasks.length > 0 ? (
+            <div className="divide-y divide-slate-800">
+              {tasks.slice(0, 5).map((t) => {
+                const due  = new Date(t.dueDate);
+                const days = Math.floor((due.getTime() - Date.now()) / 86400000);
+                const overdue = days < 0;
+                const target = t.deal ? `/deals/${t.deal.id}` : t.lead ? `/leads/${t.lead.id}` : "/tasks";
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => navigate(target)}
+                    className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0
+                      ${t.priority === "URGENT" ? "bg-red-500"
+                      : t.priority === "HIGH" ? "bg-orange-500"
+                      : t.priority === "MEDIUM" ? "bg-amber-500"
+                      : "bg-slate-500"}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-200 font-medium truncate">{t.title}</p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {t.lead ? `${t.lead.firstName} ${t.lead.lastName}` : t.deal ? t.deal.dealNumber : t.type.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium flex-shrink-0
+                      ${overdue ? "text-red-400" : days <= 1 ? "text-amber-400" : "text-slate-400"}`}>
+                      {overdue ? `${Math.abs(days)}d overdue`
+                       : days === 0 ? "Today"
+                       : days === 1 ? "Tomorrow"
+                       : `${days}d`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : <p className="text-slate-500 text-sm py-12 text-center">No pending tasks 🎉</p>}
+        </div>
+      </div>
+
+      {/* ===== Quick Actions ===== */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-white">Quick Actions</h2>
+          <p className="text-xs text-slate-500">Jump straight into common flows</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+          {[
+            { label: "New Lead",     desc: "Capture inquiry",     icon: "◉", to: "/leads",        tone: "bg-blue-600/20 text-blue-400" },
+            { label: "New Deal",     desc: "Start sales process", icon: "◈", to: "/deals",        tone: "bg-emerald-600/20 text-emerald-400" },
+            { label: "Reservation",  desc: "Hold a unit",         icon: "⊗", to: "/reservations", tone: "bg-purple-600/20 text-purple-400" },
+            { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: "bg-cyan-600/20 text-cyan-400" },
+            { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: "bg-amber-600/20 text-amber-400" },
+            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: "bg-pink-600/20 text-pink-400" },
+            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: "bg-indigo-600/20 text-indigo-400" },
+            { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: "bg-slate-600/20 text-slate-300" },
+          ].map((a) => (
+            <button
+              key={a.label}
+              onClick={() => navigate(a.to)}
+              className="flex items-center gap-3 px-3 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors text-left"
+            >
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 ${a.tone}`}>
+                {a.icon}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{a.label}</p>
+                <p className="text-[10px] text-slate-500 truncate">{a.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== Footer summary ===== */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-800 rounded-xl p-5">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Snapshot</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-xs text-slate-500">Total Leads</p>
+            <p className="text-xl font-bold text-white mt-0.5">{fmtNum(overview.totalLeads)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Active Deals</p>
+            <p className="text-xl font-bold text-white mt-0.5">{fmtNum(overview.totalDeals)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Sold Rate</p>
+            <p className="text-xl font-bold text-emerald-400 mt-0.5">{overview.soldPercentage}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">DLD Waived</p>
+            <p className="text-xl font-bold text-blue-400 mt-0.5">
+              AED {fmtAED(overview.developerIncentives?.dldWaivedTotal ?? 0)}
+            </p>
+          </div>
         </div>
       </div>
     </div>
