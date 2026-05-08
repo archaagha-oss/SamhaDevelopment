@@ -42,6 +42,7 @@ import EscrowPage from "./pages/EscrowPage";
 import CommissionTiersPage from "./pages/CommissionTiersPage";
 import LeadKycPage from "./pages/LeadKycPage";
 import DealJointOwnersPage from "./pages/DealJointOwnersPage";
+import PublicUnitView from "./components/PublicUnitView";
 
 export const router = createBrowserRouter([
   // Standalone pages (no app shell — full-page layout)
@@ -54,6 +55,8 @@ export const router = createBrowserRouter([
   { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
   { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
   { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
+  // Public, unauthenticated client share view (no app shell, no Clerk).
+  { path: "/share/u/:token",                             element: <PublicUnitView /> },
   {
     path: "/",
     element: <AppShell />,

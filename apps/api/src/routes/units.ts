@@ -12,6 +12,7 @@ import {
 } from "../schemas/validation";
 import { updateUnitStatus, isDealOwnedStatus } from "../services/unitService";
 import { prisma } from "../lib/prisma";
+import { generateToken, buildPublicShareUrl } from "../services/shareTokenService";
 
 const router = Router();
 
@@ -663,6 +664,168 @@ router.get("/:id/images", async (req, res) => {
     res.json({ data: images });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to fetch images", code: "FETCH_IMAGES_ERROR", statusCode: 500 });
+  }
+});
+
+// ============================================================================
+// DOCUMENTS — union of deal-scoped + project-scoped documents (staff view)
+// ============================================================================
+
+router.get("/:id/documents", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const unit = await prisma.unit.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        projectId: true,
+        deals: { where: { isActive: true }, select: { id: true } },
+      },
+    });
+    if (!unit) {
+      return res.status(404).json({ error: "Unit not found", code: "UNIT_NOT_FOUND", statusCode: 404 });
+    }
+    const dealIds = unit.deals.map((d) => d.id);
+    const documents = await prisma.document.findMany({
+      where: {
+        softDeleted: false,
+        OR: [
+          ...(dealIds.length ? [{ dealId: { in: dealIds } }] : []),
+          { projectId: unit.projectId },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mimeType: true,
+        contractStatus: true,
+        visibility: true,
+        expiryDate: true,
+        uploadedAt: true,
+        createdAt: true,
+        dealId: true,
+        projectId: true,
+      },
+    });
+    res.json({
+      data: documents.map((d) => ({ ...d, scope: d.projectId ? "PROJECT" : "DEAL" })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch unit documents", code: "FETCH_UNIT_DOCS_ERROR", statusCode: 500 });
+  }
+});
+
+// ============================================================================
+// SHARE TOKENS — anonymous public links to a unit
+// ============================================================================
+
+router.get("/:id/share-tokens", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const tokens = await prisma.unitShareToken.findMany({
+      where: { unitId: req.params.id },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({
+      data: tokens.map((t) => ({
+        id: t.id,
+        token: t.token,
+        url: buildPublicShareUrl(t.token),
+        showPrice: t.showPrice,
+        expiresAt: t.expiresAt,
+        revokedAt: t.revokedAt,
+        viewCount: t.viewCount,
+        lastViewedAt: t.lastViewedAt,
+        createdAt: t.createdAt,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list share tokens", code: "LIST_TOKENS_ERROR", statusCode: 500 });
+  }
+});
+
+router.post("/:id/share-tokens", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const unit = await prisma.unit.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!unit) {
+      return res.status(404).json({ error: "Unit not found", code: "UNIT_NOT_FOUND", statusCode: 404 });
+    }
+    const { showPrice = false, expiresAt = null } = req.body ?? {};
+    let expiresAtDate: Date | null = null;
+    if (expiresAt) {
+      const d = new Date(expiresAt);
+      if (Number.isNaN(d.getTime())) {
+        return res.status(400).json({ error: "Invalid expiresAt", code: "VALIDATION_ERROR", statusCode: 400 });
+      }
+      expiresAtDate = d;
+    }
+    const token = generateToken();
+    const created = await prisma.unitShareToken.create({
+      data: {
+        unitId: req.params.id,
+        token,
+        showPrice: Boolean(showPrice),
+        expiresAt: expiresAtDate,
+        createdBy: req.auth.userId,
+      },
+    });
+    res.status(201).json({
+      id: created.id,
+      token: created.token,
+      url: buildPublicShareUrl(created.token),
+      showPrice: created.showPrice,
+      expiresAt: created.expiresAt,
+      revokedAt: created.revokedAt,
+      viewCount: created.viewCount,
+      lastViewedAt: created.lastViewedAt,
+      createdAt: created.createdAt,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to create share token", code: "CREATE_TOKEN_ERROR", statusCode: 500 });
+  }
+});
+
+router.post("/:id/share-tokens/:tokenId/revoke", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.unitShareToken.findUnique({ where: { id: req.params.tokenId } });
+    if (!existing || existing.unitId !== req.params.id) {
+      return res.status(404).json({ error: "Token not found", code: "TOKEN_NOT_FOUND", statusCode: 404 });
+    }
+    const updated = await prisma.unitShareToken.update({
+      where: { id: req.params.tokenId },
+      data: { revokedAt: new Date() },
+    });
+    res.json({ id: updated.id, revokedAt: updated.revokedAt });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to revoke token", code: "REVOKE_TOKEN_ERROR", statusCode: 500 });
+  }
+});
+
+router.delete("/:id/share-tokens/:tokenId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.unitShareToken.findUnique({ where: { id: req.params.tokenId } });
+    if (!existing || existing.unitId !== req.params.id) {
+      return res.status(404).json({ error: "Token not found", code: "TOKEN_NOT_FOUND", statusCode: 404 });
+    }
+    await prisma.unitShareToken.delete({ where: { id: req.params.tokenId } });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete token", code: "DELETE_TOKEN_ERROR", statusCode: 500 });
   }
 });
 
