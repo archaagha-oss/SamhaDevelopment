@@ -108,13 +108,17 @@ router.post(
   multipartParser,
   async (req: Request, res: Response) => {
     try {
-      const expected = process.env.SENDGRID_INBOUND_TOKEN;
+      // Token can be set in AppSettings (UI-managed) or env (fallback).
+      const settings = await prisma.appSettings.findFirst().catch(() => null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const settingsToken = (settings as any)?.sendgridInboundToken as string | undefined;
+      const expected = settingsToken ?? process.env.SENDGRID_INBOUND_TOKEN;
       if (expected && req.params.token !== expected) {
         console.warn(`[Webhook] SendGrid inbound token mismatch`);
         return res.status(403).send("Forbidden");
       }
       if (!expected) {
-        console.warn(`[Webhook] SENDGRID_INBOUND_TOKEN not set — accepting unauthenticated inbound. DO NOT run in production.`);
+        console.warn(`[Webhook] sendgridInboundToken not set in AppSettings or env — accepting unauthenticated inbound. DO NOT run in production.`);
       }
 
       const body = req.body as SendGridInboundBody;

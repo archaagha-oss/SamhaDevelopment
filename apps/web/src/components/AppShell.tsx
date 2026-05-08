@@ -4,7 +4,7 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -16,6 +16,7 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/commissions")) return "commissions";
   if (pathname.startsWith("/brokers")) return "brokers";
   if (pathname.startsWith("/tasks")) return "tasks";
+  if (pathname.startsWith("/inbox")) return "inbox";
   if (pathname.startsWith("/contracts")) return "contracts";
   if (pathname.startsWith("/team")) return "team";
   if (pathname.startsWith("/reports")) return "reports";
@@ -131,6 +132,7 @@ export default function AppShell() {
       "payment-plans": "/payment-plans", reservations: "/reservations", "offers-list": "/offers-list",
       team: "/team", reports: "/reports",
       contacts: "/contacts", settings: "/settings",
+      inbox: "/inbox",
     };
     navigate(map[page]);
   }, [navigate]);

@@ -69,6 +69,8 @@ router.patch("/", async (req, res) => {
       twilioWhatsappContentSidOnDue,
       twilioWhatsappContentSidOverdue7,
       twilioWhatsappContentSidOverdue30,
+      inboundEmailDomain,
+      sendgridInboundToken,
     } = req.body;
 
     const settings = await prisma.appSettings.upsert({
@@ -99,6 +101,8 @@ router.patch("/", async (req, res) => {
         twilioWhatsappContentSidOnDue,
         twilioWhatsappContentSidOverdue7,
         twilioWhatsappContentSidOverdue30,
+        inboundEmailDomain,
+        sendgridInboundToken,
       },
       update: {
         ...(companyName           !== undefined && { companyName }),
@@ -125,6 +129,8 @@ router.patch("/", async (req, res) => {
         ...(twilioWhatsappContentSidOnDue     !== undefined && { twilioWhatsappContentSidOnDue }),
         ...(twilioWhatsappContentSidOverdue7  !== undefined && { twilioWhatsappContentSidOverdue7 }),
         ...(twilioWhatsappContentSidOverdue30 !== undefined && { twilioWhatsappContentSidOverdue30 }),
+        ...(inboundEmailDomain                !== undefined && { inboundEmailDomain }),
+        ...(sendgridInboundToken              !== undefined && { sendgridInboundToken }),
       },
     } as any);
 

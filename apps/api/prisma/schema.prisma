@@ -1333,6 +1333,12 @@ model AppSettings {
   twilioWhatsappContentSidOverdue7    String?
   twilioWhatsappContentSidOverdue30   String?
 
+  // Inbound capture (Phase D). Operator-managed so secrets/domains can be
+  // rotated from the Settings UI without a redeploy. Env vars
+  // (INBOUND_EMAIL_DOMAIN / SENDGRID_INBOUND_TOKEN) remain a fallback.
+  inboundEmailDomain   String? // e.g. "inbound.samha.ae" — used in Reply-To: reply+<activityId>@<domain>
+  sendgridInboundToken String? // path token guarding /api/webhooks/email/inbound/:token
+
   // Finance — payment instructions injected into invoices and reminder emails
   paymentInstructions String? @db.Text
 

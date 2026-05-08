@@ -33,6 +33,8 @@ interface AppSettings {
   twilioWhatsappContentSidOnDue?: string;
   twilioWhatsappContentSidOverdue7?: string;
   twilioWhatsappContentSidOverdue30?: string;
+  inboundEmailDomain?: string;
+  sendgridInboundToken?: string;
 }
 
 type Tab = "company" | "localization" | "communication" | "finance" | "templates";
@@ -285,6 +287,39 @@ export default function SettingsPage() {
                   <input className={inp} value={form.twilioWhatsappContentSidOverdue30 ?? ""} onChange={(e) => set("twilioWhatsappContentSidOverdue30", e.target.value)} placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
                 </div>
               </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inbound Capture</p>
+              <p className="text-xs text-slate-400">
+                Wires up two-way conversations: replies from leads land back in the CRM as
+                Activities on their lead/deal. Configure the inbound subdomain (MX must point to SendGrid)
+                and the path token that guards the webhook.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>Inbound Email Domain</label>
+                  <input className={inp} value={form.inboundEmailDomain ?? ""} onChange={(e) => set("inboundEmailDomain", e.target.value)} placeholder="inbound.samha.ae" />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    When set, outbound emails include <code className="bg-slate-100 px-1 rounded">Reply-To: reply+&lt;activityId&gt;@&lt;domain&gt;</code> so replies land on the exact conversation thread.
+                  </p>
+                </div>
+                <div>
+                  <label className={lbl}>SendGrid Inbound Token</label>
+                  <input type="password" className={inp} value={form.sendgridInboundToken ?? ""} onChange={(e) => set("sendgridInboundToken", e.target.value)} placeholder="random unguessable string" />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Goes into the SendGrid Inbound Parse webhook URL: <code className="bg-slate-100 px-1 rounded">/api/webhooks/email/inbound/&lt;token&gt;</code>. Rotate any time.
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 pt-2">
+                Twilio webhook URLs to configure in your Twilio console:
+              </p>
+              <ul className="text-[11px] text-slate-500 list-disc pl-5 space-y-0.5">
+                <li>WhatsApp inbound: <code className="bg-slate-100 px-1 rounded">POST /api/webhooks/twilio/whatsapp</code></li>
+                <li>SMS inbound: <code className="bg-slate-100 px-1 rounded">POST /api/webhooks/twilio/sms</code></li>
+                <li>Status callbacks: <code className="bg-slate-100 px-1 rounded">POST /api/webhooks/twilio/status</code></li>
+              </ul>
             </div>
           </div>
         )}

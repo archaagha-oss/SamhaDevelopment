@@ -5,12 +5,16 @@ import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
+import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Activity {
   id: string; type: string; summary: string; outcome?: string;
   activityDate?: string; createdAt: string;
+  direction?: string | null;
+  deliveryStatus?: string | null;
+  providerMessageSid?: string | null;
 }
 
 interface DealSummary {
@@ -93,17 +97,6 @@ const cancelBtn  = "px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-const fmtTime = (d: string) =>
-  new Date(d).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" });
-
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)     return "Just now";
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  return `${new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short" })} ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-}
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -1093,29 +1086,22 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </form>
             )}
 
-            <div className="divide-y divide-slate-50 max-h-[520px] overflow-y-auto scrollbar-thin">
-              {activities.length === 0 ? (
-                <div className="px-5 py-10 text-center text-slate-400 text-sm">No activities yet</div>
-              ) : (
-                activities.map((act) => (
-                  <div key={act.id} className="px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
-                    <div className="flex items-start gap-3">
-                      <span className="text-lg mt-0.5 flex-shrink-0">{ACTIVITY_ICON[act.type] || "📋"}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{act.type}</span>
-                          <span className="text-xs text-slate-400 flex-shrink-0">
-                            {timeAgo(act.activityDate || act.createdAt)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-700 leading-relaxed">{act.summary}</p>
-                        {act.outcome && <p className="text-xs text-slate-500 mt-1 italic">Outcome: {act.outcome}</p>}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <ConversationThread activities={activities} />
+            <ConversationReplyBox
+              leadId={lead.id}
+              availableChannels={(() => {
+                const out: ("EMAIL" | "WHATSAPP" | "SMS")[] = [];
+                const pref = lead.communicationPreference;
+                if (lead.email && !pref?.emailOptOut) out.push("EMAIL");
+                if (lead.phone && !pref?.whatsappOptOut) out.push("WHATSAPP");
+                if (lead.phone && !pref?.smsOptOut) out.push("SMS");
+                return out;
+              })()}
+              onSent={async () => {
+                const aRes = await axios.get(`/api/leads/${leadId}/activities`);
+                setActivities(aRes.data);
+              }}
+            />
           </div>
         </div>
       </div>

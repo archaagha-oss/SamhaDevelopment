@@ -99,7 +99,7 @@ export async function dispatchPaymentReminder(input: DispatchPaymentReminderInpu
 
   if (channel === "EMAIL") {
     const tmpl = pickEmailTemplate(input.rule, input.daysOverdue, input.vars);
-    const replyTo = buildReplyToHeader(activity.id);
+    const replyTo = await buildReplyToHeader(activity.id);
     result = await sendEmail({
       to: input.recipient.email!,
       ...tmpl,
@@ -154,6 +154,121 @@ export async function dispatchPaymentReminder(input: DispatchPaymentReminderInpu
   };
 }
 
+// ─── Ad-hoc message (UI-driven, no reminder rule) ───────────────────────────
+
+export interface DispatchAdHocInput {
+  leadId?: string;
+  contactId?: string;
+  dealId?: string;
+  channel?: Channel;             // explicit override; otherwise pickChannel decides
+  subject?: string;              // email only
+  body: string;                  // plain text body (used for SMS/WhatsApp; converted to HTML for email)
+  recipient: {
+    email?: string | null;
+    phone?: string | null;
+  };
+  createdBy: string;             // user id for the Activity row
+}
+
+export interface AdHocResult {
+  sent: boolean;
+  channel: Channel | null;
+  reason?: string;
+  activityId?: string;
+  providerMessageId?: string;
+}
+
+/**
+ * Send an ad-hoc message from the UI. Reuses pickChannel + recordOutbound,
+ * writes a channel-typed OUTBOUND Activity, and (for email) sets a Reply-To
+ * reply-token so any reply threads cleanly back to this message.
+ */
+export async function dispatchAdHocMessage(input: DispatchAdHocInput): Promise<AdHocResult> {
+  if (!input.leadId && !input.contactId) {
+    return { sent: false, channel: null, reason: "leadId or contactId required" };
+  }
+  if (!input.body || input.body.trim().length === 0) {
+    return { sent: false, channel: null, reason: "body required" };
+  }
+
+  const phoneE164 = normalizePhone(input.recipient.phone);
+  const hasEmail = !!input.recipient.email;
+  const hasPhone = !!phoneE164;
+
+  const channel = await pickChannel({
+    leadId: input.leadId,
+    contactId: input.contactId,
+    hasEmail,
+    hasPhone,
+    override: input.channel,
+  });
+
+  if (!channel) {
+    return { sent: false, channel: null, reason: "no deliverable channel for recipient" };
+  }
+
+  const summary =
+    channel === "EMAIL"
+      ? `Email${input.subject ? ` "${input.subject.slice(0, 60)}"` : ""} → ${input.recipient.email}`
+      : channel === "WHATSAPP"
+        ? `WhatsApp → ${phoneE164}: ${input.body.slice(0, 80)}`
+        : `SMS → ${phoneE164}: ${input.body.slice(0, 80)}`;
+
+  const activity = await prisma.activity.create({
+    data: {
+      leadId:    input.leadId    ?? null,
+      contactId: input.contactId ?? null,
+      dealId:    input.dealId    ?? null,
+      type:      channel,
+      direction: "OUTBOUND",
+      deliveryStatus: "queued",
+      summary,
+      createdBy: input.createdBy,
+    } as any,
+  });
+
+  let result: { sent: boolean; reason?: string; providerMessageId?: string };
+
+  if (channel === "EMAIL") {
+    const replyTo = await buildReplyToHeader(activity.id);
+    const html = (input.body || "").replace(/\n/g, "<br>");
+    result = await sendEmail({
+      to: input.recipient.email!,
+      subject: input.subject || "(no subject)",
+      text: input.body,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+  } else if (channel === "WHATSAPP") {
+    // Ad-hoc messages send as freeform body. Only valid inside the 24h
+    // service window (after the recipient has messaged us) or in sandbox.
+    // For proactive sends use dispatchPaymentReminder (which uses templates).
+    result = await sendWhatsapp({ to: phoneE164!, body: input.body });
+  } else {
+    result = await sendSms({ to: phoneE164!, body: input.body });
+  }
+
+  await prisma.activity.update({
+    where: { id: activity.id },
+    data: {
+      providerMessageSid: result.providerMessageId ?? null,
+      deliveryStatus: result.sent ? "sent" : "failed",
+    } as any,
+  });
+
+  recordOutbound({ leadId: input.leadId, contactId: input.contactId, channel }).catch((err) =>
+    console.warn(`[Dispatcher] recordOutbound failed: ${err instanceof Error ? err.message : err}`)
+  );
+
+  return {
+    sent: result.sent,
+    channel,
+    reason: result.reason,
+    activityId: activity.id,
+    providerMessageId: result.providerMessageId,
+  };
+}
+
 // ─── Template selectors ──────────────────────────────────────────────────────
 
 function pickEmailTemplate(rule: ReminderRule, daysOverdue: number, vars: ReminderTemplateVars) {
@@ -189,14 +304,17 @@ function humanRule(rule: ReminderRule): string {
 }
 
 /**
- * Build a per-Activity reply-token email address. When INBOUND_EMAIL_DOMAIN
- * is set (e.g. "inbound.samha.ae"), outbound reminders include
- * `Reply-To: reply+<activityId>@inbound.samha.ae`. Inbound replies hit
- * SendGrid Inbound Parse, the matcher extracts the token, and the reply
- * lands on the same conversation thread deterministically.
+ * Build a per-Activity reply-token email address. When `inboundEmailDomain` is
+ * configured (in `AppSettings.inboundEmailDomain` or as a fallback in env
+ * `INBOUND_EMAIL_DOMAIN`), outbound emails include
+ * `Reply-To: reply+<activityId>@<domain>`. Inbound replies hit SendGrid
+ * Inbound Parse, the matcher extracts the token, and the reply lands on
+ * the same conversation thread deterministically.
  */
-function buildReplyToHeader(activityId: string): string | null {
-  const domain = process.env.INBOUND_EMAIL_DOMAIN;
+async function buildReplyToHeader(activityId: string): Promise<string | null> {
+  const settings = await prisma.appSettings.findFirst().catch(() => null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const domain = (settings as any)?.inboundEmailDomain ?? process.env.INBOUND_EMAIL_DOMAIN ?? null;
   if (!domain) return null;
   return `reply+${activityId}@${domain}`;
 }

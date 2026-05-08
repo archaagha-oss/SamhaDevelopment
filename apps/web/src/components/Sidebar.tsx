@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox";
 
 interface SidebarProps {
   currentPage: Page;
@@ -15,6 +16,7 @@ const salesItems: { page: Page; label: string; icon: string }[] = [
   { page: "leads",       label: "Leads",       icon: "◉" },
   { page: "deals",       label: "Deals",       icon: "◈" },
   { page: "tasks",       label: "Activities",  icon: "✓" },
+  { page: "inbox",       label: "Hot Inbox",   icon: "✉" },
   { page: "reservations",  label: "Reservations", icon: "⊗" },
   { page: "offers-list",   label: "Offers",      icon: "◁" },
   { page: "contracts",   label: "Contracts",   icon: "⊜" },
@@ -33,14 +35,15 @@ const adminItems: { page: Page; label: string; icon: string }[] = [
   { page: "settings",    label: "Settings",    icon: "⚙" },
 ];
 
-function NavItem({ page, label, icon, active, collapsed, onNavigate }: {
+function NavItem({ page, label, icon, active, collapsed, onNavigate, badge }: {
   page: Page; label: string; icon: string; active: boolean;
   collapsed: boolean; onNavigate: (page: Page) => void;
+  badge?: number;
 }) {
   return (
     <button
       onClick={() => onNavigate(page)}
-      title={collapsed ? label : undefined}
+      title={collapsed ? `${label}${badge ? ` (${badge})` : ""}` : undefined}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
         active
           ? "bg-blue-600 text-white shadow-sm"
@@ -48,7 +51,14 @@ function NavItem({ page, label, icon, active, collapsed, onNavigate }: {
       } ${collapsed ? "justify-center" : ""}`}
     >
       <span className="text-base flex-shrink-0 w-4 text-center leading-none">{icon}</span>
-      {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+      {!!badge && badge > 0 && (
+        <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+          active ? "bg-white/20 text-white" : "bg-amber-500 text-white"
+        } ${collapsed ? "absolute -mt-4 ml-4" : ""}`}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -64,6 +74,23 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [inboxCount, setInboxCount] = useState(0);
+
+  // Poll the triage unclaimed count for the Hot Inbox badge.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const r = await axios.get("/api/triage/counts");
+        if (!cancelled) setInboxCount(r.data?.unclaimed ?? 0);
+      } catch {
+        // silent — endpoint may not be available in dev
+      }
+    };
+    fetchCount();
+    const id = setInterval(fetchCount, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
 
   return (
     <div className={`${collapsed ? "w-14" : "w-56"} bg-slate-900 flex flex-col h-full flex-shrink-0 border-r border-slate-800 transition-all duration-200`}>
@@ -83,7 +110,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <SectionLabel label="Sales" collapsed={collapsed} />
         {salesItems.map(({ page, label, icon }) => (
           <NavItem key={page} page={page} label={label} icon={icon}
-            active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
+            active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate}
+            badge={page === "inbox" ? inboxCount : undefined} />
         ))}
 
         <SectionLabel label="Finance" collapsed={collapsed} />
