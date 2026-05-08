@@ -723,8 +723,10 @@ model BrokerCompany {
   reraLicenseNumber  String?
   reraLicenseExpiry  DateTime?
   tradeLicenseNumber String?
+  tradeLicenseExpiry DateTime?
   tradeLicenseCopyUrl   String?
   vatCertificateNo      String?
+  vatCertificateExpiry  DateTime?
   vatCertificateUrl     String?
   corporateTaxCertUrl   String?
   officeRegistrationNo  String?
@@ -747,6 +749,8 @@ model BrokerCompany {
 
   @@index([name])
   @@index([reraLicenseExpiry])
+  @@index([tradeLicenseExpiry])
+  @@index([vatCertificateExpiry])
 }
 
 model BrokerAgent {

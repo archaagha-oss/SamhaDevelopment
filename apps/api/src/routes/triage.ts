@@ -11,6 +11,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { recordReply } from "../services/communicationPreferenceService.js";
+import { publishTriageCounts } from "../services/inboundProcessor.js";
+import { sseHub } from "../services/sseHub.js";
 
 const router = Router();
 
@@ -70,6 +72,8 @@ router.patch("/:id/claim", async (req, res) => {
       where: { id: req.params.id },
       data:  { status: "CLAIMED", claimedById: req.auth.userId, claimedAt: new Date() },
     });
+    sseHub.broadcast("triage.updated", { triageId: updated.id, status: updated.status });
+    publishTriageCounts().catch(() => undefined);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message ?? "Failed to claim", code: "TRIAGE_CLAIM_ERROR", statusCode: 400 });
@@ -86,6 +90,8 @@ router.patch("/:id/discard", async (req, res) => {
       where: { id: req.params.id },
       data:  { status: "DISCARDED", claimedById: req.auth.userId, claimedAt: new Date() },
     });
+    sseHub.broadcast("triage.updated", { triageId: updated.id, status: updated.status });
+    publishTriageCounts().catch(() => undefined);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message ?? "Failed to discard", code: "TRIAGE_DISCARD_ERROR", statusCode: 400 });
@@ -142,6 +148,16 @@ router.patch("/:id/attach", async (req, res) => {
         resolvedActivityId: activity.id,
       },
     });
+
+    sseHub.broadcast("triage.updated", { triageId: updated.id, status: updated.status });
+    sseHub.broadcast("activity.inbound", {
+      activityId: activity.id,
+      leadId: leadId ?? null,
+      contactId: contactId ?? null,
+      dealId: dealId ?? null,
+      channel: triage.channel,
+    });
+    publishTriageCounts().catch(() => undefined);
 
     res.json({ triage: updated, activity });
   } catch (err: any) {

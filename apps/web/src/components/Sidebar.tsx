@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useEventStream } from "../hooks/useEventStream";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox" | "compliance";
 
 interface SidebarProps {
   currentPage: Page;
@@ -31,6 +32,7 @@ const financeItems: { page: Page; label: string; icon: string }[] = [
 ];
 
 const adminItems: { page: Page; label: string; icon: string }[] = [
+  { page: "compliance",  label: "Compliance",  icon: "⚠" },
   { page: "team",        label: "Team",        icon: "⊞" },
   { page: "settings",    label: "Settings",    icon: "⚙" },
 ];
@@ -76,7 +78,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [inboxCount, setInboxCount] = useState(0);
 
-  // Poll the triage unclaimed count for the Hot Inbox badge.
+  // Initial load + slow safety-net poll. Real-time updates arrive via SSE below.
   useEffect(() => {
     let cancelled = false;
     const fetchCount = async () => {
@@ -88,9 +90,15 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       }
     };
     fetchCount();
-    const id = setInterval(fetchCount, 30_000);
+    const id = setInterval(fetchCount, 5 * 60_000); // 5 min as a safety net
     return () => { cancelled = true; clearInterval(id); };
   }, []);
+
+  // Live: react to triage.counts events pushed by the server when a triage row
+  // is created / claimed / discarded / resolved. Drops the old 30s poll.
+  useEventStream("triage.counts", (data: { unclaimed: number; claimed: number }) => {
+    if (typeof data?.unclaimed === "number") setInboxCount(data.unclaimed);
+  });
 
   return (
     <div className={`${collapsed ? "w-14" : "w-56"} bg-slate-900 flex flex-col h-full flex-shrink-0 border-r border-slate-800 transition-all duration-200`}>

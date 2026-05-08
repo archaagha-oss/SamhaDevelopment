@@ -6,6 +6,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
+import { useEventStream } from "../hooks/useEventStream";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,6 +204,15 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     brokerCompanyId: "", brokerAgentId: "",
   });
   const [creatingDeal, setCreatingDeal] = useState(false);
+
+  // ── Live updates: refresh activities when an inbound message lands on this lead
+  useEventStream("activity.inbound", async (data: { leadId?: string | null }) => {
+    if (!leadId || data?.leadId !== leadId) return;
+    try {
+      const r = await axios.get(`/api/leads/${leadId}/activities`);
+      setActivities(r.data);
+    } catch {/* ignore */}
+  });
 
   // ── Load ────────────────────────────────────────────────────────────────────
 

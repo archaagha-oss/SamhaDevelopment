@@ -3,8 +3,9 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
+import { useEventStream } from "../hooks/useEventStream";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "inbox" | "compliance";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -17,6 +18,7 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/brokers")) return "brokers";
   if (pathname.startsWith("/tasks")) return "tasks";
   if (pathname.startsWith("/inbox")) return "inbox";
+  if (pathname.startsWith("/compliance")) return "compliance";
   if (pathname.startsWith("/contracts")) return "contracts";
   if (pathname.startsWith("/team")) return "team";
   if (pathname.startsWith("/reports")) return "reports";
@@ -89,9 +91,17 @@ export default function AppShell() {
 
   useEffect(() => {
     fetchNotifications();
-    notificationTimer.current = setInterval(fetchNotifications, 60_000);
+    // Slower safety-net poll. Live updates arrive via SSE below.
+    notificationTimer.current = setInterval(fetchNotifications, 5 * 60_000);
     return () => { if (notificationTimer.current) clearInterval(notificationTimer.current); };
   }, [fetchNotifications]);
+
+  // Live: incoming notifications bump the unread badge and prepend to the list
+  useEventStream("notification.created", (n: any) => {
+    if (!n) return;
+    setNotifications((prev) => [{ ...n, read: false, createdAt: n.createdAt ?? new Date().toISOString() }, ...prev].slice(0, 20));
+    setUnreadCount((c) => c + 1);
+  });
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -133,6 +143,7 @@ export default function AppShell() {
       team: "/team", reports: "/reports",
       contacts: "/contacts", settings: "/settings",
       inbox: "/inbox",
+      compliance: "/compliance",
     };
     navigate(map[page]);
   }, [navigate]);

@@ -30,6 +30,7 @@ import OffersPage from "./components/OffersPage";
 import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
 import HotInboxPage from "./pages/HotInboxPage";
+import CompliancePage from "./pages/CompliancePage";
 
 export const router = createBrowserRouter([
   // Standalone print pages (no app shell — full-page printable layout)
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
       { path: "commissions",                              element: <CommissionDashboard /> },
       { path: "tasks",                                     element: <ActivitiesPage /> },
       { path: "inbox",                                     element: <HotInboxPage /> },
+      { path: "compliance",                                element: <CompliancePage /> },
       { path: "payments",                                  element: <PaymentReportPage /> },
       { path: "contracts",                                 element: <ContractsPage /> },
       { path: "payment-plans",                            element: <PaymentPlansPage /> },

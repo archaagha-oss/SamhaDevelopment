@@ -18,6 +18,7 @@
 import { prisma } from "../lib/prisma.js";
 import { matchInbound, type Channel } from "./inboundMatcher.js";
 import { recordReply, setOptOut } from "./communicationPreferenceService.js";
+import { sseHub } from "./sseHub.js";
 
 export interface NormalizedInbound {
   channel: Channel;
@@ -129,6 +130,15 @@ export async function processInbound(input: NormalizedInbound): Promise<ProcessR
       ambiguous: match.ambiguous,
     }).catch((err) => console.warn(`[Inbound] notify failed: ${err instanceof Error ? err.message : err}`));
 
+    // 7. Push a live event so any open Lead/Deal page refreshes its thread
+    sseHub.broadcast("activity.inbound", {
+      activityId: activity.id,
+      leadId: match.leadId ?? null,
+      dealId: match.dealId ?? null,
+      contactId: match.contactId ?? null,
+      channel: input.channel,
+    });
+
     return {
       status: isStop ? "opted-out" : "matched",
       activityId: activity.id,
@@ -158,7 +168,27 @@ export async function processInbound(input: NormalizedInbound): Promise<ProcessR
     },
   });
 
+  // Live: announce the new triage row + an updated count for the sidebar badge.
+  sseHub.broadcast("triage.created", {
+    triageId: triage.id,
+    channel: input.channel,
+    fromAddress: triage.fromAddress,
+  });
+  publishTriageCounts().catch(() => undefined);
+
   return { status: "triaged", triageId: triage.id, matchReason: match.reason };
+}
+
+/** Publish the current { unclaimed, claimed } counts to every connected client. */
+export async function publishTriageCounts(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = prisma as any;
+  if (typeof p.inboundTriage?.count !== "function") return;
+  const [unclaimed, claimed] = await Promise.all([
+    p.inboundTriage.count({ where: { status: "UNCLAIMED" } }),
+    p.inboundTriage.count({ where: { status: "CLAIMED" } }),
+  ]);
+  sseHub.broadcast("triage.counts", { unclaimed, claimed });
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -193,7 +223,7 @@ async function notifyAssignedAgent(args: NotifyArgs): Promise<void> {
   const message = `${l.firstName ?? ""} ${l.lastName ?? ""}`.trim() +
     ` replied via ${channelLabel}${ambiguousNote}: ${args.summary.slice(0, 80)}…`;
 
-  await prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       userId:   l.assignedAgentId,
       message,
@@ -201,5 +231,14 @@ async function notifyAssignedAgent(args: NotifyArgs): Promise<void> {
       type:     "GENERAL",
       priority: args.ambiguous ? "HIGH" : "NORMAL",
     } as any,
+  });
+
+  // Live: push to the assigned agent's bell so it lights up immediately.
+  sseHub.publishToUser(l.assignedAgentId, "notification.created", {
+    id: notification.id,
+    message,
+    priority: args.ambiguous ? "HIGH" : "NORMAL",
+    leadId: args.leadId,
+    activityId: args.activityId,
   });
 }

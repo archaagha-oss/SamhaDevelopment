@@ -30,6 +30,8 @@ import contactRoutes from "./routes/contacts";
 import webhookRoutes from "./routes/webhooks";
 import triageRoutes from "./routes/triage";
 import communicationsRoutes from "./routes/communications";
+import streamRoutes from "./routes/stream";
+import complianceRoutes from "./routes/compliance";
 
 dotenv.config();
 
@@ -139,6 +141,8 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/triage", triageRoutes);
 app.use("/api/communications", communicationsRoutes);
+app.use("/api/stream", streamRoutes);
+app.use("/api/compliance", complianceRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

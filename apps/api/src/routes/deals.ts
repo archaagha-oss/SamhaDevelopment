@@ -81,7 +81,7 @@ router.get("/:id", async (req, res) => {
         stageHistory: { orderBy: { changedAt: "desc" } },
         brokerCompany: true,
         brokerAgent: true,
-      } as any,
+      },
     });
 
     if (!deal) {

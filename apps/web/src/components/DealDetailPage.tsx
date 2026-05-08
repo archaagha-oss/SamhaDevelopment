@@ -9,6 +9,7 @@ import DealEditModal from "./DealEditModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
+import { useEventStream } from "../hooks/useEventStream";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -95,6 +96,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blockers, setBlockers] = useState<Array<{
+    kind: string; severity: "EXPIRED" | "CRITICAL" | "WARNING" | "ATTENTION" | "OK";
+    daysToExpiry: number; ownerName: string; expiresAt: string;
+  }>>([]);
   const [updatingStage, setUpdatingStage] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showStageSelect, setShowStageSelect] = useState(false);
@@ -243,6 +248,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       .then((r) => setDeal(r.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load deal"))
       .finally(() => setLoading(false));
+    axios.get(`/api/compliance/deal/${dealId}/blockers`)
+      .then((r) => setBlockers(r.data?.data ?? []))
+      .catch(() => setBlockers([]));
   }, [dealId]);
 
   const loadActivities = useCallback(() => {
@@ -252,6 +260,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       .catch(() => setActivities([]))
       .finally(() => setActivityLoading(false));
   }, [dealId]);
+
+  // Live: refresh activities when an inbound message lands on this deal
+  useEventStream("activity.inbound", (data: { dealId?: string | null }) => {
+    if (dealId && data?.dealId === dealId) loadActivities();
+  });
 
   const submitActivity = async () => {
     if (!activityForm.summary.trim()) return;
@@ -644,6 +657,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
       ]} />
+
+      {blockers.length > 0 && (
+        <ComplianceBanner blockers={blockers} />
+      )}
       {/* Header */}
       <div>
         <div className="flex items-start justify-between gap-4">
@@ -2090,6 +2107,61 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Compliance banner: surfaces blockers (broker license / agent EID / buyer EID) ─
+
+const KIND_LABEL: Record<string, string> = {
+  BROKER_RERA_LICENSE:  "Broker RERA license",
+  BROKER_TRADE_LICENSE: "Trade license",
+  BROKER_VAT_CERT:      "VAT certificate",
+  AGENT_RERA_CARD:      "Agent RERA card",
+  AGENT_EID:            "Agent EID",
+  BUYER_EID:            "Buyer EID",
+};
+
+const SEVERITY_TINT_BANNER: Record<string, { bg: string; pill: string }> = {
+  EXPIRED:  { bg: "bg-red-50 border-red-200",       pill: "bg-red-600 text-white" },
+  CRITICAL: { bg: "bg-orange-50 border-orange-200", pill: "bg-orange-500 text-white" },
+  WARNING:  { bg: "bg-amber-50 border-amber-200",   pill: "bg-amber-500 text-white" },
+};
+
+function ComplianceBanner({ blockers }: { blockers: Array<{
+  kind: string; severity: "EXPIRED" | "CRITICAL" | "WARNING" | "ATTENTION" | "OK";
+  daysToExpiry: number; ownerName: string; expiresAt: string;
+}> }) {
+  // Worst-severity row determines the banner colour
+  const worstRow = blockers[0]; // service sorts worst-first
+  const tint = SEVERITY_TINT_BANNER[worstRow.severity] ?? SEVERITY_TINT_BANNER.WARNING;
+  const days = (n: number) => n < 0 ? `${Math.abs(n)}d ago` : `in ${n}d`;
+
+  return (
+    <div className={`border rounded-xl px-4 py-3 ${tint.bg}`}>
+      <div className="flex items-start gap-3">
+        <span className="text-lg">⚠️</span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-slate-800">
+            {blockers.length === 1 ? "Compliance issue on this deal" : `${blockers.length} compliance issues on this deal`}
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {blockers.slice(0, 4).map((b, i) => (
+              <li key={i} className="text-xs text-slate-700 flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${SEVERITY_TINT_BANNER[b.severity]?.pill ?? "bg-slate-200 text-slate-700"}`}>
+                  {b.severity}
+                </span>
+                <span>{KIND_LABEL[b.kind] ?? b.kind}</span>
+                <span className="text-slate-500">— {b.ownerName} ({days(b.daysToExpiry)})</span>
+              </li>
+            ))}
+            {blockers.length > 4 && (
+              <li className="text-xs text-slate-500">+ {blockers.length - 4} more</li>
+            )}
+          </ul>
+        </div>
+        <a href="/compliance" className="text-xs text-blue-600 hover:underline flex-shrink-0 mt-0.5">Open radar →</a>
+      </div>
     </div>
   );
 }
