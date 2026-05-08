@@ -335,6 +335,7 @@ router.post("/", validate(createUnitSchema), async (req, res) => {
       projectId, unitNumber, floor, type, area, price, view,
       bathrooms, parkingSpaces, internalArea, externalArea, internalNotes, tags,
       areaSqft, ratePerSqft, smartHome, anticipatedCompletionDate,
+      trakheesiPermit, portalEnabled, portalTitle, portalDescription,
     } = req.body;
 
     if (!UNIT_NUMBER_PATTERN.test(unitNumber)) {
@@ -358,6 +359,10 @@ router.post("/", validate(createUnitSchema), async (req, res) => {
         ...(ratePerSqft !== undefined && { ratePerSqft }),
         ...(smartHome !== undefined && { smartHome }),
         ...(anticipatedCompletionDate && { anticipatedCompletionDate: new Date(anticipatedCompletionDate) }),
+        ...(trakheesiPermit !== undefined && { trakheesiPermit }),
+        ...(portalEnabled !== undefined && { portalEnabled }),
+        ...(portalTitle !== undefined && { portalTitle }),
+        ...(portalDescription !== undefined && { portalDescription }),
       },
     });
     res.status(201).json(unit);
@@ -385,6 +390,7 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
       bathrooms, parkingSpaces, internalArea, externalArea,
       blockExpiresAt, internalNotes, tags, paymentPlan,
       areaSqft, ratePerSqft, smartHome, anticipatedCompletionDate,
+      trakheesiPermit, portalEnabled, portalTitle, portalDescription,
     } = req.body;
 
     const unit = await prisma.unit.findUnique({ where: { id: req.params.id } });
@@ -421,6 +427,10 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
     if (anticipatedCompletionDate !== undefined) {
       data.anticipatedCompletionDate = anticipatedCompletionDate ? new Date(anticipatedCompletionDate) : null;
     }
+    if (trakheesiPermit !== undefined) data.trakheesiPermit = trakheesiPermit || null;
+    if (portalEnabled !== undefined) data.portalEnabled = !!portalEnabled;
+    if (portalTitle !== undefined) data.portalTitle = portalTitle || null;
+    if (portalDescription !== undefined) data.portalDescription = portalDescription || null;
 
     if (price !== undefined && price !== unit.price) {
       data.price = price;

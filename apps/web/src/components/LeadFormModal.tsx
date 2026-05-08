@@ -3,6 +3,8 @@ import axios from "axios";
 import { useAgents } from "../hooks/useAgents";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import EmiratesIdScan from "./EmiratesIdScan";
+import { EmiratesIdFields } from "../utils/emiratesIdOcr";
 
 interface Props {
   onClose: () => void;
@@ -58,6 +60,17 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
   const set = (patch: Partial<typeof BLANK>) => {
     setForm((f) => ({ ...f, ...patch }));
     setDirty(true);
+  };
+
+  const applyEmiratesId = (fields: EmiratesIdFields) => {
+    const patch: Partial<typeof BLANK> = {};
+    if (fields.fullName) {
+      const parts = fields.fullName.split(/\s+/);
+      patch.firstName = parts[0] || "";
+      patch.lastName = parts.slice(1).join(" ") || "";
+    }
+    if (fields.nationality) patch.nationality = fields.nationality;
+    if (Object.keys(patch).length > 0) set(patch);
   };
 
   const toggleUnit = (unitId: string) => {
@@ -155,6 +168,9 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         </div>
 
         <form id="lead-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+          {/* Emirates ID quick-scan (optional) */}
+          <EmiratesIdScan onExtracted={applyEmiratesId} />
+
           {/* Name */}
           <div className="grid grid-cols-2 gap-3">
             <div>

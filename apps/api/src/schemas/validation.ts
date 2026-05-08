@@ -235,6 +235,11 @@ export const createUnitSchema = z.object({
   internalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   ...unitSpaFields,
+  // Portal listing (all optional)
+  trakheesiPermit: z.string().optional(),
+  portalEnabled: z.boolean().optional(),
+  portalTitle: z.string().optional(),
+  portalDescription: z.string().optional(),
 });
 
 export const updateUnitSchema = z.object({
@@ -254,6 +259,12 @@ export const updateUnitSchema = z.object({
   internalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   ...unitSpaFields,
+  paymentPlan: z.string().nullable().optional(),
+  // Portal listing (all optional)
+  trakheesiPermit: z.string().nullable().optional(),
+  portalEnabled: z.boolean().optional(),
+  portalTitle: z.string().nullable().optional(),
+  portalDescription: z.string().nullable().optional(),
 });
 
 export const bulkCreateUnitsSchema = z.object({

@@ -594,6 +594,12 @@ model Unit {
   tags           Json?    // string array e.g. ["corner", "premium"]
   paymentPlan    String?  // e.g. "60/40", "50/50", "40/60"
 
+  // Portal listing (Bayut / Property Finder / Dubizzle)
+  trakheesiPermit String?  // Dubai DLD listing permit (required for portal feeds)
+  portalEnabled   Boolean  @default(false) // include in outbound XML feed
+  portalTitle     String?  // override for portal listing headline
+  portalDescription String? @db.Text
+
   // Phase 1: assignments (operational agent tracking — not buyer tracking)
   assignedAgent   User?   @relation("AssignedUnits", fields: [assignedAgentId], references: [id])
   assignedAgentId String?
