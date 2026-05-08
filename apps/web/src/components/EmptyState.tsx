@@ -6,6 +6,7 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  action?: { label: string; onClick: () => void };
   variant?: "default" | "compact";
 }
 
@@ -15,7 +16,8 @@ export default function EmptyState({
   description,
   actionLabel,
   onAction,
-  variant = "default"
+  action,
+  variant = "default",
 }: EmptyStateProps) {
   if (variant === "compact") {
     return (
@@ -25,6 +27,9 @@ export default function EmptyState({
     );
   }
 
+  const label = actionLabel ?? action?.label;
+  const handler = onAction ?? action?.onClick;
+
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="text-4xl mb-3 opacity-50">{icon}</div>
@@ -32,9 +37,9 @@ export default function EmptyState({
       {description && (
         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">{description}</p>
       )}
-      {actionLabel && onAction && (
-        <Button onClick={onAction} className="mt-4" size="sm">
-          {actionLabel}
+      {label && handler && (
+        <Button onClick={handler} className="mt-4" size="sm">
+          {label}
         </Button>
       )}
     </div>

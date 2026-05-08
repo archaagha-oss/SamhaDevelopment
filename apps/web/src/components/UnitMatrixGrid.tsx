@@ -112,8 +112,8 @@ export default function UnitMatrixGrid({
       setTotalUnits(response.data.pagination?.total || unitsData.length);
 
       // Extract available floors and types from all units, not just current page
-      const floors = Array.from(new Set(unitsData.map((u: Unit) => u.floor))).sort(
-        (a: number, b: number) => a - b
+      const floors = (Array.from(new Set(unitsData.map((u: Unit) => u.floor))) as number[]).sort(
+        (a, b) => a - b
       );
       const types = Array.from(new Set(unitsData.map((u: Unit) => u.type))) as UnitType[];
 

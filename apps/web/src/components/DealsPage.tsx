@@ -487,10 +487,10 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                     </td>
                   </tr>
                 );
-              }))
-            )}
+              }))}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Pagination — hidden in kanban view (kanban shows current page's batch only) */}

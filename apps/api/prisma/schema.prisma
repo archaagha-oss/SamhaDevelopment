@@ -187,6 +187,7 @@ enum PaymentStatus {
   PDC_CLEARED
   PDC_BOUNCED
   CANCELLED
+  WAIVED
 }
 
 enum MilestoneType {

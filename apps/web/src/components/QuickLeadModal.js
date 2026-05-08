@@ -11,6 +11,7 @@ export default function QuickLeadModal({ onClose, onCreated }) {
     const [lastName, setLastName] = useState("");
     const [phone, setPhone] = useState("");
     const [assignedAgentId, setAssignedAgentId] = useState("");
+    const [consent, setConsent] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [dirty, setDirty] = useState(false);
@@ -23,6 +24,10 @@ export default function QuickLeadModal({ onClose, onCreated }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+        if (!consent) {
+            setError("Consent is required before creating a lead.");
+            return;
+        }
         setSubmitting(true);
         try {
             await axios.post("/api/leads", {
@@ -31,6 +36,7 @@ export default function QuickLeadModal({ onClose, onCreated }) {
                 phone: phone.trim(),
                 assignedAgentId: assignedAgentId || undefined,
                 source: "DIRECT",
+                consent,
             });
             onCreated();
             onClose();
@@ -54,5 +60,5 @@ export default function QuickLeadModal({ onClose, onCreated }) {
                                             }, className: inp + " pr-24", placeholder: "+971 50 000 0000" }), _jsx("span", { className: "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none", children: "UAE format" })] })] }), _jsxs("div", { children: [_jsx("label", { className: lbl, children: "Assigned Sales Agent *" }), _jsxs("select", { required: true, value: assignedAgentId, onChange: (e) => {
                                         setAssignedAgentId(e.target.value);
                                         setDirty(true);
-                                    }, className: inp, children: [_jsx("option", { value: "", children: "Select agent\u2026" }), agents.map((a) => _jsx("option", { value: a.id, children: a.name }, a.id))] })] }), error && (_jsx("p", { className: "text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg", children: error }))] }), _jsxs("div", { className: "px-6 py-4 border-t border-slate-100 flex gap-3", children: [_jsx("button", { type: "button", onClick: handleClose, className: "flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors", children: "Cancel" }), _jsx("button", { form: "quick-lead-form", type: "submit", disabled: submitting, className: "flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50", children: submitting ? "Creating…" : "Create Lead" })] })] }) }));
+                                    }, className: inp, children: [_jsx("option", { value: "", children: "Select agent\u2026" }), agents.map((a) => _jsx("option", { value: a.id, children: a.name }, a.id))] })] }), _jsxs("label", { className: "flex items-start gap-2.5 cursor-pointer border border-slate-200 rounded-xl p-3 bg-slate-50", children: [_jsx("input", { type: "checkbox", required: true, checked: consent, onChange: (e) => { setConsent(e.target.checked); setDirty(true); }, className: "mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" }), _jsxs("span", { className: "text-xs text-slate-600 leading-relaxed", children: ["The lead has consented to being contacted about properties. ", _jsx("span", { className: "text-red-500", children: "*" })] })] }), error && (_jsx("p", { className: "text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg", children: error }))] }), _jsxs("div", { className: "px-6 py-4 border-t border-slate-100 flex gap-3", children: [_jsx("button", { type: "button", onClick: handleClose, className: "flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors", children: "Cancel" }), _jsx("button", { form: "quick-lead-form", type: "submit", disabled: submitting, className: "flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50", children: submitting ? "Creating…" : "Create Lead" })] })] }) }));
 }

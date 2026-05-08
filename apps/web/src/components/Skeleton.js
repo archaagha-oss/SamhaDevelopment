@@ -18,3 +18,4 @@ export function SkeletonCard() {
 export function SkeletonKpi() {
     return (_jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", children: [_jsx(Skeleton, { className: "h-3 w-1/3" }), _jsx(Skeleton, { className: "h-7 w-1/2" }), _jsx(Skeleton, { className: "h-3 w-2/5" })] }));
 }
+export default Skeleton;
