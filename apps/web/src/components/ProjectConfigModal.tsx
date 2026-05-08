@@ -6,7 +6,14 @@ interface Props {
   onClose: () => void;
 }
 
-const DEFAULTS = { dldPercent: 4, adminFee: 5000, reservationDays: 7, oqoodDays: 90, vatPercent: 0, agencyFeePercent: 2, unitsPerFloor: 8 };
+const DEFAULTS = {
+  dldPercent: 4, adminFee: 5000, reservationDays: 7, oqoodDays: 90,
+  vatPercent: 0, agencyFeePercent: 2, unitsPerFloor: 8,
+  // SPA business-rule constants
+  lateFeeMonthlyPercent: 2, delayCompensationAnnualPercent: 1,
+  delayCompensationCapPercent: 5, liquidatedDamagesPercent: 40,
+  disposalThresholdPercent: 30, resaleProcessingFee: 3000, gracePeriodMonths: 12,
+};
 
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
 const lbl = "block text-xs font-semibold text-slate-600 mb-0.5";
@@ -21,6 +28,13 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
     vatPercent: DEFAULTS.vatPercent.toString(),
     agencyFeePercent: DEFAULTS.agencyFeePercent.toString(),
     unitsPerFloor: DEFAULTS.unitsPerFloor.toString(),
+    lateFeeMonthlyPercent: DEFAULTS.lateFeeMonthlyPercent.toString(),
+    delayCompensationAnnualPercent: DEFAULTS.delayCompensationAnnualPercent.toString(),
+    delayCompensationCapPercent: DEFAULTS.delayCompensationCapPercent.toString(),
+    liquidatedDamagesPercent: DEFAULTS.liquidatedDamagesPercent.toString(),
+    disposalThresholdPercent: DEFAULTS.disposalThresholdPercent.toString(),
+    resaleProcessingFee: DEFAULTS.resaleProcessingFee.toString(),
+    gracePeriodMonths: DEFAULTS.gracePeriodMonths.toString(),
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -39,6 +53,13 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
           vatPercent: c.vatPercent?.toString() ?? DEFAULTS.vatPercent.toString(),
           agencyFeePercent: c.agencyFeePercent?.toString() ?? DEFAULTS.agencyFeePercent.toString(),
           unitsPerFloor: c.unitsPerFloor?.toString() ?? DEFAULTS.unitsPerFloor.toString(),
+          lateFeeMonthlyPercent: c.lateFeeMonthlyPercent?.toString() ?? DEFAULTS.lateFeeMonthlyPercent.toString(),
+          delayCompensationAnnualPercent: c.delayCompensationAnnualPercent?.toString() ?? DEFAULTS.delayCompensationAnnualPercent.toString(),
+          delayCompensationCapPercent: c.delayCompensationCapPercent?.toString() ?? DEFAULTS.delayCompensationCapPercent.toString(),
+          liquidatedDamagesPercent: c.liquidatedDamagesPercent?.toString() ?? DEFAULTS.liquidatedDamagesPercent.toString(),
+          disposalThresholdPercent: c.disposalThresholdPercent?.toString() ?? DEFAULTS.disposalThresholdPercent.toString(),
+          resaleProcessingFee: c.resaleProcessingFee?.toString() ?? DEFAULTS.resaleProcessingFee.toString(),
+          gracePeriodMonths: c.gracePeriodMonths?.toString() ?? DEFAULTS.gracePeriodMonths.toString(),
         });
       })
       .catch(() => {})
@@ -62,6 +83,13 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
         vatPercent: parseFloat(form.vatPercent),
         agencyFeePercent: parseFloat(form.agencyFeePercent),
         unitsPerFloor: parseInt(form.unitsPerFloor),
+        lateFeeMonthlyPercent: parseFloat(form.lateFeeMonthlyPercent),
+        delayCompensationAnnualPercent: parseFloat(form.delayCompensationAnnualPercent),
+        delayCompensationCapPercent: parseFloat(form.delayCompensationCapPercent),
+        liquidatedDamagesPercent: parseFloat(form.liquidatedDamagesPercent),
+        disposalThresholdPercent: parseFloat(form.disposalThresholdPercent),
+        resaleProcessingFee: parseFloat(form.resaleProcessingFee),
+        gracePeriodMonths: parseInt(form.gracePeriodMonths),
       });
       setSaved(true);
     } catch (err: any) {
@@ -73,7 +101,7 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div>
             <h2 className="font-bold text-slate-900">Project Configuration</h2>
@@ -132,6 +160,56 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
                 <p className={hint}>Default number of units when adding a full floor</p>
               </div>
             </div>
+
+            {/* SPA business-rule constants — Late Fee, Delay Compensation,
+                Liquidated Damages, Disposal Threshold, Resale Fee, Grace Period.
+                Defaults reflect the SAMHA legal SPA template. */}
+            <details className="border border-slate-200 rounded-lg" open>
+              <summary className="px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer select-none">
+                SPA business rules
+              </summary>
+              <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={lbl}>Late Fee % / month</label>
+                    <input type="number" min="0" max="100" step="0.1" value={form.lateFeeMonthlyPercent} onChange={(e) => set("lateFeeMonthlyPercent", e.target.value)} className={inp} />
+                    <p className={hint}>Daily accrual, monthly compounding</p>
+                  </div>
+                  <div>
+                    <label className={lbl}>Liquidated Damages %</label>
+                    <input type="number" min="0" max="100" step="0.1" value={form.liquidatedDamagesPercent} onChange={(e) => set("liquidatedDamagesPercent", e.target.value)} className={inp} />
+                    <p className={hint}>Of purchase price on purchaser default</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={lbl}>Delay Compensation %/year</label>
+                    <input type="number" min="0" max="100" step="0.1" value={form.delayCompensationAnnualPercent} onChange={(e) => set("delayCompensationAnnualPercent", e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Compensation Cap %</label>
+                    <input type="number" min="0" max="100" step="0.1" value={form.delayCompensationCapPercent} onChange={(e) => set("delayCompensationCapPercent", e.target.value)} className={inp} />
+                    <p className={hint}>Maximum buyer compensation</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className={lbl}>Disposal Threshold %</label>
+                    <input type="number" min="0" max="100" step="0.1" value={form.disposalThresholdPercent} onChange={(e) => set("disposalThresholdPercent", e.target.value)} className={inp} />
+                    <p className={hint}>Min paid to allow resale</p>
+                  </div>
+                  <div>
+                    <label className={lbl}>Resale Fee (AED)</label>
+                    <input type="number" min="0" value={form.resaleProcessingFee} onChange={(e) => set("resaleProcessingFee", e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Grace Period (months)</label>
+                    <input type="number" min="0" max="60" value={form.gracePeriodMonths} onChange={(e) => set("gracePeriodMonths", e.target.value)} className={inp} />
+                    <p className={hint}>Auto-extension on completion</p>
+                  </div>
+                </div>
+              </div>
+            </details>
 
             {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
             {saved && <p className="text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">Configuration saved successfully.</p>}

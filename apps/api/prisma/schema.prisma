@@ -1,0 +1,1525 @@
+// ============================================================
+// Prisma Schema — Real Estate CRM
+// Provider : MySQL (Prisma 5)
+// Last updated : 2026-04-18
+// Covers Phases 1–5: core domain, multi-project, events/jobs,
+//                    financial system, pricing engine
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// SECTION 1: ENUMERATIONS
+// ============================================================
+
+// ----- Unit -----
+
+enum UnitStatus {
+  NOT_RELEASED
+  AVAILABLE
+  ON_HOLD    // temporary soft hold during offer period (auto-expires)
+  RESERVED
+  BOOKED
+  SOLD
+  HANDED_OVER
+  BLOCKED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum CompletionStatus {
+  OFF_PLAN
+  UNDER_CONSTRUCTION
+  READY
+}
+
+enum PropertyPurpose {
+  SALE
+  RENT
+}
+
+enum FurnishingStatus {
+  UNFURNISHED
+  SEMI_FURNISHED
+  FURNISHED
+}
+
+enum UnitType {
+  STUDIO
+  ONE_BR
+  TWO_BR
+  THREE_BR
+  FOUR_BR
+  COMMERCIAL
+}
+
+enum ViewType {
+  SEA
+  GARDEN
+  STREET
+  BACK
+  SIDE
+  AMENITIES
+}
+
+enum UnitImageType {
+  PHOTO
+  FLOOR_PLAN
+  FLOOR_MAP
+  SCHEDULE_DIMENSIONED   // SPA Schedule 1 — dimensioned plan
+  SCHEDULE_FURNISHED     // SPA Schedule 1 — furnished plan
+  SCHEDULE_FLOOR_PLAN    // SPA Schedule 3 — floor plan
+}
+
+enum BankAccountPurpose {
+  ESCROW
+  CURRENT
+}
+
+// Which project bank account a given payment instalment is routed to.
+// Reservation Form / Sales Offer / SPA payment-plan tables show this column
+// per row (e.g. reservation deposit -> CORPORATE, contract signing -> ESCROW).
+enum PaymentTargetAccount {
+  ESCROW
+  CORPORATE
+}
+
+enum SpecificationArea {
+  FOYER
+  LIVING_AREA
+  DINING_AREA
+  BEDROOM
+  KITCHEN
+  MASTER_BATHROOM
+  SECONDARY_BATHROOM
+  BALCONY
+  POWDER_ROOM
+  STUDY
+  MAID_ROOM
+  LAUNDRY
+}
+
+// ----- User / Access -----
+
+enum UserRole {
+  ADMIN
+  SALES_AGENT
+  OPERATIONS
+  FINANCE
+  DEVELOPER
+}
+
+enum ProjectRole {
+  PROJECT_ADMIN
+  SALES
+  FINANCE
+  VIEWER
+}
+
+// ----- Lead -----
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  OFFER_SENT
+  SITE_VISIT
+  NEGOTIATING
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+// ----- Reservation -----
+
+enum ReservationStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  CONVERTED
+}
+
+// ----- Offer -----
+
+enum OfferStatus {
+  ACTIVE
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+// ----- Deal -----
+
+enum DealStage {
+  RESERVATION_PENDING
+  RESERVATION_CONFIRMED
+  SPA_PENDING
+  SPA_SENT
+  SPA_SIGNED
+  OQOOD_PENDING
+  OQOOD_REGISTERED
+  INSTALLMENTS_ACTIVE
+  HANDOVER_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+// ----- Payment -----
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  OVERDUE
+  PAID
+  PDC_PENDING
+  PDC_CLEARED
+  PDC_BOUNCED
+  CANCELLED
+}
+
+enum MilestoneType {
+  BOOKING_DEPOSIT
+  DLD_FEE
+  ADMIN_FEE
+  CONSTRUCTION_STAGE
+  HANDOVER_PAYMENT
+  CUSTOM
+}
+
+enum MilestoneTrigger {
+  DAYS_FROM_RESERVATION  // dueDate = reservationDate + daysFromReservation
+  FIXED_DATE             // dueDate = fixedDate (specific calendar date)
+  ON_SPA_SIGNING         // dueDate auto-set when deal reaches SPA_SIGNED
+  ON_OQOOD               // dueDate auto-set when deal reaches OQOOD_REGISTERED
+  ON_HANDOVER            // dueDate auto-set when deal reaches HANDOVER_PENDING
+}
+
+// ----- Commission -----
+
+enum CommissionStatus {
+  NOT_DUE
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  FORFEITED
+  CANCELLED
+}
+
+// ----- Document -----
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+  ARCHIVED
+}
+
+enum DocumentType {
+  PASSPORT
+  EMIRATES_ID
+  VISA
+  SALES_OFFER
+  RESERVATION_FORM
+  SPA
+  OQOOD_CERTIFICATE
+  PAYMENT_RECEIPT
+  OTHER
+}
+
+enum DocumentSource {
+  GENERATED
+  SIGNED
+  UPLOADED
+}
+
+// ----- Contact -----
+
+enum ContactSource {
+  MANUAL
+  LEAD
+  BROKER
+  REFERRAL
+  IMPORT
+}
+
+// ----- Background jobs -----
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ----- Late fee -----
+
+enum LateFeeType {
+  PERCENTAGE_PER_DAY
+  FIXED_ONE_TIME
+  PERCENTAGE_PER_MONTH
+}
+
+// ----- Pricing engine -----
+
+enum PricingScope {
+  PROJECT
+  UNIT_TYPE
+  FLOOR
+  VIEW
+  UNIT
+}
+
+enum PricingAdjustmentType {
+  PERCENTAGE_INCREASE
+  PERCENTAGE_DECREASE
+  FIXED_INCREASE
+  FIXED_DECREASE
+}
+
+// ----- Task -----
+
+enum TaskType {
+  CALL
+  MEETING
+  FOLLOW_UP
+  DOCUMENT
+  PAYMENT
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+}
+
+// ----- Notifications -----
+
+enum NotificationType {
+  PAYMENT_OVERDUE
+  RESERVATION_EXPIRING
+  COMMISSION_PENDING
+  OQOOD_DEADLINE
+  DEAL_STAGE_CHANGED
+  NEW_LEAD_ASSIGNED
+  GENERAL
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ============================================================
+// SECTION 2: ORGANIZATION & PROJECT
+// ============================================================
+
+model Organization {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  country  String    @default("UAE")
+  currency String    @default("AED")
+  timezone String    @default("Asia/Dubai")
+
+  projects    Project[]
+  appSettings AppSettings?
+  contacts    Contact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  name           String        @unique
+  location       String
+  description    String?       @db.Text
+  totalUnits     Int
+  totalFloors    Int?
+  projectStatus  ProjectStatus @default(ACTIVE)
+  handoverDate   DateTime
+  launchDate     DateTime?
+  startDate      DateTime?
+
+  completionStatus CompletionStatus @default(OFF_PLAN)
+  purpose          PropertyPurpose  @default(SALE)
+  furnishing       FurnishingStatus @default(UNFURNISHED)
+
+  // ----- SPA particulars (developer / regulatory) -----
+  // Populated from the project's RERA registration and used in the
+  // generated Sale & Purchase Agreement particulars block.
+  commercialLicense  String? // e.g. "958954"
+  developerNumber    String? // RERA developer registration number (e.g. "2216")
+  developerAddress   String?
+  developerPhone     String?
+  developerEmail     String?
+  plotNumber         String? // e.g. "JVC10EMRH005"
+  buildingPermitRef  String? // e.g. "TKS/CEDSR-146631/JVC10EMRH005/2024"
+  buildingStructure  String? // e.g. "B+G+3P+19+R"
+  masterDeveloper    String? // e.g. "Jumeirah Village LLC"
+  masterCommunity    String? // e.g. "Jumeirah Village Circle"
+  permittedUse       String? // e.g. "Single Family Residential Purpose"
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  units              Unit[]
+  leads              Lead[]
+  config             ProjectConfig?
+  userAccess         UserProjectAccess[]
+  lateFeeRules       LateFeeRule[]
+  pricingRules       PricingRule[]
+  images             ProjectImage[]
+  stageDocumentRules StageDocumentRule[]
+  bankAccounts       ProjectBankAccount[]
+  specifications     ProjectSpecification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([organizationId])
+}
+
+model ProjectImage {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  url       String
+  caption   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model ProjectConfig {
+  id              String  @id @default(cuid())
+  projectId       String  @unique
+  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  dldPercent       Float   @default(4)
+  adminFee         Float   @default(5000)
+  reservationDays  Int     @default(7)
+  oqoodDays        Int     @default(90)
+
+  vatPercent       Float   @default(0)
+  agencyFeePercent Float   @default(2)
+  unitsPerFloor    Int     @default(8)
+  totalFloors      Int?
+
+  defaultUnitType String? @default("STUDIO")
+  defaultArea      Float?  @default(750)
+  defaultView      String? @default("GARDEN")
+  defaultPrice     Float?
+
+  // ----- SPA business-rule constants -----
+  // Defaults reflect the SAMHA-style legal SPA. Override per project as needed.
+  lateFeeMonthlyPercent           Float @default(2)   // 2% per month, daily accrual
+  delayCompensationAnnualPercent  Float @default(1)   // 1% per year of paid amount
+  delayCompensationCapPercent     Float @default(5)   // capped at 5% of purchase price
+  liquidatedDamagesPercent        Float @default(40)  // 40% on purchaser default
+  disposalThresholdPercent        Float @default(30)  // 30% paid before resale allowed
+  resaleProcessingFee             Float @default(3000)
+  gracePeriodMonths               Int   @default(12)  // auto-extension on completion date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One escrow + one current account per project (SPA Particulars items IX & X).
+// Per-unit escrow reference (e.g. "SR2-STD-207") is built at render time
+// from refPrefix + unit number.
+model ProjectBankAccount {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  purpose       BankAccountPurpose
+  accountName   String
+  bankName      String
+  branchAddress String?
+  iban          String
+  accountNumber String
+  refPrefix     String? // only meaningful for ESCROW (e.g. "SR2-STD-")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, purpose])
+  @@index([projectId])
+}
+
+// SPA Schedule 2 — finishes specification table (per area).
+model ProjectSpecification {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  area               SpecificationArea
+  floorFinish        String?
+  wallFinish         String?
+  ceilingFinish      String?
+  additionalFinishes String?  @db.Text
+  sortOrder          Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, area])
+  @@index([projectId])
+}
+
+model UserProjectAccess {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(SALES)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// ============================================================
+// SECTION 3: USER
+// ============================================================
+
+model User {
+  id       String   @id @default(cuid())
+  clerkId  String   @unique
+  email    String   @unique
+  name     String
+  role     UserRole
+
+  phone      String?
+  department String?
+
+  assignedLeads  Lead[]             @relation("AssignedLeads")
+  assignedUnits  Unit[]             @relation("AssignedUnits")
+  notifications  Notification[]
+  projectAccess  UserProjectAccess[]
+  tasks          Task[]             @relation("AssignedTasks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================================
+// SECTION 4: UNIT
+// ============================================================
+
+model Unit {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  unitNumber String
+  floor      Int
+  type       UnitType
+  area       Float     // sq metres
+  basePrice  Float     // original list price — immutable after creation
+  price      Float     // current asking price (AED)
+  view       ViewType
+
+  // Physical layer
+  bathrooms      Int?
+  parkingSpaces  Int?
+  internalArea   Float?   // suite sq metres (CSV: Suite SQ.M)
+  externalArea   Float?   // balcony sq metres (CSV: Balcony SQ.M)
+  areaSqft       Float?   // total area in sq feet (SPA particulars print both units)
+  ratePerSqft    Float?   // unit rate per sq ft (SPA particulars)
+  smartHome      Boolean? // sales offer / particulars
+
+  // Per-unit override of the project's anticipated completion date.
+  // Falls back to project.handoverDate when null.
+  anticipatedCompletionDate DateTime?
+
+  status        UnitStatus         @default(NOT_RELEASED)
+  statusHistory UnitStatusHistory[]
+
+  // Operational layer
+  blockReason    String?
+  blockExpiresAt DateTime?
+  holdExpiresAt  DateTime?
+  internalNotes  String?  @db.Text
+  tags           Json?    // string array e.g. ["corner", "premium"]
+  paymentPlan    String?  // e.g. "60/40", "50/50", "40/60"
+
+  // Phase 1: assignments (operational agent tracking — not buyer tracking)
+  assignedAgent   User?   @relation("AssignedUnits", fields: [assignedAgentId], references: [id])
+  assignedAgentId String?
+
+  // Relations
+  interests    LeadUnitInterest[]
+  deals        Deal[]
+  reservations Reservation[]
+  offers       Offer[]
+  priceHistory UnitPriceHistory[]
+  activities   Activity[]         @relation("UnitActivities")
+  images       UnitImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, unitNumber])
+  @@index([projectId])
+  @@index([floor])
+  @@index([status])
+  @@index([type])
+  @@index([unitNumber])
+  @@index([projectId, status])
+  @@index([projectId, type])
+  @@index([projectId, price])
+}
+
+model UnitStatusHistory {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  oldStatus UnitStatus
+  newStatus UnitStatus
+
+  changedBy String
+  reason    String?
+
+  changedAt DateTime @default(now())
+
+  @@index([unitId])
+  @@index([changedAt])
+}
+
+model UnitImage {
+  id        String        @id @default(cuid())
+  unitId    String
+  unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  url       String        @db.Text
+  caption   String?
+  type      UnitImageType @default(PHOTO)
+  sortOrder Int           @default(0)
+
+  createdAt DateTime      @default(now())
+
+  @@index([unitId])
+  @@index([type])
+}
+
+// ============================================================
+// SECTION 5: LEADS
+// ============================================================
+
+model Lead {
+  id          String  @id @default(cuid())
+  firstName   String
+  lastName    String
+  phone       String  @unique
+  email       String?
+  nationality String?
+
+  // ----- SPA particulars (Purchaser block) -----
+  address                   String? @db.Text
+  emiratesId                String?
+  passportNumber            String?
+  companyRegistrationNumber String?
+  authorizedSignatory       String? // for corporate purchasers
+  sourceOfFunds             String? // AML clause + reservation form (e.g. "Husband Savings", "Salary")
+
+  source          String
+  brokerCompanyId String?
+  brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
+  brokerAgentId   String?
+  brokerAgent     BrokerAgent?   @relation(fields: [brokerAgentId], references: [id])
+
+  budget Float?
+  stage  LeadStage @default(NEW)
+
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id])
+
+  assignedAgentId String
+  assignedAgent   User   @relation("AssignedLeads", fields: [assignedAgentId], references: [id])
+
+  interests    LeadUnitInterest[]
+  activities   Activity[]
+  tasks        Task[]
+  stageHistory LeadStageHistory[]
+  deals        Deal[]
+  reservations Reservation[]
+  offers       Offer[]
+  documents    Document[]
+  dealPurchasers DealPurchaser[]
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([assignedAgentId])
+  @@index([stage])
+  @@index([projectId])
+  @@index([firstName])
+  @@index([lastName])
+}
+
+model LeadUnitInterest {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  isPrimary Boolean  @default(false)
+  addedAt   DateTime @default(now())
+
+  @@unique([leadId, unitId])
+  @@index([leadId])
+  @@index([unitId])
+}
+
+model LeadStageHistory {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  oldStage  LeadStage
+  newStage  LeadStage
+  changedBy String
+  reason    String?
+
+  changedAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+// ============================================================
+// SECTION 6: ACTIVITY, TASK, NOTIFICATION
+// ============================================================
+
+model Activity {
+  id        String   @id @default(cuid())
+  // At least one of leadId / dealId / unitId / contactId must be non-null (enforced in application layer)
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  dealId    String?
+  deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  unitId    String?
+  unit      Unit?    @relation("UnitActivities", fields: [unitId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact? @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
+
+  type    String  // CALL, EMAIL, WHATSAPP, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
+  summary String  @db.Text
+  outcome String? @db.Text
+
+  callDuration Int?    // minutes
+  messageId    String? // WhatsApp message ID
+
+  // For SITE_VISIT activities: which unit was physically visited
+  siteVisitUnitId String?
+
+  activityDate DateTime @default(now()) // when the activity happened
+  followUpDate DateTime?
+  createdBy    String   // User email or id
+  createdAt    DateTime @default(now())
+
+  @@index([leadId])
+  @@index([dealId])
+  @@index([unitId])
+  @@index([contactId])
+  @@index([createdAt])
+  @@index([activityDate])
+  @@index([leadId, activityDate])
+}
+
+model Task {
+  id    String @id @default(cuid())
+
+  title    String
+  type     TaskType     @default(FOLLOW_UP)
+  priority TaskPriority @default(MEDIUM)
+  status   TaskStatus   @default(PENDING)
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  dealId String?
+  deal   Deal?   @relation("DealTasks", fields: [dealId], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  dueDate     DateTime
+  notes       String?  @db.Text
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([dealId])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  message  String
+  leadId   String?
+  read     Boolean @default(false)
+
+  type     NotificationType     @default(GENERAL)
+  entityId   String? // relevant entity id (dealId, unitId, paymentId …)
+  entityType String? // "DEAL", "UNIT", "PAYMENT", etc.
+  priority NotificationPriority @default(NORMAL)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([type])
+  @@index([priority])
+}
+
+// ============================================================
+// SECTION 7: BROKER
+// ============================================================
+
+model BrokerCompany {
+  id    String  @id @default(cuid())
+  name  String
+  email String?
+  phone String?
+
+  agents BrokerAgent[]
+  leads  Lead[]
+  deals  Deal[]
+  commissions Commission[]
+
+  reraLicenseNumber  String?
+  reraLicenseExpiry  DateTime?
+  tradeLicenseNumber String?
+  tradeLicenseCopyUrl   String?
+  vatCertificateNo      String?
+  vatCertificateUrl     String?
+  corporateTaxCertUrl   String?
+  officeRegistrationNo  String?
+  ornCertificateUrl     String?
+  officeManagerBrokerId String?
+  website               String?
+  officeNo              String?
+  buildingName          String?
+  neighborhood          String?
+  emirate               String?
+  postalCode            String?
+  bankName              String?
+  bankAccountName       String?
+  bankAccountNo         String?
+  bankIban              String?
+  bankCurrency          String?  @default("AED")
+  commissionRate     Float    @default(4)
+
+  createdAt DateTime @default(now())
+
+  @@index([name])
+  @@index([reraLicenseExpiry])
+}
+
+model BrokerAgent {
+  id        String        @id @default(cuid())
+  companyId String
+  company   BrokerCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name      String
+  firstName String?
+  lastName  String?
+  email     String?
+  phone     String?
+
+  reraCardNumber  String?
+  reraCardExpiry  DateTime?
+  eidNo           String?
+  eidExpiry       DateTime?
+  eidFrontUrl     String?
+  eidBackUrl      String?
+  acceptedConsent Boolean   @default(false)
+
+  leads Lead[]
+  deals Deal[]
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([reraCardExpiry])
+}
+
+// ============================================================
+// SECTION 8: RESERVATION & OFFER
+// ============================================================
+
+model Reservation {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  status    ReservationStatus @default(ACTIVE)
+  expiresAt DateTime
+
+  reservedBy String  // userId who created this reservation
+  notes      String? @db.Text
+
+  convertedToDealId String? // set when status = CONVERTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([leadId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Offer {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  paymentPlanId String?
+  paymentPlan   PaymentPlan? @relation(fields: [paymentPlanId], references: [id])
+
+  offeredPrice   Float
+  originalPrice  Float  // unit.price at time of offer
+  discountAmount Float  @default(0)
+  discountPct    Float  @default(0)
+
+  notes     String? @db.Text
+  status    OfferStatus @default(ACTIVE)
+  expiresAt DateTime?
+
+  rejectedReason String?
+  acceptedBy     String? // userId
+
+  createdBy String  // userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([unitId])
+  @@index([status])
+  @@index([paymentPlanId])
+}
+
+// ============================================================
+// SECTION 9: PAYMENT PLAN (template)
+// ============================================================
+
+model PaymentPlan {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  templateVersion Int @default(1) // bumped when milestones change after deals reference this plan
+
+  milestones PaymentPlanMilestone[]
+  deals      Deal[]
+  offers     Offer[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model PaymentPlanMilestone {
+  id     String      @id @default(cuid())
+  planId String
+  plan   PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  label           String
+  percentage      Float
+  triggerType     MilestoneTrigger @default(DAYS_FROM_RESERVATION)
+
+  isDLDFee   Boolean @default(false)
+  isAdminFee Boolean @default(false)
+
+  // Default account routing for materialized payments — ESCROW for
+  // construction-stage instalments, CORPORATE for reservation/DLD/admin/handover.
+  targetAccount PaymentTargetAccount @default(ESCROW)
+
+  daysFromReservation Int?       // used when triggerType = DAYS_FROM_RESERVATION
+  fixedDate           DateTime?  // used when triggerType = FIXED_DATE
+  sortOrder           Int
+
+  createdAt DateTime @default(now())
+
+  @@index([planId])
+}
+
+// ============================================================
+// SECTION 10: DEAL
+// ============================================================
+
+model Deal {
+  id         String @id @default(cuid())
+  dealNumber String @unique
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id])
+
+  // Traceability to the reservation / offer that originated this deal
+  reservationId String?
+  offerId       String?
+
+  isActive Boolean   @default(true) // only ONE active deal per unit at a time (enforced in app layer)
+  stage    DealStage @default(RESERVATION_PENDING)
+
+  stageHistory DealStageHistory[]
+
+  salePrice         Float
+  discount          Float  @default(0)
+  discountReason    String?
+  reservationAmount Float  @default(0)
+
+  dldFee  Float
+  adminFee Float @default(5000)
+
+  paymentPlanId String
+  paymentPlan   PaymentPlan @relation(fields: [paymentPlanId], references: [id])
+
+  payments Payment[]
+
+  reservationDate     DateTime
+  oqoodDeadline       DateTime
+  spaSignedDate       DateTime?
+  oqoodRegisteredDate DateTime?
+
+  // SPA Particulars Item IV. Falls back to unit.anticipatedCompletionDate
+  // and then to project.handoverDate at render time.
+  anticipatedCompletionDate DateTime?
+
+  documents  Document[]
+  commission Commission?
+  activities Activity[]
+  tasks      Task[]     @relation("DealTasks")
+  purchasers DealPurchaser[]
+
+  brokerCompanyId String?
+  brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
+  brokerAgentId   String?
+  brokerAgent     BrokerAgent?   @relation(fields: [brokerAgentId], references: [id])
+
+  // Per-deal financial overrides (null = use project defaults)
+  commissionRateOverride Float?   // overrides brokerCompany.commissionRate when set
+  adminFeeWaived         Boolean  @default(false)
+  adminFeeWaivedReason   String?
+  adminFeeWaivedBy       String?
+  dldPaidBy              String   @default("BUYER") // "BUYER" | "DEVELOPER"
+  dldWaivedReason        String?
+  dldWaivedBy            String?
+
+  notes     String?  @db.Text
+
+  // Reminder controls (finance collections)
+  remindersPaused       Boolean   @default(false)
+  remindersPausedReason String?   @db.Text
+  remindersPausedUntil  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([unitId])
+  @@index([stage])
+  @@index([isActive])
+  @@index([reservationDate])
+  @@index([dealNumber])
+}
+
+model DealStageHistory {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  oldStage  DealStage
+  newStage  DealStage
+  changedBy String
+  reason    String?
+
+  changedAt DateTime @default(now())
+
+  @@index([dealId])
+}
+
+// SPA "Purchaser 1 / 2 / ..." block — supports joint purchasers.
+// Each row is jointly and severally liable under the SPA. The primary
+// purchaser is normally derived from Deal.lead, but a row may exist
+// independently of the Lead table (e.g. a spouse or co-buyer).
+model DealPurchaser {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Optional link back to Lead. Primary purchasers usually have one;
+  // additional joint purchasers may be lead-less.
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  name                       String
+  ownershipPercentage        Float    @default(100)
+  address                    String?  @db.Text
+  phone                      String?
+  email                      String?
+  nationality                String?
+  emiratesId                 String?
+  passportNumber             String?
+  companyRegistrationNumber  String?
+  authorizedSignatory        String?
+  sourceOfFunds              String?
+  isPrimary                  Boolean  @default(false)
+  sortOrder                  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([leadId])
+}
+
+// ============================================================
+// SECTION 11: PAYMENT
+// ============================================================
+
+model Payment {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  milestoneLabel String
+  amount         Float  // current effective amount (may reflect adjustments)
+  originalAmount Float  // amount when first created — immutable audit trail
+  adjustedAmount Float? // non-null if a manual adjustment has been made
+  adjustmentReason String?
+  percentage     Float
+
+  dueDate DateTime
+  status  PaymentStatus @default(PENDING)
+
+  paidDate      DateTime?
+  paidBy        String?
+  paymentMethod String?
+  receiptKey    String?
+  notes         String? @db.Text
+
+  pdcNumber      String?
+  pdcBank        String?
+  pdcDate        DateTime? // date written on the cheque
+  pdcClearedDate DateTime?
+  pdcBouncedDate DateTime?
+
+  // Living schedule support
+  sortOrder       Int              @default(0)
+  milestoneType   String           @default("PLAN") // "PLAN" | "CUSTOM" | "DEVELOPER_COST"
+  scheduleTrigger MilestoneTrigger @default(DAYS_FROM_RESERVATION)
+
+  // Account routing column shown on Sales Offer / Reservation Form / SPA
+  // payment schedule (CORPORATE for reservation, ADMIN, DLD; ESCROW for
+  // contract-signing and construction-stage instalments).
+  targetAccount    PaymentTargetAccount @default(ESCROW)
+  paymentReference String?
+  isWaived      Boolean @default(false)
+  waivedBy      String?
+  waivedAt      DateTime?
+  waivedReason  String?
+
+  partialPayments PartialPayment[]
+  auditLog        PaymentAuditLog[]
+  reminderLogs    ReminderLog[]
+
+  // Reminder tracking
+  lastReminderSentAt DateTime?
+  reminderCount      Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([dealId, status])
+}
+
+model PartialPayment {
+  id        String  @id @default(cuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  amount        Float
+  paidDate      DateTime
+  paymentMethod String
+  paidBy        String
+  receiptKey    String?
+  notes         String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+}
+
+model PaymentAuditLog {
+  id        String  @id @default(cuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  action    String
+  reason    String?
+  changedBy String
+
+  changedAt DateTime @default(now())
+
+  @@index([paymentId])
+}
+
+enum ReminderRuleType {
+  BEFORE_DUE   // 7 days before due
+  ON_DUE       // on the due date
+  OVERDUE_7    // 7 days after due
+  OVERDUE_30   // 30 days after due
+}
+
+model ReminderLog {
+  id        String            @id @default(cuid())
+  paymentId String
+  payment   Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  ruleType  ReminderRuleType
+  sentAt    DateTime          @default(now())
+  email     String?           // email it was sent to (null = no email, notification only)
+  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_EMAIL | SKIPPED_PAUSED
+
+  @@index([paymentId])
+  @@index([paymentId, ruleType])
+}
+
+// ============================================================
+// SECTION 12: COMMISSION & DOCUMENT
+// ============================================================
+
+model Commission {
+  id     String @id @default(cuid())
+  dealId String @unique
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  brokerCompanyId String?
+  brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
+
+  amount Float
+  rate   Float
+
+  status CommissionStatus @default(NOT_DUE)
+
+  spaSignedMet Boolean @default(false)
+  oqoodMet     Boolean @default(false)
+
+  approvedDate DateTime?
+  approvedBy   String?
+
+  paidDate   DateTime?
+  paidAmount Float?
+  paidVia    String?
+  receiptKey String?
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([status])
+  @@index([brokerCompanyId])
+}
+
+model Document {
+  id     String  @id @default(cuid())
+  dealId String?
+  deal   Deal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  type     DocumentType
+  source   DocumentSource @default(UPLOADED)
+  name     String
+  key      String         @default("")
+  mimeType String         @default("")
+  version  Int            @default(1)
+
+  dataSnapshot Json?
+
+  contractStatus ContractStatus @default(DRAFT)
+
+  expiryDate DateTime?
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  softDeleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([dealId])
+  @@index([leadId])
+  @@index([type])
+  @@index([source])
+}
+
+// ============================================================
+// SECTION 12b: STAGE DOCUMENT RULES
+// ============================================================
+
+// Defines which documents are required before a deal can enter a given stage.
+// projectId=null means the rule applies globally (all projects).
+// Per-project rules override global rules for the same stage+documentType.
+model StageDocumentRule {
+  id           String       @id @default(cuid())
+  projectId    String?
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  dealStage    DealStage    // destination stage that requires this document
+  documentType DocumentType // required document type
+  required     Boolean      @default(true)
+  label        String       // e.g. "Signed SPA Agreement"
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, dealStage, documentType])
+  @@index([dealStage])
+  @@index([projectId])
+}
+
+// ============================================================
+// SECTION 13: LATE FEE RULES
+// ============================================================
+
+model LateFeeRule {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name             String
+  triggerAfterDays Int
+  feeType          LateFeeType
+  feeAmount        Float
+  maxFeeAmount     Float?
+  isActive         Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================================
+// SECTION 14: PRICING ENGINE
+// ============================================================
+
+model PricingRule {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name  String
+  scope PricingScope
+
+  // JSON conditions: { "floor_gte": 10, "view": "SEA", "type": "TWO_BR" }
+  conditions Json
+
+  adjustmentType  PricingAdjustmentType
+  adjustmentValue Float
+
+  priority  Int     @default(0)
+  isActive  Boolean @default(true)
+
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([scope])
+  @@index([isActive])
+}
+
+model UnitPriceHistory {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  oldPrice  Float
+  newPrice  Float
+  changedBy String
+  reason    String?
+  ruleId    String? // PricingRule that triggered this change, if any
+
+  changedAt DateTime @default(now())
+
+  @@index([unitId])
+  @@index([changedAt])
+}
+
+// ============================================================
+// SECTION 15: EVENT SOURCING & BACKGROUND JOBS
+// ============================================================
+
+model DomainEvent {
+  id            String    @id @default(cuid())
+  eventType     String    // e.g. "DEAL_CREATED", "UNIT_RESERVED"
+  aggregateId   String    // entity id (dealId, unitId, leadId …)
+  aggregateType String    // "DEAL", "UNIT", "LEAD", etc.
+  payload       Json
+  version       Int       @default(1)
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([aggregateId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([processedAt])
+}
+
+model BackgroundJob {
+  id          String    @id @default(cuid())
+  type        String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
+  payload     Json
+  status      JobStatus @default(PENDING)
+  scheduledAt DateTime
+  startedAt   DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+  error       String?   @db.Text
+  retryCount  Int       @default(0)
+  maxRetries  Int       @default(3)
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([type])
+}
+
+// ============================================================
+// SECTION 16: APP SETTINGS
+// ============================================================
+
+model AppSettings {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Branding
+  companyName  String?
+  logoUrl      String?
+  primaryColor String?
+
+  // Localization
+  timezone   String @default("Asia/Dubai")
+  currency   String @default("AED")
+  dateFormat String @default("DD/MM/YYYY")
+
+  // Communication (foundation for email / WhatsApp / SMS integration)
+  defaultFromEmail String?
+  defaultFromName  String?
+  whatsappNumber   String?
+  smsProvider      String? // e.g. "twilio"
+  emailProvider    String? // e.g. "sendgrid", "smtp"
+
+  // SMTP delivery settings (used when emailProvider = "smtp")
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUsername String?
+  smtpPassword String?
+
+  // Finance — payment instructions injected into invoices and reminder emails
+  paymentInstructions String? @db.Text
+
+  // Email templates (JSON object keyed by template name)
+  emailTemplates Json?
+
+  // Notification preferences stored as JSON blob
+  notificationPrefs Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// SECTION 17: CONTACTS
+// ============================================================
+
+model Contact {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String?
+  email       String?
+  phone       String?
+  whatsapp    String?
+  company     String?
+  jobTitle    String?
+  nationality String?
+  source      ContactSource @default(MANUAL)
+  notes       String?       @db.Text
+  tags        String?       // comma-separated
+
+  activities Activity[] @relation("ContactActivities")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([phone])
+  @@index([firstName])
+}

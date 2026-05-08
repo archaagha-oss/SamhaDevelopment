@@ -29,6 +29,13 @@ interface Lead {
   brokerAgent?: { id: string; name: string } | null;
   brokerCompanyId?: string | null;
   brokerAgentId?: string | null;
+  // SPA / KYC fields
+  address?: string | null;
+  emiratesId?: string | null;
+  passportNumber?: string | null;
+  companyRegistrationNumber?: string | null;
+  authorizedSignatory?: string | null;
+  sourceOfFunds?: string | null;
   interests: { id: string; unitId: string; isPrimary: boolean; unit: { unitNumber: string; type: string; price: number; floor: number } }[];
   deals?: DealSummary[];
 }
@@ -127,6 +134,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     firstName: "", lastName: "", phone: "", email: "",
     nationality: "", source: "DIRECT", budget: "", notes: "",
     assignedAgentId: "", brokerCompanyId: "", brokerAgentId: "",
+    address: "", emiratesId: "", passportNumber: "",
+    companyRegistrationNumber: "", authorizedSignatory: "", sourceOfFunds: "",
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -266,6 +275,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         assignedAgentId: lead.assignedAgent?.id ?? lead.assignedAgentId ?? "",
         brokerCompanyId: lead.brokerCompanyId ?? "",
         brokerAgentId:   lead.brokerAgentId   ?? "",
+        address:                   lead.address ?? "",
+        emiratesId:                lead.emiratesId ?? "",
+        passportNumber:            lead.passportNumber ?? "",
+        companyRegistrationNumber: lead.companyRegistrationNumber ?? "",
+        authorizedSignatory:       lead.authorizedSignatory ?? "",
+        sourceOfFunds:             lead.sourceOfFunds ?? "",
       });
       // Initialize unit picker with current interests
       const unitIds = new Set(lead.interests.map((i) => i.unitId));
@@ -353,6 +368,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       if (get("assignedAgentId") !== agentId)                             payload.assignedAgentId = get("assignedAgentId") || null;
       if (get("brokerCompanyId") !== (lead.brokerCompanyId ?? ""))        payload.brokerCompanyId = get("brokerCompanyId") || null;
       if (get("brokerAgentId")   !== (lead.brokerAgentId ?? ""))          payload.brokerAgentId   = get("brokerAgentId")   || null;
+      if (get("address")                   !== (lead.address ?? ""))                   payload.address                   = get("address") || null;
+      if (get("emiratesId")                !== (lead.emiratesId ?? ""))                payload.emiratesId                = get("emiratesId") || null;
+      if (get("passportNumber")            !== (lead.passportNumber ?? ""))            payload.passportNumber            = get("passportNumber") || null;
+      if (get("companyRegistrationNumber") !== (lead.companyRegistrationNumber ?? "")) payload.companyRegistrationNumber = get("companyRegistrationNumber") || null;
+      if (get("authorizedSignatory")       !== (lead.authorizedSignatory ?? ""))       payload.authorizedSignatory       = get("authorizedSignatory") || null;
+      if (get("sourceOfFunds")             !== (lead.sourceOfFunds ?? ""))             payload.sourceOfFunds             = get("sourceOfFunds") || null;
 
       if (Object.keys(payload).length > 0) {
         await axios.patch(`/api/leads/${lead.id}`, payload);
@@ -1140,6 +1161,53 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
               <textarea value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
             </div>
+
+            {/* KYC / SPA particulars — required before SPA generation */}
+            <details className="border border-slate-200 rounded-lg">
+              <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                KYC & SPA particulars
+              </summary>
+              <div className="px-3 pb-3 pt-2 space-y-3 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Residential Address</label>
+                  <input
+                    value={editForm.address}
+                    onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
+                    placeholder="Country, city, neighbourhood, building, flat #"
+                    className={inputCls}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Emirates ID</label>
+                    <input value={editForm.emiratesId} onChange={(e) => setEditForm((p) => ({ ...p, emiratesId: e.target.value }))} placeholder="784-…" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Passport No</label>
+                    <input value={editForm.passportNumber} onChange={(e) => setEditForm((p) => ({ ...p, passportNumber: e.target.value }))} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Company Registration No</label>
+                    <input value={editForm.companyRegistrationNumber} onChange={(e) => setEditForm((p) => ({ ...p, companyRegistrationNumber: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Authorized Signatory</label>
+                    <input value={editForm.authorizedSignatory} onChange={(e) => setEditForm((p) => ({ ...p, authorizedSignatory: e.target.value }))} className={inputCls} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Source of Funds</label>
+                  <input
+                    value={editForm.sourceOfFunds}
+                    onChange={(e) => setEditForm((p) => ({ ...p, sourceOfFunds: e.target.value }))}
+                    placeholder="e.g. Salary, Husband Savings, Inheritance"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            </details>
 
             {/* Unit Interests */}
             <div className="border border-emerald-100 bg-emerald-50/30 rounded-lg p-3 space-y-2">

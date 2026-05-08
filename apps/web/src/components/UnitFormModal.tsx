@@ -14,6 +14,11 @@ interface Unit {
   parkingSpaces?: number | null;
   internalArea?: number | null;
   externalArea?: number | null;
+  // SPA particulars
+  areaSqft?: number | null;
+  ratePerSqft?: number | null;
+  smartHome?: boolean | null;
+  anticipatedCompletionDate?: string | null;
 }
 
 interface Props {
@@ -44,6 +49,12 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
     parkingSpaces: unit?.parkingSpaces?.toString() ?? "",
     internalArea: unit?.internalArea?.toString() ?? "",
     externalArea: unit?.externalArea?.toString() ?? "",
+    areaSqft: unit?.areaSqft?.toString() ?? "",
+    ratePerSqft: unit?.ratePerSqft?.toString() ?? "",
+    smartHome: unit?.smartHome ? "yes" : unit?.smartHome === false ? "no" : "",
+    anticipatedCompletionDate: unit?.anticipatedCompletionDate
+      ? unit.anticipatedCompletionDate.slice(0, 10)
+      : "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +77,11 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
       if (form.parkingSpaces) payload.parkingSpaces = parseInt(form.parkingSpaces);
       if (form.internalArea) payload.internalArea = parseFloat(form.internalArea);
       if (form.externalArea) payload.externalArea = parseFloat(form.externalArea);
+      if (form.areaSqft) payload.areaSqft = parseFloat(form.areaSqft);
+      if (form.ratePerSqft) payload.ratePerSqft = parseFloat(form.ratePerSqft);
+      if (form.smartHome === "yes") payload.smartHome = true;
+      if (form.smartHome === "no") payload.smartHome = false;
+      if (form.anticipatedCompletionDate) payload.anticipatedCompletionDate = form.anticipatedCompletionDate;
 
       if (!isEdit) {
         payload.projectId = projectId;
@@ -227,6 +243,67 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
               </div>
             </div>
           </div>
+
+          {/* SPA particulars — area in sqft, rate per sqft, smart home, anticipated date */}
+          <details className="border border-slate-200 rounded-lg" open={isEdit}>
+            <summary className="px-4 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+              SPA particulars
+            </summary>
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Total Area (sqft)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.areaSqft}
+                    onChange={(e) => set("areaSqft", e.target.value)}
+                    disabled={isLocked}
+                    placeholder="e.g. 424.96"
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className={lbl}>Rate per sqft (AED)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.ratePerSqft}
+                    onChange={(e) => set("ratePerSqft", e.target.value)}
+                    disabled={isLocked}
+                    placeholder="e.g. 1548.38"
+                    className={inp}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Smart Home</label>
+                  <select
+                    value={form.smartHome}
+                    onChange={(e) => set("smartHome", e.target.value)}
+                    className={inp}
+                  >
+                    <option value="">—</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={lbl}>Anticipated Completion</label>
+                  <input
+                    type="date"
+                    value={form.anticipatedCompletionDate}
+                    onChange={(e) => set("anticipatedCompletionDate", e.target.value)}
+                    className={inp}
+                  />
+                  <p className="text-xs text-slate-400 mt-0.5">Overrides project handover date for this unit's SPA</p>
+                </div>
+              </div>
+            </div>
+          </details>
 
           {error && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>

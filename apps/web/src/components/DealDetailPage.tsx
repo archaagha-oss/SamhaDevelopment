@@ -6,6 +6,8 @@ import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
+import DealPurchasersModal from "./DealPurchasersModal";
+import DealSpaCompliancePanel from "./DealSpaCompliancePanel";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import DealStepper from "./DealStepper";
@@ -191,6 +193,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
   // Regenerate Sales Offer confirmation
   const [showRegenSalesOffer, setShowRegenSalesOffer] = useState(false);
+  const [showPurchasersModal, setShowPurchasersModal] = useState(false);
 
   // Copy deal ID feedback
   const [copiedDealId, setCopiedDealId] = useState(false);
@@ -1077,6 +1080,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     {generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}
                   </button>
                   <button
+                    onClick={() => setShowPurchasersModal(true)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                    title="Edit joint purchasers before generating the SPA"
+                  >
+                    Manage Purchasers
+                  </button>
+                  <button
                     onClick={() => handleGenerateDocument("SPA")}
                     disabled={!!generatingDoc}
                     className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
@@ -1144,6 +1154,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             dealId={dealId}
             onUpload={() => setShowDocumentUploadModal(true)}
           />
+
+          {/* SPA compliance — late fees, disposal, delay compensation, LD */}
+          {dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
           {/* Payment schedule + Stage history tabs */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -2209,6 +2222,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         <DealEditModal
           deal={deal}
           onClose={() => setShowEditModal(false)}
+          onSaved={loadDeal}
+        />
+      )}
+      {showPurchasersModal && dealId && (
+        <DealPurchasersModal
+          dealId={dealId}
+          onClose={() => setShowPurchasersModal(false)}
           onSaved={loadDeal}
         />
       )}

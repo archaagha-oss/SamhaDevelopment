@@ -12,6 +12,9 @@ interface Milestone {
   daysFromReservation: string;
   fixedDate: string;
   sortOrder: number;
+  // Account routing column shown on Sales Offer / Reservation Form / SPA
+  // payment schedule. Carries through to materialized Payment rows.
+  targetAccount: "ESCROW" | "CORPORATE";
 }
 
 interface Plan {
@@ -28,6 +31,7 @@ interface Plan {
     daysFromReservation?: number | null;
     fixedDate?: string | null;
     sortOrder: number;
+    targetAccount?: "ESCROW" | "CORPORATE";
   }[];
 }
 
@@ -48,6 +52,7 @@ const TRIGGER_TYPES = [
 const BLANK_MILESTONE: Milestone = {
   label: "", percentage: "", triggerType: "DAYS_FROM_RESERVATION",
   isDLDFee: false, isAdminFee: false, daysFromReservation: "", fixedDate: "", sortOrder: 0,
+  targetAccount: "ESCROW",
 };
 
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
@@ -69,6 +74,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
           daysFromReservation: m.daysFromReservation != null ? String(m.daysFromReservation) : "",
           fixedDate: m.fixedDate ? m.fixedDate.split("T")[0] : "",
           sortOrder: m.sortOrder,
+          targetAccount: m.targetAccount ?? "ESCROW",
         }))
       : [{ ...BLANK_MILESTONE, sortOrder: 1 }]
   );
@@ -123,6 +129,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
             ? parseInt(m.daysFromReservation) : undefined,
           fixedDate: m.triggerType === "FIXED_DATE" && m.fixedDate ? m.fixedDate : undefined,
           sortOrder: i + 1,
+          targetAccount: m.targetAccount,
         })),
       };
       if (isEdit) {
@@ -304,6 +311,22 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                           />
                           <span className="text-xs text-slate-600">Admin Fee</span>
                         </label>
+                        <div className="pt-1">
+                          <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">
+                            Account
+                          </label>
+                          <select
+                            disabled={isEdit}
+                            value={m.targetAccount}
+                            onChange={(e) =>
+                              updateMilestone(i, "targetAccount", e.target.value as "ESCROW" | "CORPORATE")
+                            }
+                            className="text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 disabled:opacity-60"
+                          >
+                            <option value="ESCROW">Escrow</option>
+                            <option value="CORPORATE">Corporate</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
