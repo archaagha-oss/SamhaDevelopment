@@ -213,6 +213,16 @@ enum DocumentSource {
   UPLOADED
 }
 
+enum DocumentVisibility {
+  INTERNAL
+  PUBLIC
+}
+
+enum ProjectUpdateMediaType {
+  PHOTO
+  VIDEO
+}
+
 // ----- Contact -----
 
 enum ContactSource {
@@ -348,6 +358,9 @@ model Project {
   pricingRules       PricingRule[]
   images             ProjectImage[]
   stageDocumentRules StageDocumentRule[]
+  documents          Document[]
+  statusHistory      ProjectStatusHistory[]
+  updates            ProjectUpdate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -482,6 +495,7 @@ model Unit {
   priceHistory UnitPriceHistory[]
   activities   Activity[]         @relation("UnitActivities")
   images       UnitImage[]
+  shareTokens  UnitShareToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1115,18 +1129,21 @@ model Commission {
 }
 
 model Document {
-  id     String  @id @default(cuid())
-  dealId String?
-  deal   Deal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  leadId String?
-  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  dealId    String?
+  deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  type     DocumentType
-  source   DocumentSource @default(UPLOADED)
-  name     String
-  key      String         @default("")
-  mimeType String         @default("")
-  version  Int            @default(1)
+  type       DocumentType
+  source     DocumentSource     @default(UPLOADED)
+  visibility DocumentVisibility @default(INTERNAL)
+  name       String
+  key        String             @default("")
+  mimeType   String             @default("")
+  version    Int                @default(1)
 
   dataSnapshot Json?
 
@@ -1142,8 +1159,96 @@ model Document {
 
   @@index([dealId])
   @@index([leadId])
+  @@index([projectId])
+  @@index([projectId, visibility])
   @@index([type])
   @@index([source])
+}
+
+// ============================================================
+// SECTION 11b: PROJECT STATUS HISTORY, UPDATES & UNIT SHARE TOKENS
+// ============================================================
+
+model ProjectStatusHistory {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  field    String  // "projectStatus" | "completionStatus" | "handoverDate"
+  oldValue String?
+  newValue String
+
+  oldProjectStatus    ProjectStatus?
+  newProjectStatus    ProjectStatus?
+  oldCompletionStatus CompletionStatus?
+  newCompletionStatus CompletionStatus?
+  oldHandoverDate     DateTime?
+  newHandoverDate     DateTime?
+
+  changedBy String
+  reason    String?
+  changedAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([changedAt])
+  @@index([projectId, field])
+}
+
+model ProjectUpdate {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  body        String   @db.Text
+  isPublic    Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdBy   String
+
+  media       ProjectUpdateMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, publishedAt])
+  @@index([projectId, isPublic])
+}
+
+model ProjectUpdateMedia {
+  id        String                  @id @default(cuid())
+  updateId  String
+  update    ProjectUpdate           @relation(fields: [updateId], references: [id], onDelete: Cascade)
+
+  type      ProjectUpdateMediaType  @default(PHOTO)
+  url       String                  @db.Text
+  storage   String                  @default("LOCAL") // "LOCAL" | "S3"
+  caption   String?
+  sortOrder Int                     @default(0)
+  createdAt DateTime                @default(now())
+
+  @@index([updateId])
+}
+
+model UnitShareToken {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  token     String  @unique
+  showPrice Boolean @default(false)
+
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdBy    String
+  lastViewedAt DateTime?
+  viewCount    Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([unitId])
+  @@index([token])
+  @@index([revokedAt])
 }
 
 // ============================================================

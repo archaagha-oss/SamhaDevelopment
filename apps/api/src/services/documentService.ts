@@ -36,11 +36,18 @@ const s3Client = new S3Client({
   maxAttempts: 3,
 });
 
+export type UploadScope =
+  | { scope: "deal"; id: string }
+  | { scope: "project"; id: string };
+
 export class DocumentService {
   async uploadFile(
     file: Express.Multer.File,
-    dealId: string
+    target: UploadScope | string
   ): Promise<{ key: string; url: string }> {
+    // Backwards-compat: a bare string is treated as a deal ID.
+    const scoped: UploadScope =
+      typeof target === "string" ? { scope: "deal", id: target } : target;
     try {
       if (!file.buffer || file.buffer.length === 0) {
         throw new Error("File buffer is empty");
@@ -48,7 +55,8 @@ export class DocumentService {
 
       const ext = path.extname(file.originalname);
       const timestamp = Date.now();
-      const key = `deals/${dealId}/${timestamp}${ext}`;
+      const prefix = scoped.scope === "deal" ? "deals" : "projects";
+      const key = `${prefix}/${scoped.id}/${timestamp}${ext}`;
 
       const command = new PutObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET!,
@@ -65,12 +73,12 @@ export class DocumentService {
 
       const url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${key}`;
 
-      console.log(`[S3 Upload Success] dealId=${dealId}, key=${key}, size=${file.size}B`);
+      console.log(`[S3 Upload Success] ${scoped.scope}=${scoped.id}, key=${key}, size=${file.size}B`);
 
       return { key, url };
     } catch (err: any) {
       console.error("[S3 Upload Error]", {
-        dealId,
+        target: scoped,
         filename: file.originalname,
         size: file.size,
         error: err.message,

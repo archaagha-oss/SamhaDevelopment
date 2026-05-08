@@ -14,6 +14,8 @@ import UnitFloorPlans from "./UnitFloorPlans";
 import UnitActivityLogger from "./UnitActivityLogger";
 import UnitSimilarUnits from "./UnitSimilarUnits";
 import ImageUploadModal from "./ImageUploadModal";
+import UnitShareLinkPanel from "./UnitShareLinkPanel";
+import { useUnitDocuments } from "../hooks/useUnitDocuments";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 
@@ -23,6 +25,7 @@ export default function UnitDetailPage() {
   const { data: unit, isLoading, error: queryError, refetch } = useUnit(unitId!);
   const { data: agents = [] } = useAgents();
   const updateUnit = useUpdateUnit(unitId!);
+  const { data: unitDocs = [] } = useUnitDocuments(unitId!);
 
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -386,6 +389,37 @@ export default function UnitDetailPage() {
 
           {/* ── RIGHT COLUMN (1/3) ── */}
           <div className="space-y-4">
+
+            {/* 0. Share with client */}
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <UnitShareLinkPanel unitId={unit.id} />
+            </div>
+
+            {/* 0b. Documents (deal-scoped + propagated from project) */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents</p>
+              {unitDocs.length === 0 ? (
+                <p className="text-sm text-slate-400">No documents linked to this unit yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {unitDocs.map((d) => (
+                    <li key={d.id} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-700">{d.name}</span>
+                      <span
+                        className={
+                          d.scope === "PROJECT"
+                            ? "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700"
+                            : "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                        }
+                        title={d.scope === "PROJECT" ? "Inherited from project" : "Deal-scoped"}
+                      >
+                        {d.scope === "PROJECT" ? `Project · ${d.visibility}` : "Deal"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {/* 1. Status Actions */}
             <UnitStatusActions unit={unit} onError={setApiError} />

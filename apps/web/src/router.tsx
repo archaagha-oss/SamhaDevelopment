@@ -29,6 +29,7 @@ import ReservationsPage from "./components/ReservationsPage";
 import OffersPage from "./components/OffersPage";
 import SettingsPage from "./pages/SettingsPage";
 import ContactsPage from "./pages/ContactsPage";
+import PublicUnitView from "./components/PublicUnitView";
 
 export const router = createBrowserRouter([
   // Standalone print pages (no app shell — full-page printable layout)
@@ -38,6 +39,8 @@ export const router = createBrowserRouter([
   { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
   { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
   { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
+  // Public, unauthenticated client share view (no app shell, no Clerk).
+  { path: "/share/u/:token",                             element: <PublicUnitView /> },
   {
     path: "/",
     element: <AppShell />,

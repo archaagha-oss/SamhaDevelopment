@@ -27,6 +27,7 @@ import activityRoutes from "./routes/activities";
 import offerRoutes from "./routes/offers";
 import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
+import publicShareRoutes from "./routes/publicShare";
 
 dotenv.config();
 
@@ -74,6 +75,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── CORS for public share endpoints (must precede the mock-auth middleware
+//    so they remain anonymous). The default CORS handler below covers `/api/*`.
+app.use(
+  "/public/share",
+  cors({
+    origin: true,
+    credentials: false,
+  })
+);
+
+// ── Body parser + static must be in place before publicShare so it can serve
+//    media URLs and parse JSON. They are also required by /api/* below.
+app.use(express.json());
+app.use(express.static("public"));
+
+// ── Public, unauthenticated share routes — mounted BEFORE the mock-auth
+//    middleware so anonymous clients can hit them.
+app.use("/public/share", publicShareRoutes);
+
 // ── Mock auth for development (Clerk disabled) ────────────────────────────
 app.use((req, res, next) => {
   req.auth = { userId: "dev-user-1" };
@@ -92,11 +112,8 @@ app.use(
   })
 );
 
-// Body parser
-app.use(express.json());
-
-// Static file serving for uploads
-app.use(express.static("public"));
+// (Body parser + static already mounted above for /public/share — Express
+// only invokes them once per request, so no need to re-register.)
 
 // ===== HEALTH CHECK =====
 app.get("/health", (req, res) => {

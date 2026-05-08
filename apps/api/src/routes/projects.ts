@@ -5,8 +5,35 @@ import fs from "fs";
 import { validate } from "../middleware/validation";
 import { updateProjectConfigSchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
+import { documentService } from "../services/documentService";
 
 const router = Router();
+
+// ── Project document uploads (S3, mirrors deal-doc upload pattern) ──────────
+const projectDocUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
+
+// ── Project update media uploads (local disk; served via express.static) ────
+const projectUpdateMediaDir = path.join(process.cwd(), "public", "uploads", "project-updates");
+if (!fs.existsSync(projectUpdateMediaDir)) fs.mkdirSync(projectUpdateMediaDir, { recursive: true });
+
+const projectUpdateMediaUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, projectUpdateMediaDir),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, "update-" + uniqueSuffix + path.extname(file.originalname));
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    const ok = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"];
+    if (ok.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Only JPEG/PNG/WebP images or MP4/MOV videos are allowed"));
+  },
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
 
 const projectUploadsDir = path.join(process.cwd(), "public", "uploads", "projects");
 if (!fs.existsSync(projectUploadsDir)) fs.mkdirSync(projectUploadsDir, { recursive: true });
@@ -88,13 +115,14 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update project
+// Update project — also writes ProjectStatusHistory rows for projectStatus,
+// completionStatus, and handoverDate changes (mirrors UnitStatusHistory pattern).
 router.patch("/:id", async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
-    const { name, location, description, totalUnits, totalFloors, projectStatus, handoverDate, launchDate, startDate, completionStatus, purpose, furnishing } = req.body;
+    const { name, location, description, totalUnits, totalFloors, projectStatus, handoverDate, launchDate, startDate, completionStatus, purpose, furnishing, reason } = req.body;
     const data: any = {};
 
     if (name !== undefined) data.name = name;
@@ -122,7 +150,66 @@ router.patch("/:id", async (req, res) => {
       data.totalUnits = totalUnits;
     }
 
-    const project = await prisma.project.update({ where: { id: req.params.id }, data });
+    const existing = await prisma.project.findUnique({
+      where: { id: req.params.id },
+      select: { projectStatus: true, completionStatus: true, handoverDate: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+
+    const project = await prisma.$transaction(async (tx) => {
+      const updated = await tx.project.update({ where: { id: req.params.id }, data });
+      const writes: any[] = [];
+      const changedBy = req.auth!.userId;
+      const reasonStr = typeof reason === "string" && reason.length ? reason : null;
+
+      if (data.projectStatus !== undefined && data.projectStatus !== existing.projectStatus) {
+        writes.push({
+          projectId: req.params.id,
+          field: "projectStatus",
+          oldValue: existing.projectStatus,
+          newValue: data.projectStatus,
+          oldProjectStatus: existing.projectStatus,
+          newProjectStatus: data.projectStatus,
+          changedBy,
+          reason: reasonStr,
+        });
+      }
+      if (data.completionStatus !== undefined && data.completionStatus !== existing.completionStatus) {
+        writes.push({
+          projectId: req.params.id,
+          field: "completionStatus",
+          oldValue: existing.completionStatus,
+          newValue: data.completionStatus,
+          oldCompletionStatus: existing.completionStatus,
+          newCompletionStatus: data.completionStatus,
+          changedBy,
+          reason: reasonStr,
+        });
+      }
+      if (data.handoverDate !== undefined) {
+        const oldIso = existing.handoverDate ? existing.handoverDate.toISOString() : null;
+        const newIso = data.handoverDate ? (data.handoverDate as Date).toISOString() : null;
+        if (oldIso !== newIso) {
+          writes.push({
+            projectId: req.params.id,
+            field: "handoverDate",
+            oldValue: oldIso,
+            newValue: newIso ?? "",
+            oldHandoverDate: existing.handoverDate,
+            newHandoverDate: data.handoverDate ?? null,
+            changedBy,
+            reason: reasonStr,
+          });
+        }
+      }
+      if (writes.length) {
+        await tx.projectStatusHistory.createMany({ data: writes });
+      }
+      return updated;
+    });
+
     res.json(project);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update project", code: "PROJECT_UPDATE_ERROR", statusCode: 400 });
@@ -336,6 +423,302 @@ router.delete("/:id/images/:imageId", async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: "Failed to delete image" });
+  }
+});
+
+// ============================================================================
+// PROJECT DOCUMENTS — propagate to child units via union endpoint on units
+// ============================================================================
+
+router.get("/:id/documents", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const where: any = { projectId: req.params.id, softDeleted: false };
+    if (req.query.visibility) where.visibility = req.query.visibility;
+    const docs = await prisma.document.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mimeType: true,
+        visibility: true,
+        contractStatus: true,
+        expiryDate: true,
+        uploadedAt: true,
+        createdAt: true,
+      },
+    });
+    res.json({ data: docs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch project documents", code: "FETCH_PROJECT_DOCS_ERROR", statusCode: 500 });
+  }
+});
+
+router.post("/:id/documents/upload", projectDocUpload.single("file"), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "No file provided", code: "NO_FILE", statusCode: 400 });
+    }
+    const project = await prisma.project.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!project) {
+      return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    const { name, type = "OTHER", visibility = "INTERNAL" } = req.body ?? {};
+    if (!["INTERNAL", "PUBLIC"].includes(visibility)) {
+      return res.status(400).json({ error: "Invalid visibility", code: "VALIDATION_ERROR", statusCode: 400 });
+    }
+    const { key } = await documentService.uploadFile(req.file, { scope: "project", id: req.params.id });
+    const created = await prisma.document.create({
+      data: {
+        projectId: req.params.id,
+        type: type as any,
+        source: "UPLOADED",
+        visibility: visibility as any,
+        name: name || req.file.originalname,
+        key,
+        mimeType: req.file.mimetype,
+        uploadedBy: req.auth.userId,
+      },
+    });
+    res.status(201).json(created);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to upload project document", code: "PROJECT_DOC_UPLOAD_ERROR", statusCode: 500 });
+  }
+});
+
+router.patch("/:id/documents/:docId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.document.findUnique({ where: { id: req.params.docId } });
+    if (!existing || existing.projectId !== req.params.id) {
+      return res.status(404).json({ error: "Document not found", code: "DOC_NOT_FOUND", statusCode: 404 });
+    }
+    const { visibility, name } = req.body ?? {};
+    const data: any = {};
+    if (visibility !== undefined) {
+      if (!["INTERNAL", "PUBLIC"].includes(visibility)) {
+        return res.status(400).json({ error: "Invalid visibility", code: "VALIDATION_ERROR", statusCode: 400 });
+      }
+      data.visibility = visibility;
+    }
+    if (name !== undefined) data.name = name;
+    const updated = await prisma.document.update({ where: { id: req.params.docId }, data });
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to update document", code: "PROJECT_DOC_UPDATE_ERROR", statusCode: 500 });
+  }
+});
+
+router.delete("/:id/documents/:docId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.document.findUnique({ where: { id: req.params.docId } });
+    if (!existing || existing.projectId !== req.params.id) {
+      return res.status(404).json({ error: "Document not found", code: "DOC_NOT_FOUND", statusCode: 404 });
+    }
+    if (existing.key) {
+      try { await documentService.deleteFile(existing.key); } catch { /* best effort */ }
+    }
+    await prisma.document.delete({ where: { id: req.params.docId } });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete document", code: "PROJECT_DOC_DELETE_ERROR", statusCode: 500 });
+  }
+});
+
+// ============================================================================
+// PROJECT STATUS HISTORY
+// ============================================================================
+
+router.get("/:id/status-history", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const limit = Math.min(200, parseInt((req.query.limit as string) || "50", 10) || 50);
+    const data = await prisma.projectStatusHistory.findMany({
+      where: { projectId: req.params.id },
+      orderBy: { changedAt: "desc" },
+      take: limit,
+    });
+    res.json({ data });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch status history", code: "FETCH_STATUS_HISTORY_ERROR", statusCode: 500 });
+  }
+});
+
+// ============================================================================
+// PROJECT UPDATES — manually-posted updates with photos/videos
+// ============================================================================
+
+router.get("/:id/updates", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const updates = await prisma.projectUpdate.findMany({
+      where: { projectId: req.params.id },
+      orderBy: { publishedAt: "desc" },
+      include: {
+        media: { orderBy: { sortOrder: "asc" } },
+      },
+    });
+    res.json({ data: updates });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch updates", code: "FETCH_UPDATES_ERROR", statusCode: 500 });
+  }
+});
+
+router.post("/:id/updates", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const project = await prisma.project.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!project) {
+      return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    const { title, body, isPublic = true } = req.body ?? {};
+    if (!title || !body) {
+      return res.status(400).json({ error: "title and body are required", code: "VALIDATION_ERROR", statusCode: 400 });
+    }
+    const created = await prisma.projectUpdate.create({
+      data: {
+        projectId: req.params.id,
+        title,
+        body,
+        isPublic: Boolean(isPublic),
+        createdBy: req.auth.userId,
+      },
+      include: { media: true },
+    });
+    res.status(201).json(created);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to create update", code: "CREATE_UPDATE_ERROR", statusCode: 500 });
+  }
+});
+
+router.patch("/:id/updates/:updateId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.projectUpdate.findUnique({ where: { id: req.params.updateId } });
+    if (!existing || existing.projectId !== req.params.id) {
+      return res.status(404).json({ error: "Update not found", code: "UPDATE_NOT_FOUND", statusCode: 404 });
+    }
+    const { title, body, isPublic } = req.body ?? {};
+    const data: any = {};
+    if (title !== undefined) data.title = title;
+    if (body !== undefined) data.body = body;
+    if (isPublic !== undefined) data.isPublic = Boolean(isPublic);
+    const updated = await prisma.projectUpdate.update({
+      where: { id: req.params.updateId },
+      data,
+      include: { media: { orderBy: { sortOrder: "asc" } } },
+    });
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to update", code: "UPDATE_PATCH_ERROR", statusCode: 500 });
+  }
+});
+
+router.delete("/:id/updates/:updateId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.projectUpdate.findUnique({
+      where: { id: req.params.updateId },
+      include: { media: true },
+    });
+    if (!existing || existing.projectId !== req.params.id) {
+      return res.status(404).json({ error: "Update not found", code: "UPDATE_NOT_FOUND", statusCode: 404 });
+    }
+    for (const m of existing.media) {
+      if (m.storage === "LOCAL" && m.url.startsWith("/uploads/project-updates/")) {
+        const filePath = path.join(projectUpdateMediaDir, path.basename(m.url));
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch { /* best effort */ }
+        }
+      }
+    }
+    await prisma.projectUpdate.delete({ where: { id: req.params.updateId } });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete update", code: "DELETE_UPDATE_ERROR", statusCode: 500 });
+  }
+});
+
+router.post("/:id/updates/:updateId/media", projectUpdateMediaUpload.single("file"), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const existing = await prisma.projectUpdate.findUnique({ where: { id: req.params.updateId } });
+    if (!existing || existing.projectId !== req.params.id) {
+      if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
+      return res.status(404).json({ error: "Update not found", code: "UPDATE_NOT_FOUND", statusCode: 404 });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "No file provided", code: "NO_FILE", statusCode: 400 });
+    }
+    const max = await prisma.projectUpdateMedia.aggregate({
+      where: { updateId: req.params.updateId },
+      _max: { sortOrder: true },
+    });
+    const isVideo = req.file.mimetype.startsWith("video/");
+    const created = await prisma.projectUpdateMedia.create({
+      data: {
+        updateId: req.params.updateId,
+        type: isVideo ? "VIDEO" : "PHOTO",
+        url: `/uploads/project-updates/${req.file.filename}`,
+        storage: "LOCAL",
+        caption: req.body?.caption || null,
+        sortOrder: (max._max.sortOrder ?? -1) + 1,
+      },
+    });
+    res.status(201).json(created);
+  } catch (error: any) {
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
+    res.status(500).json({ error: error.message || "Failed to upload media", code: "UPLOAD_MEDIA_ERROR", statusCode: 500 });
+  }
+});
+
+router.delete("/:id/updates/:updateId/media/:mediaId", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const media = await prisma.projectUpdateMedia.findUnique({
+      where: { id: req.params.mediaId },
+      include: { update: true },
+    });
+    if (!media || media.update.projectId !== req.params.id || media.updateId !== req.params.updateId) {
+      return res.status(404).json({ error: "Media not found", code: "MEDIA_NOT_FOUND", statusCode: 404 });
+    }
+    if (media.storage === "LOCAL" && media.url.startsWith("/uploads/project-updates/")) {
+      const filePath = path.join(projectUpdateMediaDir, path.basename(media.url));
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch { /* best effort */ }
+      }
+    }
+    await prisma.projectUpdateMedia.delete({ where: { id: req.params.mediaId } });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete media", code: "DELETE_MEDIA_ERROR", statusCode: 500 });
   }
 });
 

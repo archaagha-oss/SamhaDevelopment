@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnitsTable from "./UnitsTable";
+import ProjectDocumentsTab from "./ProjectDocumentsTab";
+import ProjectUpdatesTab from "./ProjectUpdatesTab";
+import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
 
 interface Project {
   id: string;
@@ -51,7 +54,7 @@ interface Broker {
   _count?: { deals: number };
 }
 
-type Tab = "overview" | "leads" | "deals" | "brokers" | "units";
+type Tab = "overview" | "leads" | "deals" | "brokers" | "units" | "documents" | "updates";
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
@@ -247,7 +250,7 @@ export default function ProjectDetailPage() {
 
       {/* Tabs */}
       <div className="px-6 py-3 bg-white border-b border-slate-200 flex gap-1 flex-shrink-0 overflow-x-auto">
-        {(["overview", "leads", "deals", "brokers", "units"] as Tab[]).map((t) => (
+        {(["overview", "leads", "deals", "brokers", "units", "documents", "updates"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -265,7 +268,11 @@ export default function ProjectDetailPage() {
                   ? `Deals (${dealCount})`
                   : t === "brokers"
                     ? `Brokers (${brokerCount})`
-                    : "Units"}
+                    : t === "units"
+                      ? "Units"
+                      : t === "documents"
+                        ? "Documents"
+                        : "Updates"}
           </button>
         ))}
       </div>
@@ -358,6 +365,12 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             </div>
+
+            {projectId && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <ProjectStatusHistoryPanel projectId={projectId} />
+              </div>
+            )}
           </div>
         )}
 
@@ -466,6 +479,16 @@ export default function ProjectDetailPage() {
         {/* Units Tab */}
         {tab === "units" && projectId && (
           <UnitsTable projectId={projectId} />
+        )}
+
+        {/* Documents Tab */}
+        {tab === "documents" && projectId && (
+          <ProjectDocumentsTab projectId={projectId} />
+        )}
+
+        {/* Updates Tab */}
+        {tab === "updates" && projectId && (
+          <ProjectUpdatesTab projectId={projectId} />
         )}
       </div>
 
