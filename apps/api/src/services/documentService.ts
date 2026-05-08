@@ -77,12 +77,12 @@ export class DocumentService {
       });
 
       if (err.name === "NoSuchBucket") {
-        throw new Error("S3 bucket not found. Check AWS configuration.");
+        throw new Error("S3 bucket not found. Check AWS configuration.", { cause: err });
       }
       if (err.name === "InvalidAccessKeyId") {
-        throw new Error("Invalid AWS credentials.");
+        throw new Error("Invalid AWS credentials.", { cause: err });
       }
-      throw new Error(`Failed to upload file: ${err.message}`);
+      throw new Error(`Failed to upload file: ${err.message}`, { cause: err });
     }
   }
 
@@ -97,7 +97,7 @@ export class DocumentService {
       console.log(`[S3 Delete Success] key=${key}`);
     } catch (err: any) {
       console.error("[S3 Delete Error]", { key, error: err.message });
-      throw new Error(`Failed to delete file: ${err.message}`);
+      throw new Error(`Failed to delete file: ${err.message}`, { cause: err });
     }
   }
 
@@ -120,7 +120,7 @@ export class DocumentService {
       return url;
     } catch (err: any) {
       console.error("[Presigned URL Error]", { key, error: err.message });
-      throw new Error(`Failed to generate download URL: ${err.message}`);
+      throw new Error(`Failed to generate download URL: ${err.message}`, { cause: err });
     }
   }
 }

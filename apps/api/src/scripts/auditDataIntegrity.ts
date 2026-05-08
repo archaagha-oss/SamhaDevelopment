@@ -9,16 +9,8 @@ async function auditDataIntegrity() {
   console.log("🔍 Starting Data Integrity Audit...\n");
 
   try {
-    // 1. Check for orphaned leads
-    console.log("1️⃣ Checking for orphaned leads...");
-    const leadsWithoutAgent = await prisma.lead.count({
-      where: { assignedAgent: null },
-    });
-    if (leadsWithoutAgent > 0) {
-      console.warn(`⚠️ Found ${leadsWithoutAgent} leads without assigned agent`);
-    } else {
-      console.log("✅ All leads have assigned agents");
-    }
+    // 1. Lead.assignedAgentId is a required FK — Prisma enforces non-null.
+    //    No orphan check needed; left as a comment for documentation.
 
     // 2. Check for units with invalid statuses
     console.log("\n2️⃣ Checking unit statuses...");
@@ -51,30 +43,8 @@ async function auditDataIntegrity() {
       console.log("✅ All units in deal-owned statuses have active deals");
     }
 
-    // 4. Check for deals with missing relationships
-    console.log("\n4️⃣ Checking deal relationships...");
-    const dealsWithMissingData = await prisma.deal.findMany({
-      where: {
-        OR: [
-          { lead: null },
-          { unit: null },
-          { paymentPlan: null },
-        ],
-      },
-      select: { id: true, dealNumber: true, leadId: true, unitId: true, paymentPlanId: true },
-    });
-
-    if (dealsWithMissingData.length > 0) {
-      console.error(`❌ Found ${dealsWithMissingData.length} deals with missing relationships:`);
-      dealsWithMissingData.forEach((d) => {
-        console.error(`   Deal ${d.dealNumber}`);
-        if (!d.leadId) console.error(`      - Missing lead`);
-        if (!d.unitId) console.error(`      - Missing unit`);
-        if (!d.paymentPlanId) console.error(`      - Missing paymentPlan`);
-      });
-    } else {
-      console.log("✅ All deals have required relationships");
-    }
+    // 4. Deal.leadId / unitId / paymentPlanId are required FKs — Prisma
+    //    enforces non-null, so no orphan check needed here.
 
     // 5. Check for leads with inactive units they're interested in
     console.log("\n5️⃣ Checking lead interests...");

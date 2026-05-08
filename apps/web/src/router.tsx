@@ -1,69 +1,84 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./components/AppShell";
-import ExecutiveDashboard from "./components/ExecutiveDashboard";
-import ProjectDetailPage from "./components/ProjectDetailPage";
-import UnitDetailPage from "./components/UnitDetailPage";
-import UnitsPage from "./components/UnitsPage";
-import LeadsPage from "./components/LeadsPage";
-import LeadProfilePage from "./components/LeadProfilePage";
-import DealsPage from "./components/DealsPage";
-import DealDetailPage from "./components/DealDetailPage";
-import BrokerPage from "./components/BrokerPage";
-import CommissionDashboard from "./components/CommissionDashboard";
-import PaymentReportPage from "./components/PaymentReportPage";
-import ContractsPage from "./pages/ContractsPage";
 import NotFoundPage from "./components/NotFoundPage";
-import ProjectsPage from "./components/ProjectsPage";
-import ProjectSettingsPage from "./components/ProjectSettingsPage";
-import ActivitiesPage from "./pages/ActivitiesPage";
-import TeamPage from "./pages/TeamPage";
-import PaymentPlansPage from "./components/PaymentPlansPage";
-import OfferPrintPage from "./components/OfferPrintPage";
-import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
-import SpaDraftPrintPage from "./components/SpaDraftPrintPage";
-import SalesOfferPrintPage from "./components/SalesOfferPrintPage";
-import InvoicePrintPage from "./components/InvoicePrintPage";
-import ReceiptPrintPage from "./components/ReceiptPrintPage";
-import ReportsPage from "./pages/ReportsPage";
-import ReservationsPage from "./components/ReservationsPage";
-import OffersPage from "./components/OffersPage";
-import SettingsPage from "./pages/SettingsPage";
-import ContactsPage from "./pages/ContactsPage";
+
+// Lazy-loaded screens — keeps the initial bundle small.
+const ExecutiveDashboard       = lazy(() => import("./components/ExecutiveDashboard"));
+const ProjectDetailPage        = lazy(() => import("./components/ProjectDetailPage"));
+const UnitDetailPage           = lazy(() => import("./components/UnitDetailPage"));
+const UnitsPage                = lazy(() => import("./components/UnitsPage"));
+const LeadsPage                = lazy(() => import("./components/LeadsPage"));
+const LeadProfilePage          = lazy(() => import("./components/LeadProfilePage"));
+const DealsPage                = lazy(() => import("./components/DealsPage"));
+const DealDetailPage           = lazy(() => import("./components/DealDetailPage"));
+const BrokerPage               = lazy(() => import("./components/BrokerPage"));
+const CommissionDashboard      = lazy(() => import("./components/CommissionDashboard"));
+const PaymentReportPage        = lazy(() => import("./components/PaymentReportPage"));
+const ContractsPage            = lazy(() => import("./pages/ContractsPage"));
+const ProjectsPage             = lazy(() => import("./components/ProjectsPage"));
+const ProjectSettingsPage      = lazy(() => import("./components/ProjectSettingsPage"));
+const ActivitiesPage           = lazy(() => import("./pages/ActivitiesPage"));
+const TeamPage                 = lazy(() => import("./pages/TeamPage"));
+const PaymentPlansPage         = lazy(() => import("./components/PaymentPlansPage"));
+const OfferPrintPage           = lazy(() => import("./components/OfferPrintPage"));
+const ReservationFormPrintPage = lazy(() => import("./components/ReservationFormPrintPage"));
+const SpaDraftPrintPage        = lazy(() => import("./components/SpaDraftPrintPage"));
+const SalesOfferPrintPage      = lazy(() => import("./components/SalesOfferPrintPage"));
+const InvoicePrintPage         = lazy(() => import("./components/InvoicePrintPage"));
+const ReceiptPrintPage         = lazy(() => import("./components/ReceiptPrintPage"));
+const ReportsPage              = lazy(() => import("./pages/ReportsPage"));
+const ReservationsPage         = lazy(() => import("./components/ReservationsPage"));
+const OffersPage               = lazy(() => import("./components/OffersPage"));
+const SettingsPage             = lazy(() => import("./pages/SettingsPage"));
+const ContactsPage             = lazy(() => import("./pages/ContactsPage"));
+
+const RouteFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+  </div>
+);
+
+const lazyRoute = (Element: React.ComponentType) => (
+  <Suspense fallback={<RouteFallback />}>
+    <Element />
+  </Suspense>
+);
 
 export const router = createBrowserRouter([
   // Standalone print pages (no app shell — full-page printable layout)
-  { path: "/offers/:offerId",                            element: <OfferPrintPage /> },
-  { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
-  { path: "/deals/:dealId/print/spa-draft",              element: <SpaDraftPrintPage /> },
-  { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
-  { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
-  { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
+  { path: "/offers/:offerId",                            element: lazyRoute(OfferPrintPage) },
+  { path: "/deals/:dealId/print/reservation-form",       element: lazyRoute(ReservationFormPrintPage) },
+  { path: "/deals/:dealId/print/spa-draft",              element: lazyRoute(SpaDraftPrintPage) },
+  { path: "/deals/:dealId/print/sales-offer",            element: lazyRoute(SalesOfferPrintPage) },
+  { path: "/payments/:paymentId/print/invoice",          element: lazyRoute(InvoicePrintPage) },
+  { path: "/payments/:paymentId/print/receipt",          element: lazyRoute(ReceiptPrintPage) },
   {
     path: "/",
     element: <AppShell />,
     children: [
-      { index: true,                                      element: <ExecutiveDashboard /> },
-      { path: "projects",                                 element: <ProjectsPage /> },
-      { path: "projects/:projectId",                      element: <ProjectDetailPage /> },
-      { path: "projects/:projectId/settings",             element: <ProjectSettingsPage /> },
-      { path: "projects/:projectId/units/:unitId",        element: <UnitDetailPage /> },
-      { path: "units",                                    element: <UnitsPage /> },
-      { path: "leads",                                    element: <LeadsPage /> },
-      { path: "leads/:leadId",                            element: <LeadProfilePage /> },
-      { path: "deals",                                    element: <DealsPage /> },
-      { path: "deals/:dealId",                            element: <DealDetailPage /> },
-      { path: "brokers",                                  element: <BrokerPage /> },
-      { path: "commissions",                              element: <CommissionDashboard /> },
-      { path: "tasks",                                     element: <ActivitiesPage /> },
-      { path: "payments",                                  element: <PaymentReportPage /> },
-      { path: "contracts",                                 element: <ContractsPage /> },
-      { path: "payment-plans",                            element: <PaymentPlansPage /> },
-      { path: "reservations",                             element: <ReservationsPage /> },
-      { path: "offers-list",                              element: <OffersPage /> },
-      { path: "team",                                      element: <TeamPage /> },
-      { path: "reports",                                   element: <ReportsPage /> },
-      { path: "contacts",                                  element: <ContactsPage /> },
-      { path: "settings",                                  element: <SettingsPage /> },
+      { index: true,                                      element: lazyRoute(ExecutiveDashboard) },
+      { path: "projects",                                 element: lazyRoute(ProjectsPage) },
+      { path: "projects/:projectId",                      element: lazyRoute(ProjectDetailPage) },
+      { path: "projects/:projectId/settings",             element: lazyRoute(ProjectSettingsPage) },
+      { path: "projects/:projectId/units/:unitId",        element: lazyRoute(UnitDetailPage) },
+      { path: "units",                                    element: lazyRoute(UnitsPage) },
+      { path: "leads",                                    element: lazyRoute(LeadsPage) },
+      { path: "leads/:leadId",                            element: lazyRoute(LeadProfilePage) },
+      { path: "deals",                                    element: lazyRoute(DealsPage) },
+      { path: "deals/:dealId",                            element: lazyRoute(DealDetailPage) },
+      { path: "brokers",                                  element: lazyRoute(BrokerPage) },
+      { path: "commissions",                              element: lazyRoute(CommissionDashboard) },
+      { path: "tasks",                                    element: lazyRoute(ActivitiesPage) },
+      { path: "payments",                                 element: lazyRoute(PaymentReportPage) },
+      { path: "contracts",                                element: lazyRoute(ContractsPage) },
+      { path: "payment-plans",                            element: lazyRoute(PaymentPlansPage) },
+      { path: "reservations",                             element: lazyRoute(ReservationsPage) },
+      { path: "offers-list",                              element: lazyRoute(OffersPage) },
+      { path: "team",                                     element: lazyRoute(TeamPage) },
+      { path: "reports",                                  element: lazyRoute(ReportsPage) },
+      { path: "contacts",                                 element: lazyRoute(ContactsPage) },
+      { path: "settings",                                 element: lazyRoute(SettingsPage) },
       { path: "*",                                        element: <NotFoundPage /> },
     ],
   },

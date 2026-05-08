@@ -514,7 +514,7 @@ router.post("/:id/images", upload.single("file"), async (req, res) => {
     if (req.file) {
       try {
         fs.unlinkSync(req.file.path);
-      } catch {}
+      } catch { /* ignore — best-effort cleanup */ }
     }
     res.status(500).json({ error: error.message || "Failed to upload image", code: "IMAGE_UPLOAD_ERROR", statusCode: 500 });
   }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import ContactFormModal from "../components/ContactFormModal";
 
 interface Contact {
@@ -61,7 +62,10 @@ export default function ContactsPage() {
     try {
       await axios.delete(`/api/contacts/${id}`);
       load();
-    } catch { } finally {
+    } catch (err) {
+      const msg = (err as any)?.response?.data?.error || "Failed to delete contact";
+      toast.error(msg);
+    } finally {
       setDeletingId(null);
     }
   };

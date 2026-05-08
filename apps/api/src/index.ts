@@ -5,6 +5,7 @@ import swaggerUi from "swagger-ui-express";
 import { openAPISpec } from "./docs/openapi";
 import { prisma } from "./lib/prisma";
 import { logger } from "./lib/logger";
+import { setupClerkAuth } from "./middleware/auth";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
@@ -37,9 +38,9 @@ startJobProcessor(30_000); // poll every 30 s
 // Hourly sweep: release expired ON_HOLD units
 setInterval(() => {
   releaseExpiredHolds("system").catch((err: unknown) => {
-    console.error("[Cron] ON_HOLD expiry sweep error:", err);
+    logger.error("[Cron] ON_HOLD expiry sweep error", { err });
   });
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000).unref?.();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,29 +57,47 @@ app.use((_req, res, next) => {
 
 // ── Rate limiting (100 req / min per IP) ──────────────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT     = 100;
+// Periodically prune expired entries so the map can't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(ip);
+  }
+}, RATE_WINDOW_MS).unref?.();
+
 app.use((req, res, next) => {
   const ip = req.ip ?? "unknown";
   const now = Date.now();
-  const window = 60_000;
-  const limit = 100;
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + window });
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
     return next();
   }
   entry.count++;
-  if (entry.count > limit) {
+  if (entry.count > RATE_LIMIT) {
     res.setHeader("Retry-After", "60");
     return res.status(429).json({ error: "Too many requests", code: "RATE_LIMITED", statusCode: 429 });
   }
   next();
 });
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
+// ── Authentication ────────────────────────────────────────────────────────
+// In production, Clerk verifies the bearer token and populates req.auth.
+// In dev, we attach a mock auth so local development doesn't need Clerk keys.
+const isProd = process.env.NODE_ENV === "production";
+if (isProd && process.env.CLERK_SECRET_KEY) {
+  app.use(setupClerkAuth());
+} else {
+  if (isProd) {
+    logger.warn("Production mode but CLERK_SECRET_KEY is not set — falling back to mock auth (NOT SAFE)");
+  }
+  app.use((req, _res, next) => {
+    req.auth = { userId: "dev-user-1" };
+    next();
+  });
+}
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
@@ -129,17 +148,7 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
 
-// ===== ERROR HANDLING =====
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Internal server error",
-    code: err.code || "INTERNAL_ERROR",
-    statusCode: err.statusCode || 500,
-  });
-});
-
-// 404 handler
+// ===== 404 HANDLER (must be after all routes, before error handler) =====
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
@@ -148,16 +157,22 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler — must have 4 parameters
+// ===== GLOBAL ERROR HANDLER (must be last; Express requires 4 params) =====
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   logger.error("Unhandled Express error", {
-    message: err.message,
-    stack: err.stack,
+    message: err?.message,
+    code: err?.code,
+    stack: err?.stack,
     path: req.path,
     method: req.method,
   });
-  res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", statusCode: 500 });
+  const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+  res.status(status).json({
+    error: err?.message || "Internal server error",
+    code: err?.code || "INTERNAL_ERROR",
+    statusCode: status,
+  });
 });
 
 // ===== SERVER STARTUP =====

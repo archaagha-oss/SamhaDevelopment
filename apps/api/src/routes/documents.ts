@@ -143,7 +143,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Map specific errors to user-friendly messages
     let statusCode = 400;
     let errorCode = "DOCUMENT_UPLOAD_ERROR";
-    let errorMsg = error.message || "Failed to upload document";
+    const errorMsg = error.message || "Failed to upload document";
 
     if (error.message.includes("S3 bucket not found")) {
       statusCode = 503;

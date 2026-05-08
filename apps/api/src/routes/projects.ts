@@ -320,7 +320,9 @@ router.post("/:id/images", projectUpload.single("file"), async (req, res) => {
     });
     res.status(201).json(image);
   } catch (error: any) {
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch { /* ignore — best-effort cleanup */ }
+    }
     res.status(500).json({ error: error.message || "Failed to upload image" });
   }
 });

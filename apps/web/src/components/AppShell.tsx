@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
 
@@ -51,8 +52,12 @@ export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Mock user for dev (TODO: integrate real Clerk auth in future phase)
-  const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
+  const currentUser = useCurrentUser();
+  const user = {
+    firstName: currentUser.firstName,
+    fullName: currentUser.fullName,
+    primaryEmailAddress: { emailAddress: currentUser.email },
+  };
   const handleSignOut = () => {
     localStorage.clear();
     navigate("/sign-in");
@@ -67,29 +72,56 @@ export default function AppShell() {
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
+  const notificationsBase = `/api/users/${currentUser.id}/notifications`;
+
   const fetchNotifications = useCallback(() => {
     axios
-      .get("/api/users/dev-user-1/notifications", { params: { limit: 20 } })
+      .get(notificationsBase, { params: { limit: 20 } })
       .then((res) => {
         const items: any[] = res.data.data || res.data || [];
         setNotifications(Array.isArray(items) ? items : []);
         setUnreadCount(Array.isArray(items) ? items.filter((n: any) => !n.read).length : 0);
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        // axios interceptor surfaces network/5xx; nothing actionable here.
+      });
+  }, [notificationsBase]);
 
   const markAllRead = useCallback(() => {
     notifications.filter((n) => !n.read).forEach((n) => {
-      axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+      axios.patch(`${notificationsBase}/${n.id}`, { read: true }).catch(() => {});
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
-  }, [notifications]);
+  }, [notifications, notificationsBase]);
 
   useEffect(() => {
     fetchNotifications();
-    notificationTimer.current = setInterval(fetchNotifications, 60_000);
-    return () => { if (notificationTimer.current) clearInterval(notificationTimer.current); };
+    // Only poll while the tab is visible — saves bandwidth on background tabs.
+    const startPoll = () => {
+      if (notificationTimer.current) return;
+      notificationTimer.current = setInterval(fetchNotifications, 60_000);
+    };
+    const stopPoll = () => {
+      if (notificationTimer.current) {
+        clearInterval(notificationTimer.current);
+        notificationTimer.current = null;
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+        startPoll();
+      } else {
+        stopPoll();
+      }
+    };
+    if (document.visibilityState === "visible") startPoll();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stopPoll();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [fetchNotifications]);
 
   useEffect(() => {
@@ -188,7 +220,7 @@ export default function AppShell() {
                         <span
                           className="text-base mt-0.5 flex-shrink-0 cursor-pointer"
                           onClick={() => {
-                            if (!n.read) axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+                            if (!n.read) axios.patch(`${notificationsBase}/${n.id}`, { read: true }).catch(() => {});
                             setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x));
                             setUnreadCount((c) => Math.max(0, c - (n.read ? 0 : 1)));
                             if (n.entityType === "DEAL" && n.entityId) { navigate(`/deals/${n.entityId}`); setShowNotifPanel(false); }
@@ -197,7 +229,7 @@ export default function AppShell() {
                         <div
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => {
-                            if (!n.read) axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+                            if (!n.read) axios.patch(`${notificationsBase}/${n.id}`, { read: true }).catch(() => {});
                             setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x));
                             setUnreadCount((c) => Math.max(0, c - (n.read ? 0 : 1)));
                             if (n.entityType === "DEAL" && n.entityId) { navigate(`/deals/${n.entityId}`); setShowNotifPanel(false); }
@@ -209,7 +241,7 @@ export default function AppShell() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+                            axios.patch(`${notificationsBase}/${n.id}`, { read: true }).catch(() => {});
                             setNotifications((prev) => prev.filter((x) => x.id !== n.id));
                             if (!n.read) setUnreadCount((c) => Math.max(0, c - 1));
                           }}
