@@ -13,6 +13,7 @@ import {
 import { addCustomMilestone, restructureSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
+import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 
 const router = Router();
@@ -148,6 +149,35 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({
       error: "Failed to fetch deal",
       code: "FETCH_DEAL_ERROR",
+      statusCode: 500,
+    });
+  }
+});
+
+// SPA business-rule calculator. Late fees, disposal eligibility, delay
+// compensation, liquidated damages — all read-only, all derived from
+// ProjectConfig overrides + the SAMHA SPA defaults. Optional `asOf=ISO`
+// query parameter supports back-dated and forward-dated reporting.
+// GET /api/deals/:id/spa-rules
+router.get("/:id/spa-rules", async (req, res) => {
+  try {
+    const asOf = req.query.asOf ? new Date(String(req.query.asOf)) : new Date();
+    if (Number.isNaN(asOf.getTime())) {
+      return res.status(400).json({
+        error: "Invalid asOf date",
+        code: "INVALID_ASOF",
+        statusCode: 400,
+      });
+    }
+    const summary = await calculateDealSpaRules(req.params.id, asOf);
+    res.json(summary);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({
+      error: error.message || "Failed to compute SPA rules",
+      code: "SPA_RULES_ERROR",
       statusCode: 500,
     });
   }

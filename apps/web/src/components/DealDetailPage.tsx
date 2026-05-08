@@ -7,6 +7,7 @@ import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
 import DealPurchasersModal from "./DealPurchasersModal";
+import DealSpaCompliancePanel from "./DealSpaCompliancePanel";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 
@@ -1080,6 +1081,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             dealId={dealId}
             onUpload={() => setShowDocumentUploadModal(true)}
           />
+
+          {/* SPA compliance — late fees, disposal, delay compensation, LD */}
+          {dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
           {/* Payment schedule + Stage history tabs */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
