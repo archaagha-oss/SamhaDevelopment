@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
+import { StageBadge } from "@/components/ui/stage-badge";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,31 +46,6 @@ const ACTIVITY_ICON: Record<string, string> = {
   SITE_VISIT: "🏢", NOTE: "📝",
 };
 
-const STAGE_BADGE: Record<string, string> = {
-  NEW:         "bg-slate-100 text-slate-600",
-  CONTACTED:   "bg-blue-100 text-blue-700",
-  QUALIFIED:   "bg-indigo-100 text-indigo-700",
-  OFFER_SENT:  "bg-violet-100 text-violet-700",
-  SITE_VISIT:  "bg-cyan-100 text-cyan-700",
-  NEGOTIATING: "bg-amber-100 text-amber-700",
-  CLOSED_WON:  "bg-emerald-100 text-emerald-700",
-  CLOSED_LOST: "bg-red-100 text-red-700",
-};
-
-const DEAL_STAGE_BADGE: Record<string, string> = {
-  RESERVATION_PENDING:   "bg-slate-100 text-slate-600",
-  RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
-  SPA_PENDING:           "bg-violet-50 text-violet-600",
-  SPA_SENT:              "bg-violet-100 text-violet-700",
-  SPA_SIGNED:            "bg-purple-100 text-purple-700",
-  OQOOD_PENDING:         "bg-amber-100 text-amber-700",
-  OQOOD_REGISTERED:      "bg-emerald-100 text-emerald-700",
-  INSTALLMENTS_ACTIVE:   "bg-cyan-100 text-cyan-700",
-  HANDOVER_PENDING:      "bg-orange-100 text-orange-700",
-  COMPLETED:             "bg-green-100 text-green-700",
-  CANCELLED:             "bg-red-100 text-red-700",
-};
-
 const SOURCE_OPTIONS = ["DIRECT", "BROKER", "WEBSITE", "REFERRAL"] as const;
 
 const inputCls  = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400";
@@ -78,8 +54,6 @@ const cancelBtn  = "px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-const fmtTime = (d: string) =>
-  new Date(d).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" });
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -650,10 +624,10 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             <div className="relative">
               <button
                 onClick={() => setShowStagePopover(!showStagePopover)}
-                className={`px-3 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 ${STAGE_BADGE[lead.stage] || "bg-slate-100 text-slate-600"}`}
+                className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
               >
-                {lead.stage.replace(/_/g, " ")}
-                {validTransitions.length > 0 && <span className="text-xs opacity-60">▾</span>}
+                <StageBadge kind="lead" stage={lead.stage} className="text-sm px-3 py-1" />
+                {validTransitions.length > 0 && <span className="text-xs text-muted-foreground">▾</span>}
               </button>
               {showStagePopover && validTransitions.length > 0 && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 w-56 p-3 space-y-2">
@@ -806,9 +780,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{d.dealNumber}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${DEAL_STAGE_BADGE[d.stage] || "bg-slate-100 text-slate-600"}`}>
-                        {d.stage.replace(/_/g, " ")}
-                      </span>
+                      <StageBadge kind="deal" stage={d.stage} className="text-[10px]" />
                     </div>
                     <p className="text-xs text-slate-500">
                       Unit {d.unit.unitNumber} · {d.unit.type}

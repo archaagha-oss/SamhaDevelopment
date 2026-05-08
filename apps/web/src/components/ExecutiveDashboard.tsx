@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { LEAD_STAGE_HEX } from "@/components/ui/stage-badge";
 
 interface Overview {
   unitsSold: number; totalUnits: number; soldPercentage: number | string;
@@ -15,10 +16,7 @@ interface UnitStatus { [key: string]: number; }
 const fmtM = (n: number) => `${(n / 1_000_000).toFixed(2)}M`;
 const fmtK = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(0)}K` : String(n);
 
-const STAGE_COLORS: Record<string, string> = {
-  NEW: "#64748b", CONTACTED: "#3b82f6", OFFER_SENT: "#8b5cf6",
-  SITE_VISIT: "#06b6d4", NEGOTIATING: "#f59e0b", CLOSED_WON: "#10b981", CLOSED_LOST: "#ef4444",
-};
+const STAGE_COLORS = LEAD_STAGE_HEX;
 const BAR_COLORS = ["#2563eb","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899"];
 
 export default function ExecutiveDashboard(): React.ReactNode {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 
@@ -57,6 +59,12 @@ export default function AppShell() {
     localStorage.clear();
     navigate("/sign-in");
   };
+
+  const { theme, setTheme } = useTheme();
+  const toggleTheme = useCallback(
+    () => setTheme(theme === "dark" ? "light" : "dark"),
+    [theme, setTheme]
+  );
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -153,6 +161,14 @@ export default function AppShell() {
           </button>
 
           <div className="flex items-center gap-3" ref={notifPanelRef}>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <div className="relative">
               <button
                 onClick={() => { setShowNotifPanel((v) => !v); if (!showNotifPanel) fetchNotifications(); }}
@@ -258,7 +274,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-background text-foreground">
           <Outlet />
         </main>
       </div>

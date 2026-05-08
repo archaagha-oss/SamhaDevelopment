@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useAgents } from "../hooks/useAgents";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   onClose: () => void;
@@ -11,8 +13,8 @@ interface BrokerCompany { id: string; name: string; }
 interface BrokerAgent   { id: string; name: string; }
 interface UnitOption    { id: string; unitNumber: string; type: string; price: number; floor: number; }
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+const inp = "w-full border border-input rounded-lg px-3 py-2 text-sm bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 const BLANK = {
   firstName: "", lastName: "", phone: "", email: "", nationality: "",
@@ -127,15 +129,14 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
   const selectedUnits = availableUnits.filter((u) => selectedUnitIds.has(u.id));
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+    <Dialog open onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <div>
-            <h2 className="font-bold text-slate-900 text-lg">New Lead</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Fields marked * are required</p>
+            <h2 className="font-bold text-foreground text-lg">New Lead</h2>
+            <p className="text-muted-foreground text-xs mt-0.5">Fields marked * are required</p>
           </div>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
         </div>
 
         <form id="lead-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
@@ -392,17 +393,13 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
-          <button type="button" onClick={handleClose}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors">
-            Cancel
-          </button>
-          <button form="lead-form" type="submit" disabled={submitting}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50">
+        <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
+          <Button type="button" variant="secondary" className="flex-1" onClick={handleClose}>Cancel</Button>
+          <Button form="lead-form" type="submit" className="flex-1" disabled={submitting}>
             {submitting ? "Creating…" : "Create Lead"}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

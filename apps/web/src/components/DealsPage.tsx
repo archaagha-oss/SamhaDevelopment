@@ -7,6 +7,7 @@ import { useDeals } from "../hooks/useDeals";
 import DealFormModal from "./DealFormModal";
 import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
+import { StageBadge } from "@/components/ui/stage-badge";
 
 interface Deal {
   id: string; dealNumber: string;
@@ -19,20 +20,6 @@ interface Deal {
 }
 
 const STAGES = ["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT","SPA_SIGNED","OQOOD_PENDING","OQOOD_REGISTERED","INSTALLMENTS_ACTIVE","HANDOVER_PENDING","COMPLETED","CANCELLED"];
-
-const STAGE_BADGE: Record<string, string> = {
-  RESERVATION_PENDING:   "bg-slate-100 text-slate-600",
-  RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
-  SPA_PENDING:           "bg-yellow-100 text-yellow-700",
-  SPA_SENT:              "bg-yellow-100 text-yellow-700",
-  SPA_SIGNED:            "bg-violet-100 text-violet-700",
-  OQOOD_PENDING:         "bg-orange-100 text-orange-700",
-  OQOOD_REGISTERED:      "bg-teal-100 text-teal-700",
-  INSTALLMENTS_ACTIVE:   "bg-indigo-100 text-indigo-700",
-  HANDOVER_PENDING:      "bg-emerald-100 text-emerald-700",
-  COMPLETED:             "bg-emerald-100 text-emerald-700",
-  CANCELLED:             "bg-red-100 text-red-700",
-};
 
 const COM_BADGE: Record<string, string> = {
   NOT_DUE: "text-slate-400", PENDING_APPROVAL: "text-amber-600 font-semibold",
@@ -239,9 +226,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                       <p className="text-xs text-slate-400">{deal.unit.type}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
-                        {deal.stage.replace(/_/g, " ")}
-                      </span>
+                      <StageBadge kind="deal" stage={deal.stage} />
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-800">AED {deal.salePrice.toLocaleString()}</p>
