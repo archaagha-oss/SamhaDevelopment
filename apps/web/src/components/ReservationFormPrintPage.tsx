@@ -181,6 +181,7 @@ export default function ReservationFormPrintPage() {
           .print\\:hidden { display: none !important; }
           .print\\:p-0 { padding: 0 !important; }
           .print\\:max-w-none { max-width: none !important; }
+          table, tr, .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
         }
       `}</style>
     </div>

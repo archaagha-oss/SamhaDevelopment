@@ -167,19 +167,30 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
   const canEdit     = ["AVAILABLE", "BLOCKED", "NOT_RELEASED"].includes(currentUnit.status);
   const canDelete   = ["AVAILABLE", "NOT_RELEASED"].includes(currentUnit.status) && !activeDeal;
 
+  const isAvailable = currentUnit.status === "AVAILABLE";
+  const isReserved  = currentUnit.status === "RESERVED";
+  const isBookedOrSold = currentUnit.status === "BOOKED" || currentUnit.status === "SOLD";
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="
+        fixed bg-white shadow-2xl flex flex-col overflow-hidden
+        left-0 right-0 bottom-0 top-16 rounded-t-2xl
+        sm:left-auto sm:top-0 sm:bottom-0 sm:right-0 sm:rounded-none sm:rounded-l-2xl sm:w-[420px] sm:max-w-full
+      ">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white flex-shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Unit {currentUnit.unitNumber}</h2>
-            <span className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[currentUnit.status] || "bg-slate-100 text-slate-600"}`}>
+            <h2 className="text-2xl font-bold text-slate-900 leading-none">Unit {currentUnit.unitNumber}</h2>
+            <span className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[currentUnit.status] || "bg-slate-100 text-slate-600"}`}>
               {statusLabels[currentUnit.status] || currentUnit.status}
             </span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
         </div>
+
+        <div className="flex-1 overflow-y-auto">
 
         {/* Active Deal Banner */}
         {activeDeal && (
@@ -314,6 +325,41 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
 
         {/* Actions */}
         <div className="px-6 pb-4 space-y-2">
+          {/* Status-conditional primary CTAs */}
+          {isAvailable && (
+            <button
+              onClick={() => navigate(`/leads?createOfferForUnit=${currentUnit.id}`)}
+              className="w-full py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Offer
+            </button>
+          )}
+          {isReserved && activeDeal && (
+            <button
+              onClick={() => navigate(`/deals/${activeDeal.id}`)}
+              className="w-full py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              View Deal
+            </button>
+          )}
+          {isReserved && !activeDeal && (
+            <button
+              onClick={() => updateStatus("AVAILABLE", "Reservation released")}
+              disabled={acting}
+              className="w-full py-2.5 text-sm font-semibold border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-50"
+            >
+              {acting ? "…" : "Release Hold"}
+            </button>
+          )}
+          {isBookedOrSold && activeDeal && (
+            <button
+              onClick={() => navigate(`/deals/${activeDeal.id}`)}
+              className="w-full py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              View Deal
+            </button>
+          )}
+
           {canEdit && onEditUnit && (
             <button
               onClick={() => { onEditUnit(currentUnit); onClose(); }}
@@ -464,6 +510,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

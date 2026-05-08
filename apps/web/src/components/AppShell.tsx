@@ -5,8 +5,11 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
+import ErrorBoundary from "./ErrorBoundary";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings";
+
+type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -14,6 +17,7 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/units")) return "units";
   if (pathname.startsWith("/leads")) return "leads";
   if (pathname.startsWith("/deals")) return "deals";
+  if (pathname.startsWith("/finance")) return "finance";
   if (pathname.startsWith("/payments")) return "payments";
   if (pathname.startsWith("/commissions")) return "commissions";
   if (pathname.startsWith("/brokers")) return "brokers";
@@ -55,6 +59,8 @@ export default function AppShell() {
 
   // Mock user for dev (TODO: integrate real Clerk auth in future phase)
   const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
+  // Role drives sidebar visibility. Read from localStorage so QA can swap roles for testing.
+  const role: Role = (typeof window !== "undefined" ? (localStorage.getItem("samha:role") as Role | null) : null) ?? "ADMIN";
   const handleSignOut = () => {
     localStorage.clear();
     navigate("/sign-in");
@@ -134,7 +140,7 @@ export default function AppShell() {
   const handleNavigate = useCallback((page: Page) => {
     const map: Record<Page, string> = {
       dashboard: "/", projects: "/projects", units: "/units",
-      leads: "/leads", deals: "/deals", payments: "/payments",
+      leads: "/leads", deals: "/deals", finance: "/finance", payments: "/payments",
       commissions: "/commissions", brokers: "/brokers", tasks: "/tasks", contracts: "/contracts",
       "payment-plans": "/payment-plans", reservations: "/reservations", "offers-list": "/offers-list",
       team: "/team", reports: "/reports",
@@ -147,7 +153,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden">
-      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
+      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <header className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0">
@@ -275,7 +281,9 @@ export default function AppShell() {
         </header>
 
         <main className="flex-1 overflow-auto bg-background text-foreground">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

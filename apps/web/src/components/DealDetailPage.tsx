@@ -8,6 +8,7 @@ import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
+import DealStepper from "./DealStepper";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -1553,6 +1554,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         {/* Sidebar: Deal Status + Oqood + Commission */}
         <div className="space-y-4">
 
+          {/* 10-stage progress stepper */}
+          <DealStepper current={deal.stage} cancelled={deal.stage === "CANCELLED"} />
+
           {/* ── Deal Status ─────────────────────────────────────────────────── */}
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Deal Status</h3>
@@ -2030,6 +2034,59 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── Sticky bottom primary action ──────────────────────────────────── */}
+      {(() => {
+        type CTA = { label: string; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
+        let cta: CTA = null;
+        switch (deal.stage) {
+          case "RESERVATION_PENDING":
+            cta = { label: reserving ? "Reserving…" : "🔒 Record Reservation Fee", onClick: handleReserveUnit, variant: "emerald" };
+            break;
+          case "RESERVATION_CONFIRMED":
+            if (canGenerateSalesOffer && salesOfferDocs.length === 0) {
+              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer", onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
+            }
+            break;
+          case "SPA_PENDING":
+            cta = { label: generatingDoc === "SPA" ? "Generating…" : "📑 Generate SPA Draft", onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
+            break;
+          case "SPA_SENT":
+            cta = { label: "✓ Mark SPA Signed", onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
+            break;
+          case "SPA_SIGNED":
+            cta = { label: "🪪 Submit Oqood Application", onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
+            break;
+          case "OQOOD_PENDING":
+            cta = { label: "✓ Mark Oqood Registered", onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
+            break;
+          case "OQOOD_REGISTERED":
+            cta = { label: "→ Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
+            break;
+          case "INSTALLMENTS_ACTIVE":
+            cta = { label: "💰 Record Next Payment", onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
+            break;
+          case "HANDOVER_PENDING":
+            cta = { label: "🏠 Mark Handed Over", onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
+            break;
+        }
+        if (!cta) return null;
+        const tone = cta.variant === "emerald" ? "bg-emerald-600 hover:bg-emerald-700" : cta.variant === "amber" ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700";
+        return (
+          <div className="sticky bottom-0 left-0 right-0 -mx-6 mt-2 px-6 py-3 bg-white border-t border-slate-200 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 z-30">
+            <div className="text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">Next step:</span> {deal.stage.replace(/_/g, " ")}
+            </div>
+            <button
+              onClick={cta.onClick}
+              disabled={reserving || !!generatingDoc || updatingStage}
+              className={`px-5 py-2.5 ${tone} text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors`}
+            >
+              {cta.label}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Restructure Schedule Modal */}
       {showRestructure && (

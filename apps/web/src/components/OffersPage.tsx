@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import EmptyState from "./EmptyState";
 
 interface Lead {
   id: string;
@@ -141,10 +142,11 @@ export default function OffersPage() {
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-2">
-            <p className="text-3xl">📄</p>
-            <p className="text-sm">No offers found</p>
-          </div>
+          <EmptyState
+            icon="📄"
+            title={search || filter !== "ALL" ? "No offers match your filters" : "No offers yet"}
+            description={search || filter !== "ALL" ? "Try clearing the search or status filter." : "Offers created from leads will appear here."}
+          />
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full text-sm">

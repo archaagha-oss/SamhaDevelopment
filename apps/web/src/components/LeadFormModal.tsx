@@ -20,6 +20,7 @@ const BLANK = {
   firstName: "", lastName: "", phone: "", email: "", nationality: "",
   source: "DIRECT", budget: "", assignedAgentId: "", notes: "",
   brokerCompanyId: "", brokerAgentId: "",
+  consent: false,
 };
 
 export default function LeadFormModal({ onClose, onCreated }: Props) {
@@ -79,6 +80,10 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!form.consent) {
+      setError("Consent is required before creating a lead.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await axios.post("/api/leads", {
@@ -93,6 +98,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         notes:          form.notes || undefined,
         brokerCompanyId: form.source === "BROKER" && form.brokerCompanyId ? form.brokerCompanyId : undefined,
         brokerAgentId:   form.source === "BROKER" && form.brokerAgentId   ? form.brokerAgentId   : undefined,
+        consent:         form.consent,
       });
 
       const leadId = res.data.id;
@@ -385,6 +391,23 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Consent */}
+          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                required
+                checked={form.consent}
+                onChange={(e) => set({ consent: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-xs text-slate-600 leading-relaxed">
+                The lead has consented to being contacted about properties and consents to data
+                processing under our privacy policy. <span className="text-red-500">*</span>
+              </span>
+            </label>
           </div>
 
           {error && (

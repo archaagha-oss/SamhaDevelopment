@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import PaymentActionModal, { PaymentAction, PaymentSummary } from "./PaymentActionModal";
 
 interface Payment extends PaymentSummary {
@@ -109,6 +110,24 @@ export default function PaymentReportPage() {
   const [activeStatus, setActiveStatus] = useState("OVERDUE");
   const [upcomingView, setUpcomingView] = useState<"7" | "30">("7");
   const [modal, setModal]               = useState<{ payment: Payment; action: PaymentAction } | null>(null);
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+
+  const sendReminder = useCallback(async (paymentId: string) => {
+    setSendingReminder(paymentId);
+    try {
+      await axios.post(`/api/payments/${paymentId}/reminder`);
+      toast.success("Reminder sent to buyer");
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 404) {
+        toast.error("Reminder endpoint not configured on the API yet.");
+      } else {
+        toast.error(err?.response?.data?.error || "Failed to send reminder");
+      }
+    } finally {
+      setSendingReminder(null);
+    }
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -301,6 +320,16 @@ export default function PaymentReportPage() {
                       {availableActions.length > 0 && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 flex-wrap">
+                            {isOverdue && (
+                              <button
+                                onClick={() => sendReminder(p.id)}
+                                disabled={sendingReminder === p.id}
+                                title="Send a reminder to the buyer"
+                                className="text-[10px] font-semibold px-2 py-1 rounded-md border bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-300 transition-colors disabled:opacity-50 whitespace-nowrap"
+                              >
+                                {sendingReminder === p.id ? "Sending…" : "📨 Send Reminder"}
+                              </button>
+                            )}
                             {availableActions.map((act) => (
                               <button
                                 key={act}

@@ -2,6 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
+import EmptyState from "./EmptyState";
+import { getBrokerStatusColor } from "../utils/statusColors";
+
+const BROKER_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  PENDING_APPROVAL: "Pending Approval",
+};
 
 const EMIRATES = ["Abu Dhabi", "Dubai", "Sharjah", "Ajman", "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"];
 
@@ -24,6 +32,7 @@ interface BrokerAgent {
 interface BrokerCompany {
   id: string;
   name: string;
+  status?: "ACTIVE" | "INACTIVE" | "PENDING_APPROVAL";
   email?: string;
   phone?: string;
   commissionRate?: number;
@@ -48,6 +57,7 @@ interface BrokerCompany {
   bankAccountNo?: string;
   bankIban?: string;
   bankCurrency?: string;
+  bankSwiftCode?: string;
   agents: BrokerAgent[];
   deals: { id: string }[];
   commissions: { amount: number; status: string }[];
@@ -60,13 +70,14 @@ const SECTION_CLS = "border-t border-slate-100 pt-4 mt-4";
 const SECTION_TITLE_CLS = "text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3";
 
 const emptyCompanyForm = () => ({
-  name: "", email: "", phone: "", commissionRate: "4",
+  name: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
   reraLicenseNumber: "", reraLicenseExpiry: "", tradeLicenseNumber: "",
   tradeLicenseCopyUrl: "", vatCertificateNo: "", vatCertificateUrl: "",
   corporateTaxCertUrl: "", officeRegistrationNo: "", ornCertificateUrl: "",
   officeManagerBrokerId: "", website: "",
   officeNo: "", buildingName: "", neighborhood: "", emirate: "", postalCode: "",
   bankName: "", bankAccountName: "", bankAccountNo: "", bankIban: "", bankCurrency: "AED",
+  bankSwiftCode: "",
 });
 
 const emptyAgentForm = () => ({
@@ -143,6 +154,7 @@ export default function BrokerPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyCompanyForm());
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [agentForm, setAgentForm] = useState(emptyAgentForm());
@@ -201,6 +213,7 @@ export default function BrokerPage() {
     if (!selected) return;
     setEditForm({
       name: selected.name,
+      status: selected.status ?? "PENDING_APPROVAL",
       email: selected.email ?? "",
       phone: selected.phone ?? "",
       commissionRate: String(selected.commissionRate ?? 4),
@@ -225,6 +238,7 @@ export default function BrokerPage() {
       bankAccountNo: selected.bankAccountNo ?? "",
       bankIban: selected.bankIban ?? "",
       bankCurrency: selected.bankCurrency ?? "AED",
+      bankSwiftCode: (selected as any).bankSwiftCode ?? "",
     });
     setShowEditForm(true);
   };
@@ -262,6 +276,14 @@ export default function BrokerPage() {
   const handleAddAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
+    if (!agentForm.acceptedConsent) {
+      toast.error("Consent is required before adding an agent.");
+      return;
+    }
+    if (!agentForm.eidFrontUrl || !agentForm.eidBackUrl) {
+      toast.error("EID front and back must both be uploaded.");
+      return;
+    }
     try {
       await axios.post("/api/brokers/agents", {
         companyId: selected.id,
@@ -297,7 +319,11 @@ export default function BrokerPage() {
   const getTotalCommission = (c: BrokerCompany) => c.commissions.reduce((s, x) => s + x.amount, 0);
   const getPaidCommission  = (c: BrokerCompany) => c.commissions.filter((x) => x.status === "PAID").reduce((s, x) => s + x.amount, 0);
 
-  const filtered = companies.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = companies.filter((c) => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter !== "ALL" && (c.status || "PENDING_APPROVAL") !== statusFilter) return false;
+    return true;
+  });
 
   // Shared company form fields (used in both create and edit)
   const CompanyFormFields = ({
@@ -309,6 +335,14 @@ export default function BrokerPage() {
         <div>
           <label className={LABEL_CLS}>Company Name *</label>
           <input required placeholder="Company Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div>
+          <label className={LABEL_CLS}>Status</label>
+          <select value={f.status || "PENDING_APPROVAL"} onChange={(e) => setF({ ...f, status: e.target.value })} className={INPUT_CLS}>
+            <option value="PENDING_APPROVAL">Pending Approval</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
         </div>
         <div>
           <label className={LABEL_CLS}>Commission Rate (%)</label>
@@ -428,9 +462,15 @@ export default function BrokerPage() {
               <input placeholder="AED" value={f.bankCurrency} onChange={(e) => setF({ ...f, bankCurrency: e.target.value })} className={INPUT_CLS} />
             </div>
           </div>
-          <div>
-            <label className={LABEL_CLS}>IBAN</label>
-            <input placeholder="AE..." value={f.bankIban} onChange={(e) => setF({ ...f, bankIban: e.target.value })} className={INPUT_CLS} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL_CLS}>IBAN</label>
+              <input placeholder="AE..." value={f.bankIban} onChange={(e) => setF({ ...f, bankIban: e.target.value })} className={INPUT_CLS} />
+            </div>
+            <div>
+              <label className={LABEL_CLS}>SWIFT Code</label>
+              <input placeholder="e.g. ADIBAEAA" value={f.bankSwiftCode} onChange={(e) => setF({ ...f, bankSwiftCode: e.target.value })} className={INPUT_CLS} />
+            </div>
           </div>
         </div>
       </div>
@@ -450,6 +490,16 @@ export default function BrokerPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-44 focus:outline-none focus:border-blue-400 bg-slate-50"
           />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus:outline-none focus:border-blue-400"
+          >
+            <option value="ALL">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="PENDING_APPROVAL">Pending Approval</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
           <button onClick={() => setShowForm(true)}
             className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
             <span className="text-base leading-none">+</span> Add Company
@@ -465,9 +515,17 @@ export default function BrokerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Company list */}
           <div className="lg:col-span-1 space-y-2">
+            <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
             {filtered.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">No companies found</div>
-            ) : filtered.map((company) => (
+              <EmptyState
+                icon="🏢"
+                title={search ? "No companies match your search" : "No broker companies yet"}
+                description={search ? "Try a different keyword." : "Add your first broker company to start managing agents."}
+                action={!search ? { label: "Add Company", onClick: () => setShowForm(true) } : undefined}
+              />
+            ) : filtered.map((company) => {
+              const location = [company.neighborhood, company.emirate].filter(Boolean).join(", ");
+              return (
               <button key={company.id} onClick={() => setSelected(company)}
                 className={`w-full text-left bg-white rounded-xl border p-4 transition-all hover:border-blue-300 hover:shadow-sm ${selected?.id === company.id ? "border-blue-500 shadow-sm" : "border-slate-200"}`}>
                 <div className="flex items-start justify-between mb-2">
@@ -476,14 +534,27 @@ export default function BrokerPage() {
                   </div>
                   <span className="text-xs text-slate-400">{company.deals.length} deals</span>
                 </div>
-                <p className="font-semibold text-slate-800 text-sm mb-1">{company.name}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-semibold text-slate-800 text-sm">{company.name}</p>
+                  {(() => {
+                    const s = company.status || "PENDING_APPROVAL";
+                    const c = getBrokerStatusColor(s);
+                    return (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${c.badge}`}>
+                        {BROKER_STATUS_LABELS[s]}
+                      </span>
+                    );
+                  })()}
+                </div>
                 {company.email && <p className="text-xs text-slate-400 truncate">{company.email}</p>}
+                {location && <p className="text-[11px] text-slate-400 truncate mt-0.5">📍 {location}</p>}
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                   <span className="text-xs text-slate-500">{company.agents.length} agents</span>
                   <span className="text-xs font-semibold text-emerald-600">AED {getPaidCommission(company).toLocaleString()} paid</span>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
 
           {/* Detail panel */}
@@ -499,7 +570,18 @@ export default function BrokerPage() {
                 <div className="px-6 py-5 border-b border-slate-100 bg-slate-50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h2 className="text-lg font-bold text-slate-900">{selected.name}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-lg font-bold text-slate-900">{selected.name}</h2>
+                        {(() => {
+                          const s = selected.status || "PENDING_APPROVAL";
+                          const c = getBrokerStatusColor(s);
+                          return (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${c.badge}`}>
+                              {BROKER_STATUS_LABELS[s]}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <div className="flex flex-wrap gap-3 mt-0.5">
                         {selected.email && <span className="text-xs text-slate-500">{selected.email}</span>}
                         {selected.phone && <span className="text-xs text-slate-500">{selected.phone}</span>}
@@ -578,7 +660,12 @@ export default function BrokerPage() {
                     </button>
                   </div>
                   {selected.agents.length === 0 ? (
-                    <p className="text-sm text-slate-400">No agents registered</p>
+                    <EmptyState
+                      icon="👥"
+                      title="No agents registered"
+                      description="Add agents to this company so deals can be linked to a broker contact."
+                      action={{ label: "Add Agent", onClick: () => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); } }}
+                    />
                   ) : (
                     <div className="space-y-2">
                       {selected.agents.map((agent) => (
@@ -745,18 +832,26 @@ export default function BrokerPage() {
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
+                    required
                     checked={agentForm.acceptedConsent}
                     onChange={(e) => setAgentForm({ ...agentForm, acceptedConsent: e.target.checked })}
                     className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600"
                   />
                   <span className="text-sm text-slate-600">
-                    I consent to Samha Development contacting me regarding my inquiry.
+                    I consent to Samha Development contacting me regarding my inquiry. <span className="text-red-500">*</span>
                   </span>
                 </label>
+                {(!agentForm.eidFrontUrl || !agentForm.eidBackUrl) && (
+                  <p className="text-[11px] text-amber-600 mt-2">EID front and back uploads are required to add an agent.</p>
+                )}
               </div>
 
               <div className="flex gap-3 pt-5">
-                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm">Add Agent</button>
+                <button
+                  type="submit"
+                  disabled={!agentForm.acceptedConsent || !agentForm.eidFrontUrl || !agentForm.eidBackUrl}
+                  className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >Add Agent</button>
                 <button type="button" onClick={() => setShowAgentForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
               </div>
             </form>

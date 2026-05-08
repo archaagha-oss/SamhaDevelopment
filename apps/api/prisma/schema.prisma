@@ -709,6 +709,8 @@ model BrokerCompany {
   email String?
   phone String?
 
+  status BrokerCompanyStatus @default(PENDING_APPROVAL)
+
   agents BrokerAgent[]
   leads  Lead[]
   deals  Deal[]
@@ -735,12 +737,20 @@ model BrokerCompany {
   bankAccountNo         String?
   bankIban              String?
   bankCurrency          String?  @default("AED")
+  bankSwiftCode         String?
   commissionRate     Float    @default(4)
 
   createdAt DateTime @default(now())
 
   @@index([name])
   @@index([reraLicenseExpiry])
+  @@index([status])
+}
+
+enum BrokerCompanyStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_APPROVAL
 }
 
 model BrokerAgent {

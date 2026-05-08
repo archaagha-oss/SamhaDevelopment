@@ -18,6 +18,7 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [assignedAgentId, setAssignedAgentId] = useState("");
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -32,6 +33,10 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!consent) {
+      setError("Consent is required before creating a lead.");
+      return;
+    }
     setSubmitting(true);
     try {
       await axios.post("/api/leads", {
@@ -40,6 +45,7 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
         phone: phone.trim(),
         assignedAgentId: assignedAgentId || undefined,
         source: "DIRECT",
+        consent,
       });
       onCreated();
       onClose();
@@ -129,6 +135,20 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
               {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
+
+          {/* Consent */}
+          <label className="flex items-start gap-2.5 cursor-pointer border border-slate-200 rounded-xl p-3 bg-slate-50">
+            <input
+              type="checkbox"
+              required
+              checked={consent}
+              onChange={(e) => { setConsent(e.target.checked); setDirty(true); }}
+              className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-xs text-slate-600 leading-relaxed">
+              The lead has consented to being contacted about properties. <span className="text-red-500">*</span>
+            </span>
+          </label>
 
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
