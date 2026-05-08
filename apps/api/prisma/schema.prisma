@@ -982,6 +982,10 @@ model PaymentPlanMilestone {
   isDLDFee   Boolean @default(false)
   isAdminFee Boolean @default(false)
 
+  // Default account routing for materialized payments — ESCROW for
+  // construction-stage instalments, CORPORATE for reservation/DLD/admin/handover.
+  targetAccount PaymentTargetAccount @default(ESCROW)
+
   daysFromReservation Int?       // used when triggerType = DAYS_FROM_RESERVATION
   fixedDate           DateTime?  // used when triggerType = FIXED_DATE
   sortOrder           Int

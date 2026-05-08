@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { validate } from "../middleware/validation";
-import { createDealSchema, updateDealStageSchema } from "../schemas/validation";
+import {
+  createDealSchema,
+  updateDealStageSchema,
+  replaceDealPurchasersSchema,
+} from "../schemas/validation";
 import {
   createDeal as createDealService,
   updateDealStage,
@@ -165,6 +169,99 @@ router.get("/:id/spa-snapshot", async (req, res) => {
       code: "SPA_SNAPSHOT_ERROR",
       statusCode: 500,
     });
+  }
+});
+
+// ----- Deal purchasers (joint purchasers, SPA Particulars Item II) ---------
+
+router.get("/:id/purchasers", async (req, res) => {
+  try {
+    const purchasers = await prisma.dealPurchaser.findMany({
+      where: { dealId: req.params.id },
+      orderBy: { sortOrder: "asc" },
+    });
+    res.json(purchasers);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch purchasers", code: "FETCH_PURCHASERS_ERROR", statusCode: 500 });
+  }
+});
+
+// PUT /:id/purchasers — replace the deal's purchaser list in one shot.
+// Bulk replace keeps the joint-purchaser editor simple (one Save button).
+// Sum of ownershipPercentage must equal 100.
+router.put("/:id/purchasers", validate(replaceDealPurchasersSchema), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const dealId = req.params.id;
+    const incoming = req.body.purchasers as Array<{
+      leadId?: string | null;
+      name: string;
+      ownershipPercentage: number;
+      address?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      nationality?: string | null;
+      emiratesId?: string | null;
+      passportNumber?: string | null;
+      companyRegistrationNumber?: string | null;
+      authorizedSignatory?: string | null;
+      sourceOfFunds?: string | null;
+      isPrimary?: boolean;
+      sortOrder?: number;
+    }>;
+
+    const totalPct = incoming.reduce((s, p) => s + p.ownershipPercentage, 0);
+    if (Math.abs(totalPct - 100) > 0.01) {
+      return res.status(400).json({
+        error: `Ownership percentages must sum to 100% (got ${totalPct.toFixed(2)}%)`,
+        code: "OWNERSHIP_SUM_INVALID",
+        statusCode: 400,
+      });
+    }
+
+    const primaries = incoming.filter((p) => p.isPrimary);
+    if (primaries.length !== 1) {
+      return res.status(400).json({
+        error: "Exactly one purchaser must be marked as primary",
+        code: "PRIMARY_PURCHASER_INVALID",
+        statusCode: 400,
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.dealPurchaser.deleteMany({ where: { dealId } }),
+      ...incoming.map((p, idx) =>
+        prisma.dealPurchaser.create({
+          data: {
+            dealId,
+            leadId: p.leadId ?? null,
+            name: p.name,
+            ownershipPercentage: p.ownershipPercentage,
+            address: p.address ?? null,
+            phone: p.phone ?? null,
+            email: p.email || null,
+            nationality: p.nationality ?? null,
+            emiratesId: p.emiratesId ?? null,
+            passportNumber: p.passportNumber ?? null,
+            companyRegistrationNumber: p.companyRegistrationNumber ?? null,
+            authorizedSignatory: p.authorizedSignatory ?? null,
+            sourceOfFunds: p.sourceOfFunds ?? null,
+            isPrimary: p.isPrimary ?? false,
+            sortOrder: p.sortOrder ?? idx,
+          },
+        })
+      ),
+    ]);
+
+    const purchasers = await prisma.dealPurchaser.findMany({
+      where: { dealId },
+      orderBy: { sortOrder: "asc" },
+    });
+    res.json(purchasers);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to save purchasers", code: "SAVE_PURCHASERS_ERROR", statusCode: 400 });
   }
 });
 

@@ -199,7 +199,15 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
               <option value="PHOTO">Photo</option>
               <option value="FLOOR_PLAN">Floor Plan</option>
               <option value="FLOOR_MAP">Floor Location Map</option>
+              <optgroup label="SPA Schedules">
+                <option value="SCHEDULE_DIMENSIONED">Schedule 1 — Dimensioned plan</option>
+                <option value="SCHEDULE_FURNISHED">Schedule 1 — Furnished plan</option>
+                <option value="SCHEDULE_FLOOR_PLAN">Schedule 3 — Floor plan</option>
+              </optgroup>
             </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Schedule images appear automatically in the generated SPA. One image per schedule type per unit.
+            </p>
           </div>
 
           {/* Error */}

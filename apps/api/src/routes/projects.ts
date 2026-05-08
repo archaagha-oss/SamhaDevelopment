@@ -3,8 +3,38 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { validate } from "../middleware/validation";
-import { updateProjectConfigSchema } from "../schemas/validation";
+import {
+  updateProjectConfigSchema,
+  upsertProjectBankAccountSchema,
+  upsertProjectSpecificationsSchema,
+} from "../schemas/validation";
 import { prisma } from "../lib/prisma";
+
+// Whitelist of SPA-particulars columns that pass through create/update.
+const SPA_PROJECT_FIELDS = [
+  "commercialLicense",
+  "developerNumber",
+  "developerAddress",
+  "developerPhone",
+  "developerEmail",
+  "plotNumber",
+  "buildingPermitRef",
+  "buildingStructure",
+  "masterDeveloper",
+  "masterCommunity",
+  "permittedUse",
+] as const;
+
+function pickSpaFields(body: any): Record<string, string | null> {
+  const out: Record<string, string | null> = {};
+  for (const key of SPA_PROJECT_FIELDS) {
+    if (body[key] !== undefined) {
+      const v = body[key];
+      out[key] = v === "" || v === null ? null : v;
+    }
+  }
+  return out;
+}
 
 const router = Router();
 
@@ -80,6 +110,7 @@ router.post("/", async (req, res) => {
         completionStatus: completionStatus || "OFF_PLAN",
         purpose: purpose || "SALE",
         furnishing: furnishing || "UNFURNISHED",
+        ...pickSpaFields(req.body),
       },
     });
     res.status(201).json(project);
@@ -121,6 +152,8 @@ router.patch("/:id", async (req, res) => {
       }
       data.totalUnits = totalUnits;
     }
+
+    Object.assign(data, pickSpaFields(req.body));
 
     const project = await prisma.project.update({ where: { id: req.params.id }, data });
     res.json(project);
@@ -287,6 +320,118 @@ router.patch("/:id/config", validate(updateProjectConfigSchema), async (req, res
     res.json(config);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to save project config", code: "SAVE_CONFIG_ERROR", statusCode: 400 });
+  }
+});
+
+// ----- Project bank accounts (SPA Particulars Items IX & X) ----------------
+
+router.get("/:id/bank-accounts", async (req, res) => {
+  try {
+    const accounts = await prisma.projectBankAccount.findMany({
+      where: { projectId: req.params.id },
+      orderBy: { purpose: "asc" },
+    });
+    res.json(accounts);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch bank accounts", code: "FETCH_BANK_ACCOUNTS_ERROR", statusCode: 500 });
+  }
+});
+
+// PUT /:id/bank-accounts — upsert by purpose (one ESCROW + one CURRENT per project).
+router.put("/:id/bank-accounts", validate(upsertProjectBankAccountSchema), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const account = await prisma.projectBankAccount.upsert({
+      where: {
+        projectId_purpose: {
+          projectId: req.params.id,
+          purpose: req.body.purpose,
+        },
+      },
+      create: { projectId: req.params.id, ...req.body },
+      update: req.body,
+    });
+    res.json(account);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to save bank account", code: "SAVE_BANK_ACCOUNT_ERROR", statusCode: 400 });
+  }
+});
+
+router.delete("/:id/bank-accounts/:purpose", async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const purpose = req.params.purpose;
+    if (purpose !== "ESCROW" && purpose !== "CURRENT") {
+      return res.status(400).json({ error: "purpose must be ESCROW or CURRENT", code: "INVALID_PURPOSE", statusCode: 400 });
+    }
+    await prisma.projectBankAccount.delete({
+      where: { projectId_purpose: { projectId: req.params.id, purpose } },
+    });
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message, code: "DELETE_BANK_ACCOUNT_ERROR", statusCode: 400 });
+  }
+});
+
+// ----- Project specifications (SPA Schedule 2) -----------------------------
+
+router.get("/:id/specifications", async (req, res) => {
+  try {
+    const specs = await prisma.projectSpecification.findMany({
+      where: { projectId: req.params.id },
+      orderBy: { sortOrder: "asc" },
+    });
+    res.json(specs);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch specifications", code: "FETCH_SPECS_ERROR", statusCode: 500 });
+  }
+});
+
+// PUT /:id/specifications — replace the project's spec table in one shot.
+// Bulk replace keeps the editor UX simple (one Save button, no row-level state).
+router.put("/:id/specifications", validate(upsertProjectSpecificationsSchema), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const projectId = req.params.id;
+    const incoming = req.body.specifications as Array<{
+      area: string;
+      floorFinish?: string | null;
+      wallFinish?: string | null;
+      ceilingFinish?: string | null;
+      additionalFinishes?: string | null;
+      sortOrder?: number;
+    }>;
+
+    await prisma.$transaction([
+      prisma.projectSpecification.deleteMany({ where: { projectId } }),
+      ...incoming.map((s, idx) =>
+        prisma.projectSpecification.create({
+          data: {
+            projectId,
+            area: s.area as any,
+            floorFinish: s.floorFinish ?? null,
+            wallFinish: s.wallFinish ?? null,
+            ceilingFinish: s.ceilingFinish ?? null,
+            additionalFinishes: s.additionalFinishes ?? null,
+            sortOrder: s.sortOrder ?? idx,
+          },
+        })
+      ),
+    ]);
+
+    const specs = await prisma.projectSpecification.findMany({
+      where: { projectId },
+      orderBy: { sortOrder: "asc" },
+    });
+    res.json(specs);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to save specifications", code: "SAVE_SPECS_ERROR", statusCode: 400 });
   }
 });
 

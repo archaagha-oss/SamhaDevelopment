@@ -86,6 +86,10 @@ router.post("/", async (req, res) => {
             triggerType: m.triggerType ?? "DAYS_FROM_RESERVATION",
             isDLDFee: m.isDLDFee ?? false,
             isAdminFee: m.isAdminFee ?? false,
+            // CORPORATE for DLD/admin/reservation/handover, ESCROW for SPA
+            // contract-signing and construction-stage instalments. Default
+            // ESCROW; explicit value overrides.
+            targetAccount: m.targetAccount === "CORPORATE" ? "CORPORATE" : "ESCROW",
             daysFromReservation: m.daysFromReservation ?? null,
             fixedDate: m.fixedDate ? new Date(m.fixedDate) : null,
             sortOrder: m.sortOrder ?? i,

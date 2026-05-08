@@ -3,6 +3,22 @@ import { z } from "zod";
 // ===== PROJECTS =====
 const PROJECT_STATUSES = ["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const;
 
+// ----- Optional SPA-particulars fields used on Project create/update.
+// All optional/nullable so existing forms keep working unchanged.
+const projectSpaParticulars = {
+  commercialLicense: z.string().optional().nullable(),
+  developerNumber: z.string().optional().nullable(),
+  developerAddress: z.string().optional().nullable(),
+  developerPhone: z.string().optional().nullable(),
+  developerEmail: z.string().email("Invalid email").optional().nullable().or(z.literal("")),
+  plotNumber: z.string().optional().nullable(),
+  buildingPermitRef: z.string().optional().nullable(),
+  buildingStructure: z.string().optional().nullable(),
+  masterDeveloper: z.string().optional().nullable(),
+  masterCommunity: z.string().optional().nullable(),
+  permittedUse: z.string().optional().nullable(),
+};
+
 export const createProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   location: z.string().min(1, "Location is required"),
@@ -13,6 +29,7 @@ export const createProjectSchema = z.object({
   handoverDate: z.string().min(1, "Handover date is required"),
   launchDate: z.string().optional(),
   startDate: z.string().optional(),
+  ...projectSpaParticulars,
 });
 
 export const updateProjectSchema = z.object({
@@ -25,6 +42,7 @@ export const updateProjectSchema = z.object({
   handoverDate: z.string().optional(),
   launchDate: z.string().optional(),
   startDate: z.string().optional(),
+  ...projectSpaParticulars,
 });
 
 // ===== UNITS =====
@@ -42,6 +60,16 @@ export const updateUnitStatusSchema = z.object({
 });
 
 // ===== LEADS =====
+// SPA / KYC fields applied to both create and update — all optional.
+const leadKycFields = {
+  address: z.string().optional().nullable(),
+  emiratesId: z.string().optional().nullable(),
+  passportNumber: z.string().optional().nullable(),
+  companyRegistrationNumber: z.string().optional().nullable(),
+  authorizedSignatory: z.string().optional().nullable(),
+  sourceOfFunds: z.string().optional().nullable(),
+};
+
 export const createLeadSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -54,6 +82,7 @@ export const createLeadSchema = z.object({
   brokerCompanyId: z.string().optional(),
   brokerAgentId: z.string().optional(),
   notes: z.string().optional(),
+  ...leadKycFields,
 });
 
 export const updateLeadSchema = z.object({
@@ -76,6 +105,7 @@ export const updateLeadSchema = z.object({
     ])
     .optional(),
   assignedAgentId: z.string().optional(),
+  ...leadKycFields,
 });
 
 export const logActivitySchema = z.object({
@@ -180,6 +210,14 @@ export const bulkOpsSchema = z.object({
 const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"] as const;
 const UNIT_VIEWS = ["SEA", "GARDEN", "STREET", "BACK", "SIDE", "AMENITIES"] as const;
 
+// SPA-particulars unit fields applied to both create and update.
+const unitSpaFields = {
+  areaSqft: z.number().nonnegative().optional().nullable(),
+  ratePerSqft: z.number().nonnegative().optional().nullable(),
+  smartHome: z.boolean().optional().nullable(),
+  anticipatedCompletionDate: z.string().optional().nullable(),
+};
+
 export const createUnitSchema = z.object({
   projectId: z.string().min(1),
   unitNumber: z.string().min(1, "Unit number is required"),
@@ -196,6 +234,7 @@ export const createUnitSchema = z.object({
   // Operational layer (all optional)
   internalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  ...unitSpaFields,
 });
 
 export const updateUnitSchema = z.object({
@@ -214,6 +253,7 @@ export const updateUnitSchema = z.object({
   blockExpiresAt: z.string().datetime().optional(),
   internalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  ...unitSpaFields,
 });
 
 export const bulkCreateUnitsSchema = z.object({
@@ -262,6 +302,69 @@ export const updateProjectConfigSchema = z.object({
   defaultArea: z.number().positive().optional(),
   defaultView: z.string().min(1).optional(),
   defaultPrice: z.number().positive().optional(),
+
+  // SPA business-rule constants
+  lateFeeMonthlyPercent: z.number().nonnegative().max(100).optional(),
+  delayCompensationAnnualPercent: z.number().nonnegative().max(100).optional(),
+  delayCompensationCapPercent: z.number().nonnegative().max(100).optional(),
+  liquidatedDamagesPercent: z.number().nonnegative().max(100).optional(),
+  disposalThresholdPercent: z.number().nonnegative().max(100).optional(),
+  resaleProcessingFee: z.number().nonnegative().optional(),
+  gracePeriodMonths: z.number().int().nonnegative().max(60).optional(),
+});
+
+// ===== PROJECT BANK ACCOUNT =====
+export const upsertProjectBankAccountSchema = z.object({
+  purpose: z.enum(["ESCROW", "CURRENT"]),
+  accountName: z.string().min(1, "Account name is required"),
+  bankName: z.string().min(1, "Bank name is required"),
+  branchAddress: z.string().optional().nullable(),
+  iban: z.string().min(1, "IBAN is required"),
+  accountNumber: z.string().min(1, "Account number is required"),
+  refPrefix: z.string().optional().nullable(),
+});
+
+// ===== PROJECT SPECIFICATION =====
+const SPEC_AREAS = [
+  "FOYER", "LIVING_AREA", "DINING_AREA", "BEDROOM", "KITCHEN",
+  "MASTER_BATHROOM", "SECONDARY_BATHROOM", "BALCONY",
+  "POWDER_ROOM", "STUDY", "MAID_ROOM", "LAUNDRY",
+] as const;
+
+export const upsertProjectSpecificationsSchema = z.object({
+  specifications: z.array(
+    z.object({
+      area: z.enum(SPEC_AREAS),
+      floorFinish: z.string().optional().nullable(),
+      wallFinish: z.string().optional().nullable(),
+      ceilingFinish: z.string().optional().nullable(),
+      additionalFinishes: z.string().optional().nullable(),
+      sortOrder: z.number().int().nonnegative().optional(),
+    })
+  ),
+});
+
+// ===== DEAL PURCHASER =====
+export const upsertDealPurchaserSchema = z.object({
+  id: z.string().optional(), // present when updating an existing row
+  leadId: z.string().optional().nullable(),
+  name: z.string().min(1, "Purchaser name is required"),
+  ownershipPercentage: z.number().nonnegative().max(100),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email("Invalid email").optional().nullable().or(z.literal("")),
+  nationality: z.string().optional().nullable(),
+  emiratesId: z.string().optional().nullable(),
+  passportNumber: z.string().optional().nullable(),
+  companyRegistrationNumber: z.string().optional().nullable(),
+  authorizedSignatory: z.string().optional().nullable(),
+  sourceOfFunds: z.string().optional().nullable(),
+  isPrimary: z.boolean().optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+});
+
+export const replaceDealPurchasersSchema = z.object({
+  purchasers: z.array(upsertDealPurchaserSchema).min(1, "At least one purchaser is required"),
 });
 
 // Type exports for use in route handlers
@@ -279,3 +382,6 @@ export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;
 export type BulkCreateUnitsInput = z.infer<typeof bulkCreateUnitsSchema>;
 export type UploadDocumentInput = z.infer<typeof uploadDocumentSchema>;
 export type UpdateProjectConfigInput = z.infer<typeof updateProjectConfigSchema>;
+export type UpsertProjectBankAccountInput = z.infer<typeof upsertProjectBankAccountSchema>;
+export type UpsertProjectSpecificationsInput = z.infer<typeof upsertProjectSpecificationsSchema>;
+export type ReplaceDealPurchasersInput = z.infer<typeof replaceDealPurchasersSchema>;

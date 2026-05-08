@@ -4,6 +4,9 @@ import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import ProjectConfigModal from "./ProjectConfigModal";
+import ProjectBankAccountsModal from "./ProjectBankAccountsModal";
+import ProjectSpecificationsModal from "./ProjectSpecificationsModal";
 
 interface Project {
   id: string;
@@ -16,12 +19,29 @@ interface Project {
   handoverDate: string;
   launchDate?: string;
   startDate?: string;
+  // SPA particulars
+  commercialLicense?: string | null;
+  developerNumber?: string | null;
+  developerAddress?: string | null;
+  developerPhone?: string | null;
+  developerEmail?: string | null;
+  plotNumber?: string | null;
+  buildingPermitRef?: string | null;
+  buildingStructure?: string | null;
+  masterDeveloper?: string | null;
+  masterCommunity?: string | null;
+  permittedUse?: string | null;
   _count?: { units: number };
 }
 
 const BLANK = {
   name: "", location: "", description: "", totalUnits: "", totalFloors: "",
   projectStatus: "ACTIVE", handoverDate: "", launchDate: "", startDate: "",
+  // SPA particulars
+  commercialLicense: "", developerNumber: "", developerAddress: "",
+  developerPhone: "", developerEmail: "", plotNumber: "",
+  buildingPermitRef: "", buildingStructure: "", masterDeveloper: "",
+  masterCommunity: "", permittedUse: "",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -55,6 +75,10 @@ export default function ProjectsPage() {
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<Project | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  // Per-project sub-modals (config, bank accounts, SPA Schedule 2 specs)
+  const [configForProject, setConfigForProject] = useState<string | null>(null);
+  const [bankAccountsForProject, setBankAccountsForProject] = useState<string | null>(null);
+  const [specsForProject, setSpecsForProject] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -85,6 +109,17 @@ export default function ProjectsPage() {
       handoverDate: p.handoverDate ? p.handoverDate.slice(0, 10) : "",
       launchDate: p.launchDate ? p.launchDate.slice(0, 10) : "",
       startDate: p.startDate ? p.startDate.slice(0, 10) : "",
+      commercialLicense: p.commercialLicense || "",
+      developerNumber: p.developerNumber || "",
+      developerAddress: p.developerAddress || "",
+      developerPhone: p.developerPhone || "",
+      developerEmail: p.developerEmail || "",
+      plotNumber: p.plotNumber || "",
+      buildingPermitRef: p.buildingPermitRef || "",
+      buildingStructure: p.buildingStructure || "",
+      masterDeveloper: p.masterDeveloper || "",
+      masterCommunity: p.masterCommunity || "",
+      permittedUse: p.permittedUse || "",
     });
     setFormError(null);
     setShowForm(true);
@@ -105,6 +140,18 @@ export default function ProjectsPage() {
         handoverDate: form.handoverDate,
         launchDate: form.launchDate || undefined,
         startDate: form.startDate || undefined,
+        // SPA particulars (empty string -> null on the API side)
+        commercialLicense: form.commercialLicense || null,
+        developerNumber: form.developerNumber || null,
+        developerAddress: form.developerAddress || null,
+        developerPhone: form.developerPhone || null,
+        developerEmail: form.developerEmail || null,
+        plotNumber: form.plotNumber || null,
+        buildingPermitRef: form.buildingPermitRef || null,
+        buildingStructure: form.buildingStructure || null,
+        masterDeveloper: form.masterDeveloper || null,
+        masterCommunity: form.masterCommunity || null,
+        permittedUse: form.permittedUse || null,
       };
       if (editProject) {
         await axios.patch(`/api/projects/${editProject.id}`, payload);
@@ -235,6 +282,27 @@ export default function ProjectsPage() {
                     </div>
                     <div className="flex items-center gap-1 ml-2 shrink-0">
                       <button
+                        onClick={(e) => { e.stopPropagation(); setConfigForProject(p.id); }}
+                        className="text-slate-300 hover:text-slate-600 text-sm p-1 rounded transition-colors"
+                        title="Project configuration & SPA business rules"
+                      >
+                        ⚙
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setBankAccountsForProject(p.id); }}
+                        className="text-slate-300 hover:text-slate-600 text-sm p-1 rounded transition-colors"
+                        title="Bank accounts (escrow + current)"
+                      >
+                        ⌂
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSpecsForProject(p.id); }}
+                        className="text-slate-300 hover:text-slate-600 text-sm p-1 rounded transition-colors"
+                        title="SPA Schedule 2 — specifications"
+                      >
+                        ☷
+                      </button>
+                      <button
                         onClick={(e) => handleClone(p, e)}
                         disabled={cloning === p.id}
                         className="text-slate-300 hover:text-slate-600 text-xs p-1 rounded transition-colors disabled:opacity-40"
@@ -288,7 +356,7 @@ export default function ProjectsPage() {
       {/* Create / Edit Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
               <h2 className="font-bold text-slate-900">{editProject ? "Edit Project" : "New Project"}</h2>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
@@ -347,6 +415,70 @@ export default function ProjectsPage() {
                   <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className={inp} />
                 </div>
               </div>
+
+              {/* SPA Particulars — Seller, plot, master community, permit */}
+              <details className="border border-slate-200 rounded-lg" open={!!editProject}>
+                <summary className="px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer select-none">
+                  Sale & Purchase Agreement particulars
+                </summary>
+                <div className="px-4 pb-4 pt-2 space-y-3 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lbl}>Commercial License No</label>
+                      <input value={form.commercialLicense} onChange={(e) => setForm({ ...form, commercialLicense: e.target.value })} placeholder="e.g. 958954" className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>RERA Developer No</label>
+                      <input value={form.developerNumber} onChange={(e) => setForm({ ...form, developerNumber: e.target.value })} placeholder="e.g. 2216" className={inp} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={lbl}>Developer Address</label>
+                    <input value={form.developerAddress} onChange={(e) => setForm({ ...form, developerAddress: e.target.value })} placeholder="HQ address printed on the SPA" className={inp} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lbl}>Developer Phone</label>
+                      <input value={form.developerPhone} onChange={(e) => setForm({ ...form, developerPhone: e.target.value })} placeholder="e.g. 971-800SAMHA" className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Developer Email</label>
+                      <input type="email" value={form.developerEmail} onChange={(e) => setForm({ ...form, developerEmail: e.target.value })} placeholder="info@…" className={inp} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lbl}>Plot Number</label>
+                      <input value={form.plotNumber} onChange={(e) => setForm({ ...form, plotNumber: e.target.value })} placeholder="e.g. JVC10EMRH005" className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Building Permit Ref</label>
+                      <input value={form.buildingPermitRef} onChange={(e) => setForm({ ...form, buildingPermitRef: e.target.value })} placeholder="e.g. TKS/CEDSR-…" className={inp} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lbl}>Building Structure</label>
+                      <input value={form.buildingStructure} onChange={(e) => setForm({ ...form, buildingStructure: e.target.value })} placeholder="e.g. B+G+3P+19+R" className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Permitted Use</label>
+                      <input value={form.permittedUse} onChange={(e) => setForm({ ...form, permittedUse: e.target.value })} placeholder="e.g. Single Family Residential Purpose" className={inp} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lbl}>Master Developer</label>
+                      <input value={form.masterDeveloper} onChange={(e) => setForm({ ...form, masterDeveloper: e.target.value })} placeholder="e.g. Jumeirah Village LLC" className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Master Community</label>
+                      <input value={form.masterCommunity} onChange={(e) => setForm({ ...form, masterCommunity: e.target.value })} placeholder="e.g. Jumeirah Village Circle" className={inp} />
+                    </div>
+                  </div>
+                </div>
+              </details>
+
               {formError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
@@ -359,6 +491,22 @@ export default function ProjectsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {configForProject && (
+        <ProjectConfigModal projectId={configForProject} onClose={() => setConfigForProject(null)} />
+      )}
+      {bankAccountsForProject && (
+        <ProjectBankAccountsModal
+          projectId={bankAccountsForProject}
+          onClose={() => setBankAccountsForProject(null)}
+        />
+      )}
+      {specsForProject && (
+        <ProjectSpecificationsModal
+          projectId={specsForProject}
+          onClose={() => setSpecsForProject(null)}
+        />
       )}
 
       <ConfirmDialog

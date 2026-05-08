@@ -463,6 +463,10 @@ export async function generatePaymentSchedule(
             sortOrder: idx,
             milestoneType,
             scheduleTrigger: trigger as any,
+            // Carry the plan-milestone account routing through to the payment.
+            targetAccount: ((milestone as any).targetAccount === "CORPORATE"
+              ? "CORPORATE"
+              : "ESCROW") as any,
             isWaived,
             status: isWaived ? "CANCELLED" : "PENDING",
             originalAmount: amount,

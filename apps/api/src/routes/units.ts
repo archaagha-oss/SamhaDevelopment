@@ -330,7 +330,11 @@ router.post("/", validate(createUnitSchema), async (req, res) => {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
-    const { projectId, unitNumber, floor, type, area, price, view, bathrooms, parkingSpaces, internalArea, externalArea, internalNotes, tags } = req.body;
+    const {
+      projectId, unitNumber, floor, type, area, price, view,
+      bathrooms, parkingSpaces, internalArea, externalArea, internalNotes, tags,
+      areaSqft, ratePerSqft, smartHome, anticipatedCompletionDate,
+    } = req.body;
 
     if (!UNIT_NUMBER_PATTERN.test(unitNumber)) {
       return res.status(400).json({
@@ -349,6 +353,10 @@ router.post("/", validate(createUnitSchema), async (req, res) => {
         ...(externalArea !== undefined && { externalArea }),
         ...(internalNotes && { internalNotes }),
         ...(tags && { tags }),
+        ...(areaSqft !== undefined && { areaSqft }),
+        ...(ratePerSqft !== undefined && { ratePerSqft }),
+        ...(smartHome !== undefined && { smartHome }),
+        ...(anticipatedCompletionDate && { anticipatedCompletionDate: new Date(anticipatedCompletionDate) }),
       },
     });
     res.status(201).json(unit);
@@ -371,7 +379,12 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
-    const { type, area, price, view, floor, assignedAgentId, bathrooms, parkingSpaces, internalArea, externalArea, blockExpiresAt, internalNotes, tags, paymentPlan } = req.body;
+    const {
+      type, area, price, view, floor, assignedAgentId,
+      bathrooms, parkingSpaces, internalArea, externalArea,
+      blockExpiresAt, internalNotes, tags, paymentPlan,
+      areaSqft, ratePerSqft, smartHome, anticipatedCompletionDate,
+    } = req.body;
 
     const unit = await prisma.unit.findUnique({ where: { id: req.params.id } });
     if (!unit) {
@@ -401,6 +414,12 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
     if (internalNotes !== undefined) data.internalNotes = internalNotes;
     if (tags !== undefined) data.tags = tags;
     if (paymentPlan !== undefined) data.paymentPlan = paymentPlan || null;
+    if (areaSqft !== undefined) data.areaSqft = areaSqft;
+    if (ratePerSqft !== undefined) data.ratePerSqft = ratePerSqft;
+    if (smartHome !== undefined) data.smartHome = smartHome;
+    if (anticipatedCompletionDate !== undefined) {
+      data.anticipatedCompletionDate = anticipatedCompletionDate ? new Date(anticipatedCompletionDate) : null;
+    }
 
     if (price !== undefined && price !== unit.price) {
       data.price = price;

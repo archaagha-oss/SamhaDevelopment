@@ -18,6 +18,9 @@ const BLANK = {
   firstName: "", lastName: "", phone: "", email: "", nationality: "",
   source: "DIRECT", budget: "", assignedAgentId: "", notes: "",
   brokerCompanyId: "", brokerAgentId: "",
+  // SPA / KYC fields — optional at lead creation, filled in before SPA generation
+  address: "", emiratesId: "", passportNumber: "", companyRegistrationNumber: "",
+  authorizedSignatory: "", sourceOfFunds: "",
 };
 
 export default function LeadFormModal({ onClose, onCreated }: Props) {
@@ -91,6 +94,12 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         notes:          form.notes || undefined,
         brokerCompanyId: form.source === "BROKER" && form.brokerCompanyId ? form.brokerCompanyId : undefined,
         brokerAgentId:   form.source === "BROKER" && form.brokerAgentId   ? form.brokerAgentId   : undefined,
+        address:                   form.address || null,
+        emiratesId:                form.emiratesId || null,
+        passportNumber:            form.passportNumber || null,
+        companyRegistrationNumber: form.companyRegistrationNumber || null,
+        authorizedSignatory:       form.authorizedSignatory || null,
+        sourceOfFunds:             form.sourceOfFunds || null,
       });
 
       const leadId = res.data.id;
@@ -285,6 +294,72 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
               className={inp + " resize-none"}
             />
           </div>
+
+          {/* KYC / SPA particulars — optional at lead creation, required before SPA generation */}
+          <details className="border border-slate-200 rounded-lg">
+            <summary className="px-4 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+              KYC & SPA particulars
+            </summary>
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-slate-100">
+              <div>
+                <label className={lbl}>Residential Address</label>
+                <input
+                  value={form.address}
+                  onChange={(e) => set({ address: e.target.value })}
+                  placeholder="Country, city, neighbourhood, building, flat #"
+                  className={inp}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Emirates ID</label>
+                  <input
+                    value={form.emiratesId}
+                    onChange={(e) => set({ emiratesId: e.target.value })}
+                    placeholder="784-…"
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className={lbl}>Passport Number</label>
+                  <input
+                    value={form.passportNumber}
+                    onChange={(e) => set({ passportNumber: e.target.value })}
+                    className={inp}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Company Registration No.</label>
+                  <input
+                    value={form.companyRegistrationNumber}
+                    onChange={(e) => set({ companyRegistrationNumber: e.target.value })}
+                    placeholder="For corporate purchasers"
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className={lbl}>Authorized Signatory</label>
+                  <input
+                    value={form.authorizedSignatory}
+                    onChange={(e) => set({ authorizedSignatory: e.target.value })}
+                    placeholder="Name printed on the signature block"
+                    className={inp}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={lbl}>Source of Funds</label>
+                <input
+                  value={form.sourceOfFunds}
+                  onChange={(e) => set({ sourceOfFunds: e.target.value })}
+                  placeholder="e.g. Salary, Husband Savings, Inheritance"
+                  className={inp}
+                />
+              </div>
+            </div>
+          </details>
 
           {/* Unit Interests */}
           <div className="border border-emerald-100 bg-emerald-50/30 rounded-xl p-4 space-y-3">

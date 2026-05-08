@@ -80,6 +80,13 @@ export interface CreateLeadInput {
   assignedAgentId: string;
   notes?: string;
   createdBy: string;
+  // SPA / KYC fields
+  address?: string | null;
+  emiratesId?: string | null;
+  passportNumber?: string | null;
+  companyRegistrationNumber?: string | null;
+  authorizedSignatory?: string | null;
+  sourceOfFunds?: string | null;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -110,6 +117,12 @@ export async function createLead(input: CreateLeadInput) {
       assignedAgentId: input.assignedAgentId,
       notes:           input.notes ?? null,
       stage:           "NEW",
+      address:                   input.address ?? null,
+      emiratesId:                input.emiratesId ?? null,
+      passportNumber:            input.passportNumber ?? null,
+      companyRegistrationNumber: input.companyRegistrationNumber ?? null,
+      authorizedSignatory:       input.authorizedSignatory ?? null,
+      sourceOfFunds:             input.sourceOfFunds ?? null,
     },
     include: {
       assignedAgent: true,

@@ -6,6 +6,7 @@ import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
+import DealPurchasersModal from "./DealPurchasersModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 
@@ -166,6 +167,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
   // Regenerate Sales Offer confirmation
   const [showRegenSalesOffer, setShowRegenSalesOffer] = useState(false);
+  const [showPurchasersModal, setShowPurchasersModal] = useState(false);
 
   // Copy deal ID feedback
   const [copiedDealId, setCopiedDealId] = useState(false);
@@ -1002,6 +1004,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
                   >
                     {generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}
+                  </button>
+                  <button
+                    onClick={() => setShowPurchasersModal(true)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                    title="Edit joint purchasers before generating the SPA"
+                  >
+                    Manage Purchasers
                   </button>
                   <button
                     onClick={() => handleGenerateDocument("SPA")}
@@ -2068,6 +2077,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         <DealEditModal
           deal={deal}
           onClose={() => setShowEditModal(false)}
+          onSaved={loadDeal}
+        />
+      )}
+      {showPurchasersModal && dealId && (
+        <DealPurchasersModal
+          dealId={dealId}
+          onClose={() => setShowPurchasersModal(false)}
           onSaved={loadDeal}
         />
       )}

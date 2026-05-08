@@ -340,6 +340,9 @@ router.patch("/:id", async (req, res) => {
       firstName, lastName, phone, email, nationality,
       source, budget, assignedAgentId, notes,
       brokerCompanyId, brokerAgentId,
+      // SPA / KYC fields
+      address, emiratesId, passportNumber, companyRegistrationNumber,
+      authorizedSignatory, sourceOfFunds,
       // stage is intentionally excluded — use PATCH /:id/stage
     } = req.body;
 
@@ -365,6 +368,12 @@ router.patch("/:id", async (req, res) => {
     if (notes            !== undefined) data.notes            = notes || null;
     if (brokerCompanyId  !== undefined) data.brokerCompanyId  = brokerCompanyId || null;
     if (brokerAgentId    !== undefined) data.brokerAgentId    = brokerAgentId   || null;
+    if (address                   !== undefined) data.address                   = address || null;
+    if (emiratesId                !== undefined) data.emiratesId                = emiratesId || null;
+    if (passportNumber            !== undefined) data.passportNumber            = passportNumber || null;
+    if (companyRegistrationNumber !== undefined) data.companyRegistrationNumber = companyRegistrationNumber || null;
+    if (authorizedSignatory       !== undefined) data.authorizedSignatory       = authorizedSignatory || null;
+    if (sourceOfFunds             !== undefined) data.sourceOfFunds             = sourceOfFunds || null;
 
     const lead = await prisma.lead.update({
       where: { id: req.params.id },
