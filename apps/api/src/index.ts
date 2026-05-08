@@ -27,6 +27,7 @@ import activityRoutes from "./routes/activities";
 import offerRoutes from "./routes/offers";
 import settingsRoutes from "./routes/settings";
 import contactRoutes from "./routes/contacts";
+import feedRoutes from "./routes/feeds";
 
 dotenv.config();
 
@@ -128,6 +129,7 @@ app.use("/api/activities", activityRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/feeds", feedRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
