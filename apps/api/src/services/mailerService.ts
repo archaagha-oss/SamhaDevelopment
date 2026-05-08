@@ -13,6 +13,7 @@ interface EmailPayload {
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
 }
 
 export interface SendResult {
@@ -60,6 +61,7 @@ export async function sendEmail(payload: EmailPayload): Promise<SendResult> {
         subject: payload.subject,
         text: payload.text,
         html: payload.html,
+        ...(payload.replyTo ? { replyTo: payload.replyTo } : {}),
       });
       return { sent: true, messageId: info.messageId };
     } catch (err) {

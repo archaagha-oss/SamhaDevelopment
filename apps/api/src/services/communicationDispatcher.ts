@@ -73,13 +73,38 @@ export async function dispatchPaymentReminder(input: DispatchPaymentReminderInpu
     return { sent: false, channel: null, reason: "no-deliverable-channel" };
   }
 
+  // Compute the activity summary first; create the Activity row BEFORE sending
+  // so we can set a Reply-To header that points back to this exact activity id
+  // (per-activity reply tokens give the inbound matcher a deterministic 1:1).
+  const activitySummary =
+    channel === "EMAIL"
+      ? `Email reminder (${humanRule(input.rule)}) → ${input.recipient.email}`
+      : channel === "WHATSAPP"
+        ? `WhatsApp reminder (${humanRule(input.rule)}) → ${phoneE164}`
+        : `SMS reminder (${humanRule(input.rule)}) → ${phoneE164}`;
+
+  const activity = await prisma.activity.create({
+    data: {
+      dealId: input.dealId,
+      leadId: input.leadId,
+      type: channel,
+      direction: "OUTBOUND",
+      deliveryStatus: "queued",
+      summary: activitySummary,
+      createdBy: "system",
+    } as any,
+  });
+
   let result: { sent: boolean; reason?: string; providerMessageId?: string };
-  let activitySummary: string;
 
   if (channel === "EMAIL") {
     const tmpl = pickEmailTemplate(input.rule, input.daysOverdue, input.vars);
-    result = await sendEmail({ to: input.recipient.email!, ...tmpl });
-    activitySummary = `Email reminder (${humanRule(input.rule)}) → ${input.recipient.email}`;
+    const replyTo = buildReplyToHeader(activity.id);
+    result = await sendEmail({
+      to: input.recipient.email!,
+      ...tmpl,
+      ...(replyTo ? { replyTo } : {}),
+    });
   } else if (channel === "WHATSAPP") {
     const settings = await prisma.appSettings.findFirst().catch(() => null);
     const contentSid = pickContentSid(settings, input.rule);
@@ -90,31 +115,24 @@ export async function dispatchPaymentReminder(input: DispatchPaymentReminderInpu
       contentVariables: contentSid ? wa.contentVariables : undefined,
       body: contentSid ? undefined : wa.body,
     });
-    activitySummary = `WhatsApp reminder (${humanRule(input.rule)}) → ${phoneE164}`;
   } else {
     const body = pickSmsTemplate(input.rule, input.daysOverdue, input.vars);
     result = await sendSms({ to: phoneE164!, body });
-    activitySummary = `SMS reminder (${humanRule(input.rule)}) → ${phoneE164}`;
   }
+
+  // Update the Activity row with the provider message id + final delivery status
+  await prisma.activity.update({
+    where: { id: activity.id },
+    data: {
+      providerMessageSid: result.providerMessageId ?? null,
+      deliveryStatus: result.sent ? "sent" : "failed",
+    } as any,
+  });
 
   // Counters (best-effort — never fail the send because of stat update failure)
   recordOutbound({ leadId: input.leadId, channel }).catch((err) =>
     console.warn(`[Dispatcher] recordOutbound failed: ${err instanceof Error ? err.message : err}`)
   );
-
-  // Activity row — replaces the old "NOTE" entry with a channel-typed OUTBOUND row
-  await prisma.activity.create({
-    data: {
-      dealId: input.dealId,
-      leadId: input.leadId,
-      type: channel, // "EMAIL" | "WHATSAPP" | "SMS"
-      direction: "OUTBOUND",
-      providerMessageSid: result.providerMessageId ?? null,
-      deliveryStatus: result.sent ? "sent" : "failed",
-      summary: activitySummary,
-      createdBy: "system",
-    } as any,
-  });
 
   // ReminderLog row (preserves sweep dedup behavior)
   await writeReminderLog({
@@ -168,6 +186,19 @@ function pickContentSid(settings: unknown, rule: ReminderRule): string | null {
 
 function humanRule(rule: ReminderRule): string {
   return rule.replace(/_/g, " ").toLowerCase();
+}
+
+/**
+ * Build a per-Activity reply-token email address. When INBOUND_EMAIL_DOMAIN
+ * is set (e.g. "inbound.samha.ae"), outbound reminders include
+ * `Reply-To: reply+<activityId>@inbound.samha.ae`. Inbound replies hit
+ * SendGrid Inbound Parse, the matcher extracts the token, and the reply
+ * lands on the same conversation thread deterministically.
+ */
+function buildReplyToHeader(activityId: string): string | null {
+  const domain = process.env.INBOUND_EMAIL_DOMAIN;
+  if (!domain) return null;
+  return `reply+${activityId}@${domain}`;
 }
 
 // ─── ReminderLog writer (defensive — model may not be migrated yet) ──────────

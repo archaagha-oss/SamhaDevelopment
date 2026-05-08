@@ -1427,3 +1427,38 @@ model CommunicationPreference {
   @@index([leadId])
   @@index([contactId])
 }
+
+// ============================================================
+// SECTION 19: INBOUND TRIAGE
+// ============================================================
+// Inbound messages (WhatsApp / SMS / email) that we couldn't auto-match
+// to a Lead/Contact land here. The Hot Inbox UI surfaces UNCLAIMED rows
+// so an agent can attach them to the right lead.
+
+model InboundTriage {
+  id          String   @id @default(cuid())
+
+  channel     String   // EMAIL | WHATSAPP | SMS
+  direction   String   @default("INBOUND")
+  fromAddress String   // E.164 phone or email
+  toAddress   String?
+  subject     String?  @db.Text
+  body        String?  @db.Text
+  mediaUrls   Json?    // string[]
+
+  providerMessageId String? @unique // Twilio MessageSid or email Message-ID — idempotency
+  rawHeaders        Json?
+
+  status      String   @default("UNCLAIMED") // UNCLAIMED | CLAIMED | RESOLVED | DISCARDED
+  claimedById String?
+  claimedAt   DateTime?
+  resolvedActivityId String?  // if claim attached it to an Activity, link back
+
+  receivedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([status, receivedAt])
+  @@index([fromAddress])
+  @@index([channel])
+}
+
