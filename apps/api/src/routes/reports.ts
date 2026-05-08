@@ -1,79 +1,87 @@
 import { Router } from "express";
-import { generateCommissionStatement, generateDealReport } from "../services/excelService";
+import {
+  generateCommissionStatement,
+  generateDealReport,
+  generateRevenueReport,
+  generateInventoryReport,
+  generateAgentReport,
+  generateCollectionsReport,
+  generatePaymentsReport,
+  generateLeadsReport,
+} from "../services/excelService";
 import { prisma } from "../lib/prisma";
 
 const router = Router();
 
-// ===== NEW UI ENDPOINTS =====
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Helper: parse projectId, from, to from query and build common filters.
-// All four entities reach a project via different paths:
-//   Unit.projectId, Lead.projectId, Deal.unit.projectId, Payment.deal.unit.projectId
-function parseFilters(req: any) {
-  const projectId = typeof req.query.projectId === "string" && req.query.projectId !== "all"
-    ? req.query.projectId : undefined;
-  const from = typeof req.query.from === "string" ? new Date(req.query.from) : undefined;
-  const to   = typeof req.query.to   === "string" ? new Date(req.query.to)   : undefined;
-  const dateRange = (from || to) ? {
-    ...(from && !isNaN(from.getTime()) ? { gte: from } : {}),
-    ...(to   && !isNaN(to.getTime())   ? { lte: to   } : {}),
-  } : undefined;
-  return { projectId, dateRange };
+/** Parse optional ISO date query params into Date objects. */
+function parseDateRange(req: any): { startDate?: Date; endDate?: Date } {
+  const out: { startDate?: Date; endDate?: Date } = {};
+  if (req.query.startDate) {
+    const d = new Date(String(req.query.startDate));
+    if (!isNaN(d.getTime())) out.startDate = d;
+  }
+  if (req.query.endDate) {
+    const d = new Date(String(req.query.endDate));
+    if (!isNaN(d.getTime())) {
+      // include the entire end day
+      d.setHours(23, 59, 59, 999);
+      out.endDate = d;
+    }
+  }
+  return out;
 }
 
-// GET /overview — ExecutiveDashboard KPI cards
-// Optional filters: projectId, from (ISO), to (ISO)
+/** Build a Prisma date-range filter object for a field. */
+function dateFilter(field: string, range: { startDate?: Date; endDate?: Date }) {
+  if (!range.startDate && !range.endDate) return {};
+  const f: any = {};
+  if (range.startDate) f.gte = range.startDate;
+  if (range.endDate) f.lte = range.endDate;
+  return { [field]: f };
+}
+
+/** Send an XLSX buffer with proper headers. */
+function sendXlsx(res: any, buffer: Buffer, filename: string) {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="${safe}"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(buffer);
+}
+
+const today = () => new Date().toISOString().split("T")[0];
+
+// ===== UI ENDPOINTS =====
+
+// GET /overview — ExecutiveDashboard KPI cards (supports ?startDate&endDate)
 router.get("/overview", async (req, res) => {
   try {
-    const { projectId, dateRange } = parseFilters(req);
-
-    const unitWhere   = projectId ? { projectId }                           : {};
-    const leadWhere   = {
-      ...(projectId ? { projectId } : {}),
-      ...(dateRange ? { createdAt: dateRange } : {}),
-    };
-    const dealWhere   = {
-      ...(projectId ? { unit: { projectId } } : {}),
-      ...(dateRange ? { createdAt: dateRange } : {}),
-    };
-    const paymentBase = projectId ? { deal: { unit: { projectId } } } : {};
+    const range = parseDateRange(req);
+    const dealRange = dateFilter("createdAt", range);
+    const paymentRange = dateFilter("dueDate", range);
 
     const [
       totalUnits, soldUnits, totalLeads, totalDeals,
-      revenueResult, overdueResult,
+      revenueResult, pipelineResult, overdueResult,
       dldWaivedResult, adminFeeWaivedCount,
     ] = await Promise.all([
-      prisma.unit.count({ where: unitWhere }),
-      prisma.unit.count({ where: { ...unitWhere, status: "SOLD" } }),
-      prisma.lead.count({ where: leadWhere }),
-      prisma.deal.count({ where: dealWhere }),
-      prisma.payment.aggregate({
-        _sum: { amount: true },
-        where: {
-          ...paymentBase,
-          status: "PAID",
-          ...(dateRange ? { paidDate: dateRange } : {}),
-        },
-      }),
-      prisma.payment.aggregate({
-        _sum: { amount: true },
-        where: { ...paymentBase, status: "OVERDUE" },
-      }),
-      prisma.deal.aggregate({
-        _sum: { dldFee: true },
-        where: { ...dealWhere, dldPaidBy: "DEVELOPER", stage: { notIn: ["CANCELLED"] } },
-      }),
-      prisma.deal.count({
-        where: { ...dealWhere, adminFeeWaived: true, stage: { notIn: ["CANCELLED"] } },
-      }),
+      prisma.unit.count(),
+      prisma.unit.count({ where: { status: "SOLD" } }),
+      prisma.lead.count({ where: { ...dateFilter("createdAt", range) } }),
+      prisma.deal.count({ where: { ...dealRange } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "PAID", ...paymentRange } }),
+      prisma.deal.aggregate({ _sum: { salePrice: true }, where: { stage: { notIn: ["COMPLETED","CANCELLED"] }, ...dealRange } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "OVERDUE", ...paymentRange } }),
+      prisma.deal.aggregate({ _sum: { dldFee: true }, where: { dldPaidBy: "DEVELOPER", stage: { notIn: ["CANCELLED"] }, ...dealRange } }),
+      prisma.deal.count({ where: { adminFeeWaived: true, stage: { notIn: ["CANCELLED"] }, ...dealRange } }),
     ]);
-
     const pipelineDeals = await prisma.deal.findMany({
-      where: { ...dealWhere, stage: { notIn: ["COMPLETED","CANCELLED"] } },
+      where: { stage: { notIn: ["COMPLETED","CANCELLED"] }, ...dealRange },
       select: { salePrice: true, discount: true },
     });
     const pipelineNetValue = pipelineDeals.reduce((s, d) => s + d.salePrice - (d.discount ?? 0), 0);
-
     res.json({
       unitsSold: soldUnits,
       totalUnits,
@@ -87,20 +95,23 @@ router.get("/overview", async (req, res) => {
         dldWaivedTotal: dldWaivedResult._sum.dldFee || 0,
         adminFeeWaivedCount,
       },
-      filters: { projectId: projectId || null, from: dateRange?.gte || null, to: dateRange?.lte || null },
+      meta: {
+        generatedAt: new Date().toISOString(),
+        filters: {
+          startDate: range.startDate?.toISOString() ?? null,
+          endDate:   range.endDate?.toISOString() ?? null,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch overview", code: "FETCH_OVERVIEW_ERROR", statusCode: 500 });
   }
 });
 
-// GET /units-by-status — ExecutiveDashboard inventory donut
-// Optional filter: projectId
+// GET /units-by-status — ExecutiveDashboard bar chart
 router.get("/units-by-status", async (req, res) => {
   try {
-    const { projectId } = parseFilters(req);
-    const where = projectId ? { projectId } : {};
-    const groups = await prisma.unit.groupBy({ by: ["status"], _count: { id: true }, where });
+    const groups = await prisma.unit.groupBy({ by: ["status"], _count: { id: true } });
     const result: Record<string, number> = {};
     groups.forEach((g) => { result[g.status] = g._count.id; });
     res.json(result);
@@ -109,17 +120,13 @@ router.get("/units-by-status", async (req, res) => {
   }
 });
 
-// GET /leads — ExecutiveDashboard lead pipeline
-// Optional filters: projectId, from, to (filter on lead.createdAt)
+// GET /leads — pipeline (supports ?startDate&endDate)
 router.get("/leads", async (req, res) => {
   try {
-    const { projectId, dateRange } = parseFilters(req);
-    const where = {
-      ...(projectId ? { projectId } : {}),
-      ...(dateRange ? { createdAt: dateRange } : {}),
-    };
+    const range = parseDateRange(req);
+    const where = { ...dateFilter("createdAt", range) };
     const [stageGroups, sourceGroups, totalLeads, convertedToDeals] = await Promise.all([
-      prisma.lead.groupBy({ by: ["stage"],  _count: { id: true }, where }),
+      prisma.lead.groupBy({ by: ["stage"], _count: { id: true }, where }),
       prisma.lead.groupBy({ by: ["source"], _count: { id: true }, where }),
       prisma.lead.count({ where }),
       prisma.lead.count({ where: { ...where, stage: "CLOSED_WON" } }),
@@ -138,7 +145,7 @@ router.get("/leads", async (req, res) => {
   }
 });
 
-// GET /payments — PaymentReportPage grouped by status
+// GET /payments — grouped by status
 router.get("/payments", async (req, res) => {
   try {
     const payments = await prisma.payment.findMany({
@@ -148,7 +155,6 @@ router.get("/payments", async (req, res) => {
     const byStatus: Record<string, any[]> = {};
     const totals: Record<string, number> = {};
     payments.forEach((p) => {
-      // Waived payments (CANCELLED + isWaived=true) get their own bucket
       const bucket = (p.status === "CANCELLED" && (p as any).isWaived) ? "WAIVED" : p.status;
       if (!byStatus[bucket]) byStatus[bucket] = [];
       byStatus[bucket].push(p);
@@ -160,50 +166,49 @@ router.get("/payments", async (req, res) => {
   }
 });
 
-// GET /revenue/monthly — collected vs expected per month
-// Optional filters: projectId, months (default 12, max 24)
+// GET /revenue/monthly — last 12 months (or custom range) of collected vs expected
 router.get("/revenue/monthly", async (req, res) => {
   try {
-    const { projectId } = parseFilters(req);
-    const monthsCount = Math.min(24, Math.max(1, parseInt(String(req.query.months ?? "12"), 10) || 12));
-    const projectScope = projectId ? { deal: { unit: { projectId } } } : {};
+    const range = parseDateRange(req);
+    const now = range.endDate ?? new Date();
+    const start = range.startDate ?? new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-    const payments = await prisma.payment.findMany({
-      where: { ...projectScope, status: { in: ["PAID", "PDC_CLEARED"] } },
-      select: { amount: true, paidDate: true },
-      orderBy: { paidDate: "asc" },
-    });
-
-    // Build last N months buckets
-    const now = new Date();
-    const months: { key: string; label: string; collected: number; expected: number }[] = [];
-    for (let i = monthsCount - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const months: { key: string; label: string; collected: number; expected: number; collectionRate: number }[] = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cursor <= now) {
       months.push({
-        key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-        label: d.toLocaleDateString("en-AE", { month: "short", year: "2-digit" }),
+        key:   `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`,
+        label: cursor.toLocaleDateString("en-AE", { month: "short", year: "2-digit" }),
         collected: 0,
-        expected:  0,
+        expected: 0,
+        collectionRate: 0,
       });
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
-    payments.forEach((p) => {
-      if (!p.paidDate) return;
-      const key = `${p.paidDate.getFullYear()}-${String(p.paidDate.getMonth() + 1).padStart(2, "0")}`;
-      const bucket = months.find((m) => m.key === key);
-      if (bucket) bucket.collected += p.amount;
-    });
+    const [paid, allDue] = await Promise.all([
+      prisma.payment.findMany({
+        where: { status: { in: ["PAID", "PDC_CLEARED"] }, paidDate: { not: null } },
+        select: { amount: true, paidDate: true },
+      }),
+      prisma.payment.findMany({
+        where: { status: { notIn: ["CANCELLED"] } },
+        select: { amount: true, dueDate: true },
+      }),
+    ]);
 
-    // Expected: all non-cancelled payments due in those months
-    const allDue = await prisma.payment.findMany({
-      where: { ...projectScope, status: { notIn: ["CANCELLED"] } },
-      select: { amount: true, dueDate: true },
+    paid.forEach((p) => {
+      if (!p.paidDate) return;
+      const k = `${p.paidDate.getFullYear()}-${String(p.paidDate.getMonth() + 1).padStart(2, "0")}`;
+      const m = months.find((x) => x.key === k);
+      if (m) m.collected += p.amount;
     });
     allDue.forEach((p) => {
-      const key = `${p.dueDate.getFullYear()}-${String(p.dueDate.getMonth() + 1).padStart(2, "0")}`;
-      const bucket = months.find((m) => m.key === key);
-      if (bucket) bucket.expected += p.amount;
+      const k = `${p.dueDate.getFullYear()}-${String(p.dueDate.getMonth() + 1).padStart(2, "0")}`;
+      const m = months.find((x) => x.key === k);
+      if (m) m.expected += p.amount;
     });
+    months.forEach((m) => { m.collectionRate = m.expected > 0 ? +(m.collected / m.expected).toFixed(4) : 0; });
 
     res.json(months);
   } catch (error) {
@@ -211,48 +216,46 @@ router.get("/revenue/monthly", async (req, res) => {
   }
 });
 
-// GET /collections — finance collections overview (overdue summary, aging, upcoming)
-// Optional filter: projectId
+// GET /collections — overdue summary, aging, upcoming + overdue rows for the UI table
 router.get("/collections", async (req, res) => {
   try {
-    const { projectId } = parseFilters(req);
-    const projectScope = projectId ? { deal: { unit: { projectId } } } : {};
     const now = new Date();
     const in7  = new Date(now.getTime() + 7  * 86400000);
     const in30 = new Date(now.getTime() + 30 * 86400000);
 
     const [overduePayments, upcoming7, upcoming30] = await Promise.all([
       prisma.payment.findMany({
-        where: { ...projectScope, status: { in: ["OVERDUE", "PARTIAL"] }, dueDate: { lt: now } },
+        where: { status: { in: ["OVERDUE", "PARTIAL"] }, dueDate: { lt: now } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),
       prisma.payment.findMany({
-        where: { ...projectScope, status: "PENDING", dueDate: { gte: now, lte: in7 } },
+        where: { status: "PENDING", dueDate: { gte: now, lte: in7 } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),
       prisma.payment.findMany({
-        where: { ...projectScope, status: "PENDING", dueDate: { gte: now, lte: in30 } },
+        where: { status: "PENDING", dueDate: { gte: now, lte: in30 } },
         include: { deal: { include: { lead: true, unit: true } } },
         orderBy: { dueDate: "asc" },
       }),
     ]);
 
-    // Build aging buckets
     const aging = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
     const agingAmt = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
-    for (const p of overduePayments) {
+    const overdueRows = overduePayments.map((p) => {
       const days = Math.floor((now.getTime() - new Date(p.dueDate).getTime()) / 86400000);
-      const bucket = days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+";
+      const bucket = (days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+") as keyof typeof aging;
       aging[bucket]++;
       agingAmt[bucket] += p.amount;
-    }
+      return { ...p, daysLate: days, agingBucket: bucket };
+    });
 
     res.json({
       overdue: {
         count: overduePayments.length,
         total: overduePayments.reduce((s, p) => s + p.amount, 0),
+        payments: overdueRows,
       },
       aging: Object.entries(aging).map(([range, count]) => ({
         range,
@@ -315,7 +318,6 @@ router.get("/agents/summary", async (req, res) => {
       },
     });
 
-    // Group deals and commissions by the lead's assigned agent
     const allLeads = await prisma.lead.findMany({
       select: { id: true, stage: true, assignedAgentId: true },
     });
@@ -370,7 +372,6 @@ router.get("/agents/summary", async (req, res) => {
 
 // ===== LEGACY ENDPOINTS =====
 
-// Get dashboard summary
 router.get("/dashboard/summary", async (req, res) => {
   try {
     const [totalLeads, leadsNewCount, totalDeals, dealsCompletedCount] =
@@ -403,7 +404,6 @@ router.get("/dashboard/summary", async (req, res) => {
   }
 });
 
-// Get leads by stage distribution
 router.get("/leads/by-stage", async (req, res) => {
   try {
     const stages = await prisma.lead.groupBy({
@@ -427,7 +427,6 @@ router.get("/leads/by-stage", async (req, res) => {
   }
 });
 
-// Get deals by stage
 router.get("/deals/by-stage", async (req, res) => {
   try {
     const stages = await prisma.deal.groupBy({
@@ -453,7 +452,6 @@ router.get("/deals/by-stage", async (req, res) => {
   }
 });
 
-// Get agent performance
 router.get("/agents/performance", async (req, res) => {
   try {
     const agents = await prisma.user.findMany({
@@ -492,7 +490,6 @@ router.get("/agents/performance", async (req, res) => {
   }
 });
 
-// Get broker performance
 router.get("/brokers/performance", async (req, res) => {
   try {
     const brokers = await prisma.brokerCompany.findMany({
@@ -538,56 +535,86 @@ router.get("/brokers/performance", async (req, res) => {
 
 // ===== EXCEL EXPORTS =====
 
-// Export commission statement for broker
 router.get("/export/commissions/:brokerCompanyId", async (req, res) => {
   try {
     const buffer = await generateCommissionStatement(req.params.brokerCompanyId);
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="commission-statement-${new Date().toISOString().split("T")[0]}.xlsx"`
-    );
-    res.send(buffer);
+    sendXlsx(res, buffer, `commission-statement-${today()}.xlsx`);
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to generate commission statement",
-      code: "EXPORT_COMMISSION_ERROR",
-      statusCode: 500,
-    });
+    res.status(500).json({ error: "Failed to generate commission statement", code: "EXPORT_COMMISSION_ERROR", statusCode: 500 });
   }
 });
 
-// Export deal report with optional filters
 router.get("/export/deals", async (req, res) => {
   try {
-    const { stage, startDate, endDate } = req.query;
-
-    const filters: any = {};
-    if (stage) filters.stage = stage;
-    if (startDate) filters.startDate = new Date(startDate as string);
-    if (endDate) filters.endDate = new Date(endDate as string);
-
+    const range = parseDateRange(req);
+    const filters: any = { ...range };
+    if (req.query.stage) filters.stage = String(req.query.stage);
     const buffer = await generateDealReport(filters);
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="deal-report-${new Date().toISOString().split("T")[0]}.xlsx"`
-    );
-    res.send(buffer);
+    sendXlsx(res, buffer, `deals-report-${today()}.xlsx`);
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to generate deal report",
-      code: "EXPORT_DEAL_ERROR",
-      statusCode: 500,
-    });
+    res.status(500).json({ error: "Failed to generate deal report", code: "EXPORT_DEAL_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/revenue", async (req, res) => {
+  try {
+    const range = parseDateRange(req);
+    const buffer = await generateRevenueReport(range);
+    sendXlsx(res, buffer, `revenue-report-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate revenue report", code: "EXPORT_REVENUE_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/inventory", async (req, res) => {
+  try {
+    const buffer = await generateInventoryReport();
+    sendXlsx(res, buffer, `inventory-report-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate inventory report", code: "EXPORT_INVENTORY_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/agents", async (req, res) => {
+  try {
+    const buffer = await generateAgentReport();
+    sendXlsx(res, buffer, `agent-performance-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate agent report", code: "EXPORT_AGENT_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/collections", async (req, res) => {
+  try {
+    const buffer = await generateCollectionsReport();
+    sendXlsx(res, buffer, `collections-report-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate collections report", code: "EXPORT_COLLECTIONS_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/payments", async (req, res) => {
+  try {
+    const range = parseDateRange(req);
+    const filters: any = { ...range };
+    if (req.query.status) filters.status = String(req.query.status);
+    const buffer = await generatePaymentsReport(filters);
+    sendXlsx(res, buffer, `payments-report-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate payments report", code: "EXPORT_PAYMENTS_ERROR", statusCode: 500 });
+  }
+});
+
+router.get("/export/leads", async (req, res) => {
+  try {
+    const range = parseDateRange(req);
+    const filters: any = { ...range };
+    if (req.query.stage)  filters.stage = String(req.query.stage);
+    if (req.query.source) filters.source = String(req.query.source);
+    const buffer = await generateLeadsReport(filters);
+    sendXlsx(res, buffer, `leads-report-${today()}.xlsx`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate leads report", code: "EXPORT_LEADS_ERROR", statusCode: 500 });
   }
 });
 
