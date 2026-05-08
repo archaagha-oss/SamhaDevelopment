@@ -34,6 +34,12 @@ import triageRoutes from "./routes/triage";
 import communicationsRoutes from "./routes/communications";
 import streamRoutes from "./routes/stream";
 import complianceRoutes from "./routes/compliance";
+// Integrated CRM routes (broker dashboard + finance)
+import brokerDashboardRoutes from "./routes/brokerDashboard";
+import financeRoutes from "./routes/finance";
+// Phase 4 routes — disabled pending schema migration (Phase, UnitTypePlan,
+// CommissionTier, Invoice, Receipt, Refund, Escrow, Handover, Snag, KYC, etc.)
+// Files are present under src/routes but require ~36 additional schema models.
 
 dotenv.config();
 
@@ -162,6 +168,8 @@ app.use("/api/triage", triageRoutes);
 app.use("/api/communications", communicationsRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/compliance", complianceRoutes);
+app.use("/api/broker-dashboard", brokerDashboardRoutes);
+app.use("/api/finance", financeRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
