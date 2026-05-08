@@ -1,40 +1,32 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-  NoSuchKey,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+/**
+ * Document storage service — LOCAL FILESYSTEM (dev mode)
+ *
+ * Files are stored under apps/api/uploads/ and served via the /uploads
+ * static mount in index.ts. Vite proxies /uploads -> localhost:3000 in dev,
+ * so the same URL works from the web app.
+ *
+ * To swap back to S3 later, replace this module with the original
+ * @aws-sdk/client-s3 implementation. The DocumentService API surface
+ * (uploadFile / deleteFile / generatePresignedUrl) is intentionally
+ * identical so callers don't need to change.
+ */
+import fs from "fs/promises";
 import path from "path";
 import { prisma } from "../lib/prisma";
 
-// Validate S3 configuration at startup
-const validateS3Config = () => {
-  const required = ["AWS_S3_BUCKET", "AWS_S3_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"];
-  const missing = required.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing S3 configuration: ${missing.join(", ")}`);
-  }
-};
+// Resolve uploads dir relative to apps/api, regardless of cwd.
+// __dirname at runtime: apps/api/dist/services or src/services depending on tsx vs node.
+// We anchor on apps/api by going up until we hit the package.json.
+const UPLOADS_DIR = path.resolve(process.cwd().endsWith("apps/api") || process.cwd().endsWith("apps\\api")
+  ? "uploads"
+  : path.join("apps", "api", "uploads"));
 
-try {
-  validateS3Config();
-} catch (err) {
-  console.error("[S3 Configuration Error]", err);
-  if (process.env.NODE_ENV === "production") {
-    process.exit(1);
-  }
+// Public URL prefix served by Express. Must match the static mount in index.ts.
+const PUBLIC_URL_PREFIX = "/uploads";
+
+async function ensureDir(dir: string) {
+  await fs.mkdir(dir, { recursive: true });
 }
-
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-  maxAttempts: 3,
-});
 
 export type UploadScope =
   | { scope: "deal"; id: string }
@@ -45,7 +37,6 @@ export class DocumentService {
     file: Express.Multer.File,
     target: UploadScope | string
   ): Promise<{ key: string; url: string }> {
-    // Backwards-compat: a bare string is treated as a deal ID.
     const scoped: UploadScope =
       typeof target === "string" ? { scope: "deal", id: target } : target;
     try {
@@ -56,80 +47,55 @@ export class DocumentService {
       const ext = path.extname(file.originalname);
       const timestamp = Date.now();
       const prefix = scoped.scope === "deal" ? "deals" : "projects";
+
+      // Key uses POSIX separators so it's portable in URLs and DB.
       const key = `${prefix}/${scoped.id}/${timestamp}${ext}`;
 
-      const command = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET!,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        Metadata: {
-          "original-filename": file.originalname,
-          "upload-timestamp": timestamp.toString(),
-        },
-      });
+      const absDir = path.join(UPLOADS_DIR, prefix, scoped.id);
+      const absPath = path.join(absDir, `${timestamp}${ext}`);
 
-      await s3Client.send(command);
+      await ensureDir(absDir);
+      await fs.writeFile(absPath, file.buffer);
 
-      const url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${key}`;
+      const url = `${PUBLIC_URL_PREFIX}/${key}`;
 
-      console.log(`[S3 Upload Success] ${scoped.scope}=${scoped.id}, key=${key}, size=${file.size}B`);
+      console.log(`[Local Upload Success] ${scoped.scope}=${scoped.id}, key=${key}, size=${file.size}B`);
 
       return { key, url };
     } catch (err: any) {
-      console.error("[S3 Upload Error]", {
+      console.error("[Local Upload Error]", {
         target: scoped,
         filename: file.originalname,
         size: file.size,
         error: err.message,
       });
-
-      if (err.name === "NoSuchBucket") {
-        throw new Error("S3 bucket not found. Check AWS configuration.");
-      }
-      if (err.name === "InvalidAccessKeyId") {
-        throw new Error("Invalid AWS credentials.");
-      }
       throw new Error(`Failed to upload file: ${err.message}`);
     }
   }
 
   async deleteFile(key: string): Promise<void> {
     try {
-      const command = new DeleteObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET!,
-        Key: key,
+      const absPath = path.join(UPLOADS_DIR, key);
+      await fs.unlink(absPath).catch((err) => {
+        // Treat "file not found" as success — the row may have been deleted
+        // before the file, or the file was cleaned up out-of-band.
+        if (err?.code === "ENOENT") return;
+        throw err;
       });
-
-      await s3Client.send(command);
-      console.log(`[S3 Delete Success] key=${key}`);
+      console.log(`[Local Delete Success] key=${key}`);
     } catch (err: any) {
-      console.error("[S3 Delete Error]", { key, error: err.message });
+      console.error("[Local Delete Error]", { key, error: err.message });
       throw new Error(`Failed to delete file: ${err.message}`);
     }
   }
 
   async generatePresignedUrl(
     key: string,
-    expiresIn: number = 3600
+    _expiresIn: number = 3600
   ): Promise<string> {
-    try {
-      if (expiresIn < 60 || expiresIn > 604800) {
-        throw new Error("Expiry must be between 60 seconds and 7 days");
-      }
-
-      const command = new GetObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET!,
-        Key: key,
-      });
-
-      const url = await getSignedUrl(s3Client, command, { expiresIn });
-      console.log(`[Presigned URL Generated] key=${key}, expiresIn=${expiresIn}s`);
-      return url;
-    } catch (err: any) {
-      console.error("[Presigned URL Error]", { key, error: err.message });
-      throw new Error(`Failed to generate download URL: ${err.message}`);
-    }
+    // Local files are served directly by Express. No signing needed.
+    // We keep the same signature so callers don't need to change.
+    return `${PUBLIC_URL_PREFIX}/${key}`;
   }
 }
 

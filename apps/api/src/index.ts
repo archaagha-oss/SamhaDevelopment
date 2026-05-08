@@ -107,6 +107,9 @@ app.use(
 //    media URLs and parse JSON. They are also required by /api/* below.
 app.use(express.json());
 app.use(express.static("public"));
+// Local document storage (dev mode — replaces S3). Files written by
+// documentService land here and are accessed at /uploads/<key>.
+app.use("/uploads", express.static("uploads"));
 
 // ── Public, unauthenticated share routes — mounted BEFORE the mock-auth
 //    middleware so anonymous clients can hit them.

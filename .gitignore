@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Local document storage (dev) — files uploaded via documentService
+apps/api/uploads/
+
 # Environment files
 .env
 .env.local
