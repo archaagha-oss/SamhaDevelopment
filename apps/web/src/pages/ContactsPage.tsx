@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import ContactFormModal from "../components/ContactFormModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
+import { SkeletonTableRows } from "../components/Skeleton";
 
 interface Contact {
   id: string;
@@ -37,6 +41,7 @@ export default function ContactsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Contact | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -49,21 +54,32 @@ export default function ContactsPage() {
         setContacts(r.data.data || []);
         setTotal(r.data.total || 0);
       })
-      .catch(() => {})
+      .catch((err) => {
+        toast.error(err?.response?.data?.message || "Failed to load contacts");
+      })
       .finally(() => setLoading(false));
   }, [page, search, filterSource]);
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this contact? This cannot be undone.")) return;
+  const performDelete = async (id: string) => {
     setDeletingId(id);
     try {
       await axios.delete(`/api/contacts/${id}`);
+      toast.success("Contact deleted");
       load();
-    } catch { } finally {
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to delete contact");
+    } finally {
       setDeletingId(null);
+      setConfirmDelete(null);
     }
+  };
+
+  const initials = (c: Contact) => {
+    const first = c.firstName?.trim()?.[0] ?? "";
+    const last = c.lastName?.trim()?.[0] ?? "";
+    return (first + last).toUpperCase() || "?";
   };
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -110,25 +126,26 @@ export default function ContactsPage() {
         {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center h-48">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <table className="w-full text-sm">
+              <tbody>
+                <SkeletonTableRows rows={6} cols={7} />
+              </tbody>
+            </table>
           ) : contacts.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-3xl mb-3">📋</p>
-              <p className="text-slate-500 font-medium">No contacts found</p>
-              <p className="text-slate-400 text-sm mt-1">
-                {search || filterSource !== "ALL" ? "Try adjusting your filters" : "Add your first contact to get started"}
-              </p>
-              {!search && filterSource === "ALL" && (
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
-                >
-                  + New Contact
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon="◉"
+              title="No contacts found"
+              description={
+                search || filterSource !== "ALL"
+                  ? "Try adjusting your filters or clearing your search."
+                  : "Add your first contact to get started."
+              }
+              action={
+                !search && filterSource === "ALL"
+                  ? { label: "+ New Contact", onClick: () => setShowCreate(true) }
+                  : undefined
+              }
+            />
           ) : (
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
@@ -148,11 +165,11 @@ export default function ContactsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                          {c.firstName[0]}{c.lastName?.[0] ?? ""}
+                          {initials(c)}
                         </div>
                         <div>
                           <p className="font-semibold text-slate-800 text-sm">
-                            {c.firstName} {c.lastName ?? ""}
+                            {(c.firstName || "Unnamed").trim()} {c.lastName ?? ""}
                           </p>
                           {c.jobTitle && <p className="text-xs text-slate-400">{c.jobTitle}</p>}
                         </div>
@@ -184,9 +201,10 @@ export default function ContactsPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(c.id)}
+                          onClick={() => setConfirmDelete(c)}
                           disabled={deletingId === c.id}
                           className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                          aria-label={`Delete ${c.firstName ?? "contact"}`}
                         >
                           Del
                         </button>
@@ -239,6 +257,16 @@ export default function ContactsPage() {
           onSaved={() => { setEditingContact(null); load(); }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete contact?"
+        message={`This will permanently delete "${[confirmDelete?.firstName, confirmDelete?.lastName].filter(Boolean).join(" ") || "this contact"}". This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => confirmDelete && performDelete(confirmDelete.id)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

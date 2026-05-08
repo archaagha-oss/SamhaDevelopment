@@ -7,6 +7,9 @@ import { useDeals } from "../hooks/useDeals";
 import DealFormModal from "./DealFormModal";
 import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
+import Breadcrumbs from "./Breadcrumbs";
+import { SkeletonTableRows } from "./Skeleton";
+import { IconChevronUp, IconChevronDown, IconChevronsUpDown, IconChevronLeft, IconChevronRight } from "./Icons";
 
 interface Deal {
   id: string; dealNumber: string;
@@ -65,6 +68,8 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const [editDeal, setEditDeal] = useState<Deal | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [cancelDeal, setCancelDeal] = useState<Deal | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   // Debounce search input 350ms before firing API call
   const handleSearch = (val: string) => {
@@ -116,19 +121,27 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   });
 
   const SortIcon = ({ col }: { col: string }) => (
-    <span className={`ml-1 text-[10px] ${sortCol === col ? "text-slate-700" : "text-slate-300"}`}>
-      {sortCol === col ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+    <span className={`ml-1 inline-flex items-center align-middle ${sortCol === col ? "text-slate-700" : "text-slate-300"}`} aria-hidden="true">
+      {sortCol === col
+        ? (sortDir === "asc" ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />)
+        : <IconChevronsUpDown size={12} />}
     </span>
   );
 
-  const handleQuickCancel = async (deal: Deal) => {
-    const reason = prompt("Cancel reason:");
-    if (!reason) return;
-    setCancelingId(deal.id);
+  const performCancel = async () => {
+    if (!cancelDeal) return;
+    const reason = cancelReason.trim();
+    if (!reason) {
+      toast.error("A cancel reason is required");
+      return;
+    }
+    setCancelingId(cancelDeal.id);
     try {
-      await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: "CANCELLED", reason });
+      await axios.patch(`/api/deals/${cancelDeal.id}/stage`, { newStage: "CANCELLED", reason });
       toast.success("Deal cancelled");
       queryClient.invalidateQueries({ queryKey: ["deals"] });
+      setCancelDeal(null);
+      setCancelReason("");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to cancel deal");
     } finally {
@@ -141,39 +154,47 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
+      <div className="px-4 sm:px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
+        <Breadcrumbs variant="light" className="mb-2" crumbs={[{ label: "Home", path: "/" }, { label: "Deals" }]} />
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <div className="min-w-0">
             <h1 className="text-lg font-bold text-slate-900">Deals</h1>
             <p className="text-slate-400 text-xs mt-0.5">{total} deals {selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial sm:justify-end min-w-0">
             <input
               type="text"
               placeholder="Search deal, buyer, unit…"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-56 focus:outline-none focus:border-blue-400 bg-slate-50"
+              aria-label="Search deals"
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 flex-1 sm:flex-initial sm:w-56 focus:outline-none focus:border-blue-400 bg-slate-50 min-w-0"
             />
             <button
               onClick={() => setShowNewDeal(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
-              <span className="text-base leading-none">+</span> New Deal
+              <span className="text-base leading-none" aria-hidden="true">+</span>
+              <span className="hidden sm:inline">New Deal</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
         </div>
-        {/* Stage filters */}
-        <div className="flex gap-1.5 flex-wrap">
+        {/* Stage filters - horizontal scroll on mobile */}
+        <div className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin pb-1" role="tablist" aria-label="Filter by stage">
           <button
             onClick={() => setSelectedStage(null)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            role="tab"
+            aria-selected={!selectedStage}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
           >All</button>
           {STAGES.map((s) => (
             <button
               key={s}
               onClick={() => setSelectedStage(s === selectedStage ? null : s)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              role="tab"
+              aria-selected={selectedStage === s}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
             >{s.replace(/_/g," ")}</button>
           ))}
         </div>
@@ -181,36 +202,35 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
 
       {/* Table */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
-              <tr>
-                {[
-                  { label: "Deal #", col: "dealNumber" },
-                  { label: "Buyer", col: "buyer" },
-                  { label: "Unit", col: "unit" },
-                  { label: "Stage", col: "stage" },
-                  { label: "Sale Price", col: "salePrice" },
-                  { label: "Payments", col: null },
-                  { label: "Commission", col: null },
-                  { label: "", col: null },
-                ].map(({ label, col }) => (
-                  <th
-                    key={label || "actions"}
-                    onClick={col ? () => handleSort(col) : undefined}
-                    className={`text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap ${col ? "cursor-pointer hover:text-slate-800 select-none" : ""}`}
-                  >
-                    {label}{col && <SortIcon col={col} />}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+        <table className="w-full text-sm min-w-[800px]">
+          <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+            <tr>
+              {[
+                { label: "Deal #", col: "dealNumber" },
+                { label: "Buyer", col: "buyer" },
+                { label: "Unit", col: "unit" },
+                { label: "Stage", col: "stage" },
+                { label: "Sale Price", col: "salePrice" },
+                { label: "Payments", col: null },
+                { label: "Commission", col: null },
+                { label: "", col: null },
+              ].map(({ label, col }) => (
+                <th
+                  key={label || "actions"}
+                  onClick={col ? () => handleSort(col) : undefined}
+                  className={`text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap ${col ? "cursor-pointer hover:text-slate-800 select-none" : ""}`}
+                  aria-sort={col && sortCol === col ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
+                >
+                  {label}{col && <SortIcon col={col} />}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {isLoading ? (
+              <SkeletonTableRows rows={6} cols={8} />
+            ) : (
+              filtered.length === 0 ? (
                 <tr><td colSpan={8}>
                   <EmptyState
                     icon="◈"
@@ -219,7 +239,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                     action={!debouncedSearch && !selectedStage ? { label: "New Deal", onClick: () => setShowNewDeal(true) } : undefined}
                   />
                 </td></tr>
-              ) : filtered.map((deal) => {
+              ) : (filtered.map((deal) => {
                 const pct = paymentProgress(deal);
                 const isMenuOpen = openMenuId === deal.id;
                 return (
@@ -262,11 +282,14 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                         </span>
                       ) : <span className="text-xs text-slate-300">—</span>}
                     </td>
-                    {/* Kebab menu */}
+                    {/* Kebab menu - always tappable on touch */}
                     <td className="px-2 py-3 relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setOpenMenuId(isMenuOpen ? null : deal.id)}
-                        className="p-1.5 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100"
+                        aria-label={`Actions for deal ${deal.dealNumber}`}
+                        aria-haspopup="menu"
+                        aria-expanded={isMenuOpen}
+                        className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       >
                         ⋮
                       </button>
@@ -288,7 +311,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                             </button>
                             {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                               <button
-                                onClick={() => { setOpenMenuId(null); handleQuickCancel(deal); }}
+                                onClick={() => { setOpenMenuId(null); setCancelDeal(deal); setCancelReason(""); }}
                                 disabled={cancelingId === deal.id}
                                 className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 disabled:opacity-50"
                               >
@@ -301,28 +324,53 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
-        )}
+              }))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0">
-        <p className="text-xs text-slate-500">Page {currentPage} of {totalPages}</p>
-        <div className="flex gap-2">
+      <nav className="flex items-center justify-between gap-3 flex-wrap px-4 sm:px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0" aria-label="Deals pagination">
+        <p className="text-xs text-slate-500">
+          Page <span className="font-medium text-slate-700">{currentPage}</span> of <span className="font-medium text-slate-700">{totalPages}</span> · {total} deals
+        </p>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >← Prev</button>
+            aria-label="Previous page"
+            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+          >
+            <IconChevronLeft size={12} aria-hidden="true" />
+            <span>Prev</span>
+          </button>
+          <label className="text-xs text-slate-500 flex items-center gap-1.5">
+            <span className="hidden sm:inline">Go to</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (!Number.isNaN(v) && v >= 1 && v <= totalPages) setCurrentPage(v);
+              }}
+              className="w-14 px-2 py-1 text-xs border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-blue-400"
+              aria-label="Jump to page"
+            />
+          </label>
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >Next →</button>
+            aria-label="Next page"
+            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+          >
+            <span>Next</span>
+            <IconChevronRight size={12} aria-hidden="true" />
+          </button>
         </div>
-      </div>
+      </nav>
 
       {showNewDeal && (
         <DealFormModal
@@ -339,6 +387,53 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
           onClose={() => setEditDeal(null)}
           onSaved={() => { setEditDeal(null); queryClient.invalidateQueries({ queryKey: ["deals"] }); }}
         />
+      )}
+
+      {cancelDeal && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4"
+          onClick={() => { if (cancelingId) return; setCancelDeal(null); setCancelReason(""); }}
+          onKeyDown={(e) => { if (e.key === "Escape" && !cancelingId) { setCancelDeal(null); setCancelReason(""); } }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-deal-title"
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-5">
+              <h3 id="cancel-deal-title" className="text-base font-semibold text-slate-900">Cancel deal {cancelDeal.dealNumber}?</h3>
+              <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">
+                This will set the deal to CANCELLED. Provide a reason — it will be recorded on the deal's history.
+              </p>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Buyer changed mind, financing fell through, etc."
+                rows={3}
+                autoFocus
+                className="mt-3 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+              <button
+                onClick={() => { setCancelDeal(null); setCancelReason(""); }}
+                disabled={!!cancelingId}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Keep deal
+              </button>
+              <button
+                onClick={performCancel}
+                disabled={!cancelReason.trim() || !!cancelingId}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
+                {cancelingId ? "Cancelling…" : "Cancel deal"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

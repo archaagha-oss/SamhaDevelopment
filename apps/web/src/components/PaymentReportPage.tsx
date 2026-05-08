@@ -79,19 +79,6 @@ const ACTION_STYLES: Partial<Record<PaymentAction, string>> = {
   WAIVE:        "bg-red-50 text-red-600 hover:bg-red-100 border-red-200",
 };
 
-// Aging buckets for overdue payments
-function agingBuckets(payments: Payment[]) {
-  const now = Date.now();
-  const b = { "0–30": [] as Payment[], "31–60": [] as Payment[], "61–90": [] as Payment[], "90+": [] as Payment[] };
-  for (const p of payments) {
-    const days = Math.floor((now - new Date(p.dueDate).getTime()) / 86400000);
-    if (days <= 30) b["0–30"].push(p);
-    else if (days <= 60) b["31–60"].push(p);
-    else if (days <= 90) b["61–90"].push(p);
-    else b["90+"].push(p);
-  }
-  return b;
-}
 
 function exportCSV(payments: Payment[], filename: string) {
   const header = ["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount (AED)", "Status", "Days Overdue"];

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit } from "../hooks/useUpdateUnit";
@@ -36,6 +37,10 @@ export default function UnitDetailPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
 
+  // Inline payment plan editing
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [planValue, setPlanValue] = useState("");
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -68,10 +73,14 @@ export default function UnitDetailPage() {
 
   const handleSavePrice = async () => {
     const parsed = parseInt(priceValue.replace(/,/g, ""));
-    if (!parsed || parsed <= 0) return;
+    if (!parsed || parsed <= 0) {
+      toast.error("Enter a valid price");
+      return;
+    }
     try {
       await updateUnit.mutateAsync({ price: parsed });
       setEditingPrice(false);
+      toast.success("Price updated");
     } catch (err: any) {
       setApiError(err);
     }
@@ -81,6 +90,20 @@ export default function UnitDetailPage() {
     try {
       await updateUnit.mutateAsync({ internalNotes: notesValue });
       setEditingNotes(false);
+      toast.success("Notes saved");
+    } catch (err: any) {
+      setApiError(err);
+    }
+  };
+
+  const handleSavePlan = async () => {
+    const trimmed = planValue.trim();
+    if (!trimmed) return;
+    try {
+      await updateUnit.mutateAsync({ paymentPlan: trimmed });
+      setEditingPlan(false);
+      setPlanValue("");
+      toast.success("Payment plan saved");
     } catch (err: any) {
       setApiError(err);
     }
@@ -176,14 +199,47 @@ export default function UnitDetailPage() {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Payment Plan</p>
-                  {unit.paymentPlan ? (
-                    <p className="text-sm font-semibold text-slate-800">{unit.paymentPlan}</p>
+                  {editingPlan ? (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <input
+                        type="text"
+                        value={planValue}
+                        onChange={(e) => setPlanValue(e.target.value)}
+                        placeholder="e.g. 60/40"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSavePlan();
+                          if (e.key === "Escape") { setEditingPlan(false); setPlanValue(""); }
+                        }}
+                        className="flex-1 min-w-0 border border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                      <button
+                        onClick={handleSavePlan}
+                        disabled={updateUnit.isPending || !planValue.trim()}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => { setEditingPlan(false); setPlanValue(""); }}
+                        className="px-2 py-1 border border-slate-200 text-xs rounded hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : unit.paymentPlan ? (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-800">{unit.paymentPlan}</p>
+                      <button
+                        onClick={() => { setEditingPlan(true); setPlanValue(unit.paymentPlan!); }}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   ) : (
                     <button
-                      onClick={() => {
-                        const val = prompt("Enter payment plan (e.g. 60/40):");
-                        if (val) updateUnit.mutateAsync({ paymentPlan: val });
-                      }}
+                      onClick={() => { setEditingPlan(true); setPlanValue(""); }}
                       className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                     >
                       + Add

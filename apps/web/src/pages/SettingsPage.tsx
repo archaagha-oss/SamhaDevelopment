@@ -143,7 +143,7 @@ export default function SettingsPage() {
         {tab === "company" && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Company Profile</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className={lbl}>Company Name</label>
                 <input className={inp} value={form.companyName ?? ""} onChange={(e) => set("companyName", e.target.value)} placeholder="e.g. Samha Development" />
@@ -172,7 +172,7 @@ export default function SettingsPage() {
         {tab === "localization" && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Localization</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>Timezone</label>
                 <select className={sel} value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
@@ -201,7 +201,7 @@ export default function SettingsPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</p>
               <p className="text-xs text-slate-400">Used as the sender for automated emails (future integration).</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={lbl}>From Name</label>
                   <input className={inp} value={form.defaultFromName ?? ""} onChange={(e) => set("defaultFromName", e.target.value)} placeholder="e.g. Samha Sales Team" />
@@ -226,7 +226,7 @@ export default function SettingsPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">WhatsApp & SMS</p>
               <p className="text-xs text-slate-400">Used for direct messaging to leads and contacts (future integration).</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={lbl}>WhatsApp Number</label>
                   <input className={inp} value={form.whatsappNumber ?? ""} onChange={(e) => set("whatsappNumber", e.target.value)} placeholder="+971501234567" />
@@ -264,7 +264,7 @@ export default function SettingsPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">SMTP Email Delivery</p>
               <p className="text-xs text-slate-400">Requires nodemailer to be installed. Leave blank to use console logging (development).</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={lbl}>SMTP Host</label>
                   <input className={inp} value={form.smtpHost ?? ""} onChange={(e) => set("smtpHost", e.target.value)} placeholder="smtp.gmail.com" />

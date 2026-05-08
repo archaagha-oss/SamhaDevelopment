@@ -3,6 +3,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import PaymentPlanFormModal from "./PaymentPlanFormModal";
 import ConfirmDialog from "./ConfirmDialog";
+import EmptyState from "./EmptyState";
+import { Skeleton } from "./Skeleton";
 
 interface Milestone {
   id: string;
@@ -173,22 +175,22 @@ export default function PaymentPlansPage() {
       {/* List */}
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-3 max-w-4xl">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-3">
-            <p className="text-3xl">📋</p>
-            <p className="text-sm">{plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}</p>
-            {plans.length === 0 && (
-              <button
-                onClick={() => { setEditPlan(null); setShowForm(true); }}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-              >
-                Create first plan
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon="◫"
+            title={plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}
+            description={plans.length === 0 ? "Define milestone schedules to attach to deals." : "Try adjusting your filters."}
+            action={plans.length === 0 ? { label: "Create first plan", onClick: () => { setEditPlan(null); setShowForm(true); } } : undefined}
+          />
         ) : (
           <div className="space-y-3 max-w-4xl">
             {filtered.map((plan) => {

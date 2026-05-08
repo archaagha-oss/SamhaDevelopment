@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Skeleton, SkeletonKpi } from "./Skeleton";
+import { IconRefresh } from "./Icons";
+
+function timeAgo(d: Date | null): string {
+  if (!d) return "—";
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 5) return "just now";
+  if (diff < 60) return `${diff}s ago`;
+  const m = Math.floor(diff / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 interface Overview {
   unitsSold: number; totalUnits: number; soldPercentage: number | string;
@@ -27,6 +42,8 @@ export default function ExecutiveDashboard(): React.ReactNode {
   const [leadsReport, setLeadsReport] = useState<LeadsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [, setNowTick] = useState(0);
 
   const fetchDashboardData = () => {
     setLoading(true);
@@ -39,15 +56,35 @@ export default function ExecutiveDashboard(): React.ReactNode {
       setOverview(o.data);
       setUnitStatus(u.data);
       setLeadsReport(l.data);
+      setLastFetched(new Date());
     }).catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchDashboardData(); }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+  // Re-render the "Updated Xm ago" label every 30s without refetching.
+  useEffect(() => {
+    const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (loading && !overview) return (
+    <div className="p-6 space-y-6" role="status" aria-busy="true" aria-label="Loading dashboard">
+      <div>
+        <Skeleton className="h-6 w-44" />
+        <Skeleton className="h-3 w-72 mt-2" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <SkeletonKpi key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => <SkeletonKpi key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Skeleton className="h-64 w-full" rounded="xl" />
+        <Skeleton className="h-64 w-full" rounded="xl" />
+      </div>
     </div>
   );
   if (error) return (
@@ -66,45 +103,74 @@ export default function ExecutiveDashboard(): React.ReactNode {
   const totalStageLeads = stageEntries.reduce((s, [, v]) => s + v, 0);
 
   const kpis = [
-    { label: "Revenue Collected", value: fmtM(overview.revenueCollected), sub: "AED",              color: "bg-blue-600",   icon: "↑" },
-    { label: "Pipeline Value",     value: fmtM(overview.pipelineValue),    sub: "AED in pipeline",  color: "bg-indigo-600", icon: "◈" },
-    { label: "Units Sold",         value: `${overview.unitsSold}/${overview.totalUnits}`, sub: `${overview.soldPercentage}% sold`, color: "bg-emerald-600", icon: "⊞" },
-    { label: "Overdue Payments",   value: fmtK(overview.overduePayments),  sub: "AED overdue",      color: "bg-red-500",    icon: "!" },
+    { label: "Revenue Collected", value: fmtM(overview.revenueCollected), sub: "AED",              color: "bg-blue-600",   icon: "↑", to: "/payments" },
+    { label: "Pipeline Value",     value: fmtM(overview.pipelineValue),    sub: "AED in pipeline",  color: "bg-indigo-600", icon: "◈", to: "/deals" },
+    { label: "Units Sold",         value: `${overview.unitsSold}/${overview.totalUnits}`, sub: `${overview.soldPercentage}% sold`, color: "bg-emerald-600", icon: "⊞", to: "/units" },
+    { label: "Overdue Payments",   value: fmtK(overview.overduePayments),  sub: "AED overdue",      color: "bg-red-500",    icon: "!", to: "/payments" },
   ];
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Command Center</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Real-time sales pipeline overview</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Command Center</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Real-time sales pipeline overview</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs text-slate-400"
+            title={lastFetched ? lastFetched.toLocaleString() : ""}
+            aria-live="polite"
+          >
+            Updated {timeAgo(lastFetched)}
+          </span>
+          <button
+            onClick={fetchDashboardData}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            aria-label="Refresh dashboard"
+          >
+            <IconRefresh size={12} aria-hidden="true" className={loading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => (
-          <div key={k.label} className={`${k.color} rounded-xl p-4 text-white`}>
+          <Link
+            key={k.label}
+            to={k.to}
+            className={`${k.color} rounded-xl p-4 text-white block hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all`}
+            aria-label={`${k.label}: ${k.value}. View ${k.to.replace("/", "")}.`}
+          >
             <div className="flex items-start justify-between mb-2">
               <p className="text-xs font-medium opacity-80">{k.label}</p>
-              <span className="text-lg opacity-60 leading-none">{k.icon}</span>
+              <span className="text-lg opacity-60 leading-none" aria-hidden="true">{k.icon}</span>
             </div>
             <p className="text-2xl font-bold tracking-tight">{k.value}</p>
             <p className="text-xs opacity-70 mt-0.5">{k.sub}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
       {/* Secondary metrics */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: "Total Leads",      value: overview.totalLeads,   color: "text-blue-600" },
-          { label: "Active Deals",     value: overview.totalDeals,   color: "text-emerald-600" },
-          { label: "Conversion Rate",  value: `${leadsReport.conversionRate}%`, color: "text-purple-600" },
+          { label: "Total Leads",      value: overview.totalLeads,   color: "text-blue-600",    to: "/leads" },
+          { label: "Active Deals",     value: overview.totalDeals,   color: "text-emerald-600", to: "/deals" },
+          { label: "Conversion Rate",  value: `${leadsReport.conversionRate}%`, color: "text-purple-600", to: "/reports" },
         ].map((m) => (
-          <div key={m.label} className="bg-white rounded-xl border border-slate-200 p-4">
+          <Link
+            key={m.label}
+            to={m.to}
+            className="bg-white rounded-xl border border-slate-200 p-4 block hover:border-slate-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+          >
             <p className="text-slate-500 text-xs mb-1">{m.label}</p>
             <p className={`text-2xl font-bold ${m.color}`}>{m.value}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

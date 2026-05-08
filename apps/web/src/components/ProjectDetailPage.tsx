@@ -215,7 +215,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 grid grid-cols-6 gap-3 flex-shrink-0">
+      <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-shrink-0">
         <div className="bg-white rounded-lg p-3 border border-slate-100">
           <p className="text-xs text-slate-500 mb-1">Total Units</p>
           <p className="text-xl font-bold text-slate-800">{project.totalUnits}</p>
@@ -226,7 +226,7 @@ export default function ProjectDetailPage() {
             <p className="text-xl font-bold text-slate-800">{project.totalFloors}</p>
           </div>
         )}
-        <div className={`bg-white rounded-lg p-3 border border-slate-100 ${project.totalFloors ? "" : "col-span-1"}`}>
+        <div className="bg-white rounded-lg p-3 border border-slate-100">
           <p className="text-xs text-slate-500 mb-1">Handover</p>
           <p className={`font-semibold text-sm ${handoverColor}`}>{fmtDate(project.handoverDate)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{days < 0 ? `${Math.abs(days)} overdue` : `${days} left`}</p>

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import Modal from "./Modal";
+import EmptyState from "./EmptyState";
+import { SkeletonTableRows } from "./Skeleton";
 
 interface Lead {
   id: string;
@@ -57,7 +60,7 @@ export default function ReservationsPage() {
     if (filter !== "ALL") params.status = filter;
     axios.get("/api/reservations", { params })
       .then((r) => setReservations(r.data.data ?? []))
-      .catch(() => {})
+      .catch((err) => toast.error(err?.response?.data?.error || "Failed to load reservations"))
       .finally(() => setLoading(false));
   }, [filter]);
 
@@ -126,14 +129,19 @@ export default function ReservationsPage() {
       {/* Table */}
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody>
+                <SkeletonTableRows rows={5} cols={7} />
+              </tbody>
+            </table>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-2">
-            <p className="text-3xl">📋</p>
-            <p className="text-sm">No reservations found</p>
-          </div>
+          <EmptyState
+            icon="◫"
+            title={search ? "No reservations match your search" : `No ${filter === "ALL" ? "" : filter.toLowerCase() + " "}reservations`}
+            description={search ? "Try clearing your search or switching the status filter." : "Reservations created from leads will appear here."}
+          />
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full text-sm">
@@ -206,16 +214,38 @@ export default function ReservationsPage() {
         )}
       </div>
 
-      {/* Cancel confirmation modal */}
-      {confirmCancel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
-            <h2 className="font-bold text-slate-900 text-base mb-1">Cancel Reservation</h2>
-            <p className="text-sm text-slate-500 mb-4">
-              Cancel reservation for <strong>{confirmCancel.lead.firstName} {confirmCancel.lead.lastName}</strong> on unit{" "}
+      <Modal
+        open={!!confirmCancel}
+        onClose={() => { if (!cancelling) { setConfirmCancel(null); setCancelReason(""); } }}
+        title="Cancel reservation"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => { setConfirmCancel(null); setCancelReason(""); }}
+              disabled={!!cancelling}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+            >
+              Keep reservation
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={!!cancelling}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+            >
+              {cancelling ? "Cancelling…" : "Confirm cancel"}
+            </button>
+          </>
+        }
+      >
+        {confirmCancel && (
+          <div className="px-6 py-5">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Cancel reservation for{" "}
+              <strong>{confirmCancel.lead.firstName} {confirmCancel.lead.lastName}</strong> on unit{" "}
               <strong>{confirmCancel.unit.unitNumber}</strong>?
             </p>
-            <div className="mb-4">
+            <div className="mt-4">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Reason (optional)</label>
               <input
                 type="text"
@@ -225,24 +255,9 @@ export default function ReservationsPage() {
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
               />
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmCancel(null)}
-                className="flex-1 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleCancel}
-                disabled={cancelling === confirmCancel.id}
-                className="flex-1 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 text-sm disabled:opacity-50"
-              >
-                {cancelling === confirmCancel.id ? "Cancelling…" : "Confirm Cancel"}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

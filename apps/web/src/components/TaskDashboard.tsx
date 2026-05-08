@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -47,7 +48,10 @@ export default function TaskDashboard() {
     setLoading(true);
     axios.get("/api/tasks", { params: { status: "PENDING", limit: 200 } })
       .then((r) => setTasks(r.data || []))
-      .catch(() => setTasks([]))
+      .catch((err) => {
+        setTasks([]);
+        toast.error(err?.response?.data?.error || "Failed to load tasks");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,8 +62,9 @@ export default function TaskDashboard() {
     try {
       await axios.patch(`/api/tasks/${id}/complete`);
       setTasks((prev) => prev.filter((t) => t.id !== id));
-    } catch {
-      // silent
+      toast.success("Task completed");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to complete task");
     } finally {
       setCompletingId(null);
     }
@@ -72,8 +77,9 @@ export default function TaskDashboard() {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, dueDate: new Date(newDueDate).toISOString() } : t));
       setReschedulingId(null);
       setNewDueDate("");
-    } catch {
-      // silent
+      toast.success("Task rescheduled");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to reschedule task");
     }
   };
 
@@ -91,8 +97,9 @@ export default function TaskDashboard() {
       setTasks((prev) => [...prev, res.data]);
       setAddForm({ title: "", type: "FOLLOW_UP", priority: "MEDIUM", dueDate: "", notes: "" });
       setShowAddForm(false);
-    } catch {
-      // silent
+      toast.success("Task created");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to create task");
     } finally {
       setSubmitting(false);
     }

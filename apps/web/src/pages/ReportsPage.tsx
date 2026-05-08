@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -437,9 +438,6 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
     "90+":   "bg-red-100 border-red-300 text-red-800",
   };
 
-  const overduePayments = [
-    ...collections.upcoming.next7Days.payments.filter(() => false), // upcoming is pending, not overdue
-  ];
   // The collections API returns overdue count/total but not payment rows; we'll show upcoming for the table
   const upcomingPayments7 = collections.upcoming.next7Days.payments ?? [];
 
@@ -566,7 +564,10 @@ export default function ReportsPage() {
       setAgents(ag.data);
       setInventory(inv.data);
       setCollections(col.data);
-    }).catch(console.error)
+    }).catch((err: any) => {
+      console.error(err);
+      toast.error(err?.response?.data?.error || "Failed to load reports");
+    })
     .finally(() => setLoading(false));
   }, []);
 
@@ -578,10 +579,12 @@ export default function ReportsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto scrollbar-thin" role="tablist">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
               tab === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}>
             {t.label}
