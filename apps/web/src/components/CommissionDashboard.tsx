@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const SELECT_CLASS =
+  "w-full h-10 text-sm border border-input rounded-md px-3 bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Commission {
   id: string; amount: number; rate: number; status: string;
@@ -227,27 +240,39 @@ export default function CommissionDashboard() {
                     </td>
                     <td className="px-4 py-3">
                       {tab === "PENDING_APPROVAL" ? (
-                        <button
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={approvable ? "default" : "secondary"}
                           onClick={() => handleApprove(c.id)}
                           disabled={!approvable || approvingId === c.id}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                            approvable
-                              ? "bg-primary text-white hover:bg-primary/90"
-                              : "bg-muted text-muted-foreground cursor-not-allowed"
-                          }`}
+                          className="text-xs"
                         >
                           {approvingId === c.id ? "…" : approvable ? "Approve" : "Blocked"}
-                        </button>
+                        </Button>
                       ) : tab === "APPROVED" ? (
-                        <button
-                          onClick={() => { setShowPayModal(c); setPayForm({ paidAmount: String(c.amount), paidVia: "BANK_TRANSFER", receiptKey: "" }); }}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="success"
+                          onClick={() => {
+                            setShowPayModal(c);
+                            setPayForm({
+                              paidAmount: String(c.amount),
+                              paidVia: "BANK_TRANSFER",
+                              receiptKey: "",
+                            });
+                          }}
                           disabled={payingId === c.id}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-success text-white hover:bg-success/90 transition-colors disabled:opacity-50"
+                          className="text-xs"
                         >
-                          {payingId === c.id ? "…" : "Mark Paid"}
-                        </button>
+                          {payingId === c.id ? "…" : "Mark paid"}
+                        </Button>
                       ) : (
-                        <span className="text-xs text-success font-semibold">✓ Paid</span>
+                        <span className="text-xs text-success font-semibold inline-flex items-center gap-1">
+                          <Check className="size-3.5" aria-hidden="true" />
+                          Paid
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -257,62 +282,90 @@ export default function CommissionDashboard() {
           </table>
         )}
       </div>
-      {/* Mark Paid Modal */}
-      {showPayModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Mark Commission as Paid</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{showPayModal.deal.dealNumber} · {showPayModal.brokerCompany?.name}</p>
-            </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Paid (AED)</label>
-                <input
-                  type="number"
-                  value={payForm.paidAmount}
-                  onChange={(e) => setPayForm((f) => ({ ...f, paidAmount: e.target.value }))}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-success/30"
-                />
+      <Dialog
+        open={!!showPayModal}
+        onOpenChange={(open) => {
+          if (!open && payingId === null) setShowPayModal(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          {showPayModal && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Mark commission as paid</DialogTitle>
+                <DialogDescription>
+                  {showPayModal.deal.dealNumber}
+                  {showPayModal.brokerCompany?.name ? ` · ${showPayModal.brokerCompany.name}` : ""}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                    Amount paid (AED)
+                  </label>
+                  <Input
+                    type="number"
+                    value={payForm.paidAmount}
+                    onChange={(e) =>
+                      setPayForm((f) => ({ ...f, paidAmount: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                    Payment method
+                  </label>
+                  <select
+                    aria-label="Payment method"
+                    value={payForm.paidVia}
+                    onChange={(e) =>
+                      setPayForm((f) => ({ ...f, paidVia: e.target.value }))
+                    }
+                    className={SELECT_CLASS}
+                  >
+                    {["BANK_TRANSFER", "CHEQUE", "CASH"].map((m) => (
+                      <option key={m} value={m}>
+                        {m.replace(/_/g, " ")}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                    Receipt / reference (optional)
+                  </label>
+                  <Input
+                    type="text"
+                    value={payForm.receiptKey}
+                    onChange={(e) =>
+                      setPayForm((f) => ({ ...f, receiptKey: e.target.value }))
+                    }
+                    placeholder="e.g. CHQ-2026-001"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
-                <select
-                  value={payForm.paidVia}
-                  onChange={(e) => setPayForm((f) => ({ ...f, paidVia: e.target.value }))}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-success/30"
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPayModal(null)}
+                  disabled={payingId !== null}
                 >
-                  {["BANK_TRANSFER","CHEQUE","CASH"].map((m) => (
-                    <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Receipt / Reference (optional)</label>
-                <input
-                  type="text"
-                  value={payForm.receiptKey}
-                  onChange={(e) => setPayForm((f) => ({ ...f, receiptKey: e.target.value }))}
-                  placeholder="e.g. CHQ-2026-001"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-success/30"
-                />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPayModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
-                Cancel
-              </button>
-              <button
-                onClick={handleMarkPaid}
-                disabled={payingId !== null}
-                className="flex-1 py-2.5 bg-success text-white font-semibold rounded-lg hover:bg-success/90 text-sm disabled:opacity-50"
-              >
-                {payingId ? "Saving…" : "Confirm Paid"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="success"
+                  onClick={handleMarkPaid}
+                  disabled={payingId !== null}
+                >
+                  {payingId ? "Saving…" : "Confirm paid"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       </PageContainer>
     </div>
   );

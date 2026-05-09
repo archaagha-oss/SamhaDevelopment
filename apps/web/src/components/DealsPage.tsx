@@ -10,6 +10,15 @@ import { StageBadge } from "@/components/ui/stage-badge";
 import { SkeletonTableRows } from "./Skeleton";
 import { PageContainer, PageHeader } from "./layout";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
   FilterBar,
   ActiveFilterChips,
   Pagination,
@@ -530,52 +539,58 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
         </PageContainer>
       )}
 
-      {cancelDeal && (
-        <div
-          className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4"
-          onClick={() => { if (cancelingId) return; setCancelDeal(null); setCancelReason(""); }}
-          onKeyDown={(e) => { if (e.key === "Escape" && !cancelingId) { setCancelDeal(null); setCancelReason(""); } }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cancel-deal-title"
-            className="bg-card rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-6 py-5">
-              <h3 id="cancel-deal-title" className="text-base font-semibold text-foreground">Cancel deal {cancelDeal.dealNumber}?</h3>
-              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                This will set the deal to CANCELLED. Provide a reason — it will be recorded on the deal's history.
-              </p>
-              <textarea
+      <Dialog
+        open={!!cancelDeal}
+        onOpenChange={(open) => {
+          if (!open && !cancelingId) {
+            setCancelDeal(null);
+            setCancelReason("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          {cancelDeal && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Cancel deal {cancelDeal.dealNumber}?</DialogTitle>
+                <DialogDescription>
+                  This will set the deal to CANCELLED. Provide a reason — it will be
+                  recorded on the deal's history.
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="e.g. Buyer changed mind, financing fell through, etc."
                 rows={3}
                 autoFocus
-                className="mt-3 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring resize-none"
+                className="resize-none"
               />
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border">
-              <button
-                onClick={() => { setCancelDeal(null); setCancelReason(""); }}
-                disabled={!!cancelingId}
-                className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
-              >
-                Keep deal
-              </button>
-              <button
-                onClick={performCancel}
-                disabled={!cancelReason.trim() || !!cancelingId}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-destructive hover:bg-destructive/90 text-white disabled:opacity-50"
-              >
-                {cancelingId ? "Cancelling…" : "Cancel deal"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCancelDeal(null);
+                    setCancelReason("");
+                  }}
+                  disabled={!!cancelingId}
+                >
+                  Keep deal
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={performCancel}
+                  disabled={!cancelReason.trim() || !!cancelingId}
+                >
+                  {cancelingId ? "Cancelling…" : "Cancel deal"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 import EmptyState from "./EmptyState";
 import Modal from "./Modal";
 import { SkeletonCard } from "./Skeleton";
@@ -443,12 +444,13 @@ function ProjectCard({
             <p className="text-xs text-muted-foreground mt-1">{p.location}</p>
           </div>
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted text-sm p-1.5 rounded-md transition-all shrink-0"
+            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 rounded-md transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             title="Edit project"
             aria-label={`Edit ${p.name}`}
           >
-            ✎
+            <Pencil className="size-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -547,12 +549,13 @@ function ProjectTable({
                   </td>
                   <td className="px-4 py-3">
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); onEdit(p); }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted text-sm p-1.5 rounded-md transition-colors"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       title="Edit project"
                       aria-label={`Edit ${p.name}`}
                     >
-                      ✎
+                      <Pencil className="size-4" aria-hidden="true" />
                     </button>
                   </td>
                 </tr>

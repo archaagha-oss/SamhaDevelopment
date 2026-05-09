@@ -11,6 +11,7 @@ import {
   type NotificationPrefs,
 } from "../contexts/SettingsContext";
 import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { PageHeader } from "../components/layout";
 import { DEFAULT_PRIMARY_HEX, DEFAULT_SECONDARY_HEX } from "@/constants/brand";
 
@@ -1523,6 +1524,8 @@ function ApiKeysSection() {
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [revealedKey, setRevealedKey] = useState<{ name: string; plaintext: string } | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [revoking, setRevoking] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -1538,14 +1541,18 @@ function ApiKeysSection() {
   }
   useEffect(() => { load(); }, []);
 
-  async function revoke(id: string, name: string) {
-    if (!confirm(`Revoke "${name}"? Any service using this key will start getting 401s immediately.`)) return;
+  async function performRevoke() {
+    if (!revokeTarget) return;
+    setRevoking(true);
     try {
-      await axios.post(`/api/settings/api-keys/${id}/revoke`, {});
+      await axios.post(`/api/settings/api-keys/${revokeTarget.id}/revoke`, {});
       toast.success("Key revoked");
+      setRevokeTarget(null);
       load();
     } catch (e: any) {
       toast.error(e.response?.data?.error ?? "Revoke failed");
+    } finally {
+      setRevoking(false);
     }
   }
 
@@ -1578,7 +1585,13 @@ function ApiKeysSection() {
         )}
 
         <div className="divide-y divide-border">
-          {active.map((k) => <ApiKeyRow key={k.id} k={k} onRevoke={() => revoke(k.id, k.name)} />)}
+          {active.map((k) => (
+            <ApiKeyRow
+              key={k.id}
+              k={k}
+              onRevoke={() => setRevokeTarget({ id: k.id, name: k.name })}
+            />
+          ))}
         </div>
 
         {revoked.length > 0 && (
@@ -1609,6 +1622,23 @@ function ApiKeysSection() {
         keyName={revealedKey?.name ?? ""}
         plaintext={revealedKey?.plaintext ?? ""}
         onClose={() => setRevealedKey(null)}
+      />
+
+      <ConfirmDialog
+        open={!!revokeTarget}
+        title="Revoke this API key?"
+        message={
+          revokeTarget
+            ? `Any service using "${revokeTarget.name}" will start receiving 401 Unauthorized responses immediately. This cannot be undone — issue a new key to restore access.`
+            : ""
+        }
+        confirmLabel={revoking ? "Revoking…" : "Revoke key"}
+        cancelLabel="Keep key"
+        variant="danger"
+        onConfirm={performRevoke}
+        onCancel={() => {
+          if (!revoking) setRevokeTarget(null);
+        }}
       />
     </div>
   );

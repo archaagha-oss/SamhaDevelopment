@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Ruler, Camera, MapPin, Plus, MessageCircle } from "lucide-react";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
@@ -190,8 +191,11 @@ export default function UnitDetailPage() {
                     className="w-full h-[420px] object-contain bg-muted/50"
                     loading="lazy"
                   />
-                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-900/75 text-white">
-                    {heroIsPlan ? "📐 Floor plan" : "📷 Photo"}
+                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-900/75 text-white inline-flex items-center gap-1.5">
+                    {heroIsPlan
+                      ? <Ruler className="size-3" aria-hidden="true" />
+                      : <Camera className="size-3" aria-hidden="true" />}
+                    {heroIsPlan ? "Floor plan" : "Photo"}
                   </span>
                   <span className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/85 text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     Click to enlarge
@@ -200,9 +204,10 @@ export default function UnitDetailPage() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowUploadModal(true); }}
-                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-md shadow-md"
+                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-md shadow-md inline-flex items-center gap-1.5"
                     >
-                      + Add floor plan
+                      <Plus className="size-3.5" aria-hidden="true" />
+                      Add floor plan
                     </button>
                   )}
                 </button>
@@ -210,9 +215,9 @@ export default function UnitDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(true)}
-                  className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/40 hover:bg-info-soft/40 transition-colors"
+                  className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/40 hover:bg-info-soft/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="text-4xl">📐</span>
+                  <Ruler className="size-10 text-muted-foreground" aria-hidden="true" />
                   <span className="text-sm font-semibold text-foreground">Add floor plan</span>
                   <span className="text-xs text-muted-foreground">Floor plan helps clients picture the unit fastest</span>
                 </button>
@@ -231,11 +236,13 @@ export default function UnitDetailPage() {
             {/* Quick actions */}
             <div className="flex items-center justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setShowShareModal(true)}
                 className="px-3 py-1.5 bg-success text-white text-xs font-semibold rounded-lg hover:bg-success/90 flex items-center gap-1.5"
                 title="Pre-fill a WhatsApp/Email/SMS to a lead with this unit's details"
               >
-                💬 Share with lead
+                <MessageCircle className="size-3.5" aria-hidden="true" />
+                Share with lead
               </button>
             </div>
 
@@ -619,8 +626,13 @@ export default function UnitDetailPage() {
                 alt={viewingImage.caption || "Unit image"}
                 className="w-full h-auto max-h-[85vh] object-contain"
               />
-              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
-                {viewingImage.type === "PHOTO" ? "📷 Photo" : viewingImage.type === "FLOOR_PLAN" ? "📐 Floor plan" : "📍 Floor map"}
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white inline-flex items-center gap-1.5">
+                {viewingImage.type === "PHOTO" && <Camera className="size-3" aria-hidden="true" />}
+                {viewingImage.type === "FLOOR_PLAN" && <Ruler className="size-3" aria-hidden="true" />}
+                {viewingImage.type !== "PHOTO" && viewingImage.type !== "FLOOR_PLAN" && (
+                  <MapPin className="size-3" aria-hidden="true" />
+                )}
+                {viewingImage.type === "PHOTO" ? "Photo" : viewingImage.type === "FLOOR_PLAN" ? "Floor plan" : "Floor map"}
               </span>
               <button
                 type="button"

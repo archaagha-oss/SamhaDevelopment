@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
+import { Pencil, Copy, Check, ClipboardList, Wallet, AlertTriangle, Home } from "lucide-react";
 import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
@@ -715,11 +716,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-foreground">{deal.lead.firstName} {deal.lead.lastName}</h1>
               <button
+                type="button"
                 onClick={() => navigate(`/deals/${dealId}/edit`)}
-                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors text-sm"
+                aria-label="Edit deal"
+                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="Edit deal"
               >
-                ✎
+                <Pencil className="size-4" aria-hidden="true" />
               </button>
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -729,8 +732,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 title="Copy deal ID"
               >
                 {deal.dealNumber}
-                <span className="text-foreground/80 group-hover:text-foreground transition-colors">
-                  {copiedDealId ? "✓" : "⎘"}
+                <span className="text-foreground/80 group-hover:text-foreground transition-colors inline-flex">
+                  {copiedDealId
+                    ? <Check className="size-3.5" aria-hidden="true" />
+                    : <Copy className="size-3.5" aria-hidden="true" />}
                 </span>
               </button>
               <span className="text-foreground/80">·</span>
@@ -786,26 +791,36 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 disabled={!!generatingDoc}
                 className="px-4 py-1.5 bg-accent-2 text-accent-2-foreground text-sm font-bold rounded-lg hover:bg-accent-2 disabled:opacity-50 transition-colors"
               >
-                {generatingDoc === "SPA" ? "Generating…" : "📝 Generate SPA"}
+                {generatingDoc === "SPA" ? (
+                  "Generating…"
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Pencil className="size-4" aria-hidden="true" /> Generate SPA
+                  </span>
+                )}
               </button>
             )}
             {deal.stage === "OQOOD_PENDING" && (
               <button
+                type="button"
                 onClick={() => setShowDocumentUploadModal(true)}
-                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors"
+                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors inline-flex items-center gap-1.5"
               >
-                📋 Record Oqood
+                <ClipboardList className="size-4" aria-hidden="true" />
+                Record Oqood
               </button>
             )}
             {(deal.stage === "INSTALLMENTS_ACTIVE" || deal.stage === "SPA_SIGNED") && deal.payments.length > 0 && deal.payments.some((p: any) => p.status === "PENDING" || p.status === "OVERDUE") && (
               <button
+                type="button"
                 onClick={() => {
                   const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
                   if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
                 }}
-                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
               >
-                💰 Record Payment
+                <Wallet className="size-4" aria-hidden="true" />
+                Record payment
               </button>
             )}
 
@@ -2133,37 +2148,37 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
       {/* ── Sticky bottom primary action ──────────────────────────────────── */}
       {(() => {
-        type CTA = { label: string; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
+        type CTA = { label: React.ReactNode; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
         let cta: CTA = null;
         switch (deal.stage) {
           case "RESERVATION_PENDING":
-            cta = { label: reserving ? "Reserving…" : "🔒 Record Reservation Fee", onClick: handleReserveUnit, variant: "emerald" };
+            cta = { label: reserving ? "Reserving…" : "Record reservation fee", onClick: handleReserveUnit, variant: "emerald" };
             break;
           case "RESERVATION_CONFIRMED":
             if (canGenerateSalesOffer && salesOfferDocs.length === 0) {
-              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer", onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
+              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate sales offer", onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
             }
             break;
           case "SPA_PENDING":
-            cta = { label: generatingDoc === "SPA" ? "Generating…" : "📑 Generate SPA Draft", onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
+            cta = { label: generatingDoc === "SPA" ? "Generating…" : "Generate SPA draft", onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
             break;
           case "SPA_SENT":
-            cta = { label: "✓ Mark SPA Signed", onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
+            cta = { label: <span className="inline-flex items-center gap-1.5"><Check className="size-4" aria-hidden="true" /> Mark SPA signed</span>, onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
             break;
           case "SPA_SIGNED":
-            cta = { label: "🪪 Submit Oqood Application", onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
+            cta = { label: "Submit Oqood application", onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
             break;
           case "OQOOD_PENDING":
-            cta = { label: "✓ Mark Oqood Registered", onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
+            cta = { label: <span className="inline-flex items-center gap-1.5"><Check className="size-4" aria-hidden="true" /> Mark Oqood registered</span>, onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
             break;
           case "OQOOD_REGISTERED":
-            cta = { label: "→ Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
+            cta = { label: "Begin installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
             break;
           case "INSTALLMENTS_ACTIVE":
-            cta = { label: "💰 Record Next Payment", onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
+            cta = { label: <span className="inline-flex items-center gap-1.5"><Wallet className="size-4" aria-hidden="true" /> Record next payment</span>, onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
             break;
           case "HANDOVER_PENDING":
-            cta = { label: "🏠 Mark Handed Over", onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
+            cta = { label: <span className="inline-flex items-center gap-1.5"><Home className="size-4" aria-hidden="true" /> Mark handed over</span>, onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
             break;
         }
         if (!cta) return null;
@@ -2314,7 +2329,7 @@ function ComplianceBanner({ blockers }: { blockers: Array<{
   return (
     <div className={`border rounded-xl px-4 py-3 ${tint.bg}`}>
       <div className="flex items-start gap-3">
-        <span className="text-lg">⚠️</span>
+        <AlertTriangle className="size-5 shrink-0" aria-hidden="true" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">
             {blockers.length === 1 ? "Compliance issue on this deal" : `${blockers.length} compliance issues on this deal`}

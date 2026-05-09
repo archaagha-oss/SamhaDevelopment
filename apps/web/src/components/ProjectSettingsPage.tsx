@@ -2,6 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import ProjectDocumentsTab from "./ProjectDocumentsTab";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface ProjectImage { id: string; url: string; caption?: string; sortOrder: number; }
 interface ProjectConfig {
@@ -593,53 +603,60 @@ export default function ProjectSettingsPage() {
        </div>
       </div>
 
-      {/* Delete Project Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-foreground/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-xl w-full max-w-md shadow-xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h2 className="font-bold text-destructive">Delete Project</h2>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <p className="text-sm text-foreground">
-                This will permanently delete <span className="font-semibold">{info.name}</span> and
-                all its configuration. Project images, documents, deal settings, specifications, and bank accounts
-                will be removed. This cannot be undone.
-              </p>
-              <div>
-                <label className={lbl}>
-                  Type <span className="font-mono text-destructive">{info.name}</span> to confirm
-                </label>
-                <input
-                  className={inp}
-                  value={deleteText}
-                  onChange={(e) => setDeleteText(e.target.value)}
-                  placeholder={info.name}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-border flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setShowDeleteConfirm(false); setDeleteText(""); }}
-                disabled={deletingProject}
-                className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted/80 text-sm disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteProject}
-                disabled={deleteText !== info.name || deletingProject}
-                className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {deletingProject ? "Deleting…" : "Delete Project"}
-              </button>
-            </div>
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          if (!open && !deletingProject) {
+            setShowDeleteConfirm(false);
+            setDeleteText("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete project</DialogTitle>
+            <DialogDescription>
+              This will permanently delete{" "}
+              <span className="font-semibold text-foreground">{info.name}</span> and
+              all its configuration. Project images, documents, deal settings,
+              specifications, and bank accounts will be removed. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className={lbl}>
+              Type{" "}
+              <span className="font-mono text-destructive">{info.name}</span> to confirm
+            </label>
+            <Input
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder={info.name}
+              autoFocus
+            />
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteText("");
+              }}
+              disabled={deletingProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteProject}
+              disabled={deleteText !== info.name || deletingProject}
+            >
+              {deletingProject ? "Deleting…" : "Delete project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

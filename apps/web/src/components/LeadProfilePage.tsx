@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
+import { Phone, Mail, MessageCircle, Plus } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
@@ -589,17 +590,17 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 {lead.phone && (
                   <a
                     href={`tel:${lead.phone}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    📞 Call
+                    <Phone className="size-3.5" aria-hidden="true" /> Call
                   </a>
                 )}
                 {lead.email && (
                   <a
                     href={`mailto:${lead.email}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    ✉ Email
+                    <Mail className="size-3.5" aria-hidden="true" /> Email
                   </a>
                 )}
                 {lead.phone && (
@@ -607,16 +608,17 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                     href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    💬 WhatsApp
+                    <MessageCircle className="size-3.5" aria-hidden="true" /> WhatsApp
                   </a>
                 )}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("activity"); setShowActForm(true); }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90"
                 >
-                  + Log Activity
+                  <Plus className="size-3.5" aria-hidden="true" /> Log activity
                 </button>
               </div>
             </div>
