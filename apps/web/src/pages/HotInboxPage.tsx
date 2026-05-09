@@ -29,10 +29,10 @@ interface LeadHit {
 
 const CHANNEL_ICON: Record<string, string> = { EMAIL: "✉️", WHATSAPP: "💬", SMS: "📱" };
 const STATUS_TINT: Record<string, string> = {
-  UNCLAIMED: "bg-amber-100 text-amber-800",
-  CLAIMED:   "bg-blue-100 text-blue-800",
-  RESOLVED:  "bg-emerald-100 text-emerald-800",
-  DISCARDED: "bg-slate-100 text-slate-500",
+  UNCLAIMED: "bg-warning-soft text-warning-soft-foreground",
+  CLAIMED:   "bg-info-soft text-primary",
+  RESOLVED:  "bg-success-soft text-success-soft-foreground",
+  DISCARDED: "bg-muted text-muted-foreground",
 };
 
 function timeAgo(dateStr: string): string {
@@ -63,21 +63,21 @@ export default function HotInboxPage() {
   useEffect(() => { reload(); }, [reload]);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Hot Inbox</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Hot Inbox</h1>
+          <p className="text-sm text-muted-foreground">
             Inbound messages we couldn't auto-attach. Match each to a lead so it lands on their conversation.
           </p>
         </div>
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-muted rounded-lg p-1">
           {(["UNCLAIMED", "CLAIMED", "ALL"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                filter === f ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
@@ -87,10 +87,10 @@ export default function HotInboxPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-12 text-center text-slate-400 text-sm">Loading…</div>
+        <div className="bg-card rounded-xl border border-border px-5 py-12 text-center text-muted-foreground text-sm">Loading…</div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-12 text-center">
-          <p className="text-slate-400 text-sm">
+        <div className="bg-card rounded-xl border border-border px-5 py-12 text-center">
+          <p className="text-muted-foreground text-sm">
             {filter === "UNCLAIMED" ? "🎉 Nothing waiting in the inbox." : "No messages match this filter."}
           </p>
         </div>
@@ -138,24 +138,24 @@ function TriageCard({ row, onAction }: { row: TriageRow; onAction: () => void })
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="px-4 py-3 flex items-start gap-3">
         <span className="text-xl flex-shrink-0">{CHANNEL_ICON[row.channel] ?? "📨"}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-slate-800">{row.fromAddress}</span>
-            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${STATUS_TINT[row.status] ?? "bg-slate-100 text-slate-500"}`}>
+            <span className="text-sm font-semibold text-foreground">{row.fromAddress}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${STATUS_TINT[row.status] ?? "bg-muted text-muted-foreground"}`}>
               {row.status}
             </span>
-            <span className="text-xs text-slate-400">· {timeAgo(row.receivedAt)}</span>
-            <span className="text-xs text-slate-400">· {row.channel}</span>
+            <span className="text-xs text-muted-foreground">· {timeAgo(row.receivedAt)}</span>
+            <span className="text-xs text-muted-foreground">· {row.channel}</span>
           </div>
-          {row.subject && <p className="text-sm font-medium text-slate-700 mt-0.5">{row.subject}</p>}
-          <p className={`text-sm text-slate-600 mt-1 ${expanded ? "" : "line-clamp-2"}`}>{row.body || "(no body)"}</p>
+          {row.subject && <p className="text-sm font-medium text-foreground mt-0.5">{row.subject}</p>}
+          <p className={`text-sm text-muted-foreground mt-1 ${expanded ? "" : "line-clamp-2"}`}>{row.body || "(no body)"}</p>
           {row.body && row.body.length > 160 && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs text-blue-600 hover:underline mt-1"
+              className="text-xs text-primary hover:underline mt-1"
             >
               {expanded ? "Collapse" : "Expand"}
             </button>
@@ -167,21 +167,21 @@ function TriageCard({ row, onAction }: { row: TriageRow; onAction: () => void })
               <button
                 onClick={() => setMatchOpen(true)}
                 disabled={busy}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
               >
                 Attach to lead…
               </button>
               <button
                 onClick={claim}
                 disabled={busy}
-                className="px-3 py-1.5 bg-white text-slate-600 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                className="px-3 py-1.5 bg-card text-muted-foreground text-xs font-medium border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
               >
                 Claim
               </button>
               <button
                 onClick={discard}
                 disabled={busy}
-                className="px-3 py-1.5 bg-white text-red-500 text-xs font-medium border border-red-100 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                className="px-3 py-1.5 bg-card text-destructive text-xs font-medium border border-destructive/30 rounded-lg hover:bg-destructive-soft disabled:opacity-50"
               >
                 Discard
               </button>
@@ -191,13 +191,13 @@ function TriageCard({ row, onAction }: { row: TriageRow; onAction: () => void })
             <button
               onClick={() => setMatchOpen(true)}
               disabled={busy}
-              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               Attach to lead…
             </button>
           )}
           {row.status === "RESOLVED" && row.resolvedActivityId && (
-            <span className="text-[11px] text-slate-400">→ Activity {row.resolvedActivityId.slice(0, 8)}…</span>
+            <span className="text-[11px] text-muted-foreground">→ Activity {row.resolvedActivityId.slice(0, 8)}…</span>
           )}
         </div>
       </div>
@@ -247,34 +247,34 @@ function AttachToLeadModal({ row, onClose, onAttached }: { row: TriageRow; onClo
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800 text-sm">Attach to lead</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+          <h3 className="font-semibold text-foreground text-sm">Attach to lead</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <p className="text-xs text-slate-500">
-            Inbound from <span className="font-mono text-slate-700">{row.fromAddress}</span>. Pick the lead this should attach to.
+          <p className="text-xs text-muted-foreground">
+            Inbound from <span className="font-mono text-foreground">{row.fromAddress}</span>. Pick the lead this should attach to.
           </p>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search leads by name, email, phone…"
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring"
             autoFocus
           />
-          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
-            {searching && <p className="px-3 py-4 text-xs text-slate-400 text-center">Searching…</p>}
-            {!searching && results.length === 0 && <p className="px-3 py-4 text-xs text-slate-400 text-center">No matches</p>}
+          <div className="max-h-64 overflow-y-auto divide-y divide-border border border-border rounded-lg">
+            {searching && <p className="px-3 py-4 text-xs text-muted-foreground text-center">Searching…</p>}
+            {!searching && results.length === 0 && <p className="px-3 py-4 text-xs text-muted-foreground text-center">No matches</p>}
             {!searching && results.map((lead) => (
               <button
                 key={lead.id}
                 disabled={attaching}
                 onClick={() => attach(lead.id)}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-50"
+                className="w-full text-left px-3 py-2 hover:bg-muted/50 disabled:opacity-50"
               >
-                <p className="text-sm font-medium text-slate-800">{lead.firstName} {lead.lastName}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm font-medium text-foreground">{lead.firstName} {lead.lastName}</p>
+                <p className="text-xs text-muted-foreground">
                   {lead.phone}{lead.email ? ` · ${lead.email}` : ""}
                 </p>
               </button>

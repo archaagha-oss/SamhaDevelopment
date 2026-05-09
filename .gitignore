@@ -5,6 +5,14 @@ node_modules/
 dist/
 build/
 
+# TypeScript build artifacts that should never be committed alongside source.
+# `tsc` historically emitted .js next to .tsx in apps/web/src; tsconfig now sets
+# noEmit:true, but this rule prevents recurrence on machines that bypass it.
+apps/web/src/**/*.js
+apps/web/src/**/*.js.map
+apps/web/src/**/*.d.ts
+!apps/web/src/vite-env.d.ts
+
 # Local document storage (dev) — files uploaded via documentService
 apps/api/uploads/
 

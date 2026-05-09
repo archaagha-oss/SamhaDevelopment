@@ -62,24 +62,24 @@ const VALID_DEAL_TRANSITIONS: Record<string, string[]> = {
 };
 
 const STAGE_BADGE: Record<string, string> = {
-  RESERVATION_PENDING: "bg-slate-100 text-slate-600", RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
-  SPA_PENDING: "bg-yellow-100 text-yellow-700", SPA_SENT: "bg-yellow-100 text-yellow-700",
-  SPA_SIGNED: "bg-violet-100 text-violet-700", OQOOD_PENDING: "bg-orange-100 text-orange-700",
-  OQOOD_REGISTERED: "bg-teal-100 text-teal-700", INSTALLMENTS_ACTIVE: "bg-indigo-100 text-indigo-700",
-  HANDOVER_PENDING: "bg-emerald-100 text-emerald-700", COMPLETED: "bg-emerald-100 text-emerald-700",
-  CANCELLED: "bg-red-100 text-red-700",
+  RESERVATION_PENDING: "bg-muted text-muted-foreground", RESERVATION_CONFIRMED: "bg-info-soft text-primary",
+  SPA_PENDING: "bg-warning-soft text-warning", SPA_SENT: "bg-warning-soft text-warning",
+  SPA_SIGNED: "bg-stage-active text-stage-active-foreground", OQOOD_PENDING: "bg-warning-soft text-warning",
+  OQOOD_REGISTERED: "bg-chart-5/15 text-chart-5", INSTALLMENTS_ACTIVE: "bg-stage-active text-stage-active-foreground",
+  HANDOVER_PENDING: "bg-success-soft text-success", COMPLETED: "bg-success-soft text-success",
+  CANCELLED: "bg-destructive-soft text-destructive",
 };
 const PAY_BADGE: Record<string, string> = {
-  PAID: "bg-emerald-100 text-emerald-700", PENDING: "bg-amber-100 text-amber-700",
-  PARTIAL: "bg-amber-100 text-amber-700", OVERDUE: "bg-red-100 text-red-700",
-  PDC_PENDING: "bg-orange-100 text-orange-700",
-  PDC_CLEARED: "bg-teal-100 text-teal-700", CANCELLED: "bg-slate-100 text-slate-500",
+  PAID: "bg-success-soft text-success", PENDING: "bg-warning-soft text-warning",
+  PARTIAL: "bg-warning-soft text-warning", OVERDUE: "bg-destructive-soft text-destructive",
+  PDC_PENDING: "bg-warning-soft text-warning",
+  PDC_CLEARED: "bg-chart-5/15 text-chart-5", CANCELLED: "bg-muted text-muted-foreground",
 };
 const OQOOD_COLOR: Record<string, string> = {
-  green: "text-emerald-600 bg-emerald-50 border-emerald-200",
-  yellow: "text-amber-600 bg-amber-50 border-amber-200",
-  red: "text-red-600 bg-red-50 border-red-200",
-  overdue: "text-red-700 bg-red-100 border-red-300",
+  green: "text-success bg-success-soft border-success/30",
+  yellow: "text-warning bg-warning-soft border-warning/30",
+  red: "text-destructive bg-destructive-soft border-destructive/30",
+  overdue: "text-destructive bg-destructive-soft border-destructive/30",
 };
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -640,15 +640,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
     </div>
   );
   if (error || !deal) return (
     <div className="p-6">
-      <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">← Back</button>
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <p className="text-red-600 font-medium">{error || "Deal not found"}</p>
-        <button onClick={handleBack} className="mt-3 text-sm text-red-500 underline">Go back</button>
+      <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">← Back</button>
+      <div className="bg-destructive-soft border border-destructive/30 rounded-xl p-6 text-center">
+        <p className="text-destructive font-medium">{error || "Deal not found"}</p>
+        <button onClick={handleBack} className="mt-3 text-sm text-destructive underline">Go back</button>
       </div>
     </div>
   );
@@ -679,7 +679,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const oqoodOk       = commission?.conditions?.oqoodRegisteredMet ?? (commission as any)?.oqoodMet ?? false;
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <Breadcrumbs crumbs={[
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
@@ -693,10 +693,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{deal.lead.firstName} {deal.lead.lastName}</h1>
+              <h1 className="text-xl font-bold text-foreground">{deal.lead.firstName} {deal.lead.lastName}</h1>
               <button
                 onClick={() => setShowEditModal(true)}
-                className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors text-sm"
+                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors text-sm"
                 title="Edit deal"
               >
                 ✎
@@ -705,29 +705,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <button
                 onClick={copyDealId}
-                className="flex items-center gap-1 font-mono text-xs text-slate-400 hover:text-slate-700 transition-colors group"
+                className="flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors group"
                 title="Copy deal ID"
               >
                 {deal.dealNumber}
-                <span className="text-slate-300 group-hover:text-slate-500 transition-colors">
+                <span className="text-foreground/80 group-hover:text-foreground transition-colors">
                   {copiedDealId ? "✓" : "⎘"}
                 </span>
               </button>
-              <span className="text-slate-300">·</span>
-              <span className="text-sm text-slate-500">{deal.lead.phone}</span>
-              {deal.lead.email && <span className="text-sm text-slate-400">{deal.lead.email}</span>}
+              <span className="text-foreground/80">·</span>
+              <span className="text-sm text-muted-foreground">{deal.lead.phone}</span>
+              {deal.lead.email && <span className="text-sm text-muted-foreground">{deal.lead.email}</span>}
               {deal.brokerCompany && (
                 <>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-foreground/80">·</span>
+                  <span className="text-xs bg-chart-7/15 text-chart-7 px-2 py-0.5 rounded-full font-medium">
                     {deal.brokerCompany.name}{deal.brokerAgent ? ` / ${deal.brokerAgent.name}` : ""}
                   </span>
                 </>
               )}
               {deal.paymentPlan && (
                 <>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-xs text-slate-500">Plan: <span className="font-medium text-slate-700">{deal.paymentPlan.name}</span></span>
+                  <span className="text-foreground/80">·</span>
+                  <span className="text-xs text-muted-foreground">Plan: <span className="font-medium text-foreground">{deal.paymentPlan.name}</span></span>
                 </>
               )}
             </div>
@@ -735,7 +735,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Stage badge + dynamic primary CTA + secondary actions */}
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-muted text-muted-foreground"}`}>
               {deal.stage.replace(/_/g, " ")}
             </span>
 
@@ -744,7 +744,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={handleReserveUnit}
                 disabled={reserving}
-                className="px-4 py-1.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                className="px-4 py-1.5 bg-success text-white text-sm font-bold rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors flex items-center gap-1.5"
               >
                 {reserving
                   ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
@@ -755,7 +755,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={() => handleGenerateDocument("SALES_OFFER")}
                 disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer"}
               </button>
@@ -764,7 +764,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={() => handleGenerateDocument("SPA")}
                 disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-violet-600 text-white text-sm font-bold rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-1.5 bg-accent-2 text-accent-2-foreground text-sm font-bold rounded-lg hover:bg-accent-2 disabled:opacity-50 transition-colors"
               >
                 {generatingDoc === "SPA" ? "Generating…" : "📝 Generate SPA"}
               </button>
@@ -772,7 +772,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {deal.stage === "OQOOD_PENDING" && (
               <button
                 onClick={() => setShowDocumentUploadModal(true)}
-                className="px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
+                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors"
               >
                 📋 Record Oqood
               </button>
@@ -783,7 +783,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
                   if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
                 }}
-                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors"
               >
                 💰 Record Payment
               </button>
@@ -793,7 +793,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                 <button
                   onClick={() => setShowCancelModal(true)}
-                  className="px-3 py-1 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                  className="px-3 py-1 text-xs border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft transition-colors"
                 >
                   Cancel Deal
                 </button>
@@ -801,23 +801,23 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={() => setShowStageSelect(!showStageSelect)}
                 disabled={updatingStage}
-                className="px-3 py-1 text-xs border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="px-3 py-1 text-xs border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
                 {updatingStage ? "Updating…" : "Change Stage ▾"}
               </button>
               {showStageSelect && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 w-56">
+                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-20 py-1 w-56">
                   {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED").map((s) => (
                     <button
                       key={s}
                       onClick={() => handleStageChange(s)}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors text-foreground"
                     >
                       → {s.replace(/_/g, " ")}
                     </button>
                   ))}
                   {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).length === 0 && (
-                    <p className="px-4 py-2 text-xs text-slate-400">No further transitions</p>
+                    <p className="px-4 py-2 text-xs text-muted-foreground">No further transitions</p>
                   )}
                 </div>
               )}
@@ -832,7 +832,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
 
       {/* Quick note input */}
-      <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 flex items-center gap-2">
+      <div className="bg-info-soft rounded-lg border border-primary/40 p-3 flex items-center gap-2">
         <input
           type="text"
           value={quickNote}
@@ -841,12 +841,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             if (e.key === "Enter") submitQuickNote();
           }}
           placeholder="Add a quick note and press Enter…"
-          className="flex-1 bg-white border border-blue-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="flex-1 bg-card border border-primary/40 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           onClick={submitQuickNote}
           disabled={!quickNote.trim() || addingQuickNote}
-          className="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-3 py-2 bg-primary text-white text-sm font-semibold rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {addingQuickNote ? "…" : "Add"}
         </button>
@@ -857,8 +857,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         <div className="lg:col-span-2 space-y-4">
 
           {/* ── Buyer Info ──────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Buyer</h3>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Buyer</h3>
             <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
               {[
                 ["Name",  `${deal.lead.firstName} ${deal.lead.lastName}`],
@@ -866,26 +866,26 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 ["Email", deal.lead.email ?? "—"],
               ].map(([label, value]) => (
                 <div key={label}>
-                  <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-                  <p className="font-medium text-slate-800">{value}</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+                  <p className="font-medium text-foreground">{value}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* ── Unit Selection ──────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</h3>
               {deal.stage === "RESERVATION_PENDING" ? (
                 <button
                   onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
-                  className="text-xs text-blue-600 font-semibold hover:underline"
+                  className="text-xs text-primary font-semibold hover:underline"
                 >
                   {showChangeUnit ? "Cancel" : "Change Unit"}
                 </button>
               ) : deal.unit.status === "RESERVED" ? (
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-200">
+                <span className="text-xs font-bold text-success bg-success-soft px-2.5 py-1 rounded-full border border-success/30">
                   Reserved (This Deal)
                 </span>
               ) : null}
@@ -895,43 +895,43 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <div className="flex items-center gap-4 mb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold text-slate-900">{deal.unit.unitNumber}</p>
+                  <p className="text-2xl font-bold text-foreground">{deal.unit.unitNumber}</p>
                   {deal.unit.status === "RESERVED" && (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">RESERVED</span>
+                    <span className="text-xs font-bold text-success bg-success-soft px-2 py-0.5 rounded-full border border-success/30">RESERVED</span>
                   )}
                   {deal.unit.status === "ON_HOLD" && (
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">ON HOLD</span>
+                    <span className="text-xs font-medium text-warning bg-warning-soft px-2 py-0.5 rounded-full border border-warning/30">ON HOLD</span>
                   )}
                 </div>
-                <p className="text-sm text-slate-500">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
+                <p className="text-sm text-muted-foreground">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-lg font-bold text-blue-700">AED {deal.salePrice.toLocaleString()}</p>
-                <p className="text-xs text-slate-400">Sale Price</p>
+                <p className="text-lg font-bold text-primary">AED {deal.salePrice.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Sale Price</p>
               </div>
             </div>
 
             {/* Change Unit panel */}
             {showChangeUnit && (
-              <div className="border-t border-slate-100 pt-4 space-y-3">
-                <p className="text-xs text-slate-500">Select a new unit to replace the current assignment. Only AVAILABLE units are shown.</p>
+              <div className="border-t border-border pt-4 space-y-3">
+                <p className="text-xs text-muted-foreground">Select a new unit to replace the current assignment. Only AVAILABLE units are shown.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Project</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Project</label>
                     <select
                       value={changeUnitProjectId}
                       onChange={(e) => handleChangeUnitProject(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                     >
                       <option value="">— Select project —</option>
                       {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Unit</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Unit</label>
                     {loadingChangeUnits ? (
-                      <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
-                        <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                        <div className="w-4 h-4 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
                         Loading…
                       </div>
                     ) : (
@@ -939,7 +939,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                         value={changeUnitId}
                         onChange={(e) => setChangeUnitId(e.target.value)}
                         disabled={!changeUnitProjectId || changeUnitList.length === 0}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 disabled:opacity-50"
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring disabled:opacity-50"
                       >
                         <option value="">
                           {!changeUnitProjectId ? "Select a project first" : changeUnitList.length === 0 ? "No available units" : "— Select unit —"}
@@ -956,7 +956,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <button
                   onClick={handleAssignUnit}
                   disabled={!changeUnitId || assigningUnit}
-                  className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {assigningUnit ? "Assigning…" : "Assign Unit"}
                 </button>
@@ -971,15 +971,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             const hasExisting   = salesOfferDocs.length > 0;
 
             return (
-              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+              <div className="bg-card rounded-xl border border-border p-4 space-y-4">
                 {/* Header row */}
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Documents</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Documents</h3>
                   {canGenerateSalesOffer && (
                     <button
                       onClick={() => hasExisting ? setShowRegenSalesOffer(true) : handleGenerateDocument("SALES_OFFER")}
                       disabled={!!generatingDoc}
-                      className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                     >
                       {generatingDoc === "SALES_OFFER"
                         ? "Generating…"
@@ -988,7 +988,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   )}
                   {!canGenerateSalesOffer && deal.stage !== "CANCELLED" && (
                     <span
-                      className="text-xs text-slate-400 italic cursor-default"
+                      className="text-xs text-muted-foreground italic cursor-default"
                       title="Reserve the unit first to unlock document generation"
                     >
                       Reserve unit first
@@ -998,10 +998,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
                 {/* Sales Offer version table — or actionable empty state */}
                 {hasExisting ? (
-                  <div className="rounded-lg border border-slate-100 overflow-hidden">
+                  <div className="rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-slate-50 text-left text-slate-500">
+                        <tr className="bg-muted/50 text-left text-muted-foreground">
                           <th className="px-3 py-2 font-semibold">Type</th>
                           <th className="px-3 py-2 font-semibold">Version</th>
                           <th className="px-3 py-2 font-semibold">Generated</th>
@@ -1010,32 +1010,32 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       </thead>
                       <tbody>
                         {salesOfferDocs.map((doc) => (
-                          <tr key={doc.id} className="border-t border-slate-100">
-                            <td className="px-3 py-2.5 font-medium text-slate-700">
+                          <tr key={doc.id} className="border-t border-border">
+                            <td className="px-3 py-2.5 font-medium text-foreground">
                               Sales Offer
                             </td>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-slate-700">v{doc.version}</span>
+                                <span className="font-semibold text-foreground">v{doc.version}</span>
                                 {doc.version === latestVersion && (
-                                  <span className="px-1.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Latest</span>
+                                  <span className="px-1.5 py-0.5 text-xs font-semibold bg-success-soft text-success rounded-full">Latest</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 text-slate-500">
+                            <td className="px-3 py-2.5 text-muted-foreground">
                               {fmtDate(doc.uploadedAt)}
                             </td>
                             <td className="px-3 py-2.5">
                               <div className="flex justify-end gap-1.5">
                                 <button
                                   onClick={() => window.open(`/deals/${dealId}/print/sales-offer?docId=${doc.id}`, "_blank")}
-                                  className="px-2.5 py-1 text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
+                                  className="px-2.5 py-1 text-xs font-semibold border border-primary/40 bg-info-soft text-primary rounded hover:bg-info-soft"
                                 >
                                   Preview
                                 </button>
                                 <button
                                   onClick={() => window.open(`/deals/${dealId}/print/sales-offer?docId=${doc.id}&auto=print`, "_blank")}
-                                  className="px-2.5 py-1 text-xs font-semibold bg-blue-600 text-white rounded hover:bg-blue-700"
+                                  className="px-2.5 py-1 text-xs font-semibold bg-primary text-white rounded hover:bg-primary/90"
                                 >
                                   Download
                                 </button>
@@ -1048,8 +1048,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   </div>
                 ) : (
                   /* Actionable empty state */
-                  <div className="rounded-lg bg-slate-50 border border-dashed border-slate-200 px-4 py-5 text-center">
-                    <p className="text-sm text-slate-500 mb-3">
+                  <div className="rounded-lg bg-muted/50 border border-dashed border-border px-4 py-5 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">
                       No Sales Offer generated yet.
                       {canGenerateSalesOffer
                         ? " Generate one to send to the buyer."
@@ -1059,7 +1059,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       <button
                         onClick={() => handleGenerateDocument("SALES_OFFER")}
                         disabled={!!generatingDoc}
-                        className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                       >
                         {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}
                       </button>
@@ -1068,17 +1068,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 )}
 
                 {/* Other document quick-actions */}
-                <div className="flex gap-2 flex-wrap pt-1 border-t border-slate-100">
+                <div className="flex gap-2 flex-wrap pt-1 border-t border-border">
                   <button
                     onClick={() => handleGenerateDocument("RESERVATION_FORM")}
                     disabled={!!generatingDoc}
-                    className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs font-semibold bg-neutral-700 text-white rounded-lg hover:bg-neutral-600 disabled:opacity-50"
                   >
                     {generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}
                   </button>
                   <button
                     onClick={() => setShowPurchasersModal(true)}
-                    className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                    className="px-3 py-1.5 text-xs font-semibold bg-muted text-foreground rounded-lg hover:bg-muted"
                     title="Edit joint purchasers before generating the SPA"
                   >
                     Manage Purchasers
@@ -1086,7 +1086,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <button
                     onClick={() => handleGenerateDocument("SPA")}
                     disabled={!!generatingDoc}
-                    className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs font-semibold bg-accent-2 text-accent-2-foreground rounded-lg hover:bg-accent-2 disabled:opacity-50"
                   >
                     {generatingDoc === "SPA" ? "Generating…" : "SPA Draft"}
                   </button>
@@ -1098,23 +1098,23 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {/* Regenerate Sales Offer confirmation modal */}
           {showRegenSalesOffer && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                <h3 className="text-base font-bold text-slate-800 mb-2">Generate New Version?</h3>
-                <p className="text-sm text-slate-500 mb-5">
+              <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <h3 className="text-base font-bold text-foreground mb-2">Generate New Version?</h3>
+                <p className="text-sm text-muted-foreground mb-5">
                   This will create a new version of the Sales Offer capturing the current deal
                   data. The existing version will remain accessible in the history.
                 </p>
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowRegenSalesOffer(false)}
-                    className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                    className="px-4 py-2 text-sm font-semibold text-muted-foreground bg-muted rounded-lg hover:bg-muted"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => { setShowRegenSalesOffer(false); handleGenerateDocument("SALES_OFFER"); }}
                     disabled={!!generatingDoc}
-                    className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                   >
                     {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate New Version"}
                   </button>
@@ -1124,22 +1124,22 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           )}
 
           {/* ── Notes ───────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
-              {notesSaved && <span className="text-xs text-emerald-600 font-medium">Saved ✓</span>}
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</h3>
+              {notesSaved && <span className="text-xs text-success font-medium">Saved ✓</span>}
             </div>
             <textarea
               rows={3}
               value={notesValue ?? ""}
               onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
               placeholder="Internal deal notes…"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
             />
             <button
               onClick={handleSaveNotes}
               disabled={savingNotes}
-              className="mt-2 px-4 py-1.5 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50"
+              className="mt-2 px-4 py-1.5 bg-neutral-700 text-white text-sm font-semibold rounded-lg hover:bg-muted disabled:opacity-50"
             >
               {savingNotes ? "Saving…" : "Save Notes"}
             </button>
@@ -1156,15 +1156,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
           {/* Payment schedule + Stage history tabs */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
                 {(["timeline", "payments", "activity", "tasks", "history"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                      activeTab === tab ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage History"}
@@ -1174,21 +1174,21 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               {activeTab === "payments" && (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${paidPct}%` }} />
+                    <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${paidPct}%` }} />
                     </div>
-                    <span className="text-xs font-semibold text-slate-600">{paidPct}%</span>
+                    <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
                   </div>
-                  <span className="text-xs text-slate-400">AED {totalPaid.toLocaleString()} paid</span>
+                  <span className="text-xs text-muted-foreground">AED {totalPaid.toLocaleString()} paid</span>
                   {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                     <>
                       <button
                         onClick={() => { setShowAddMilestone(true); setMilestoneForm({ label: "", amount: "", dueDate: "", notes: "" }); }}
-                        className="px-2 py-1 text-xs border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="px-2 py-1 text-xs border border-primary/40 text-primary rounded-lg hover:bg-info-soft transition-colors"
                       >+ Milestone</button>
                       <button
                         onClick={() => { setShowRestructure(true); setRestructureDays(""); setRestructureReason(""); }}
-                        className="px-2 py-1 text-xs border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors"
+                        className="px-2 py-1 text-xs border border-border text-muted-foreground rounded-lg hover:bg-muted/50 transition-colors"
                       >Restructure</button>
                     </>
                   )}
@@ -1198,14 +1198,14 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       <button
                         onClick={() => togglePauseReminders(false)}
                         disabled={pausingReminders}
-                        className="ml-auto px-2 py-1 text-xs border border-amber-300 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center gap-1"
+                        className="ml-auto px-2 py-1 text-xs border border-warning/30 text-warning bg-warning-soft rounded-lg hover:bg-warning-soft transition-colors disabled:opacity-50 flex items-center gap-1"
                       >
                         <span>⏸</span> Reminders Paused
                       </button>
                     ) : (
                       <button
                         onClick={() => setShowPauseModal(true)}
-                        className="ml-auto px-2 py-1 text-xs border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1"
+                        className="ml-auto px-2 py-1 text-xs border border-border text-muted-foreground rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-1"
                       >
                         <span>🔔</span> Pause Reminders
                       </button>
@@ -1232,8 +1232,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               deal.payments.length === 0 ? (
                 <div className="px-5 py-10 text-center">
                   <p className="text-2xl mb-2">💳</p>
-                  <p className="text-sm font-medium text-slate-600 mb-1">No payment schedule yet</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">No payment schedule yet</p>
+                  <p className="text-xs text-muted-foreground">
                     {["RESERVATION_PENDING", "RESERVATION_CONFIRMED"].includes(deal.stage)
                       ? "A payment plan will appear here once the deal advances to SPA stage."
                       : "Assign a payment plan to this deal to generate the installment schedule."}
@@ -1242,20 +1242,20 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               ) : (
                 <>
                 {/* Financial summary */}
-                <div className="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
+                <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
                   {[
-                    { label: "Total Price", value: `AED ${netPrice.toLocaleString()}`, color: "text-slate-800" },
-                    { label: "Total Paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-emerald-700" },
-                    { label: "Remaining", value: `AED ${remaining.toLocaleString()}`, color: remaining > 0 ? "text-slate-700" : "text-emerald-700" },
-                    { label: "Overdue", value: overdueAmt > 0 ? `AED ${overdueAmt.toLocaleString()}` : "—", color: overdueAmt > 0 ? "text-red-600 font-bold" : "text-slate-400" },
+                    { label: "Total Price", value: `AED ${netPrice.toLocaleString()}`, color: "text-foreground" },
+                    { label: "Total Paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-success" },
+                    { label: "Remaining", value: `AED ${remaining.toLocaleString()}`, color: remaining > 0 ? "text-foreground" : "text-success" },
+                    { label: "Overdue", value: overdueAmt > 0 ? `AED ${overdueAmt.toLocaleString()}` : "—", color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="px-4 py-3 text-center">
-                      <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
                       <p className={`text-sm font-semibold ${color}`}>{value}</p>
                     </div>
                   ))}
                 </div>
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-border">
                   {deal.payments.map((p: any) => {
                     const isOverdue = p.status === "OVERDUE";
                     const isPartial = p.status === "PARTIAL";
@@ -1265,32 +1265,32 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     const partialReceived = p.partialPayments?.reduce((s: number, pp: any) => s + pp.amount, 0) ?? 0;
                     const partialRemaining = isPartial ? (p.amount - partialReceived) : 0;
                     const auditOpen = expandedAuditId === p.id;
-                    const rowBg = isOverdue ? "bg-red-50/60" : isPartial ? "bg-amber-50/60" : p.status === "PAID" ? "bg-emerald-50/40" : "";
+                    const rowBg = isOverdue ? "bg-destructive-soft/60" : isPartial ? "bg-warning-soft/60" : p.status === "PAID" ? "bg-success-soft/40" : "";
                     return (
                       <div key={p.id} className={rowBg}>
                         <div className="flex items-center justify-between px-5 py-3">
                           <div>
-                            <p className={`text-sm font-medium ${isOverdue ? "text-red-800" : isPartial ? "text-amber-800" : "text-slate-800"}`}>{p.milestoneLabel}</p>
+                            <p className={`text-sm font-medium ${isOverdue ? "text-destructive-soft-foreground" : isPartial ? "text-warning-soft-foreground" : "text-foreground"}`}>{p.milestoneLabel}</p>
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               {p.scheduleTrigger === "ON_SPA_SIGNING" && p.status === "PENDING" ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">Due on SPA Signing</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-info-soft text-primary font-medium">Due on SPA Signing</span>
                               ) : p.scheduleTrigger === "ON_OQOOD" && p.status === "PENDING" ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Due on Oqood</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-chart-7/15 text-chart-7 font-medium">Due on Oqood</span>
                               ) : p.scheduleTrigger === "ON_HANDOVER" && p.status === "PENDING" ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Due on Handover</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-success-soft text-success font-medium">Due on Handover</span>
                               ) : (
-                                <p className="text-xs text-slate-400">Due {fmtDate(p.dueDate)}</p>
+                                <p className="text-xs text-muted-foreground">Due {fmtDate(p.dueDate)}</p>
                               )}
-                              {isOverdue && <span className="text-xs font-semibold text-red-600">{overdueDays}d overdue</span>}
-                              {isPartial && overdueDays > 0 && <span className="text-xs font-semibold text-red-600">{overdueDays}d overdue</span>}
-                              {isPartial && <span className="text-xs text-amber-700">Remaining: AED {partialRemaining.toLocaleString()}</span>}
+                              {isOverdue && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
+                              {isPartial && overdueDays > 0 && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
+                              {isPartial && <span className="text-xs text-warning">Remaining: AED {partialRemaining.toLocaleString()}</span>}
                               {p.lastReminderSentAt && (
-                                <span className="text-xs text-slate-400" title={`Reminder count: ${p.reminderCount ?? 0}`}>
+                                <span className="text-xs text-muted-foreground" title={`Reminder count: ${p.reminderCount ?? 0}`}>
                                   Reminded {timeAgo(p.lastReminderSentAt)}
                                 </span>
                               )}
                               {(p.auditLog?.length > 0) && (
-                                <button onClick={() => setExpandedAuditId(auditOpen ? null : p.id)} className="text-xs text-blue-500 hover:underline">
+                                <button onClick={() => setExpandedAuditId(auditOpen ? null : p.id)} className="text-xs text-primary hover:underline">
                                   {auditOpen ? "Hide" : `History (${p.auditLog.length})`}
                                 </button>
                               )}
@@ -1298,8 +1298,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className={`text-sm font-bold ${isOverdue ? "text-red-700" : "text-slate-800"}`}>AED {p.amount.toLocaleString()}</p>
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAY_BADGE[p.status] || "bg-slate-100 text-slate-600"}`}>
+                              <p className={`text-sm font-bold ${isOverdue ? "text-destructive" : "text-foreground"}`}>AED {p.amount.toLocaleString()}</p>
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAY_BADGE[p.status] || "bg-muted text-muted-foreground"}`}>
                                 {p.status.replace(/_/g, " ")}
                               </span>
                             </div>
@@ -1309,20 +1309,20 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                   <button
                                     onClick={() => { setShowMarkPaidModal(p.id); setPaidDate(new Date().toISOString().slice(0,10)); setPaidRef(""); setPaidNotes(""); }}
                                     disabled={payingId === p.id}
-                                    className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-semibold bg-success text-white rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50"
                                   >
                                     {payingId === p.id ? "…" : "Mark Paid"}
                                   </button>
                                   <button
                                     onClick={() => { setShowPartialModal(p.id); setPartialAmount(""); setPartialMethod("BANK_TRANSFER"); setPartialRef(""); setPartialNotes(""); }}
-                                    className="px-2.5 py-1 text-xs font-medium border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                                    className="px-2.5 py-1 text-xs font-medium border border-warning/30 text-warning rounded-lg hover:bg-warning-soft transition-colors"
                                   >
                                     Partial
                                   </button>
                                   {p.status !== "PARTIAL" && (
                                     <button
                                       onClick={() => { setShowPdcModal(p.id); setPdcForm({ pdcNumber: "", pdcBank: "", pdcDate: "" }); }}
-                                      className="px-2.5 py-1 text-xs font-medium border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
+                                      className="px-2.5 py-1 text-xs font-medium border border-warning/30 text-warning rounded-lg hover:bg-warning-soft transition-colors"
                                     >
                                       PDC
                                     </button>
@@ -1330,7 +1330,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                   {!p.isWaived && (
                                     <button
                                       onClick={() => { setWaiveId(p.id); setWaiveReason(""); }}
-                                      className="px-2.5 py-1 text-xs font-medium border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors"
+                                      className="px-2.5 py-1 text-xs font-medium border border-border text-muted-foreground rounded-lg hover:bg-muted/50 transition-colors"
                                     >
                                       Waive
                                     </button>
@@ -1341,14 +1341,14 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                   <button
                                     onClick={() => handlePdcAction(p.id, "pdc-cleared")}
                                     disabled={pdcId === p.id}
-                                    className="px-2.5 py-1 text-xs font-semibold bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-semibold bg-chart-5 text-white rounded-lg hover:bg-chart-5 transition-colors disabled:opacity-50"
                                   >
                                     Cleared
                                   </button>
                                   <button
                                     onClick={() => handlePdcAction(p.id, "pdc-bounced")}
                                     disabled={pdcId === p.id}
-                                    className="px-2.5 py-1 text-xs font-medium border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-medium border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft transition-colors disabled:opacity-50"
                                   >
                                     Bounced
                                   </button>
@@ -1372,7 +1372,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                     href={`/payments/${p.id}/print/invoice?docId=${invoiceDoc.id}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="px-2.5 py-1 text-xs font-medium border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                    className="px-2.5 py-1 text-xs font-medium border border-primary/40 text-primary rounded-lg hover:bg-info-soft transition-colors"
                                   >
                                     View Invoice
                                   </a>
@@ -1380,7 +1380,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                   <button
                                     onClick={() => generateInvoice(p.id)}
                                     disabled={generatingInvoice === p.id}
-                                    className="px-2.5 py-1 text-xs font-medium border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-medium border border-primary/40 text-primary rounded-lg hover:bg-info-soft transition-colors disabled:opacity-50"
                                   >
                                     {generatingInvoice === p.id ? "Generating…" : "Generate Invoice"}
                                   </button>
@@ -1392,7 +1392,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                     href={`/payments/${p.id}/print/receipt?docId=${receiptDoc.id}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="px-2.5 py-1 text-xs font-medium border border-emerald-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
+                                    className="px-2.5 py-1 text-xs font-medium border border-success/30 text-success rounded-lg hover:bg-success-soft transition-colors"
                                   >
                                     View Receipt
                                   </a>
@@ -1400,7 +1400,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                   <button
                                     onClick={() => generateReceipt(p.id)}
                                     disabled={generatingReceipt === p.id}
-                                    className="px-2.5 py-1 text-xs font-medium border border-emerald-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-medium border border-success/30 text-success rounded-lg hover:bg-success-soft transition-colors disabled:opacity-50"
                                   >
                                     {generatingReceipt === p.id ? "Generating…" : "Generate Receipt"}
                                   </button>
@@ -1412,15 +1412,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                         {/* Audit log accordion */}
                         {auditOpen && p.auditLog?.length > 0 && (
                           <div className="px-5 pb-3">
-                            <div className="bg-slate-50 rounded-lg border border-slate-100 divide-y divide-slate-100">
+                            <div className="bg-muted/50 rounded-lg border border-border divide-y divide-border">
                               {p.auditLog.map((log: any) => (
                                 <div key={log.id} className="px-3 py-2 flex items-start justify-between gap-3">
                                   <div>
-                                    <span className="text-xs font-semibold text-slate-700">{log.action.replace(/_/g, " ")}</span>
-                                    {log.reason && <span className="text-xs text-slate-500 ml-2">· {log.reason}</span>}
-                                    <p className="text-xs text-slate-400 mt-0.5">by {log.changedBy}</p>
+                                    <span className="text-xs font-semibold text-foreground">{log.action.replace(/_/g, " ")}</span>
+                                    {log.reason && <span className="text-xs text-muted-foreground ml-2">· {log.reason}</span>}
+                                    <p className="text-xs text-muted-foreground mt-0.5">by {log.changedBy}</p>
                                   </div>
-                                  <span className="text-xs text-slate-400 flex-shrink-0">{fmtDate(log.changedAt)}</span>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">{fmtDate(log.changedAt)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1438,7 +1438,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {activeTab === "activity" && (
               <div>
                 {/* Quick-log bar */}
-                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+                <div className="px-5 py-3 border-b border-border flex items-center gap-2 flex-wrap">
                   {([
                     { type: "NOTE",    label: "Note",    icon: "📝" },
                     { type: "CALL",    label: "Call",    icon: "📞" },
@@ -1450,8 +1450,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       onClick={() => { setActivityForm((f) => ({ ...f, type })); setShowActivityForm(true); }}
                       className={`px-3 py-1.5 text-xs font-semibold border rounded-lg flex items-center gap-1.5 transition-colors ${
                         showActivityForm && activityForm.type === type
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          ? "bg-primary text-white border-primary/40"
+                          : "border-border text-muted-foreground hover:bg-muted/50"
                       }`}
                     >
                       <span>{icon}</span>{label}
@@ -1460,19 +1460,19 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   {showActivityForm && (
                     <button
                       onClick={() => setShowActivityForm(false)}
-                      className="ml-auto text-xs text-slate-400 hover:text-slate-600"
+                      className="ml-auto text-xs text-muted-foreground hover:text-foreground"
                     >✕ Cancel</button>
                   )}
                 </div>
 
                 {/* Inline log form */}
                 {showActivityForm && (
-                  <div className="px-5 py-4 bg-blue-50 border-b border-blue-100 space-y-3">
+                  <div className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
                     <div className="flex gap-2 flex-wrap">
                       {(["NOTE","CALL","WHATSAPP","EMAIL","MEETING","SITE_VISIT"] as const).map((t) => (
                         <button key={t} onClick={() => setActivityForm((f) => ({ ...f, type: t }))}
                           className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                            activityForm.type === t ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 bg-white text-slate-600 hover:border-blue-400"
+                            activityForm.type === t ? "bg-primary text-white border-primary/40" : "border-border bg-card text-muted-foreground hover:border-primary/40"
                           }`}
                         >{t.replace("_", " ")}</button>
                       ))}
@@ -1482,26 +1482,26 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       onChange={(e) => setActivityForm((f) => ({ ...f, summary: e.target.value }))}
                       placeholder="Summary *"
                       rows={2}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 resize-none"
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-none"
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Activity Date</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Activity Date</label>
                         <input type="datetime-local" value={activityForm.activityDate}
                           onChange={(e) => setActivityForm((f) => ({ ...f, activityDate: e.target.value }))}
-                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400" />
+                          className="w-full border border-border rounded-lg px-2 py-1.5 text-xs bg-card focus:outline-none focus:border-ring" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Follow-up Date</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Follow-up Date</label>
                         <input type="datetime-local" value={activityForm.followUpDate}
                           onChange={(e) => setActivityForm((f) => ({ ...f, followUpDate: e.target.value }))}
-                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400" />
+                          className="w-full border border-border rounded-lg px-2 py-1.5 text-xs bg-card focus:outline-none focus:border-ring" />
                       </div>
                     </div>
                     <button
                       onClick={submitActivity}
                       disabled={!activityForm.summary.trim() || submittingActivity}
-                      className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      className="px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                     >
                       {submittingActivity ? "Saving…" : "Save"}
                     </button>
@@ -1511,7 +1511,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 {/* Timeline */}
                 {activityLoading ? (
                   <div className="flex items-center justify-center h-24">
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
                   <ConversationThread
@@ -1540,9 +1540,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
             {/* Tasks tab */}
             {activeTab === "tasks" && (
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-border">
                 <div className="px-5 py-3">
-                  <button onClick={() => setShowAddTaskForm((v) => !v)} className="text-xs font-semibold text-blue-600 hover:underline">
+                  <button onClick={() => setShowAddTaskForm((v) => !v)} className="text-xs font-semibold text-primary hover:underline">
                     {showAddTaskForm ? "− Cancel" : "+ Add Task"}
                   </button>
                   {showAddTaskForm && (
@@ -1550,23 +1550,23 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       <input type="text" value={addTaskForm.title}
                         onChange={(e) => setAddTaskForm((f) => ({ ...f, title: e.target.value }))}
                         placeholder="Task title *"
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                       />
                       <div className="grid grid-cols-3 gap-2">
                         <select value={addTaskForm.type} onChange={(e) => setAddTaskForm((f) => ({ ...f, type: e.target.value }))}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-slate-50 focus:outline-none">
+                          className="border border-border rounded-lg px-2 py-1.5 text-sm bg-muted/50 focus:outline-none">
                           {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT"].map((t) => <option key={t} value={t}>{t.replace(/_/g," ")}</option>)}
                         </select>
                         <select value={addTaskForm.priority} onChange={(e) => setAddTaskForm((f) => ({ ...f, priority: e.target.value }))}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-slate-50 focus:outline-none">
+                          className="border border-border rounded-lg px-2 py-1.5 text-sm bg-muted/50 focus:outline-none">
                           {["LOW","MEDIUM","HIGH","URGENT"].map((p) => <option key={p} value={p}>{p}</option>)}
                         </select>
                         <input type="datetime-local" value={addTaskForm.dueDate}
                           onChange={(e) => setAddTaskForm((f) => ({ ...f, dueDate: e.target.value }))}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-slate-50 focus:outline-none" />
+                          className="border border-border rounded-lg px-2 py-1.5 text-sm bg-muted/50 focus:outline-none" />
                       </div>
                       <button onClick={submitDealTask} disabled={!addTaskForm.title.trim() || !addTaskForm.dueDate || addingTask}
-                        className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        className="px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
                         {addingTask ? "Creating…" : "Create Task"}
                       </button>
                     </div>
@@ -1574,21 +1574,21 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </div>
                 {tasksLoading ? (
                   <div className="flex items-center justify-center h-24">
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : dealTasks.length === 0 ? (
-                  <p className="px-5 py-8 text-center text-sm text-slate-400">No open tasks</p>
+                  <p className="px-5 py-8 text-center text-sm text-muted-foreground">No open tasks</p>
                 ) : dealTasks.map((t: any) => {
                   const isOverdue = new Date(t.dueDate) < new Date();
                   return (
-                    <div key={t.id} className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50/60 group">
+                    <div key={t.id} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/60 group">
                       <button onClick={() => completeDealTask(t.id)} disabled={completingTaskId === t.id}
-                        className="w-5 h-5 rounded-full border-2 border-slate-300 hover:border-blue-500 flex-shrink-0 mt-0.5 transition-colors" />
+                        className="w-5 h-5 rounded-full border-2 border-border hover:border-primary/40 flex-shrink-0 mt-0.5 transition-colors" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800">{t.title}</p>
+                        <p className="text-sm font-medium text-foreground">{t.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{t.type.replace(/_/g," ")}</span>
-                          <span className={`text-xs font-semibold ${isOverdue ? "text-red-500" : "text-slate-400"}`}>
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t.type.replace(/_/g," ")}</span>
+                          <span className={`text-xs font-semibold ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
                             {isOverdue ? "Overdue · " : ""}{fmtDate(t.dueDate)}
                           </span>
                         </div>
@@ -1602,22 +1602,22 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {/* Stage history tab */}
             {activeTab === "history" && (
               !deal.stageHistory || deal.stageHistory.length === 0 ? (
-                <p className="px-5 py-8 text-center text-sm text-slate-400">No stage history yet</p>
+                <p className="px-5 py-8 text-center text-sm text-muted-foreground">No stage history yet</p>
               ) : (
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-border">
                   {deal.stageHistory.map((h) => (
                     <div key={h.id} className="px-5 py-3.5">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <div className="flex items-center gap-2 text-sm flex-wrap">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${STAGE_BADGE[h.oldStage] || "bg-slate-100 text-slate-600"}`}>{h.oldStage.replace(/_/g," ")}</span>
-                          <span className="text-slate-400 text-xs">→</span>
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${STAGE_BADGE[h.newStage] || "bg-slate-100 text-slate-600"}`}>{h.newStage.replace(/_/g," ")}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${STAGE_BADGE[h.oldStage] || "bg-muted text-muted-foreground"}`}>{h.oldStage.replace(/_/g," ")}</span>
+                          <span className="text-muted-foreground text-xs">→</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${STAGE_BADGE[h.newStage] || "bg-muted text-muted-foreground"}`}>{h.newStage.replace(/_/g," ")}</span>
                         </div>
-                        <span className="text-xs text-slate-400 flex-shrink-0">{fmtDate(h.changedAt)}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{fmtDate(h.changedAt)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">{h.changedBy === "system" ? "System" : h.changedBy}</span>
-                        {h.reason && <span className="text-xs text-slate-400 italic">· {h.reason}</span>}
+                        <span className="text-xs text-muted-foreground">{h.changedBy === "system" ? "System" : h.changedBy}</span>
+                        {h.reason && <span className="text-xs text-muted-foreground italic">· {h.reason}</span>}
                       </div>
                     </div>
                   ))}
@@ -1634,12 +1634,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           <DealStepper current={deal.stage} cancelled={deal.stage === "CANCELLED"} />
 
           {/* ── Deal Status ─────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Deal Status</h3>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Deal Status</h3>
 
             {/* Current stage */}
             <div className="flex items-center gap-2 mb-4">
-              <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${STAGE_BADGE[deal.stage] || "bg-slate-100 text-slate-600"}`}>
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${STAGE_BADGE[deal.stage] || "bg-muted text-muted-foreground"}`}>
                 {deal.stage.replace(/_/g, " ")}
               </span>
             </div>
@@ -1649,7 +1649,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={handleReserveUnit}
                 disabled={reserving}
-                className="w-full py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors mb-3 flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-success text-white text-sm font-bold rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors mb-3 flex items-center justify-center gap-2"
               >
                 {reserving ? (
                   <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
@@ -1657,7 +1657,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               </button>
             )}
             {deal.stage === "RESERVATION_CONFIRMED" && (
-              <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 mb-3">
+              <div className="flex items-center gap-2 text-success bg-success-soft border border-success/30 rounded-lg px-3 py-2.5 mb-3">
                 <span className="text-base">✓</span>
                 <span className="text-sm font-bold">Unit Reserved</span>
               </div>
@@ -1666,13 +1666,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {/* Valid next stages */}
             {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
               <div className="space-y-1.5">
-                <p className="text-xs text-slate-400 font-medium mb-2">Next stage:</p>
+                <p className="text-xs text-muted-foreground font-medium mb-2">Next stage:</p>
                 {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED").map((s) => (
                   <button
                     key={s}
                     onClick={() => handleStageChange(s)}
                     disabled={updatingStage}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm border border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 transition-all"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm border border-border text-muted-foreground hover:border-primary/40 hover:bg-info-soft hover:text-primary disabled:opacity-50 transition-all"
                   >
                     → {s.replace(/_/g, " ")}
                   </button>
@@ -1710,33 +1710,33 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Commission */}
           {commission && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Commission</h3>
-              <p className="text-2xl font-bold text-slate-900 mb-0.5">AED {commission.amount.toLocaleString()}</p>
-              <p className="text-xs text-slate-400 mb-3">{commission.rate}% rate</p>
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Commission</h3>
+              <p className="text-2xl font-bold text-foreground mb-0.5">AED {commission.amount.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mb-3">{commission.rate}% rate</p>
 
               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-4 ${
-                commission.status === "PAID"             ? "bg-emerald-100 text-emerald-700" :
-                commission.status === "APPROVED"         ? "bg-blue-100 text-blue-700" :
-                commission.status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-700" :
-                "bg-slate-100 text-slate-600"
+                commission.status === "PAID"             ? "bg-success-soft text-success" :
+                commission.status === "APPROVED"         ? "bg-info-soft text-primary" :
+                commission.status === "PENDING_APPROVAL" ? "bg-warning-soft text-warning" :
+                "bg-muted text-muted-foreground"
               }`}>
                 {commission.status.replace(/_/g, " ")}
               </div>
 
-              <div className="space-y-2 border-t border-slate-100 pt-3">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Unlock Conditions</p>
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Unlock Conditions</p>
                 {[
                   { label: "SPA Signed",       met: spaOk },
                   { label: "Oqood Registered", met: oqoodOk },
                 ].map(({ label, met }) => (
-                  <div key={label} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${met ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                  <div key={label} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${met ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
                     <span className="font-bold">{met ? "✓" : "✗"}</span>
                     <span className="font-medium">{label}</span>
                   </div>
                 ))}
                 {spaOk && oqoodOk && (
-                  <p className="text-xs text-center text-emerald-600 font-semibold mt-1">All conditions met ✓</p>
+                  <p className="text-xs text-center text-success font-semibold mt-1">All conditions met ✓</p>
                 )}
               </div>
             </div>
@@ -1744,13 +1744,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Next Stage Requirements */}
           {stageRequirements.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Next Stage Checklist</h3>
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Next Stage Checklist</h3>
               <div className="space-y-2">
                 {stageRequirements.map((req) => (
                   <div
                     key={req.documentType}
-                    className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${req.uploaded ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                    className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${req.uploaded ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}
                   >
                     <span className="font-bold text-base leading-none">{req.uploaded ? "✓" : "○"}</span>
                     <span className="font-medium">{req.label}</span>
@@ -1758,26 +1758,26 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 ))}
               </div>
               {stageRequirements.every((r) => r.uploaded) ? (
-                <p className="text-xs text-center text-emerald-600 font-semibold mt-2">Ready to advance ✓</p>
+                <p className="text-xs text-center text-success font-semibold mt-2">Ready to advance ✓</p>
               ) : (
-                <p className="text-xs text-center text-amber-600 mt-2">Upload missing documents to advance</p>
+                <p className="text-xs text-center text-warning mt-2">Upload missing documents to advance</p>
               )}
             </div>
           )}
 
           {/* Broker */}
           {deal.brokerCompany && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Broker</h3>
-              <p className="text-sm font-semibold text-slate-800">{deal.brokerCompany.name}</p>
-              {deal.brokerAgent && <p className="text-xs text-slate-500 mt-0.5">{deal.brokerAgent.name}</p>}
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Broker</h3>
+              <p className="text-sm font-semibold text-foreground">{deal.brokerCompany.name}</p>
+              {deal.brokerAgent && <p className="text-xs text-muted-foreground mt-0.5">{deal.brokerAgent.name}</p>}
             </div>
           )}
 
           {/* Reservation date */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Reserved On</h3>
-            <p className="text-base font-semibold text-slate-800">{fmtDate(deal.reservationDate)}</p>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Reserved On</h3>
+            <p className="text-base font-semibold text-foreground">{fmtDate(deal.reservationDate)}</p>
           </div>
         </div>
       </div>
@@ -1785,42 +1785,42 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* ── Reserve Unit Confirmation Modal ───────────────────────────────────── */}
       {showReserveConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-5 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-lg">Confirm Reservation</h3>
+          <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
+            <div className="px-6 py-5 border-b border-border">
+              <h3 className="font-bold text-foreground text-lg">Confirm Reservation</h3>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-sm text-amber-800 font-medium">
+              <div className="bg-warning-soft border border-warning/30 rounded-xl p-4">
+                <p className="text-sm text-warning-soft-foreground font-medium">
                   This will lock Unit <span className="font-bold">{deal?.unit.unitNumber}</span> and prevent any other deal from booking it.
                 </p>
-                <p className="text-xs text-amber-600 mt-1.5">This action cannot be undone by agents. Only an Admin can release a reserved unit.</p>
+                <p className="text-xs text-warning mt-1.5">This action cannot be undone by agents. Only an Admin can release a reserved unit.</p>
               </div>
-              <div className="text-sm text-slate-600 space-y-1">
+              <div className="text-sm text-muted-foreground space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Buyer</span>
+                  <span className="text-muted-foreground">Buyer</span>
                   <span className="font-medium">{deal?.lead.firstName} {deal?.lead.lastName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Unit</span>
+                  <span className="text-muted-foreground">Unit</span>
                   <span className="font-medium">{deal?.unit.unitNumber} · {deal?.unit.type.replace(/_/g, " ")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Price</span>
-                  <span className="font-bold text-blue-700">AED {deal?.salePrice.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Price</span>
+                  <span className="font-bold text-primary">AED {deal?.salePrice.toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={confirmReserveUnit}
                   disabled={reserving}
-                  className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-2.5 bg-success text-white text-sm font-bold rounded-xl hover:bg-success/90 disabled:opacity-50 transition-colors"
                 >
                   {reserving ? "Reserving…" : "Confirm — Reserve Unit"}
                 </button>
                 <button
                   onClick={() => setShowReserveConfirm(false)}
-                  className="px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                  className="px-5 py-2.5 bg-muted text-foreground text-sm font-semibold rounded-xl hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
@@ -1833,31 +1833,31 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Cancel Deal Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Cancel Deal</h3>
-              <p className="text-xs text-slate-400 mt-0.5">This will release the unit back to available.</p>
+          <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Cancel Deal</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reason *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
                 <textarea
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="e.g. Client withdrew, financing fell through…"
                   rows={3}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-red-400 resize-none"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-destructive/30 resize-none"
                 />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => { setShowCancelModal(false); setCancelReason(""); }} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
+              <button onClick={() => { setShowCancelModal(false); setCancelReason(""); }} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
                 Keep Deal
               </button>
               <button
                 onClick={handleCancelDeal}
                 disabled={!cancelReason.trim() || cancelling}
-                className="flex-1 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
               >
                 {cancelling ? "Cancelling…" : "Cancel Deal"}
               </button>
@@ -1869,17 +1869,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Mark Paid Modal */}
       {showMarkPaidModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Mark Payment as Paid</h3>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Mark Payment as Paid</h3>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Method</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
                 <select
                   value={paidMethod}
                   onChange={(e) => setPaidMethod(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 >
                   {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
                     <option key={m} value={m}>{m.replace(/_/g," ")}</option>
@@ -1887,43 +1887,43 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Date</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Date</label>
                 <input
                   type="date"
                   value={paidDate}
                   onChange={(e) => setPaidDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reference / Receipt No.</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
                 <input
                   type="text"
                   value={paidRef}
                   onChange={(e) => setPaidRef(e.target.value)}
                   placeholder="e.g. TXN-12345"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
                 <textarea
                   value={paidNotes}
                   onChange={(e) => setPaidNotes(e.target.value)}
                   placeholder="Optional notes…"
                   rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
                 />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowMarkPaidModal(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
+              <button onClick={() => setShowMarkPaidModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
                 Cancel
               </button>
               <button
                 onClick={confirmMarkPaid}
                 disabled={payingId !== null}
-                className="flex-1 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-success text-white font-semibold rounded-lg hover:bg-success/90 text-sm disabled:opacity-50"
               >
                 {payingId ? "Saving…" : "Confirm Paid"}
               </button>
@@ -1935,29 +1935,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Partial Payment Modal */}
       {showPartialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Record Partial Payment</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Enter the amount received so far.</p>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Record Partial Payment</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Enter the amount received so far.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Amount Received (AED) *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
                 <input
                   type="number"
                   min="1"
                   value={partialAmount}
                   onChange={(e) => setPartialAmount(e.target.value)}
                   placeholder="e.g. 50000"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Method</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
                 <select
                   value={partialMethod}
                   onChange={(e) => setPartialMethod(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 >
                   {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
                     <option key={m} value={m}>{m.replace(/_/g," ")}</option>
@@ -1965,34 +1965,34 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reference / Receipt No.</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
                 <input
                   type="text"
                   value={partialRef}
                   onChange={(e) => setPartialRef(e.target.value)}
                   placeholder="e.g. TXN-12345"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
                 <textarea
                   value={partialNotes}
                   onChange={(e) => setPartialNotes(e.target.value)}
                   placeholder="Optional notes…"
                   rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
                 />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPartialModal(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
+              <button onClick={() => setShowPartialModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
                 Cancel
               </button>
               <button
                 onClick={confirmPartial}
                 disabled={submittingPartial || !partialAmount || parseFloat(partialAmount) <= 0}
-                className="flex-1 py-2.5 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-warning text-warning-foreground font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50"
               >
                 {submittingPartial ? "Saving…" : "Record Partial"}
               </button>
@@ -2015,30 +2015,30 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* PDC Modal */}
       {showPdcModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Register Post-Dated Cheque</h3>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Register Post-Dated Cheque</h3>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Cheque Number</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Number</label>
                 <input type="text" value={pdcForm.pdcNumber} onChange={(e) => setPdcForm((f) => ({...f, pdcNumber: e.target.value}))}
-                  placeholder="e.g. 001234" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  placeholder="e.g. 001234" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Bank</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Bank</label>
                 <input type="text" value={pdcForm.pdcBank} onChange={(e) => setPdcForm((f) => ({...f, pdcBank: e.target.value}))}
-                  placeholder="e.g. Emirates NBD" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  placeholder="e.g. Emirates NBD" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Cheque Date</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Date</label>
                 <input type="date" value={pdcForm.pdcDate} onChange={(e) => setPdcForm((f) => ({...f, pdcDate: e.target.value}))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPdcModal(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
-              <button onClick={confirmPdc} disabled={pdcId !== null} className="flex-1 py-2.5 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 text-sm disabled:opacity-50">
+              <button onClick={() => setShowPdcModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+              <button onClick={confirmPdc} disabled={pdcId !== null} className="flex-1 py-2.5 bg-warning text-white font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50">
                 {pdcId ? "Saving…" : "Register PDC"}
               </button>
             </div>
@@ -2049,21 +2049,21 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Waive Payment Modal */}
       {waiveId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Waive Payment</h3>
-              <p className="text-xs text-slate-400 mt-0.5">This removes the payment from collection obligations.</p>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Waive Payment</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">This removes the payment from collection obligations.</p>
             </div>
             <div className="px-6 py-4">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Reason *</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
               <textarea value={waiveReason} onChange={(e) => setWaiveReason(e.target.value)}
                 placeholder="e.g. Developer incentive, agreed waiver…"
-                rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none" />
+                rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setWaiveId(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+              <button onClick={() => setWaiveId(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               <button onClick={confirmWaive} disabled={submittingWaive || !waiveReason.trim()}
-                className="flex-1 py-2.5 bg-slate-700 text-white font-semibold rounded-lg hover:bg-slate-900 text-sm disabled:opacity-50">
+                className="flex-1 py-2.5 bg-neutral-700 text-white font-semibold rounded-lg hover:bg-neutral-600 text-sm disabled:opacity-50">
                 {submittingWaive ? "Waiving…" : "Waive Payment"}
               </button>
             </div>
@@ -2074,36 +2074,36 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Add Custom Milestone Modal */}
       {showAddMilestone && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Add Custom Milestone</h3>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Add Custom Milestone</h3>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Label *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Label *</label>
                 <input type="text" value={milestoneForm.label} onChange={(e) => setMilestoneForm((f) => ({...f, label: e.target.value}))}
-                  placeholder="e.g. Handover Balance" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  placeholder="e.g. Handover Balance" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Amount (AED) *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (AED) *</label>
                 <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
-                  placeholder="e.g. 50000" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Due Date *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
                 <input type="date" value={milestoneForm.dueDate} onChange={(e) => setMilestoneForm((f) => ({...f, dueDate: e.target.value}))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
                 <input type="text" value={milestoneForm.notes} onChange={(e) => setMilestoneForm((f) => ({...f, notes: e.target.value}))}
-                  placeholder="Optional" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  placeholder="Optional" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowAddMilestone(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+              <button onClick={() => setShowAddMilestone(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               <button onClick={confirmAddMilestone} disabled={addingMilestone || !milestoneForm.label || !milestoneForm.amount || !milestoneForm.dueDate}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
+                className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
                 {addingMilestone ? "Adding…" : "Add Milestone"}
               </button>
             </div>
@@ -2147,11 +2147,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             break;
         }
         if (!cta) return null;
-        const tone = cta.variant === "emerald" ? "bg-emerald-600 hover:bg-emerald-700" : cta.variant === "amber" ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700";
+        const tone = cta.variant === "emerald" ? "bg-success hover:bg-success/90" : cta.variant === "amber" ? "bg-warning hover:bg-warning/90" : "bg-primary hover:bg-primary/90";
         return (
-          <div className="sticky bottom-0 left-0 right-0 -mx-6 mt-2 px-6 py-3 bg-white border-t border-slate-200 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 z-30">
-            <div className="text-xs text-slate-500">
-              <span className="font-semibold text-slate-700">Next step:</span> {deal.stage.replace(/_/g, " ")}
+          <div className="sticky bottom-0 left-0 right-0 -mx-6 mt-2 px-6 py-3 bg-card border-t border-border shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 z-30">
+            <div className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Next step:</span> {deal.stage.replace(/_/g, " ")}
             </div>
             <button
               onClick={cta.onClick}
@@ -2167,29 +2167,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Restructure Schedule Modal */}
       {showRestructure && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Restructure Payment Schedule</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Shifts all future PENDING payments by N days.</p>
+          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Restructure Payment Schedule</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Shifts all future PENDING payments by N days.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Shift by (days) *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Shift by (days) *</label>
                 <input type="number" value={restructureDays} onChange={(e) => setRestructureDays(e.target.value)}
                   placeholder="e.g. 30 (positive = later, negative = earlier)"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reason *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
                 <textarea value={restructureReason} onChange={(e) => setRestructureReason(e.target.value)}
                   placeholder="e.g. Construction delay, handover pushed to Q3 2026…"
-                  rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none" />
+                  rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
               </div>
             </div>
             <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowRestructure(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+              <button onClick={() => setShowRestructure(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               <button onClick={confirmRestructure} disabled={submittingRestructure || !restructureDays || !restructureReason.trim()}
-                className="flex-1 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 text-sm disabled:opacity-50">
+                className="flex-1 py-2.5 bg-accent-2 text-accent-2-foreground font-semibold rounded-lg hover:bg-accent-2 text-sm disabled:opacity-50">
                 {submittingRestructure ? "Restructuring…" : "Apply Shift"}
               </button>
             </div>
@@ -2224,29 +2224,29 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       {/* Pause Reminders Modal */}
       {showPauseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="px-6 py-5 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Pause Payment Reminders</h3>
-              <p className="text-xs text-slate-400 mt-1">No automated emails will be sent while paused.</p>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 py-5 border-b border-border">
+              <h3 className="text-base font-bold text-foreground">Pause Payment Reminders</h3>
+              <p className="text-xs text-muted-foreground mt-1">No automated emails will be sent while paused.</p>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reason <span className="text-slate-400">(optional)</span></label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason <span className="text-muted-foreground">(optional)</span></label>
                 <textarea
                   value={pauseReason}
                   onChange={(e) => setPauseReason(e.target.value)}
                   placeholder="e.g. Buyer requested delay"
                   rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring resize-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Resume on <span className="text-slate-400">(optional)</span></label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Resume on <span className="text-muted-foreground">(optional)</span></label>
                 <input
                   type="date"
                   value={pauseUntil}
                   onChange={(e) => setPauseUntil(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
                 />
               </div>
             </div>
@@ -2254,13 +2254,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <button
                 onClick={() => togglePauseReminders(true)}
                 disabled={pausingReminders}
-                className="flex-1 px-4 py-2.5 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 bg-warning text-warning-foreground text-sm font-semibold rounded-xl hover:bg-warning/90 transition-colors disabled:opacity-50"
               >
                 {pausingReminders ? "Pausing…" : "Pause Reminders"}
               </button>
               <button
                 onClick={() => setShowPauseModal(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-border text-foreground text-sm font-semibold rounded-xl hover:bg-muted/50 transition-colors"
               >
                 Cancel
               </button>
@@ -2284,9 +2284,9 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const SEVERITY_TINT_BANNER: Record<string, { bg: string; pill: string }> = {
-  EXPIRED:  { bg: "bg-red-50 border-red-200",       pill: "bg-red-600 text-white" },
-  CRITICAL: { bg: "bg-orange-50 border-orange-200", pill: "bg-orange-500 text-white" },
-  WARNING:  { bg: "bg-amber-50 border-amber-200",   pill: "bg-amber-500 text-white" },
+  EXPIRED:  { bg: "bg-destructive-soft border-destructive/30",       pill: "bg-destructive text-white" },
+  CRITICAL: { bg: "bg-warning-soft border-warning/30", pill: "bg-warning text-white" },
+  WARNING:  { bg: "bg-warning-soft border-warning/30",   pill: "bg-warning text-white" },
 };
 
 function ComplianceBanner({ blockers }: { blockers: Array<{
@@ -2303,25 +2303,25 @@ function ComplianceBanner({ blockers }: { blockers: Array<{
       <div className="flex items-start gap-3">
         <span className="text-lg">⚠️</span>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-slate-800">
+          <p className="text-sm font-semibold text-foreground">
             {blockers.length === 1 ? "Compliance issue on this deal" : `${blockers.length} compliance issues on this deal`}
           </p>
           <ul className="mt-1 space-y-0.5">
             {blockers.slice(0, 4).map((b, i) => (
-              <li key={i} className="text-xs text-slate-700 flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${SEVERITY_TINT_BANNER[b.severity]?.pill ?? "bg-slate-200 text-slate-700"}`}>
+              <li key={i} className="text-xs text-foreground flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${SEVERITY_TINT_BANNER[b.severity]?.pill ?? "bg-neutral-200 text-foreground"}`}>
                   {b.severity}
                 </span>
                 <span>{KIND_LABEL[b.kind] ?? b.kind}</span>
-                <span className="text-slate-500">— {b.ownerName} ({days(b.daysToExpiry)})</span>
+                <span className="text-muted-foreground">— {b.ownerName} ({days(b.daysToExpiry)})</span>
               </li>
             ))}
             {blockers.length > 4 && (
-              <li className="text-xs text-slate-500">+ {blockers.length - 4} more</li>
+              <li className="text-xs text-muted-foreground">+ {blockers.length - 4} more</li>
             )}
           </ul>
         </div>
-        <a href="/compliance" className="text-xs text-blue-600 hover:underline flex-shrink-0 mt-0.5">Open radar →</a>
+        <a href="/compliance" className="text-xs text-primary hover:underline flex-shrink-0 mt-0.5">Open radar →</a>
       </div>
     </div>
   );

@@ -25,8 +25,8 @@ interface Props {
 interface BrokerCompany { id: string; name: string; agents: { id: string; name: string }[]; }
 interface Agent { id: string; name: string; }
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white disabled:opacity-50";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card disabled:opacity-50";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 const LOCKED_STAGES = ["SPA_SIGNED", "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED", "CANCELLED"];
 
@@ -53,7 +53,7 @@ export default function DealEditModal({ deal, onClose, onSaved }: Props) {
 
   useEffect(() => {
     axios.get("/api/brokers/companies").then((r) => setBrokerCompanies(r.data || [])).catch(() => {});
-    axios.get("/api/users").then((r) => setAgents((r.data || []).filter((u: any) => u.role === "SALES_AGENT" || u.role === "OPERATIONS"))).catch(() => {});
+    axios.get("/api/users").then((r) => setAgents((r.data || []).filter((u: any) => u.status === "ACTIVE" && u.role !== "VIEWER"))).catch(() => {});
   }, []);
 
   const selectedCompany = brokerCompanies.find((c) => c.id === form.brokerCompanyId);
@@ -88,15 +88,15 @@ export default function DealEditModal({ deal, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-          <h2 className="font-bold text-slate-900 text-lg">Edit Deal</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+      <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="font-bold text-foreground text-lg">Edit deal</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
         </div>
 
         <form id="deal-edit-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {isLocked && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            <div className="bg-warning-soft border border-warning/30 rounded-lg px-3 py-2 text-xs text-warning">
               Deal is past SPA Signing stage. Sale price and discount are locked. You can still update broker, agent, and fee settings.
             </div>
           )}
@@ -126,9 +126,9 @@ export default function DealEditModal({ deal, onClose, onSaved }: Props) {
           </div>
 
           {!isLocked && form.salePrice && (
-            <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 text-sm flex justify-between">
-              <span className="text-slate-600">Net Price</span>
-              <span className="font-bold text-slate-800">AED {netPrice.toLocaleString()}</span>
+            <div className="bg-info-soft border border-primary/40 rounded-lg px-4 py-2.5 text-sm flex justify-between">
+              <span className="text-muted-foreground">Net Price</span>
+              <span className="font-bold text-foreground">AED {netPrice.toLocaleString()}</span>
             </div>
           )}
 
@@ -186,15 +186,15 @@ export default function DealEditModal({ deal, onClose, onSaved }: Props) {
           )}
 
           {/* Admin Fee + DLD */}
-          <div className="space-y-3 border border-slate-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Fee Overrides</p>
+          <div className="space-y-3 border border-border rounded-lg p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fee Overrides</p>
             <div className="flex items-center gap-3">
               <input
                 type="checkbox" id="adminFeeWaived" checked={form.adminFeeWaived}
                 onChange={(e) => setForm((f) => ({ ...f, adminFeeWaived: e.target.checked }))}
-                className="w-4 h-4 rounded border-slate-300"
+                className="w-4 h-4 rounded border-border"
               />
-              <label htmlFor="adminFeeWaived" className="text-sm text-slate-700 font-medium">Waive Admin Fee</label>
+              <label htmlFor="adminFeeWaived" className="text-sm text-foreground font-medium">Waive Admin Fee</label>
             </div>
             {form.adminFeeWaived && (
               <input
@@ -226,18 +226,18 @@ export default function DealEditModal({ deal, onClose, onSaved }: Props) {
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
           )}
         </form>
 
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-border flex gap-3 flex-shrink-0">
           <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors">
+            className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm transition-colors">
             Cancel
           </button>
           <button form="deal-edit-form" type="submit" disabled={submitting}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50">
-            {submitting ? "Saving…" : "Save Changes"}
+            className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm transition-colors disabled:opacity-50">
+            {submitting ? "Saving…" : "Save changes"}
           </button>
         </div>
       </div>

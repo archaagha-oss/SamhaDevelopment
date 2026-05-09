@@ -52,7 +52,7 @@ export default function UnitDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -60,11 +60,11 @@ export default function UnitDetailPage() {
   if (queryError || !unit) {
     return (
       <div className="p-6">
-        <button onClick={() => navigate(`/projects/${projectId}`)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
+        <button onClick={() => navigate(`/projects/${projectId}`)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
           ← Back to Project
         </button>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600 font-medium">{queryError instanceof Error ? queryError.message : "Unit not found"}</p>
+        <div className="bg-destructive-soft border border-destructive/30 rounded-xl p-6 text-center">
+          <p className="text-destructive font-medium">{queryError instanceof Error ? queryError.message : "Unit not found"}</p>
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export default function UnitDetailPage() {
                      || (unit.reservations?.length ?? 0) > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-full bg-background">
       <UnitHeader
         unitNumber={unit.unitNumber}
         status={unit.status}
@@ -145,9 +145,9 @@ export default function UnitDetailPage() {
       {/* Error Banner */}
       {apiError && (
         <div className="max-w-7xl mx-auto px-6 pt-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between">
-            <p className="text-red-700 text-sm">{apiError.message}</p>
-            <button onClick={() => setApiError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none ml-4">×</button>
+          <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3 flex items-center justify-between">
+            <p className="text-destructive text-sm">{apiError.message}</p>
+            <button onClick={() => setApiError(null)} className="text-destructive hover:text-destructive text-lg leading-none ml-4">×</button>
           </div>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function UnitDetailPage() {
             <ActiveDealSummaryCard unit={unit} />
 
             {/* 2. Floor-plan hero (or photo fallback with "Add floor plan" CTA) */}
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div className="bg-card rounded-lg border border-border overflow-hidden">
               {heroImage ? (
                 <button
                   type="button"
@@ -173,20 +173,20 @@ export default function UnitDetailPage() {
                   <img
                     src={heroImage.url}
                     alt={heroImage.caption || (heroIsPlan ? "Floor plan" : "Unit photo")}
-                    className="w-full h-[420px] object-contain bg-slate-50"
+                    className="w-full h-[420px] object-contain bg-muted/50"
                     loading="lazy"
                   />
-                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900/75 text-white">
+                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-900/75 text-white">
                     {heroIsPlan ? "📐 Floor plan" : "📷 Photo"}
                   </span>
-                  <span className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/85 text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/85 text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     Click to enlarge
                   </span>
                   {!heroIsPlan && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowUploadModal(true); }}
-                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-md"
+                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-md shadow-md"
                     >
                       + Add floor plan
                     </button>
@@ -196,11 +196,11 @@ export default function UnitDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(true)}
-                  className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/40 transition-colors"
+                  className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/40 hover:bg-info-soft/40 transition-colors"
                 >
                   <span className="text-4xl">📐</span>
-                  <span className="text-sm font-semibold text-slate-700">Add floor plan</span>
-                  <span className="text-xs text-slate-400">Floor plan helps clients picture the unit fastest</span>
+                  <span className="text-sm font-semibold text-foreground">Add floor plan</span>
+                  <span className="text-xs text-muted-foreground">Floor plan helps clients picture the unit fastest</span>
                 </button>
               )}
 
@@ -218,7 +218,7 @@ export default function UnitDetailPage() {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowShareModal(true)}
-                className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-success text-white text-xs font-semibold rounded-lg hover:bg-success/90 flex items-center gap-1.5"
                 title="Pre-fill a WhatsApp/Email/SMS to a lead with this unit's details"
               >
                 💬 Share with lead
@@ -226,27 +226,27 @@ export default function UnitDetailPage() {
             </div>
 
             {/* 3. Key Info Bar */}
-            <div className="bg-white rounded-lg border border-slate-200 px-5 py-4">
-              <div className="grid grid-cols-5 divide-x divide-slate-100">
+            <div className="bg-card rounded-lg border border-border px-5 py-4">
+              <div className="grid grid-cols-5 divide-x divide-border">
                 <div className="px-3 first:pl-0">
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">Type</p>
-                  <p className="text-sm font-semibold text-slate-900">{unit.type.replace(/_/g, " ")}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Type</p>
+                  <p className="text-sm font-semibold text-foreground">{unit.type.replace(/_/g, " ")}</p>
                 </div>
                 <div className="px-3">
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">Floor</p>
-                  <p className="text-sm font-semibold text-slate-900">{unit.floor}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Floor</p>
+                  <p className="text-sm font-semibold text-foreground">{unit.floor}</p>
                 </div>
                 <div className="px-3">
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">View</p>
-                  <p className="text-sm font-semibold text-slate-900">{unit.view}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">View</p>
+                  <p className="text-sm font-semibold text-foreground">{unit.view}</p>
                 </div>
                 <div className="px-3">
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">Total Area</p>
-                  <p className="text-sm font-semibold text-slate-900">{formatArea(unit.area)}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Area</p>
+                  <p className="text-sm font-semibold text-foreground">{formatArea(unit.area)}</p>
                 </div>
                 <div className="px-3">
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">Price / sqft</p>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Price / sqft</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {unit.pricePerSqft ? `AED ${unit.pricePerSqft.toLocaleString()}` : "—"}
                   </p>
                 </div>
@@ -254,34 +254,34 @@ export default function UnitDetailPage() {
             </div>
 
             {/* 4. Property Specs */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Property Specs</p>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Property Specs</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Purpose</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Purpose</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {unit.project?.purpose === "RENT" ? "Rent" : "Sale"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Furnishing</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Furnishing</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {unit.project?.furnishing?.replace(/_/g, " ") ?? "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Completion</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Completion</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {unit.project?.completionStatus?.replace(/_/g, " ") ?? "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Project</p>
-                  <p className="text-sm font-semibold text-slate-800">{unit.project?.name ?? "—"}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Project</p>
+                  <p className="text-sm font-semibold text-foreground">{unit.project?.name ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Handover</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Handover</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {unit.project?.handoverDate
                       ? new Date(unit.project.handoverDate).toLocaleDateString("en-AE", { month: "long", year: "numeric" })
                       : "—"}
@@ -291,13 +291,13 @@ export default function UnitDetailPage() {
             </div>
 
             {/* 5. Pricing */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
+            <div className="bg-card rounded-lg border border-border p-5">
               <div className="flex items-start justify-between mb-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Price</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Current Price</p>
                 {!editingPrice && (
                   <button
                     onClick={() => { setEditingPrice(true); setPriceValue(unit.price.toString()); }}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    className="text-xs text-primary hover:text-primary font-medium"
                   >
                     Edit
                   </button>
@@ -306,32 +306,32 @@ export default function UnitDetailPage() {
 
               {editingPrice ? (
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-slate-500">AED</span>
+                  <span className="text-sm text-muted-foreground">AED</span>
                   <input
                     type="number"
                     value={priceValue}
                     onChange={(e) => setPriceValue(e.target.value)}
-                    className="flex-1 border border-blue-300 rounded-lg px-3 py-2 text-lg font-bold focus:outline-none focus:border-blue-500"
+                    className="flex-1 border border-primary/40 rounded-lg px-3 py-2 text-lg font-bold focus:outline-none focus:border-ring"
                     autoFocus
                   />
                   <button
                     onClick={handleSavePrice}
                     disabled={updateUnit.isPending}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg disabled:opacity-50"
                   >
                     Save
                   </button>
-                  <button onClick={() => setEditingPrice(false)} className="px-3 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50">
+                  <button onClick={() => setEditingPrice(false)} className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted/50">
                     Cancel
                   </button>
                 </div>
               ) : (
                 <div className="flex items-end gap-3">
-                  <p className="text-2xl font-bold text-slate-900">
+                  <p className="text-2xl font-bold text-foreground">
                     AED {unit.price.toLocaleString("en-AE")}
                   </p>
                   {priceTrend && (
-                    <span className={`text-sm font-semibold mb-0.5 ${parseFloat(priceTrend) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    <span className={`text-sm font-semibold mb-0.5 ${parseFloat(priceTrend) >= 0 ? "text-success" : "text-destructive"}`}>
                       {parseFloat(priceTrend) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(priceTrend))}% from base
                     </span>
                   )}
@@ -339,7 +339,7 @@ export default function UnitDetailPage() {
               )}
 
               {unit.basePrice && unit.basePrice !== unit.price && (
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Base: <span className="line-through">AED {unit.basePrice.toLocaleString("en-AE")}</span>
                 </p>
               )}
@@ -350,31 +350,31 @@ export default function UnitDetailPage() {
 
             {/* 7. Physical Details */}
             {(unit.bathrooms || unit.parkingSpaces !== undefined || unit.internalArea || unit.externalArea) && (
-              <div className="bg-white rounded-lg border border-slate-200 p-5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Physical Details</p>
+              <div className="bg-card rounded-lg border border-border p-5">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Physical Details</p>
                 <div className="grid grid-cols-4 gap-4">
                   {unit.bathrooms && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Bathrooms</p>
-                      <p className="text-lg font-bold text-slate-900">{unit.bathrooms}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Bathrooms</p>
+                      <p className="text-lg font-bold text-foreground">{unit.bathrooms}</p>
                     </div>
                   )}
                   {unit.parkingSpaces !== undefined && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Parking</p>
-                      <p className="text-lg font-bold text-slate-900">{unit.parkingSpaces}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Parking</p>
+                      <p className="text-lg font-bold text-foreground">{unit.parkingSpaces}</p>
                     </div>
                   )}
                   {unit.internalArea && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Suite Area</p>
-                      <p className="text-sm font-semibold text-slate-900">{formatArea(unit.internalArea)}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Suite Area</p>
+                      <p className="text-sm font-semibold text-foreground">{formatArea(unit.internalArea)}</p>
                     </div>
                   )}
                   {unit.externalArea && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Balcony</p>
-                      <p className="text-sm font-semibold text-slate-900">{formatArea(unit.externalArea)}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Balcony</p>
+                      <p className="text-sm font-semibold text-foreground">{formatArea(unit.externalArea)}</p>
                     </div>
                   )}
                 </div>
@@ -382,13 +382,13 @@ export default function UnitDetailPage() {
             )}
 
             {/* 8. Tags & Notes */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5 space-y-4">
+            <div className="bg-card rounded-lg border border-border p-5 space-y-4">
               {unit.tags && unit.tags.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tags</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {unit.tags.map((tag) => (
-                      <span key={tag} className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-100">{tag}</span>
+                      <span key={tag} className="text-xs bg-info-soft text-primary px-2.5 py-1 rounded-full border border-primary/40">{tag}</span>
                     ))}
                   </div>
                 </div>
@@ -396,11 +396,11 @@ export default function UnitDetailPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Internal Notes</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal Notes</p>
                   {!editingNotes && (
                     <button
                       onClick={() => { setEditingNotes(true); setNotesValue(unit.internalNotes || ""); }}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-xs text-primary hover:text-primary font-medium"
                     >
                       Edit
                     </button>
@@ -412,24 +412,24 @@ export default function UnitDetailPage() {
                       value={notesValue}
                       onChange={(e) => setNotesValue(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 resize-none"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-ring resize-none"
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={handleSaveNotes}
                         disabled={updateUnit.isPending}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50"
                       >
                         Save
                       </button>
-                      <button onClick={() => setEditingNotes(false)} className="px-3 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50">
+                      <button onClick={() => setEditingNotes(false)} className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted/50">
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-700 bg-slate-50 px-3 py-2.5 rounded-lg min-h-[2.5rem]">
-                    {unit.internalNotes || <span className="text-slate-400">No notes added</span>}
+                  <p className="text-sm text-foreground bg-muted/50 px-3 py-2.5 rounded-lg min-h-[2.5rem]">
+                    {unit.internalNotes || <span className="text-muted-foreground">No notes added</span>}
                   </p>
                 )}
               </div>
@@ -442,16 +442,16 @@ export default function UnitDetailPage() {
             <UnitActivityLogger unitId={unit.id} interests={unit.interests ?? []} />
 
             {/* 11. Danger Zone — delete moved out of the table per UX call */}
-            <div className="bg-white rounded-lg border border-red-200 p-5">
+            <div className="bg-card rounded-lg border border-destructive/30 p-5">
               <div className="flex items-start gap-3">
-                <span className="text-red-500 text-lg leading-none mt-0.5">⚠</span>
+                <span className="text-destructive text-lg leading-none mt-0.5">⚠</span>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Danger zone</p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs font-semibold text-destructive uppercase tracking-wide">Danger zone</p>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Permanently remove this unit. Allowed only when there's no active deal or reservation.
                   </p>
                   {deleteBlocked && (
-                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2 inline-block">
+                    <p className="text-xs text-warning bg-warning-soft border border-warning/30 rounded-md px-2.5 py-1.5 mt-2 inline-block">
                       Locked — unit is {unit.status.replace(/_/g, " ").toLowerCase()}{(unit.deals?.length ?? 0) > 0 ? " and has an active deal" : ""}.
                     </p>
                   )}
@@ -460,7 +460,7 @@ export default function UnitDetailPage() {
                   type="button"
                   onClick={() => { setConfirmingDelete(true); setDeleteAck(""); }}
                   disabled={deleteBlocked || deleteUnit.isPending}
-                  className="px-3 py-2 border border-red-300 text-red-700 text-xs font-semibold rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 border border-destructive/30 text-destructive text-xs font-semibold rounded-md hover:bg-destructive-soft disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Delete unit
                 </button>
@@ -472,25 +472,25 @@ export default function UnitDetailPage() {
           <div className="space-y-4">
 
             {/* 0. Share with client */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="bg-card rounded-lg border border-border p-4">
               <UnitShareLinkPanel unitId={unit.id} />
             </div>
 
             {/* 0b. Documents (deal-scoped + propagated from project) */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents</p>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Documents</p>
               {unitDocs.length === 0 ? (
-                <p className="text-sm text-slate-400">No documents linked to this unit yet.</p>
+                <p className="text-sm text-muted-foreground">No documents linked to this unit yet.</p>
               ) : (
                 <ul className="space-y-2">
                   {unitDocs.map((d) => (
                     <li key={d.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-700">{d.name}</span>
+                      <span className="text-foreground">{d.name}</span>
                       <span
                         className={
                           d.scope === "PROJECT"
-                            ? "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700"
-                            : "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                            ? "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-stage-active text-stage-active-foreground"
+                            : "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
                         }
                         title={d.scope === "PROJECT" ? "Inherited from project" : "Deal-scoped"}
                       >
@@ -509,21 +509,21 @@ export default function UnitDetailPage() {
             <UnitCommercialPanel unit={unit} />
 
             {/* 3. Agent Assignment */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Assigned Agent</p>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Assigned Agent</p>
               {agentName && (
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-info-soft text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
                     {agentName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
-                  <span className="text-sm font-semibold text-slate-800">{agentName}</span>
+                  <span className="text-sm font-semibold text-foreground">{agentName}</span>
                 </div>
               )}
               <select
                 value={unit.assignedAgentId ?? ""}
                 onChange={(e) => handleAgentChange(e.target.value)}
                 disabled={updateUnit.isPending}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-blue-400 disabled:opacity-50"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-muted/50 focus:outline-none focus:border-ring disabled:opacity-50"
               >
                 <option value="">— Unassigned —</option>
                 {agents.map((a) => (
@@ -534,15 +534,15 @@ export default function UnitDetailPage() {
 
             {/* 4. Block Info (if BLOCKED) */}
             {unit.status === "BLOCKED" && unit.blockReason && (
-              <div className="bg-amber-50 rounded-lg border border-amber-200 p-5">
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Block Reason</p>
-                <p className="text-sm text-amber-800">{unit.blockReason}</p>
+              <div className="bg-warning-soft rounded-lg border border-warning/30 p-5">
+                <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-2">Block Reason</p>
+                <p className="text-sm text-warning-soft-foreground">{unit.blockReason}</p>
                 {unit.blockExpiresAt && (
-                  <div className="mt-3 bg-amber-100 rounded-lg px-3 py-2">
-                    <p className="text-xs font-semibold text-amber-800">
+                  <div className="mt-3 bg-warning-soft rounded-lg px-3 py-2">
+                    <p className="text-xs font-semibold text-warning-soft-foreground">
                       Expires: {new Date(unit.blockExpiresAt).toLocaleDateString("en-AE")}
                     </p>
-                    <p className="text-xs text-amber-600 mt-0.5">
+                    <p className="text-xs text-warning mt-0.5">
                       {Math.ceil((new Date(unit.blockExpiresAt).getTime() - Date.now()) / 86400000)} days remaining
                     </p>
                   </div>
@@ -551,16 +551,16 @@ export default function UnitDetailPage() {
             )}
 
             {/* 5. Stats */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Activity</p>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Activity</p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 rounded-lg px-3 py-3 text-center">
-                  <p className="text-2xl font-bold text-slate-900">{unit.inquiryCount ?? 0}</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">Inquiries</p>
+                <div className="bg-muted/50 rounded-lg px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">{unit.inquiryCount ?? 0}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Inquiries</p>
                 </div>
-                <div className="bg-slate-50 rounded-lg px-3 py-3 text-center">
-                  <p className="text-2xl font-bold text-slate-900">{unit.visitCount ?? 0}</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">Site Visits</p>
+                <div className="bg-muted/50 rounded-lg px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">{unit.visitCount ?? 0}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Site Visits</p>
                 </div>
               </div>
             </div>
@@ -573,9 +573,9 @@ export default function UnitDetailPage() {
             />
 
             {/* 7. Last Update */}
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Last Updated</p>
-              <p className="text-sm text-slate-700 mt-2">{new Date(unit.updatedAt).toLocaleDateString("en-AE")}</p>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Last Updated</p>
+              <p className="text-sm text-foreground mt-2">{new Date(unit.updatedAt).toLocaleDateString("en-AE")}</p>
             </div>
           </div>
         </div>
@@ -605,7 +605,7 @@ export default function UnitDetailPage() {
                 alt={viewingImage.caption || "Unit image"}
                 className="w-full h-auto max-h-[85vh] object-contain"
               />
-              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-900/70 text-white">
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
                 {viewingImage.type === "PHOTO" ? "📷 Photo" : viewingImage.type === "FLOOR_PLAN" ? "📐 Floor plan" : "📍 Floor map"}
               </span>
               <button
@@ -617,7 +617,7 @@ export default function UnitDetailPage() {
                 ✕
               </button>
               {viewingImage.caption && (
-                <div className="bg-slate-900 px-4 py-3 text-sm text-slate-100">{viewingImage.caption}</div>
+                <div className="bg-card px-4 py-3 text-sm text-foreground">{viewingImage.caption}</div>
               )}
             </div>
           </div>
@@ -633,9 +633,9 @@ export default function UnitDetailPage() {
           aria-modal="true"
           aria-labelledby="delete-confirm-title"
         >
-          <div className="bg-white rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <p id="delete-confirm-title" className="text-base font-semibold text-slate-900">Delete unit {unit.unitNumber}?</p>
-            <p className="text-sm text-slate-600 mt-2">
+          <div className="bg-card rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <p id="delete-confirm-title" className="text-base font-semibold text-foreground">Delete unit {unit.unitNumber}?</p>
+            <p className="text-sm text-muted-foreground mt-2">
               This will permanently remove the unit, its images, status history, and activities.
               Type <span className="font-mono font-semibold">{unit.unitNumber}</span> to confirm.
             </p>
@@ -644,7 +644,7 @@ export default function UnitDetailPage() {
               value={deleteAck}
               onChange={(e) => setDeleteAck(e.target.value)}
               placeholder={unit.unitNumber}
-              className="mt-3 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:border-red-400"
+              className="mt-3 w-full px-3 py-2 border border-border rounded-lg text-sm font-mono focus:outline-none focus:border-destructive/30"
               autoFocus
             />
             <div className="mt-4 flex justify-end gap-2">
@@ -652,7 +652,7 @@ export default function UnitDetailPage() {
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={deleteUnit.isPending}
-                className="px-3 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted/50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -660,7 +660,7 @@ export default function UnitDetailPage() {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleteUnit.isPending || deleteAck !== unit.unitNumber}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-destructive hover:bg-destructive/90 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleteUnit.isPending ? "Deleting…" : "Delete unit"}
               </button>

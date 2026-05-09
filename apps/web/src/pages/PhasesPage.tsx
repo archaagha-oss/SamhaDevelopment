@@ -17,9 +17,9 @@ interface Phase {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  INTERNAL: "bg-gray-200 text-gray-800",
-  BROKER_PREVIEW: "bg-amber-100 text-amber-800",
-  PUBLIC: "bg-green-100 text-green-800",
+  INTERNAL: "bg-neutral-200 text-foreground",
+  BROKER_PREVIEW: "bg-warning-soft text-warning-soft-foreground",
+  PUBLIC: "bg-success-soft text-success-soft-foreground",
 };
 
 export default function PhasesPage() {
@@ -67,18 +67,18 @@ export default function PhasesPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Project Phases</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Project Phases</h1>
       </div>
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : phases.length === 0 ? (
-        <p className="text-gray-500">No phases configured for this project.</p>
+        <p className="text-muted-foreground">No phases configured for this project.</p>
       ) : (
         <table className="w-full border-collapse">
           <thead>
-            <tr className="text-left text-xs uppercase text-gray-500 border-b">
+            <tr className="text-left text-xs uppercase text-muted-foreground border-b">
               <th className="py-2">Phase</th>
               <th>Code</th>
               <th>Floors</th>
@@ -104,7 +104,7 @@ export default function PhasesPage() {
                 <td>
                   {p.releaseStage !== "PUBLIC" && (
                     <button
-                      className="text-blue-600 hover:underline text-sm"
+                      className="text-primary hover:underline text-sm"
                       onClick={() => advance(p)}
                     >
                       Advance Stage →

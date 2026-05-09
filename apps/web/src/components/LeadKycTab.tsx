@@ -20,17 +20,17 @@ interface KYCRecord {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-800",
-  IN_REVIEW: "bg-blue-100 text-blue-800",
-  APPROVED: "bg-green-100 text-green-800",
-  EXPIRED: "bg-red-100 text-red-800",
-  REJECTED: "bg-red-100 text-red-800",
+  PENDING: "bg-warning-soft text-warning-soft-foreground",
+  IN_REVIEW: "bg-info-soft text-primary",
+  APPROVED: "bg-success-soft text-success-soft-foreground",
+  EXPIRED: "bg-destructive-soft text-destructive-soft-foreground",
+  REJECTED: "bg-destructive-soft text-destructive-soft-foreground",
 };
 
 const RISK_COLORS: Record<string, string> = {
-  LOW: "bg-green-100 text-green-800",
-  MEDIUM: "bg-amber-100 text-amber-800",
-  HIGH: "bg-red-100 text-red-800",
+  LOW: "bg-success-soft text-success-soft-foreground",
+  MEDIUM: "bg-warning-soft text-warning-soft-foreground",
+  HIGH: "bg-destructive-soft text-destructive-soft-foreground",
 };
 
 export default function LeadKycTab({ leadId }: { leadId: string }) {
@@ -88,7 +88,7 @@ export default function LeadKycTab({ leadId }: { leadId: string }) {
       <div className="flex justify-between">
         <h3 className="font-medium">KYC Records</h3>
         <button
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-primary hover:underline"
           onClick={() => setShowForm((s) => !s)}
         >
           {showForm ? "Cancel" : "+ New KYC"}
@@ -96,7 +96,7 @@ export default function LeadKycTab({ leadId }: { leadId: string }) {
       </div>
 
       {showForm && (
-        <form className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded" onSubmit={submit}>
+        <form className="grid grid-cols-2 gap-2 bg-muted/50 p-3 rounded" onSubmit={submit}>
           <select
             className="border rounded px-2 py-1 text-sm"
             value={form.idType ?? "PASSPORT"}
@@ -156,7 +156,7 @@ export default function LeadKycTab({ leadId }: { leadId: string }) {
             Politically exposed person (PEP)
           </label>
           <div className="col-span-2 text-right">
-            <button className="bg-blue-600 text-white text-sm px-3 py-1 rounded" type="submit">
+            <button className="bg-primary text-white text-sm px-3 py-1 rounded" type="submit">
               Save
             </button>
           </div>
@@ -164,13 +164,13 @@ export default function LeadKycTab({ leadId }: { leadId: string }) {
       )}
 
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">Loading…</p>
       ) : records.length === 0 ? (
-        <p className="text-gray-500 text-sm">No KYC records.</p>
+        <p className="text-muted-foreground text-sm">No KYC records.</p>
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase text-gray-500 border-b">
+            <tr className="text-left text-xs uppercase text-muted-foreground border-b">
               <th className="py-1">Status</th>
               <th>Risk</th>
               <th>ID</th>
@@ -199,7 +199,7 @@ export default function LeadKycTab({ leadId }: { leadId: string }) {
                 <td>{r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : "—"}</td>
                 <td>
                   {r.status !== "APPROVED" && (
-                    <button className="text-blue-600 hover:underline text-xs" onClick={() => approve(r)}>
+                    <button className="text-primary hover:underline text-xs" onClick={() => approve(r)}>
                       Approve
                     </button>
                   )}

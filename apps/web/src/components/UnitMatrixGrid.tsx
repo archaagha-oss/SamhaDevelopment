@@ -52,7 +52,7 @@ const UnitCell = memo(function UnitCell({ unit, onClick }: UnitCellProps) {
       aria-label={`Unit ${unit.unitNumber} - ${statusColor.text}`}
     >
       {/* Tooltip on hover */}
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-900 text-white text-xs py-2 px-3 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-primary text-primary-foreground text-xs py-2 px-3 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
         Unit {unit.unitNumber} | {UNIT_TYPE_LABELS[unit.type] || unit.type}
         <br />
         {unit.area.toFixed(2)} sqft | AED {pricePerSqft}/sqft
@@ -200,22 +200,22 @@ export default function UnitMatrixGrid({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-muted/50">
       {/* Filters Section */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 space-y-4 flex-shrink-0">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 space-y-4 flex-shrink-0">
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-900">Filters</h3>
+          <h3 className="text-sm font-semibold text-foreground">Filters</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {/* Floor Filter */}
             <div>
-              <label htmlFor="floor-filter" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="floor-filter" className="block text-xs font-medium text-foreground mb-1">
                 Floor
               </label>
               <select
                 id="floor-filter"
                 value={filters.floor}
                 onChange={(e) => updateFilters({ floor: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
               >
                 <option value="All">All Floors</option>
                 {availableFloors.map((floor) => (
@@ -228,14 +228,14 @@ export default function UnitMatrixGrid({
 
             {/* Type Filter */}
             <div>
-              <label htmlFor="type-filter" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="type-filter" className="block text-xs font-medium text-foreground mb-1">
                 Type
               </label>
               <select
                 id="type-filter"
                 value={filters.type}
                 onChange={(e) => updateFilters({ type: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
               >
                 <option value="All">All Types</option>
                 {availableTypes.map((type) => (
@@ -248,7 +248,7 @@ export default function UnitMatrixGrid({
 
             {/* Min Price Filter */}
             <div>
-              <label htmlFor="min-price" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="min-price" className="block text-xs font-medium text-foreground mb-1">
                 Min Price (AED)
               </label>
               <input
@@ -257,13 +257,13 @@ export default function UnitMatrixGrid({
                 value={filters.minPrice}
                 onChange={(e) => updateFilters({ minPrice: e.target.value })}
                 placeholder="e.g., 500000"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
               />
             </div>
 
             {/* Max Price Filter */}
             <div>
-              <label htmlFor="max-price" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="max-price" className="block text-xs font-medium text-foreground mb-1">
                 Max Price (AED)
               </label>
               <input
@@ -272,7 +272,7 @@ export default function UnitMatrixGrid({
                 value={filters.maxPrice}
                 onChange={(e) => updateFilters({ maxPrice: e.target.value })}
                 placeholder="e.g., 1000000"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
               />
             </div>
           </div>
@@ -280,12 +280,12 @@ export default function UnitMatrixGrid({
 
         {/* Reset Button and Stats */}
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-muted-foreground">
             {loading ? "Loading..." : `${totalUnits} unit${totalUnits !== 1 ? "s" : ""} total`}
           </p>
           <button
             onClick={resetFilters}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium transition"
+            className="text-xs text-primary hover:text-primary font-medium transition"
           >
             Reset Filters
           </button>
@@ -297,18 +297,18 @@ export default function UnitMatrixGrid({
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-sm text-slate-600">Loading units...</p>
+              <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm text-muted-foreground">Loading units...</p>
             </div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-sm">
-              <p className="text-sm text-red-600 font-medium mb-2">Error loading units</p>
-              <p className="text-xs text-slate-500">{error}</p>
+              <p className="text-sm text-destructive font-medium mb-2">Error loading units</p>
+              <p className="text-xs text-muted-foreground">{error}</p>
               <button
                 onClick={() => loadUnits()}
-                className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                className="mt-3 px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition"
               >
                 Try Again
               </button>
@@ -317,28 +317,28 @@ export default function UnitMatrixGrid({
         ) : unitsByFloor.size === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <p className="text-slate-500 text-sm">No units found matching your filters.</p>
+              <p className="text-muted-foreground text-sm">No units found matching your filters.</p>
             </div>
           </div>
         ) : (
           <div className="p-4 sm:p-6 space-y-4">
             {Array.from(unitsByFloor.entries()).map(([floor, floorUnits]) => (
-              <div key={floor} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <div key={floor} className="bg-card rounded-lg border border-border overflow-hidden">
                 {/* Floor Header - Collapsible */}
                 <button
                   onClick={() => toggleFloor(floor)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition"
                   aria-expanded={expandedFloors.has(floor)}
                   aria-label={`Floor ${floor === 0 ? "Ground" : floor} - ${expandedFloors.has(floor) ? "Collapse" : "Expand"}`}
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">
+                    <h3 className="text-sm font-semibold text-foreground">
                       Floor {floor === 0 ? "Ground" : floor}
                     </h3>
-                    <span className="text-xs text-slate-500">({floorUnits.length} unit{floorUnits.length !== 1 ? "s" : ""})</span>
+                    <span className="text-xs text-muted-foreground">({floorUnits.length} unit{floorUnits.length !== 1 ? "s" : ""})</span>
                   </div>
                   <span
-                    className={`text-slate-400 transition-transform duration-200 ${
+                    className={`text-muted-foreground transition-transform duration-200 ${
                       expandedFloors.has(floor) ? "rotate-180" : ""
                     }`}
                     aria-hidden="true"
@@ -349,7 +349,7 @@ export default function UnitMatrixGrid({
 
                 {/* Units Grid - Responsive */}
                 {expandedFloors.has(floor) && (
-                  <div className="border-t border-slate-200 p-3 sm:p-4">
+                  <div className="border-t border-border p-3 sm:p-4">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6 auto-rows-max">
                       {floorUnits.map((unit) => (
                         <UnitCell

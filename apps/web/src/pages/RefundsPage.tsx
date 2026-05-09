@@ -19,11 +19,11 @@ interface Refund {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  REQUESTED: "bg-amber-100 text-amber-800",
-  APPROVED: "bg-blue-100 text-blue-800",
-  PROCESSED: "bg-green-100 text-green-800",
-  REJECTED: "bg-red-100 text-red-800",
-  CANCELLED: "bg-gray-200 text-gray-800",
+  REQUESTED: "bg-warning-soft text-warning-soft-foreground",
+  APPROVED: "bg-info-soft text-primary",
+  PROCESSED: "bg-success-soft text-success-soft-foreground",
+  REJECTED: "bg-destructive-soft text-destructive-soft-foreground",
+  CANCELLED: "bg-neutral-200 text-foreground",
 };
 
 export default function RefundsPage() {
@@ -71,20 +71,20 @@ export default function RefundsPage() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Refund Requests</h1>
-      <p className="text-sm text-gray-500">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">Refund Requests</h1>
+      <p className="text-sm text-muted-foreground">
         Open and approved refunds awaiting action. Processed / cancelled refunds drop off this list.
       </p>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : refunds.length === 0 ? (
-        <p className="text-gray-500">No open refund requests.</p>
+        <p className="text-muted-foreground">No open refund requests.</p>
       ) : (
         <table className="w-full border-collapse">
           <thead>
-            <tr className="text-left text-xs uppercase text-gray-500 border-b">
+            <tr className="text-left text-xs uppercase text-muted-foreground border-b">
               <th className="py-2">Deal</th>
               <th>Amount</th>
               <th>Reason</th>
@@ -112,16 +112,16 @@ export default function RefundsPage() {
                 <td className="space-x-2">
                   {r.status === "REQUESTED" && (
                     <>
-                      <button className="text-blue-600 text-xs hover:underline" onClick={() => action(r.id, "APPROVED")}>
+                      <button className="text-primary text-xs hover:underline" onClick={() => action(r.id, "APPROVED")}>
                         Approve
                       </button>
-                      <button className="text-red-600 text-xs hover:underline" onClick={() => action(r.id, "REJECTED")}>
+                      <button className="text-destructive text-xs hover:underline" onClick={() => action(r.id, "REJECTED")}>
                         Reject
                       </button>
                     </>
                   )}
                   {r.status === "APPROVED" && (
-                    <button className="text-green-600 text-xs hover:underline" onClick={() => action(r.id, "PROCESSED")}>
+                    <button className="text-success text-xs hover:underline" onClick={() => action(r.id, "PROCESSED")}>
                       Mark Processed
                     </button>
                   )}

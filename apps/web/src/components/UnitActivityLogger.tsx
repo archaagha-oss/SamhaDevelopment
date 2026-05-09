@@ -39,15 +39,15 @@ const ACTIVITY_TYPES: ActivityTypeMeta[] = [
 ];
 
 const TYPE_COLORS: Record<string, string> = {
-  CALL:        "bg-blue-100 text-blue-700",
-  SITE_VISIT:  "bg-emerald-100 text-emerald-700",
-  NOTE:        "bg-slate-100 text-slate-600",
-  EMAIL:       "bg-purple-100 text-purple-700",
-  WHATSAPP:    "bg-green-100 text-green-700",
-  MEETING:     "bg-amber-100 text-amber-700",
-  INSPECTION:  "bg-cyan-100 text-cyan-700",
-  SNAG_REPORT: "bg-rose-100 text-rose-700",
-  VIDEO_TOUR:  "bg-indigo-100 text-indigo-700",
+  CALL:        "bg-info-soft text-primary",
+  SITE_VISIT:  "bg-success-soft text-success",
+  NOTE:        "bg-muted text-muted-foreground",
+  EMAIL:       "bg-chart-7/15 text-chart-7",
+  WHATSAPP:    "bg-success-soft text-success",
+  MEETING:     "bg-warning-soft text-warning",
+  INSPECTION:  "bg-chart-5/15 text-chart-5",
+  SNAG_REPORT: "bg-destructive-soft text-destructive",
+  VIDEO_TOUR:  "bg-stage-active text-stage-active-foreground",
 };
 
 const OUTCOME_CHIPS = [
@@ -132,12 +132,12 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
   const focusSummary = () => requestAnimationFrame(() => summaryRef.current?.focus());
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-5">
+    <div className="bg-card rounded-lg border border-border p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Activity log
           {activities.length > 0 && (
-            <span className="ml-2 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-xs">{activities.length}</span>
+            <span className="ml-2 bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full text-xs">{activities.length}</span>
           )}
         </p>
       </div>
@@ -151,8 +151,8 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
             onClick={() => { setType(t.value); focusSummary(); }}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg border-2 transition-colors ${
               type === t.value
-                ? "border-blue-500 bg-blue-50 text-blue-700"
-                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                ? "border-primary/40 bg-info-soft text-primary"
+                : "border-border bg-card text-foreground hover:border-border hover:bg-muted/50"
             }`}
           >
             <span className="text-base">{t.emoji}</span>
@@ -162,13 +162,13 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
       </div>
 
       {/* Always-visible logger form */}
-      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3 mb-4">
+      <div className="p-3 bg-muted/50 rounded-lg border border-border space-y-3 mb-4">
         {/* Secondary type chips (shown collapsed by default) */}
         <details className="group">
-          <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-500 font-medium hover:text-slate-700 list-none">
+          <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground font-medium hover:text-foreground list-none">
             <span className="select-none">More types ▾</span>
             {currentMeta && !currentMeta.primary && (
-              <span className="ml-auto text-[11px] text-blue-600 font-semibold">
+              <span className="ml-auto text-[11px] text-primary font-semibold">
                 {currentMeta.emoji} {currentMeta.label} selected
               </span>
             )}
@@ -181,8 +181,8 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
                 onClick={() => { setType(t.value); focusSummary(); }}
                 className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                   type === t.value
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    ? "border-primary/40 bg-info-soft text-primary"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 {t.emoji} {t.label}
@@ -193,8 +193,8 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
 
         {/* Summary */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">
-            Summary <span className="text-red-500">*</span>
+          <label className="block text-xs font-semibold text-muted-foreground mb-1">
+            Summary <span className="text-destructive">*</span>
           </label>
           <textarea
             ref={summaryRef}
@@ -202,13 +202,13 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
             onChange={(e) => setSummary(e.target.value)}
             placeholder={currentMeta.promptHelper}
             rows={2}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 resize-none bg-white"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:border-ring resize-none bg-card"
           />
         </div>
 
         {/* Outcome — chips + free text */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Outcome (optional)</label>
+          <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Outcome (optional)</label>
           <div className="flex flex-wrap gap-1.5 mb-1.5">
             {OUTCOME_CHIPS.map((chip) => (
               <button
@@ -217,8 +217,8 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
                 onClick={() => setOutcome(outcome === chip ? "" : chip)}
                 className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
                   outcome === chip
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    ? "border-primary/40 bg-info-soft text-primary"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 {chip}
@@ -230,18 +230,18 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
             placeholder="Or type a custom outcome…"
-            className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
+            className="w-full px-3 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:border-ring bg-card"
           />
         </div>
 
         {/* Link to lead */}
         {interests.length > 0 && (
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Link to lead (optional)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Link to lead (optional)</label>
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
+              className="w-full px-3 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:border-ring bg-card"
             >
               <option value="">— No lead —</option>
               {interests.map((i) => (
@@ -257,7 +257,7 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
           type="button"
           onClick={() => logActivity.mutate()}
           disabled={!summary.trim() || logActivity.isPending}
-          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors"
+          className="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors"
         >
           {logActivity.isPending ? "Saving…" : `Save ${currentMeta.label.toLowerCase()}`}
         </button>
@@ -274,10 +274,10 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
               type="button"
               onClick={() => setActiveFilter(g.label)}
               className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${
-                active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
-              {g.label} <span className={`ml-1 ${active ? "text-slate-300" : "text-slate-400"}`}>{count}</span>
+              {g.label} <span className={`ml-1 ${active ? "text-foreground/80" : "text-muted-foreground"}`}>{count}</span>
             </button>
           );
         })}
@@ -286,33 +286,33 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
       {/* Activity Feed */}
       {isLoading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)}
+          {[1, 2].map((i) => <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />)}
         </div>
       ) : visibleActivities.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-4">
+        <p className="text-xs text-muted-foreground text-center py-4">
           {activities.length === 0 ? "No activities logged yet — log your first one above." : "Nothing in this filter."}
         </p>
       ) : (
         <div className="space-y-2">
           {visibleActivities.slice(0, 10).map((a) => (
-            <div key={a.id} className="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded self-start mt-0.5 whitespace-nowrap ${TYPE_COLORS[a.type] || "bg-slate-100 text-slate-600"}`}>
+            <div key={a.id} className="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded self-start mt-0.5 whitespace-nowrap ${TYPE_COLORS[a.type] || "bg-muted text-muted-foreground"}`}>
                 {a.type.replace(/_/g, " ")}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-800 leading-relaxed">{a.summary}</p>
-                {a.outcome && <p className="text-[10px] text-slate-400 mt-0.5 italic">→ {a.outcome}</p>}
+                <p className="text-xs text-foreground leading-relaxed">{a.summary}</p>
+                {a.outcome && <p className="text-[10px] text-muted-foreground mt-0.5 italic">→ {a.outcome}</p>}
                 <div className="flex items-center gap-2 mt-1">
                   {a.lead && (
-                    <span className="text-[10px] text-blue-600">{a.lead.firstName} {a.lead.lastName}</span>
+                    <span className="text-[10px] text-primary">{a.lead.firstName} {a.lead.lastName}</span>
                   )}
-                  <span className="text-[10px] text-slate-400">{new Date(a.createdAt).toLocaleDateString("en-AE")}</span>
+                  <span className="text-[10px] text-muted-foreground">{new Date(a.createdAt).toLocaleDateString("en-AE")}</span>
                 </div>
               </div>
             </div>
           ))}
           {visibleActivities.length > 10 && (
-            <p className="text-xs text-slate-400 text-center pt-1">+{visibleActivities.length - 10} older activities</p>
+            <p className="text-xs text-muted-foreground text-center pt-1">+{visibleActivities.length - 10} older activities</p>
           )}
         </div>
       )}

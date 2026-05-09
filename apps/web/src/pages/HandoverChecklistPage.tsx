@@ -25,10 +25,10 @@ interface Checklist {
 }
 
 const STATUS_BADGES: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-800",
-  COMPLETED: "bg-green-100 text-green-800",
-  WAIVED: "bg-gray-200 text-gray-800",
-  NOT_APPLICABLE: "bg-gray-100 text-gray-600",
+  PENDING: "bg-warning-soft text-warning-soft-foreground",
+  COMPLETED: "bg-success-soft text-success-soft-foreground",
+  WAIVED: "bg-neutral-200 text-foreground",
+  NOT_APPLICABLE: "bg-muted text-muted-foreground",
 };
 
 export default function HandoverChecklistPage() {
@@ -96,14 +96,14 @@ export default function HandoverChecklistPage() {
 
   if (!dealId) return <div className="p-6">Deal ID required.</div>;
 
-  if (loading) return <div className="p-6 text-gray-500">Loading…</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
 
   if (!checklist) {
     return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Handover Checklist</h1>
-        <p className="text-gray-500">No checklist exists for this deal.</p>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm" onClick={ensure}>
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Handover Checklist</h1>
+        <p className="text-muted-foreground">No checklist exists for this deal.</p>
+        <button className="bg-primary text-white px-4 py-2 rounded text-sm" onClick={ensure}>
           + Create Checklist
         </button>
       </div>
@@ -113,9 +113,9 @@ export default function HandoverChecklistPage() {
   const ready = checklist.items.filter((i) => i.required).every((i) => i.status !== "PENDING");
 
   return (
-    <div className="p-6 space-y-4 max-w-4xl">
-      <h1 className="text-2xl font-semibold">Handover Checklist</h1>
-      <p className="text-sm text-gray-500">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">Handover Checklist</h1>
+      <p className="text-sm text-muted-foreground">
         Started {new Date(checklist.startedAt).toLocaleDateString()}.
         {checklist.completedAt && ` Completed ${new Date(checklist.completedAt).toLocaleDateString()}.`}
       </p>
@@ -127,31 +127,31 @@ export default function HandoverChecklistPage() {
             <div className="flex-1">
               <div className="font-medium">
                 {it.label}
-                {it.required && <span className="text-red-500 ml-1">*</span>}
+                {it.required && <span className="text-destructive ml-1">*</span>}
               </div>
               {it.completedAt && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   Done {new Date(it.completedAt).toLocaleDateString()} by {it.completedBy ?? "—"}
                 </div>
               )}
             </div>
             <div className="flex gap-2">
               {it.status !== "COMPLETED" && (
-                <button className="text-green-700 text-xs hover:underline" onClick={() => toggle(it, "COMPLETED")}>
+                <button className="text-success text-xs hover:underline" onClick={() => toggle(it, "COMPLETED")}>
                   Mark Done
                 </button>
               )}
               {it.status === "COMPLETED" && (
-                <button className="text-gray-500 text-xs hover:underline" onClick={() => toggle(it, "PENDING")}>
+                <button className="text-muted-foreground text-xs hover:underline" onClick={() => toggle(it, "PENDING")}>
                   Reopen
                 </button>
               )}
               {!it.required && it.status === "PENDING" && (
                 <>
-                  <button className="text-gray-700 text-xs hover:underline" onClick={() => toggle(it, "WAIVED")}>
+                  <button className="text-foreground text-xs hover:underline" onClick={() => toggle(it, "WAIVED")}>
                     Waive
                   </button>
-                  <button className="text-gray-700 text-xs hover:underline" onClick={() => toggle(it, "NOT_APPLICABLE")}>
+                  <button className="text-foreground text-xs hover:underline" onClick={() => toggle(it, "NOT_APPLICABLE")}>
                     N/A
                   </button>
                 </>
@@ -162,9 +162,9 @@ export default function HandoverChecklistPage() {
       </div>
 
       {!checklist.completedAt && (
-        <div className="border rounded p-4 bg-gray-50 space-y-2">
+        <div className="border rounded p-4 bg-muted/50 space-y-2">
           <h2 className="font-medium">Customer Sign-off</h2>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-muted-foreground">
             All required items {ready ? "have been completed" : "must be completed"} before customer sign-off.
           </p>
           <div className="flex gap-2 items-center">
@@ -176,7 +176,7 @@ export default function HandoverChecklistPage() {
             />
             <button
               disabled={!ready}
-              className="bg-green-600 disabled:bg-gray-300 text-white px-4 py-1 rounded text-sm"
+              className="bg-success disabled:bg-neutral-300 text-white px-4 py-1 rounded text-sm"
               onClick={finish}
             >
               Sign Off & Complete

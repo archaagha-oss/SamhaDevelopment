@@ -3,6 +3,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import PaymentPlanFormModal from "./PaymentPlanFormModal";
 import ConfirmDialog from "./ConfirmDialog";
+import { PageContainer, PageHeader } from "./layout";
+import { Button } from "@/components/ui/button";
 import EmptyState from "./EmptyState";
 import { Skeleton } from "./Skeleton";
 
@@ -36,11 +38,11 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 const TRIGGER_BADGE_COLORS: Record<string, string> = {
-  DAYS_FROM_RESERVATION: "bg-slate-100 text-slate-600",
-  FIXED_DATE:            "bg-amber-100 text-amber-700",
-  ON_SPA_SIGNING:        "bg-blue-100 text-blue-700",
-  ON_OQOOD:              "bg-purple-100 text-purple-700",
-  ON_HANDOVER:           "bg-emerald-100 text-emerald-700",
+  DAYS_FROM_RESERVATION: "bg-muted text-muted-foreground",
+  FIXED_DATE:            "bg-warning-soft text-warning",
+  ON_SPA_SIGNING:        "bg-info-soft text-primary",
+  ON_OQOOD:              "bg-chart-7/15 text-chart-7",
+  ON_HANDOVER:           "bg-success-soft text-success",
 };
 
 function formatMilestoneDue(m: Milestone): string {
@@ -137,47 +139,40 @@ export default function PaymentPlansPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Payment Plans</h1>
-            <p className="text-slate-400 text-xs mt-0.5">{plans.filter(p => p.isActive).length} active templates</p>
-          </div>
-          <button
-            onClick={() => { setEditPlan(null); setShowForm(true); }}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">+</span> New Plan
-          </button>
-        </div>
-        {/* Filters */}
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Payment Plans" }]}
+        title="Payment Plans"
+        subtitle={`${plans.filter(p => p.isActive).length} active templates`}
+        actions={<Button onClick={() => { setEditPlan(null); setShowForm(true); }}>Create plan</Button>}
+      />
+
+      <PageContainer padding="compact" className="flex-shrink-0">
         <div className="flex items-center gap-3">
           <input
             type="text"
             placeholder="Search plans…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-blue-400 bg-slate-50"
+            className="text-sm border border-border rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-ring bg-card"
           />
           <div className="flex gap-1">
             {(["all", "active", "inactive"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilterActive(f)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${filterActive === f ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${filterActive === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"}`}
               >{f}</button>
             ))}
           </div>
         </div>
-      </div>
+      </PageContainer>
 
       {/* List */}
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
           <div className="space-y-3 max-w-4xl">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+              <div key={i} className="bg-card rounded-xl border border-border p-5 space-y-3">
                 <Skeleton className="h-5 w-1/3" />
                 <Skeleton className="h-3 w-2/3" />
                 <Skeleton className="h-3 w-1/2" />
@@ -200,7 +195,7 @@ export default function PaymentPlansPage() {
               return (
                 <div
                   key={plan.id}
-                  className={`bg-white rounded-xl border transition-all ${isExpanded ? "border-blue-300 shadow-sm" : "border-slate-200 hover:border-slate-300"} ${!plan.isActive ? "opacity-60" : ""}`}
+                  className={`bg-card rounded-xl border transition-all ${isExpanded ? "border-primary/40 shadow-sm" : "border-border hover:border-border"} ${!plan.isActive ? "opacity-60" : ""}`}
                 >
                   {/* Plan header row */}
                   <div
@@ -209,32 +204,32 @@ export default function PaymentPlansPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-slate-900">{plan.name}</h3>
+                        <h3 className="font-bold text-foreground">{plan.name}</h3>
                         {!plan.isActive && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">Inactive</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">Inactive</span>
                         )}
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pct === 100 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pct === 100 ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
                           {pct}%
                         </span>
                       </div>
                       {plan.description && (
-                        <p className="text-xs text-slate-500 mt-0.5">{plan.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-4 shrink-0 text-sm">
                       <div className="text-center">
-                        <p className="text-xs text-slate-400">Milestones</p>
-                        <p className="font-bold text-slate-800">{plan.milestones.length}</p>
+                        <p className="text-xs text-muted-foreground">Milestones</p>
+                        <p className="font-bold text-foreground">{plan.milestones.length}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-slate-400">Deals</p>
-                        <p className="font-bold text-slate-800">{deals}</p>
+                        <p className="text-xs text-muted-foreground">Deals</p>
+                        <p className="font-bold text-foreground">{deals}</p>
                       </div>
                       {/* Actions */}
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditPlan(plan); setShowForm(true); }}
-                          className="text-slate-400 hover:text-blue-600 text-sm px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                          className="text-muted-foreground hover:text-primary text-sm px-2 py-1 rounded hover:bg-info-soft transition-colors"
                           title="Edit plan"
                         >
                           ✎
@@ -242,7 +237,7 @@ export default function PaymentPlansPage() {
                         <button
                           onClick={(e) => handleClone(plan, e)}
                           disabled={cloning === plan.id}
-                          className="text-slate-400 hover:text-slate-700 text-sm px-2 py-1 rounded hover:bg-slate-100 transition-colors disabled:opacity-40"
+                          className="text-muted-foreground hover:text-foreground text-sm px-2 py-1 rounded hover:bg-muted transition-colors disabled:opacity-40"
                           title="Clone plan"
                         >
                           {cloning === plan.id ? "…" : "⊕"}
@@ -250,63 +245,63 @@ export default function PaymentPlansPage() {
                         <button
                           onClick={(e) => handleDeactivate(plan, e)}
                           disabled={deactivating === plan.id}
-                          className={`text-xs px-2 py-1 rounded transition-colors disabled:opacity-40 ${plan.isActive ? "text-red-400 hover:text-red-600 hover:bg-red-50" : "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"}`}
+                          className={`text-xs px-2 py-1 rounded transition-colors disabled:opacity-40 ${plan.isActive ? "text-destructive hover:text-destructive hover:bg-destructive-soft" : "text-success hover:text-success hover:bg-success-soft"}`}
                           title={plan.isActive ? "Deactivate" : "Reactivate"}
                         >
                           {deactivating === plan.id ? "…" : plan.isActive ? "Deactivate" : "Reactivate"}
                         </button>
                       </div>
-                      <span className="text-slate-300 text-sm">{isExpanded ? "▲" : "▼"}</span>
+                      <span className="text-foreground/80 text-sm">{isExpanded ? "▲" : "▼"}</span>
                     </div>
                   </div>
 
                   {/* Expanded milestones table */}
                   {isExpanded && (
-                    <div className="border-t border-slate-100 overflow-x-auto">
+                    <div className="border-t border-border overflow-x-auto">
                       {plan.milestones.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-slate-400 text-center">No milestones defined</p>
+                        <p className="px-5 py-4 text-sm text-muted-foreground text-center">No milestones defined</p>
                       ) : (
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="bg-slate-50 text-left">
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">#</th>
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Label</th>
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">%</th>
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Trigger</th>
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Due Date</th>
-                              <th className="px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Flags</th>
+                            <tr className="bg-muted/50 text-left">
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">#</th>
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Label</th>
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">%</th>
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trigger</th>
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Due Date</th>
+                              <th className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Flags</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
+                          <tbody className="divide-y divide-border">
                             {plan.milestones.map((m, i) => (
-                              <tr key={m.id} className="hover:bg-slate-50/60">
-                                <td className="px-5 py-2.5 text-xs text-slate-400">{i + 1}</td>
-                                <td className="px-5 py-2.5 font-medium text-slate-800">{m.label}</td>
+                              <tr key={m.id} className="hover:bg-muted/60">
+                                <td className="px-5 py-2.5 text-xs text-muted-foreground">{i + 1}</td>
+                                <td className="px-5 py-2.5 font-medium text-foreground">{m.label}</td>
                                 <td className="px-5 py-2.5">
-                                  <span className="font-bold text-slate-900">{m.percentage}%</span>
+                                  <span className="font-bold text-foreground">{m.percentage}%</span>
                                 </td>
                                 <td className="px-5 py-2.5">
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRIGGER_BADGE_COLORS[m.triggerType] ?? "bg-slate-100 text-slate-600"}`}>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRIGGER_BADGE_COLORS[m.triggerType] ?? "bg-muted text-muted-foreground"}`}>
                                     {TRIGGER_LABELS[m.triggerType] || m.triggerType}
                                   </span>
                                 </td>
-                                <td className="px-5 py-2.5 text-xs text-slate-500 font-medium">
+                                <td className="px-5 py-2.5 text-xs text-muted-foreground font-medium">
                                   {formatMilestoneDue(m)}
                                 </td>
                                 <td className="px-5 py-2.5">
                                   <div className="flex gap-1.5">
-                                    {m.isDLDFee && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">DLD</span>}
-                                    {m.isAdminFee && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Admin</span>}
+                                    {m.isDLDFee && <span className="text-xs px-1.5 py-0.5 rounded bg-warning-soft text-warning font-medium">DLD</span>}
+                                    {m.isAdminFee && <span className="text-xs px-1.5 py-0.5 rounded bg-info-soft text-primary font-medium">Admin</span>}
                                   </div>
                                 </td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr className="bg-slate-50 border-t border-slate-200">
-                              <td colSpan={2} className="px-5 py-2.5 text-xs font-semibold text-slate-600">Total</td>
+                            <tr className="bg-muted/50 border-t border-border">
+                              <td colSpan={2} className="px-5 py-2.5 text-xs font-semibold text-muted-foreground">Total</td>
                               <td className="px-5 py-2.5">
-                                <span className={`font-bold text-sm ${pct === 100 ? "text-emerald-700" : "text-red-600"}`}>{pct}%</span>
+                                <span className={`font-bold text-sm ${pct === 100 ? "text-success" : "text-destructive"}`}>{pct}%</span>
                               </td>
                               <td colSpan={3} />
                             </tr>

@@ -151,16 +151,16 @@ router.post("/", async (req, res) => {
       createdBy:    req.auth.userId,
     });
 
-    // Auto-advance lead to OFFER_SENT if still in early stage
+    // Auto-advance lead to PROPOSAL if still in early stage
     const lead = (offer as any).lead;
-    const advanceableStages = ["NEW", "CONTACTED"];
+    const advanceableStages = ["NEW", "CONTACTED", "QUALIFIED", "VIEWING"];
     if (lead && advanceableStages.includes(lead.stage)) {
-      await prisma.lead.update({ where: { id: leadId }, data: { stage: "OFFER_SENT" } });
+      await prisma.lead.update({ where: { id: leadId }, data: { stage: "PROPOSAL" } });
       await prisma.leadStageHistory.create({
         data: {
           leadId,
           oldStage:  lead.stage,
-          newStage:  "OFFER_SENT",
+          newStage:  "PROPOSAL",
           changedBy: req.auth.userId,
           reason:    "Offer generated",
         },

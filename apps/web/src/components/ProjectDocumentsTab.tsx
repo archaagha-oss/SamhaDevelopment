@@ -46,7 +46,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
   return (
     <section style={{ padding: 16 }}>
       <h2 style={{ marginTop: 0 }}>Project documents</h2>
-      <p style={{ color: "#666", fontSize: 14, marginTop: -4 }}>
+      <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14, marginTop: -4 }}>
         Documents uploaded here are visible inside every unit in this project. Mark a document
         <strong> Public </strong>
         to also expose it on shared client links.
@@ -87,18 +87,18 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
           <option value="PUBLIC">Public — visible on shared links</option>
         </select>
         <input ref={fileRef} type="file" onChange={handleFile} disabled={upload.isPending} />
-        {upload.isPending && <span style={{ color: "#666", fontSize: 13 }}>Uploading…</span>}
+        {upload.isPending && <span style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Uploading…</span>}
       </div>
 
       <div style={{ marginTop: 16 }}>
         {docsQuery.isLoading ? (
-          <p style={{ color: "#888" }}>Loading…</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
         ) : (docsQuery.data ?? []).length === 0 ? (
-          <p style={{ color: "#888" }}>No documents yet.</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>No documents yet.</p>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #ececef" }}>
+              <tr style={{ textAlign: "left", borderBottom: "1px solid hsl(var(--border))" }}>
                 <th style={th}>Name</th>
                 <th style={th}>Type</th>
                 <th style={th}>Visibility</th>
@@ -108,7 +108,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
             </thead>
             <tbody>
               {(docsQuery.data ?? []).map((d) => (
-                <tr key={d.id} style={{ borderBottom: "1px solid #f4f4f7" }}>
+                <tr key={d.id} style={{ borderBottom: "1px solid hsl(var(--border) / 0.6)" }}>
                   <td style={td}>{d.name}</td>
                   <td style={td}>{d.type.replace(/_/g, " ")}</td>
                   <td style={td}>
@@ -133,7 +133,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
                       style={{
                         padding: "4px 10px",
                         border: "1px solid #f3c4c4",
-                        color: "#a40000",
+                        color: "hsl(var(--destructive))",
                         background: "#fff",
                         borderRadius: 4,
                         cursor: "pointer",
@@ -152,5 +152,5 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
   );
 }
 
-const th: React.CSSProperties = { padding: "8px 6px", fontSize: 13, color: "#555" };
+const th: React.CSSProperties = { padding: "8px 6px", fontSize: 13, color: "hsl(var(--muted-foreground))" };
 const td: React.CSSProperties = { padding: "8px 6px", fontSize: 14 };

@@ -97,13 +97,13 @@ export default function ActivityModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-700">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-white font-semibold text-base">Log Activity</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 text-2xl leading-none"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
           >
             ×
           </button>
@@ -112,7 +112,7 @@ export default function ActivityModal({
         <div className="px-6 py-5 space-y-4">
           {/* Type grid */}
           <div>
-            <label className="block text-slate-400 text-xs font-medium mb-2">
+            <label className="block text-muted-foreground text-xs font-medium mb-2">
               Activity Type
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -122,8 +122,8 @@ export default function ActivityModal({
                   onClick={() => setType(value)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
                     type === value
-                      ? "bg-blue-600 border-blue-500 text-white shadow-sm"
-                      : "bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-slate-100"
+                      ? "bg-primary border-primary/40 text-white shadow-sm"
+                      : "bg-muted border-border text-foreground/80 hover:border-border hover:text-foreground"
                   }`}
                 >
                   <span>{icon}</span>
@@ -135,41 +135,41 @@ export default function ActivityModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1.5">
-              Notes <span className="text-red-400">*</span>
+            <label className="block text-muted-foreground text-xs font-medium mb-1.5">
+              Notes <span className="text-destructive">*</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Describe what happened…"
               rows={3}
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-ring resize-none transition-colors"
             />
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 text-xs font-medium mb-1.5">
+              <label className="block text-muted-foreground text-xs font-medium mb-1.5">
                 Activity Date
               </label>
               <input
                 type="datetime-local"
                 value={activityDate}
                 onChange={(e) => setActivityDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring transition-colors"
               />
             </div>
             <div>
-              <label className="block text-slate-400 text-xs font-medium mb-1.5">
+              <label className="block text-muted-foreground text-xs font-medium mb-1.5">
                 Follow-up Date{" "}
-                <span className="text-slate-600">(optional)</span>
+                <span className="text-muted-foreground">(optional)</span>
               </label>
               <input
                 type="datetime-local"
                 value={followUpDate}
                 onChange={(e) => setFollowUpDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring transition-colors"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function ActivityModal({
           {/* Call duration — only for CALL */}
           {type === "CALL" && (
             <div>
-              <label className="block text-slate-400 text-xs font-medium mb-1.5">
+              <label className="block text-muted-foreground text-xs font-medium mb-1.5">
                 Call Duration (minutes)
               </label>
               <input
@@ -186,29 +186,29 @@ export default function ActivityModal({
                 onChange={(e) => setCallDuration(e.target.value)}
                 placeholder="e.g. 5"
                 min={0}
-                className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring transition-colors"
               />
             </div>
           )}
 
           {/* Outcome */}
           <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1.5">
+            <label className="block text-muted-foreground text-xs font-medium mb-1.5">
               Outcome{" "}
-              <span className="text-slate-600">(optional)</span>
+              <span className="text-muted-foreground">(optional)</span>
             </label>
             <input
               type="text"
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
               placeholder="e.g. Interested, Callback requested, Closed…"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:border-ring transition-colors"
             />
           </div>
 
           {/* Follow-up notice */}
           {followUpDate && (
-            <div className="flex items-start gap-2 text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5">
+            <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2.5">
               <span className="mt-0.5 flex-shrink-0">📌</span>
               <p>
                 A follow-up task will be created for{" "}
@@ -225,24 +225,24 @@ export default function ActivityModal({
 
           {/* Error */}
           {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-700">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-300 hover:text-white text-sm transition-colors"
+            className="px-4 py-2 text-foreground/80 hover:text-white text-sm transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-5 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
           >
             {saving ? "Saving…" : "Save Activity"}
           </button>

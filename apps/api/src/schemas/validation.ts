@@ -97,8 +97,9 @@ export const updateLeadSchema = z.object({
     .enum([
       "NEW",
       "CONTACTED",
-      "OFFER_SENT",
-      "SITE_VISIT",
+      "QUALIFIED",
+      "VIEWING",
+      "PROPOSAL",
       "NEGOTIATING",
       "CLOSED_WON",
       "CLOSED_LOST",

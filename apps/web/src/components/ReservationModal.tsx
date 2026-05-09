@@ -83,18 +83,18 @@ export default function ReservationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-700">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
             <h2 className="text-white font-semibold text-base">Reserve Unit</h2>
             {leadName && (
-              <p className="text-slate-500 text-xs mt-0.5">for {leadName}</p>
+              <p className="text-muted-foreground text-xs mt-0.5">for {leadName}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 text-2xl leading-none"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
           >
             ×
           </button>
@@ -103,21 +103,21 @@ export default function ReservationModal({
         <div className="px-6 py-5 space-y-4">
           {/* Unit selector */}
           <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1.5">
-              Available Unit <span className="text-red-400">*</span>
+            <label className="block text-muted-foreground text-xs font-medium mb-1.5">
+              Available Unit <span className="text-destructive">*</span>
             </label>
 
             {fetchingUnits ? (
-              <p className="text-slate-500 text-sm py-2">Loading available units…</p>
+              <p className="text-muted-foreground text-sm py-2">Loading available units…</p>
             ) : units.length === 0 ? (
-              <p className="text-amber-400 text-sm py-2">
+              <p className="text-warning text-sm py-2">
                 No available units at this time.
               </p>
             ) : (
               <select
                 value={selectedUnitId}
                 onChange={(e) => setSelectedUnitId(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-ring transition-colors"
               >
                 <option value="">Select a unit…</option>
                 {units.map((u) => (
@@ -135,29 +135,29 @@ export default function ReservationModal({
 
           {/* Selected unit preview card */}
           {selectedUnit && (
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+            <div className="bg-muted border border-border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-white font-semibold text-sm">
                   Unit {selectedUnit.unitNumber}
                 </p>
                 {selectedUnit.project?.name && (
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {selectedUnit.project.name}
                   </span>
                 )}
               </div>
               <div className="grid grid-cols-3 gap-3 text-xs">
                 <div>
-                  <p className="text-slate-500 mb-0.5">Type</p>
-                  <p className="text-slate-200 font-medium">{selectedUnit.type || "—"}</p>
+                  <p className="text-muted-foreground mb-0.5">Type</p>
+                  <p className="text-foreground font-medium">{selectedUnit.type || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 mb-0.5">Floor</p>
-                  <p className="text-slate-200 font-medium">{selectedUnit.floor ?? "—"}</p>
+                  <p className="text-muted-foreground mb-0.5">Floor</p>
+                  <p className="text-foreground font-medium">{selectedUnit.floor ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 mb-0.5">Asking Price</p>
-                  <p className="text-emerald-400 font-semibold">
+                  <p className="text-muted-foreground mb-0.5">Asking Price</p>
+                  <p className="text-success font-semibold">
                     {fmtAED(selectedUnit.askingPrice)}
                   </p>
                 </div>
@@ -167,24 +167,24 @@ export default function ReservationModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1.5">
-              Notes <span className="text-slate-600">(optional)</span>
+            <label className="block text-muted-foreground text-xs font-medium mb-1.5">
+              Notes <span className="text-muted-foreground">(optional)</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Reason for reservation, special requirements, client preferences…"
               rows={3}
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-ring resize-none transition-colors"
             />
           </div>
 
           {/* Expiry notice */}
-          <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2.5">
-            <span className="text-amber-400 mt-0.5 flex-shrink-0">⏱</span>
+          <div className="flex items-start gap-2.5 text-xs text-muted-foreground bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+            <span className="text-warning mt-0.5 flex-shrink-0">⏱</span>
             <p>
               The unit will be temporarily locked as{" "}
-              <span className="text-amber-300 font-medium">RESERVED</span>. Reservations
+              <span className="text-warning font-medium">RESERVED</span>. Reservations
               expire automatically based on the project configuration (typically 7–14
               days). You can convert this reservation into a deal at any time.
             </p>
@@ -192,24 +192,24 @@ export default function ReservationModal({
 
           {/* Error */}
           {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-700">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-300 hover:text-white text-sm transition-colors"
+            className="px-4 py-2 text-foreground/80 hover:text-white text-sm transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving || !selectedUnitId || fetchingUnits || units.length === 0}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-5 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-medium rounded-lg transition-colors"
           >
             {saving ? "Reserving…" : "Reserve Unit"}
           </button>

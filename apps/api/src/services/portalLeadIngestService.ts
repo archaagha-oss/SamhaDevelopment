@@ -15,9 +15,13 @@ const FALLBACK_FIRST = "Portal";
 const FALLBACK_LAST = "Lead";
 
 async function pickDefaultAgentId(): Promise<string | null> {
-  // Round-robin would be nicer; for now pick any active SALES_AGENT or ADMIN
+  // Round-robin would be nicer; for now pick any active assignable user
+  // (anyone except viewers and deactivated accounts).
   const agent = await prisma.user.findFirst({
-    where: { role: { in: ["SALES_AGENT", "ADMIN"] } },
+    where: {
+      status: "ACTIVE",
+      role: { in: ["ADMIN", "MANAGER", "MEMBER"] },
+    },
     select: { id: true },
     orderBy: { createdAt: "asc" },
   });
@@ -86,7 +90,7 @@ export async function ingestPortalLead(parsed: ParsedPortalLead): Promise<Ingest
 
   const agentId = await pickDefaultAgentId();
   if (!agentId) {
-    logger.error("[portalIngest] no SALES_AGENT/ADMIN user available to assign lead");
+    logger.error("[portalIngest] no active assignable user available for lead");
     return { status: "REJECTED", reason: "No agent available to receive lead" };
   }
 

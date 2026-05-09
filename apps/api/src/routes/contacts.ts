@@ -20,13 +20,16 @@ router.get("/", async (req, res) => {
     if (tags)   where.tags   = { contains: tags as string };
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search as string, mode: "insensitive" } },
-        { lastName:  { contains: search as string, mode: "insensitive" } },
-        { email:     { contains: search as string, mode: "insensitive" } },
-        { phone:     { contains: search as string, mode: "insensitive" } },
-        { company:   { contains: search as string, mode: "insensitive" } },
-      ];
+      const q = (search as string).trim();
+      if (q) {
+        where.OR = [
+          { firstName: { contains: q } },
+          { lastName:  { contains: q } },
+          { email:     { contains: q } },
+          { phone:     { contains: q } },
+          { company:   { contains: q } },
+        ];
+      }
     }
 
     const [total, contacts] = await Promise.all([

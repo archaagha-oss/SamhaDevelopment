@@ -28,12 +28,15 @@ router.get("/", async (req, res) => {
     if (assignedAgentId) where.assignedAgentId = assignedAgentId;
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search as string, mode: "insensitive" } },
-        { lastName:  { contains: search as string, mode: "insensitive" } },
-        { email:     { contains: search as string, mode: "insensitive" } },
-        { phone:     { contains: search as string, mode: "insensitive" } },
-      ];
+      const q = (search as string).trim();
+      if (q) {
+        where.OR = [
+          { firstName: { contains: q } },
+          { lastName:  { contains: q } },
+          { email:     { contains: q } },
+          { phone:     { contains: q } },
+        ];
+      }
     }
 
     const [total, leads] = await Promise.all([
@@ -234,7 +237,7 @@ router.get("/:id/valid-transitions", async (req, res) => {
       return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
     }
 
-    const ALL_STAGES = ["NEW", "CONTACTED", "OFFER_SENT", "SITE_VISIT", "NEGOTIATING", "CLOSED_WON", "CLOSED_LOST"];
+    const ALL_STAGES = ["NEW", "CONTACTED", "QUALIFIED", "VIEWING", "PROPOSAL", "NEGOTIATING", "CLOSED_WON", "CLOSED_LOST"];
     const validNext = ALL_STAGES.filter((s) => validateLeadTransition(lead.stage as any, s as any).valid);
     res.json({ current: lead.stage, validNext });
   } catch (error) {
@@ -546,7 +549,7 @@ router.post("/:id/create-deal", async (req, res) => {
     }
 
     // Advance lead to NEGOTIATING if not already past that stage
-    const NEGOTIATING_ALLOWED_FROM = ["NEW", "CONTACTED", "QUALIFIED", "OFFER_SENT", "SITE_VISIT"];
+    const NEGOTIATING_ALLOWED_FROM = ["NEW", "CONTACTED", "QUALIFIED", "VIEWING", "PROPOSAL"];
     if (NEGOTIATING_ALLOWED_FROM.includes(lead.stage)) {
       await prisma.lead.update({ where: { id: lead.id }, data: { stage: "NEGOTIATING" } });
       await prisma.leadStageHistory.create({

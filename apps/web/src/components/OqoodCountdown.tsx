@@ -12,10 +12,10 @@ export default function OqoodCountdown({
   isOverdue,
 }: OqoodCountdownProps) {
   const statusColors = {
-    green: "bg-green-50 border-green-200 text-green-800",
-    yellow: "bg-yellow-50 border-yellow-200 text-yellow-800",
-    red: "bg-red-50 border-red-200 text-red-800",
-    overdue: "bg-red-100 border-red-300 text-red-900",
+    green: "bg-success-soft border-success/30 text-success-soft-foreground",
+    yellow: "bg-warning-soft border-warning/30 text-warning-soft-foreground",
+    red: "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
+    overdue: "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
   };
 
   const statusIcons = {
@@ -51,7 +51,7 @@ export default function OqoodCountdown({
         </div>
         <div>
           <p className="text-xs opacity-75">Time Remaining</p>
-          <p className={`font-bold text-lg ${isOverdue ? "text-red-600" : ""}`}>
+          <p className={`font-bold text-lg ${isOverdue ? "text-destructive" : ""}`}>
             {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days`}
           </p>
         </div>
@@ -60,18 +60,18 @@ export default function OqoodCountdown({
       <div className="mt-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs font-medium opacity-75">Status</span>
-          <span className="px-2 py-1 bg-white rounded text-xs font-semibold">
+          <span className="px-2 py-1 bg-card rounded text-xs font-semibold">
             {statusLabels[status]}
           </span>
         </div>
-        <div className="w-full bg-gray-300 rounded-full h-2">
+        <div className="w-full bg-neutral-300 rounded-full h-2">
           <div
             className={`h-2 rounded-full transition-all ${
               status === "green"
-                ? "bg-green-500"
+                ? "bg-success"
                 : status === "yellow"
-                  ? "bg-yellow-500"
-                  : "bg-red-600"
+                  ? "bg-warning"
+                  : "bg-destructive"
             }`}
             style={{
               width: `${Math.max(0, Math.min(100, (daysRemaining / 90) * 100))}%`,

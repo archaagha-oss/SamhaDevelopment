@@ -18,9 +18,9 @@ interface BankAccount {
 }
 
 const inp =
-  "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
-const lbl = "block text-xs font-semibold text-slate-600 mb-0.5";
-const hint = "text-xs text-slate-400 mt-0.5";
+  "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-0.5";
+const hint = "text-xs text-muted-foreground mt-0.5";
 
 const BLANK_ESCROW: BankAccount = {
   id: "",
@@ -87,11 +87,11 @@ export default function ProjectBankAccountsModal({ projectId, onClose }: Props) 
     title: string,
     showRefPrefix: boolean,
   ) => (
-    <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate-800 text-sm">{title}</h3>
+        <h3 className="font-semibold text-foreground text-sm">{title}</h3>
         {saved === account.purpose && (
-          <span className="text-xs text-emerald-600 font-medium">Saved</span>
+          <span className="text-xs text-success font-medium">Saved</span>
         )}
       </div>
       <div>
@@ -164,7 +164,7 @@ export default function ProjectBankAccountsModal({ projectId, onClose }: Props) 
         <button
           onClick={() => save(account)}
           disabled={savingPurpose === account.purpose}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
         >
           {savingPurpose === account.purpose ? "Saving…" : `Save ${title}`}
         </button>
@@ -174,15 +174,15 @@ export default function ProjectBankAccountsModal({ projectId, onClose }: Props) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div className="bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-bold text-slate-900">Project Bank Accounts</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-bold text-foreground">Project Bank Accounts</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Used by SPA Particulars Items IX (Escrow) and X (Current Account)
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
             ×
           </button>
         </div>
@@ -190,19 +190,19 @@ export default function ProjectBankAccountsModal({ projectId, onClose }: Props) 
         <div className="px-6 py-5 space-y-5">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
               {renderEditor(escrow, setEscrow, "Escrow Account", true)}
               {renderEditor(current, setCurrent, "Current Account", false)}
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+                <p className="text-sm text-destructive bg-destructive-soft px-3 py-2 rounded-lg">{error}</p>
               )}
               <div className="pt-1 flex justify-end">
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
+                  className="px-4 py-2 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm"
                 >
                   Close
                 </button>

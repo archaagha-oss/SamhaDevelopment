@@ -68,18 +68,18 @@ export default function HoverPreview({ src, caption, children, size = 360, disab
 
       {pos && (
         <div
-          className="fixed z-50 rounded-lg overflow-hidden shadow-2xl ring-1 ring-slate-900/10 bg-white pointer-events-none"
+          className="fixed z-50 rounded-lg overflow-hidden shadow-2xl ring-1 ring-slate-900/10 bg-card pointer-events-none"
           style={overlayStyle}
           role="tooltip"
         >
           <img
             src={src}
             alt={caption || "Preview"}
-            className="w-full h-full object-contain bg-slate-50"
+            className="w-full h-full object-contain bg-muted/50"
             draggable={false}
           />
           {caption && (
-            <div className="absolute bottom-0 left-0 right-0 bg-slate-900/80 text-white text-xs px-2 py-1 truncate">
+            <div className="absolute bottom-0 left-0 right-0 bg-neutral-900/80 text-white text-xs px-2 py-1 truncate">
               {caption}
             </div>
           )}

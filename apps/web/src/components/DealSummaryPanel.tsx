@@ -20,17 +20,17 @@ interface DealSummaryPanelProps {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  RESERVATION_PENDING: "bg-slate-100 text-slate-700",
-  RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
-  SPA_PENDING: "bg-yellow-100 text-yellow-700",
-  SPA_SENT: "bg-yellow-100 text-yellow-700",
-  SPA_SIGNED: "bg-violet-100 text-violet-700",
-  OQOOD_PENDING: "bg-orange-100 text-orange-700",
-  OQOOD_REGISTERED: "bg-teal-100 text-teal-700",
-  INSTALLMENTS_ACTIVE: "bg-indigo-100 text-indigo-700",
-  HANDOVER_PENDING: "bg-emerald-100 text-emerald-700",
-  COMPLETED: "bg-emerald-100 text-emerald-700",
-  CANCELLED: "bg-red-100 text-red-700",
+  RESERVATION_PENDING: "bg-muted text-foreground",
+  RESERVATION_CONFIRMED: "bg-info-soft text-primary",
+  SPA_PENDING: "bg-warning-soft text-warning",
+  SPA_SENT: "bg-warning-soft text-warning",
+  SPA_SIGNED: "bg-stage-active text-stage-active-foreground",
+  OQOOD_PENDING: "bg-warning-soft text-warning",
+  OQOOD_REGISTERED: "bg-chart-5/15 text-chart-5",
+  INSTALLMENTS_ACTIVE: "bg-stage-active text-stage-active-foreground",
+  HANDOVER_PENDING: "bg-success-soft text-success",
+  COMPLETED: "bg-success-soft text-success",
+  CANCELLED: "bg-destructive-soft text-destructive",
 };
 
 /**
@@ -48,7 +48,7 @@ export default function DealSummaryPanel({
   deal,
   onPrimaryAction,
   primaryActionLabel = "Proceed",
-  primaryActionColor = "bg-blue-600 hover:bg-blue-700",
+  primaryActionColor = "bg-primary hover:bg-primary/90",
 }: DealSummaryPanelProps): JSX.Element {
   const formatDate = (dateStr: string | undefined): string => {
     if (!dateStr) return "N/A";
@@ -76,17 +76,17 @@ export default function DealSummaryPanel({
     };
   }, [deal.payments, deal.salePrice]);
 
-  const stageColor = STAGE_COLORS[deal.stage] || "bg-gray-100 text-gray-700";
+  const stageColor = STAGE_COLORS[deal.stage] || "bg-muted text-foreground";
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 border-l border-slate-200">
+    <div className="flex flex-col h-full bg-muted/50 border-l border-border">
       {/* Sticky Header */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 p-6 space-y-4">
+      <div className="flex-shrink-0 bg-card border-b border-border p-6 space-y-4">
         {/* Deal Number & Stage */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-slate-600 font-medium">Deal Number</p>
-            <p className="text-lg font-bold text-slate-900">{deal.dealNumber}</p>
+            <p className="text-xs text-muted-foreground font-medium">Deal Number</p>
+            <p className="text-lg font-bold text-foreground">{deal.dealNumber}</p>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${stageColor}`}>
             {deal.stage.replace(/_/g, " ")}
@@ -94,32 +94,32 @@ export default function DealSummaryPanel({
         </div>
 
         {/* Summary Grid */}
-        <div className="bg-slate-50 rounded-lg p-4 space-y-3 text-sm">
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-600">Buyer:</span>
-            <span className="font-medium text-slate-900">
+            <span className="text-muted-foreground">Buyer:</span>
+            <span className="font-medium text-foreground">
               {deal.lead.firstName} {deal.lead.lastName}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-600">Unit:</span>
-            <span className="font-medium text-slate-900">{deal.unit.unitNumber}</span>
+            <span className="text-muted-foreground">Unit:</span>
+            <span className="font-medium text-foreground">{deal.unit.unitNumber}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-600">Sale Price:</span>
-            <span className="font-bold text-slate-900">
+            <span className="text-muted-foreground">Sale Price:</span>
+            <span className="font-bold text-foreground">
               AED {deal.salePrice.toLocaleString()}
             </span>
           </div>
           {deal.brokerCompany && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Broker:</span>
-              <span className="font-medium text-slate-900">{deal.brokerCompany.name}</span>
+              <span className="text-muted-foreground">Broker:</span>
+              <span className="font-medium text-foreground">{deal.brokerCompany.name}</span>
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-slate-600">Started:</span>
-            <span className="font-medium text-slate-900">
+            <span className="text-muted-foreground">Started:</span>
+            <span className="font-medium text-foreground">
               {formatDate(deal.createdAt)}
             </span>
           </div>
@@ -130,17 +130,17 @@ export default function DealSummaryPanel({
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Payment Progress */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 mb-3">Payment Progress</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Payment Progress</h3>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">
+              <span className="text-muted-foreground">
                 AED {paymentProgress.paid.toLocaleString()} of AED {paymentProgress.total.toLocaleString()}
               </span>
-              <span className="font-medium text-slate-900">{paymentProgress.percentage}%</span>
+              <span className="font-medium text-foreground">{paymentProgress.percentage}%</span>
             </div>
-            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-emerald-500 h-full transition-all duration-300"
+                className="bg-success h-full transition-all duration-300"
                 style={{ width: `${paymentProgress.percentage}%` }}
               />
             </div>
@@ -150,26 +150,26 @@ export default function DealSummaryPanel({
         {/* Payment Milestones */}
         {deal.payments && deal.payments.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Payment Milestones</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3">Payment Milestones</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {deal.payments.map((payment) => (
                 <div
                   key={payment.id}
                   className={`p-3 rounded-lg border text-sm ${
                     payment.status === "PAID"
-                      ? "bg-emerald-50 border-emerald-200"
-                      : "bg-amber-50 border-amber-200"
+                      ? "bg-success-soft border-success/30"
+                      : "bg-warning-soft border-warning/30"
                   }`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-900 font-medium">
+                    <span className="text-foreground font-medium">
                       AED {payment.amount.toLocaleString()}
                     </span>
                     <span
                       className={`text-xs font-medium px-2 py-1 rounded ${
                         payment.status === "PAID"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-amber-100 text-amber-700"
+                          ? "bg-success-soft text-success"
+                          : "bg-warning-soft text-warning"
                       }`}
                     >
                       {payment.status}
@@ -183,7 +183,7 @@ export default function DealSummaryPanel({
       </div>
 
       {/* Sticky Primary Action Button */}
-      <div className="flex-shrink-0 bg-white border-t border-slate-200 p-6">
+      <div className="flex-shrink-0 bg-card border-t border-border p-6">
         <button
           onClick={onPrimaryAction}
           className={`w-full px-4 py-3 text-white rounded-lg font-medium transition ${primaryActionColor}`}

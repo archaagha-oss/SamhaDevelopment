@@ -4,6 +4,8 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import { PageContainer, PageHeader } from "../components/layout";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,7 +52,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   AVAILABLE: "#10b981", RESERVED: "#3b82f6", BOOKED: "#a855f7",
-  SOLD: "#f59e0b", HANDED_OVER: "#6b7280", BLOCKED: "#ef4444", NOT_RELEASED: "#94a3b8",
+  SOLD: "#f59e0b", HANDED_OVER: "#6b7280", BLOCKED: "#ef4444", NOT_RELEASED: "hsl(var(--neutral-400))",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -61,18 +63,18 @@ const fmtNum  = (n: number) => n.toLocaleString();
 const pct     = (a: number, b: number) => b > 0 ? ((a / b) * 100).toFixed(1) + "%" : "0%";
 const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
 
-function KPI({ label, value, sub, color = "text-slate-800" }: { label: string; value: string; sub?: string; color?: string }) {
+function KPI({ label, value, sub, color = "text-foreground" }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{label}</p>
+    <div className="bg-card rounded-xl border border-border p-4">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-sm font-semibold text-slate-700 mb-3">{children}</h3>;
+  return <h3 className="text-sm font-semibold text-foreground mb-3">{children}</h3>;
 }
 
 /** RFC4180-compliant CSV: quote any field containing comma/quote/newline; double internal quotes. */
@@ -120,13 +122,13 @@ const ExportMenu = ({ csvRows, csvName, xlsxUrl, xlsxName }: {
   <div className="flex gap-1.5 print:hidden">
     <button
       onClick={() => downloadCSV(csvRows, csvName)}
-      className="text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 rounded px-2.5 py-1 transition-colors"
+      className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border rounded px-2.5 py-1 transition-colors"
       title="Download as CSV"
     >CSV</button>
     {xlsxUrl && xlsxName && (
       <button
         onClick={() => downloadXLSX(xlsxUrl, xlsxName)}
-        className="text-xs text-emerald-700 hover:text-white hover:bg-emerald-600 border border-emerald-200 rounded px-2.5 py-1 transition-colors"
+        className="text-xs text-success hover:text-white hover:bg-success border border-success/30 rounded px-2.5 py-1 transition-colors"
         title="Download styled Excel report"
       >Excel</button>
     )}
@@ -156,14 +158,14 @@ function PipelineTab({ overview, dealStages, leads, range }: {
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Total Deals"      value={fmtNum(overview.totalDeals)}  />
-        <KPI label="Pipeline Value"   value={fmtAED(overview.pipelineValue)} color="text-blue-700" />
+        <KPI label="Pipeline Value"   value={fmtAED(overview.pipelineValue)} color="text-primary" />
         <KPI label="Total Leads"      value={fmtNum(overview.totalLeads)}  />
-        <KPI label="Conversion Rate"  value={leads.conversionRate + "%"}   color="text-emerald-700"
+        <KPI label="Conversion Rate"  value={leads.conversionRate + "%"}   color="text-success"
           sub={`${leads.convertedToDeals} of ${leads.totalLeads} leads`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-card rounded-xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>Deals by Stage</SectionTitle>
             <ExportMenu
@@ -179,12 +181,12 @@ function PipelineTab({ overview, dealStages, leads, range }: {
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="stage" tick={{ fontSize: 11 }} width={110} />
               <Tooltip formatter={(v: any) => [v, "Deals"]} />
-              <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-card rounded-xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>Lead Pipeline</SectionTitle>
             <ExportMenu
@@ -200,14 +202,14 @@ function PipelineTab({ overview, dealStages, leads, range }: {
               <XAxis dataKey="stage" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="count" fill="#a855f7" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500 mb-2">Lead Sources</p>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Lead Sources</p>
             <div className="flex flex-wrap gap-2">
               {leadSources.map(({ source, count }) => (
-                <span key={source} className="text-xs px-2 py-1 rounded-full border border-slate-200 text-slate-600">
+                <span key={source} className="text-xs px-2 py-1 rounded-full border border-border text-muted-foreground">
                   {source}: <strong>{count}</strong>
                 </span>
               ))}
@@ -219,23 +221,23 @@ function PipelineTab({ overview, dealStages, leads, range }: {
       {/* Conversion funnel */}
       {(() => {
         const funnelStages = [
-          { label: "Total Leads",  value: overview.totalLeads,  color: "bg-purple-500" },
-          { label: "Active Deals", value: overview.totalDeals,  color: "bg-blue-500"   },
+          { label: "Total Leads",  value: overview.totalLeads,  color: "bg-chart-7" },
+          { label: "Active Deals", value: overview.totalDeals,  color: "bg-primary"   },
           {
             label: "Res. Confirmed",
             value: sorted.find((s) => s.stage === STAGE_LABELS["RESERVATION_CONFIRMED"])?.count
               ?? sorted.filter((s) => !["Cancelled", "Res. Pending"].includes(s.stage)).reduce((a, s) => a + s.count, 0),
-            color: "bg-indigo-500",
+            color: "bg-chart-4",
           },
           {
             label: "Completed",
             value: sorted.find((s) => s.stage === STAGE_LABELS["COMPLETED"])?.count ?? 0,
-            color: "bg-emerald-500",
+            color: "bg-success",
           },
         ];
         const max = funnelStages[0]?.value || 1;
         return (
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <SectionTitle>Conversion Funnel</SectionTitle>
             <div className="space-y-3 mt-2">
               {funnelStages.map((stage, i) => {
@@ -246,13 +248,13 @@ function PipelineTab({ overview, dealStages, leads, range }: {
                 return (
                   <div key={stage.label}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-slate-600">{stage.label}</span>
-                      <span className="text-xs text-slate-500">
-                        <strong className="text-slate-800">{stage.value.toLocaleString()}</strong>
-                        {pctOfPrev && <span className="ml-2 text-slate-400">({pctOfPrev})</span>}
+                      <span className="text-xs font-medium text-muted-foreground">{stage.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        <strong className="text-foreground">{stage.value.toLocaleString()}</strong>
+                        {pctOfPrev && <span className="ml-2 text-muted-foreground">({pctOfPrev})</span>}
                       </span>
                     </div>
-                    <div className="h-6 bg-slate-100 rounded-lg overflow-hidden">
+                    <div className="h-6 bg-muted rounded-lg overflow-hidden">
                       <div
                         className={`h-full ${stage.color} rounded-lg transition-all`}
                         style={{ width: `${Math.max(pctOfFirst, 1)}%` }}
@@ -294,13 +296,13 @@ function RevenueTab({ overview, monthly, range }: {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Collected"       value={fmtAED(totalCollected)}           color="text-emerald-700" />
-        <KPI label="Overdue"         value={fmtAED(overview.overduePayments)} color="text-red-700" />
-        <KPI label="Pipeline Value"  value={fmtAED(overview.pipelineValue)}   color="text-blue-700" />
+        <KPI label="Collected"       value={fmtAED(totalCollected)}           color="text-success" />
+        <KPI label="Overdue"         value={fmtAED(overview.overduePayments)} color="text-destructive" />
+        <KPI label="Pipeline Value"  value={fmtAED(overview.pipelineValue)}   color="text-primary" />
         <KPI label="Collection Rate" value={collectionRate} sub={`${fmtAED(totalCollected)} of ${fmtAED(totalExpected)}`} />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Monthly Revenue — Collected vs. Expected</SectionTitle>
           <ExportMenu
@@ -317,53 +319,53 @@ function RevenueTab({ overview, monthly, range }: {
             <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
             <Tooltip formatter={(v: any) => [`AED ${Number(v).toLocaleString()}`, ""]} />
             <Legend />
-            <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expected"  name="Expected"  fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="collected" name="Collected" fill="hsl(var(--success))"     radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expected"  name="Expected"  fill="hsl(var(--neutral-200))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Monthly breakdown table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="px-5 py-3 border-b border-border">
           <SectionTitle>Monthly Breakdown</SectionTitle>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
+          <thead className="bg-muted/50 border-b border-border">
             <tr>
               {["Month","Collected","Expected","Variance","Collection %"].map((h) => (
-                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-border">
             {monthly.map((m) => {
               const variance = m.collected - m.expected;
               const ratePct = m.expected > 0 ? (m.collected / m.expected) * 100 : 0;
               return (
-                <tr key={m.key} className="hover:bg-slate-50/80">
-                  <td className="px-4 py-3 font-medium text-slate-800">{m.label}</td>
-                  <td className="px-4 py-3 text-emerald-700 font-medium">{fmtAEDFull(m.collected)}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmtAEDFull(m.expected)}</td>
-                  <td className={`px-4 py-3 font-medium ${variance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                <tr key={m.key} className="hover:bg-muted/80">
+                  <td className="px-4 py-3 font-medium text-foreground">{m.label}</td>
+                  <td className="px-4 py-3 text-success font-medium">{fmtAEDFull(m.collected)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtAEDFull(m.expected)}</td>
+                  <td className={`px-4 py-3 font-medium ${variance >= 0 ? "text-success" : "text-destructive"}`}>
                     {variance >= 0 ? "+" : ""}{fmtAEDFull(variance)}
                   </td>
-                  <td className={`px-4 py-3 font-semibold ${ratePct >= 90 ? "text-emerald-600" : ratePct >= 70 ? "text-amber-600" : "text-red-500"}`}>
+                  <td className={`px-4 py-3 font-semibold ${ratePct >= 90 ? "text-success" : ratePct >= 70 ? "text-warning" : "text-destructive"}`}>
                     {ratePct.toFixed(1)}%
                   </td>
                 </tr>
               );
             })}
           </tbody>
-          <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+          <tfoot className="bg-muted/50 border-t-2 border-border">
             <tr>
-              <td className="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide text-xs">Total</td>
-              <td className="px-4 py-3 font-bold text-emerald-700">{fmtAEDFull(totalCollected)}</td>
-              <td className="px-4 py-3 font-bold text-slate-700">{fmtAEDFull(totalExpected)}</td>
-              <td className={`px-4 py-3 font-bold ${totalCollected - totalExpected >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+              <td className="px-4 py-3 font-bold text-foreground uppercase tracking-wide text-xs">Total</td>
+              <td className="px-4 py-3 font-bold text-success">{fmtAEDFull(totalCollected)}</td>
+              <td className="px-4 py-3 font-bold text-foreground">{fmtAEDFull(totalExpected)}</td>
+              <td className={`px-4 py-3 font-bold ${totalCollected - totalExpected >= 0 ? "text-success" : "text-destructive"}`}>
                 {totalCollected - totalExpected >= 0 ? "+" : ""}{fmtAEDFull(totalCollected - totalExpected)}
               </td>
-              <td className="px-4 py-3 font-bold text-slate-800">{collectionRate}</td>
+              <td className="px-4 py-3 font-bold text-foreground">{collectionRate}</td>
             </tr>
           </tfoot>
         </table>
@@ -400,11 +402,11 @@ function AgentsTab({ agents }: { agents: AgentSummary[] }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Total Agents"     value={String(agents.length)} />
         <KPI label="Total Deals"      value={fmtNum(totalDeals)} />
-        <KPI label="Commission Paid"  value={fmtAED(totalComm)} color="text-emerald-700" />
+        <KPI label="Commission Paid"  value={fmtAED(totalComm)} color="text-success" />
         <KPI label="Avg Close Rate"   value={avgClose.toFixed(1) + "%"} />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Leads vs. Deals vs. Closed — Per Agent</SectionTitle>
           <ExportMenu
@@ -421,53 +423,53 @@ function AgentsTab({ agents }: { agents: AgentSummary[] }) {
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="leads"  name="Leads"  fill="#94a3b8" radius={[4,4,0,0]} />
-            <Bar dataKey="deals"  name="Deals"  fill="#3b82f6" radius={[4,4,0,0]} />
-            <Bar dataKey="closed" name="Closed" fill="#10b981" radius={[4,4,0,0]} />
+            <Bar dataKey="leads"  name="Leads"  fill="hsl(var(--neutral-400))" radius={[4,4,0,0]} />
+            <Bar dataKey="deals"  name="Deals"  fill="hsl(var(--chart-1))" radius={[4,4,0,0]} />
+            <Bar dataKey="closed" name="Closed" fill="hsl(var(--success))" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
+          <thead className="bg-muted/50 border-b border-border">
             <tr>
               {["Agent","Role","Leads","Deals","Closed Leads","Close Rate","Revenue","Commission"].map((h) => (
-                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-border">
             {agents.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400 text-sm">No agent data</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground text-sm">No agent data</td></tr>
             ) : agents.map((a) => (
-              <tr key={a.agentId} className="hover:bg-slate-50/80">
-                <td className="px-4 py-3 font-semibold text-slate-800">{a.agentName}</td>
-                <td className="px-4 py-3 text-xs text-slate-500">{a.role.replace(/_/g, " ")}</td>
+              <tr key={a.agentId} className="hover:bg-muted/80">
+                <td className="px-4 py-3 font-semibold text-foreground">{a.agentName}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">{a.role.replace(/_/g, " ")}</td>
                 <td className="px-4 py-3">{a.totalLeads}</td>
                 <td className="px-4 py-3">{a.totalDeals}</td>
                 <td className="px-4 py-3">{a.closedLeads}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-sm font-semibold ${parseFloat(a.closeRate) >= 50 ? "text-emerald-600" : parseFloat(a.closeRate) >= 25 ? "text-amber-600" : "text-red-500"}`}>
+                  <span className={`text-sm font-semibold ${parseFloat(a.closeRate) >= 50 ? "text-success" : parseFloat(a.closeRate) >= 25 ? "text-warning" : "text-destructive"}`}>
                     {a.closeRate}%
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{fmtAED(a.dealRevenue)}</td>
-                <td className="px-4 py-3 text-emerald-700 font-medium">{fmtAED(a.commissionEarned)}</td>
+                <td className="px-4 py-3 text-foreground">{fmtAED(a.dealRevenue)}</td>
+                <td className="px-4 py-3 text-success font-medium">{fmtAED(a.commissionEarned)}</td>
               </tr>
             ))}
           </tbody>
           {agents.length > 0 && (
-            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+            <tfoot className="bg-muted/50 border-t-2 border-border">
               <tr>
-                <td className="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide text-xs">Total</td>
+                <td className="px-4 py-3 font-bold text-foreground uppercase tracking-wide text-xs">Total</td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 font-bold">{fmtNum(totalLeads)}</td>
                 <td className="px-4 py-3 font-bold">{fmtNum(totalDeals)}</td>
                 <td className="px-4 py-3 font-bold">{fmtNum(totalClosed)}</td>
                 <td className="px-4 py-3 font-bold">{avgClose.toFixed(1)}%</td>
-                <td className="px-4 py-3 font-bold text-slate-800">{fmtAED(totalRevenue)}</td>
-                <td className="px-4 py-3 font-bold text-emerald-700">{fmtAED(totalComm)}</td>
+                <td className="px-4 py-3 font-bold text-foreground">{fmtAED(totalRevenue)}</td>
+                <td className="px-4 py-3 font-bold text-success">{fmtAED(totalComm)}</td>
               </tr>
             </tfoot>
           )}
@@ -512,21 +514,21 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Total Units"  value={fmtNum(overview.totalUnits)} />
-        <KPI label="Available"    value={fmtNum(totalAvail)} color="text-emerald-700"
+        <KPI label="Available"    value={fmtNum(totalAvail)} color="text-success"
           sub={pct(totalAvail, totalUnits) + " of total"} />
-        <KPI label="Sold"         value={fmtNum(totalSold)} color="text-amber-700"
+        <KPI label="Sold"         value={fmtNum(totalSold)} color="text-warning"
           sub={overview.soldPercentage + "% sold"} />
-        <KPI label="Total Value"  value={fmtAED(totalValue)} color="text-blue-700" />
+        <KPI label="Total Value"  value={fmtAED(totalValue)} color="text-primary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-card rounded-xl border border-border p-5">
           <SectionTitle>Unit Status Distribution</SectionTitle>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {pieData.map(({ name }) => (
-                  <Cell key={name} fill={STATUS_COLORS[name] || "#94a3b8"} />
+                  <Cell key={name} fill={STATUS_COLORS[name] || "hsl(var(--neutral-400))"} />
                 ))}
               </Pie>
               <Tooltip formatter={(v: any) => [v, "Units"]} />
@@ -534,15 +536,15 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
           </ResponsiveContainer>
           <div className="flex flex-wrap gap-2 mt-2 justify-center">
             {pieData.map(({ name, value }) => (
-              <span key={name} className="flex items-center gap-1 text-xs text-slate-600">
-                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: STATUS_COLORS[name] || "#94a3b8" }} />
+              <span key={name} className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: STATUS_COLORS[name] || "hsl(var(--neutral-400))" }} />
                 {name}: {value}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-card rounded-xl border border-border p-5">
           <div className="flex items-center justify-between mb-1">
             <SectionTitle>Units by Project</SectionTitle>
             <ExportMenu
@@ -560,55 +562,55 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
               <Tooltip />
               <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11 }} />
               {allStatuses.map((s) => (
-                <Bar key={s} dataKey={s} stackId="a" fill={STATUS_COLORS[s] || "#94a3b8"} name={s} />
+                <Bar key={s} dataKey={s} stackId="a" fill={STATUS_COLORS[s] || "hsl(var(--neutral-400))"} name={s} />
               ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
+          <thead className="bg-muted/50 border-b border-border">
             <tr>
               {["Project","Total","Available","Reserved","Booked","Sold","Blocked","Avail. Rate","Total Value"].map((h) => (
-                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-border">
             {inventory.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400 text-sm">No inventory data</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">No inventory data</td></tr>
             ) : inventory.map((p) => (
-              <tr key={p.projectName} className="hover:bg-slate-50/80">
-                <td className="px-4 py-3 font-semibold text-slate-800">{p.projectName}</td>
+              <tr key={p.projectName} className="hover:bg-muted/80">
+                <td className="px-4 py-3 font-semibold text-foreground">{p.projectName}</td>
                 <td className="px-4 py-3">{p.total}</td>
-                <td className="px-4 py-3 text-emerald-600 font-medium">{p.byStatus["AVAILABLE"] || 0}</td>
-                <td className="px-4 py-3 text-blue-600">{p.byStatus["RESERVED"] || 0}</td>
-                <td className="px-4 py-3 text-purple-600">{p.byStatus["BOOKED"] || 0}</td>
-                <td className="px-4 py-3 text-amber-600 font-medium">{p.byStatus["SOLD"] || 0}</td>
-                <td className="px-4 py-3 text-red-500">{p.byStatus["BLOCKED"] || 0}</td>
+                <td className="px-4 py-3 text-success font-medium">{p.byStatus["AVAILABLE"] || 0}</td>
+                <td className="px-4 py-3 text-primary">{p.byStatus["RESERVED"] || 0}</td>
+                <td className="px-4 py-3 text-chart-7">{p.byStatus["BOOKED"] || 0}</td>
+                <td className="px-4 py-3 text-warning font-medium">{p.byStatus["SOLD"] || 0}</td>
+                <td className="px-4 py-3 text-destructive">{p.byStatus["BLOCKED"] || 0}</td>
                 <td className="px-4 py-3">
-                  <span className={`font-semibold ${parseFloat(p.availableRate) > 50 ? "text-emerald-600" : parseFloat(p.availableRate) > 20 ? "text-amber-600" : "text-red-500"}`}>
+                  <span className={`font-semibold ${parseFloat(p.availableRate) > 50 ? "text-success" : parseFloat(p.availableRate) > 20 ? "text-warning" : "text-destructive"}`}>
                     {p.availableRate}%
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{fmtAED(p.totalValue)}</td>
+                <td className="px-4 py-3 text-foreground">{fmtAED(p.totalValue)}</td>
               </tr>
             ))}
           </tbody>
           {inventory.length > 0 && (
-            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+            <tfoot className="bg-muted/50 border-t-2 border-border">
               <tr>
-                <td className="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide text-xs">Total</td>
+                <td className="px-4 py-3 font-bold text-foreground uppercase tracking-wide text-xs">Total</td>
                 <td className="px-4 py-3 font-bold">{fmtNum(totalUnits)}</td>
-                <td className="px-4 py-3 font-bold text-emerald-700">{fmtNum(totalAvail)}</td>
-                <td className="px-4 py-3 font-bold text-blue-700">{fmtNum(totalRes)}</td>
-                <td className="px-4 py-3 font-bold text-purple-700">{fmtNum(totalBook)}</td>
-                <td className="px-4 py-3 font-bold text-amber-700">{fmtNum(totalSold)}</td>
-                <td className="px-4 py-3 font-bold text-red-600">{fmtNum(totalBlock)}</td>
+                <td className="px-4 py-3 font-bold text-success">{fmtNum(totalAvail)}</td>
+                <td className="px-4 py-3 font-bold text-primary">{fmtNum(totalRes)}</td>
+                <td className="px-4 py-3 font-bold text-chart-7">{fmtNum(totalBook)}</td>
+                <td className="px-4 py-3 font-bold text-warning">{fmtNum(totalSold)}</td>
+                <td className="px-4 py-3 font-bold text-destructive">{fmtNum(totalBlock)}</td>
                 <td className="px-4 py-3 font-bold">{pct(totalAvail, totalUnits)}</td>
-                <td className="px-4 py-3 font-bold text-slate-800">{fmtAED(totalValue)}</td>
+                <td className="px-4 py-3 font-bold text-foreground">{fmtAED(totalValue)}</td>
               </tr>
             </tfoot>
           )}
@@ -623,21 +625,21 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
 function FinanceTab({ overview, collections }: { overview: Overview; collections: Collections | null }) {
   if (!collections) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
   const agingColors: Record<string, string> = {
-    "0-30":  "bg-amber-50 border-amber-200 text-amber-700",
-    "31-60": "bg-orange-50 border-orange-200 text-orange-700",
-    "61-90": "bg-red-50 border-red-200 text-red-700",
-    "90+":   "bg-red-100 border-red-300 text-red-800",
+    "0-30":  "bg-warning-soft border-warning/30 text-warning",
+    "31-60": "bg-warning-soft border-warning/30 text-warning",
+    "61-90": "bg-destructive-soft border-destructive/30 text-destructive",
+    "90+":   "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
   };
   const bucketBadge: Record<string, string> = {
-    "0-30":  "bg-amber-100 text-amber-700",
-    "31-60": "bg-orange-100 text-orange-700",
-    "61-90": "bg-red-100 text-red-700",
-    "90+":   "bg-red-200 text-red-900",
+    "0-30":  "bg-warning-soft text-warning",
+    "31-60": "bg-warning-soft text-warning",
+    "61-90": "bg-destructive-soft text-destructive",
+    "90+":   "bg-destructive/30 text-destructive-soft-foreground",
   };
 
   const overduePayments  = collections.overdue.payments ?? [];
@@ -667,12 +669,12 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Total Collected"    value={fmtAED(overview.revenueCollected)} color="text-emerald-700" />
-        <KPI label="Overdue Amount"     value={fmtAED(overview.overduePayments)}  color="text-red-700"
+        <KPI label="Total Collected"    value={fmtAED(overview.revenueCollected)} color="text-success" />
+        <KPI label="Overdue Amount"     value={fmtAED(overview.overduePayments)}  color="text-destructive"
           sub={`${collections.overdue.count} payment${collections.overdue.count !== 1 ? "s" : ""}`} />
-        <KPI label="Due in 7 Days"      value={fmtAED(collections.upcoming.next7Days.total)}  color="text-amber-700"
+        <KPI label="Due in 7 Days"      value={fmtAED(collections.upcoming.next7Days.total)}  color="text-warning"
           sub={`${collections.upcoming.next7Days.count} payments`} />
-        <KPI label="Due in 30 Days"     value={fmtAED(collections.upcoming.next30Days.total)} color="text-blue-700"
+        <KPI label="Due in 30 Days"     value={fmtAED(collections.upcoming.next30Days.total)} color="text-primary"
           sub={`${collections.upcoming.next30Days.count} payments`} />
       </div>
 
@@ -680,7 +682,7 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
         <SectionTitle>Overdue Aging Buckets</SectionTitle>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {collections.aging.map(({ range, count, amount }) => (
-            <div key={range} className={`rounded-xl border p-4 ${agingColors[range] || "bg-slate-50 border-slate-200 text-slate-600"}`}>
+            <div key={range} className={`rounded-xl border p-4 ${agingColors[range] || "bg-muted/50 border-border text-muted-foreground"}`}>
               <p className="text-xs font-bold uppercase tracking-wide mb-1">{range} days</p>
               <p className="text-2xl font-bold">{count}</p>
               <p className="text-xs mt-0.5 opacity-80">{fmtAEDFull(amount)}</p>
@@ -690,8 +692,8 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
       </div>
 
       {/* Overdue payments table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <SectionTitle>Overdue Payments</SectionTitle>
           <ExportMenu
             csvRows={overdueCsv}
@@ -702,38 +704,38 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
                 {["Deal #","Buyer","Unit","Milestone","Due Date","Days Late","Aging","Amount"].map((h) => (
-                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-border">
               {overduePayments.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400 text-sm">No overdue payments</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground text-sm">No overdue payments</td></tr>
               ) : overduePayments.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/80">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.deal?.dealNumber}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">{p.deal?.lead?.firstName} {p.deal?.lead?.lastName}</td>
-                  <td className="px-4 py-3 text-slate-700">{p.deal?.unit?.unitNumber}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600 max-w-[180px] truncate" title={p.milestoneLabel}>{p.milestoneLabel}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{fmtDate(p.dueDate)}</td>
-                  <td className="px-4 py-3 text-red-600 font-semibold">{p.daysLate}d</td>
+                <tr key={p.id} className="hover:bg-muted/80">
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.deal?.dealNumber}</td>
+                  <td className="px-4 py-3 font-semibold text-foreground">{p.deal?.lead?.firstName} {p.deal?.lead?.lastName}</td>
+                  <td className="px-4 py-3 text-foreground">{p.deal?.unit?.unitNumber}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-[180px] truncate" title={p.milestoneLabel}>{p.milestoneLabel}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-foreground">{fmtDate(p.dueDate)}</td>
+                  <td className="px-4 py-3 text-destructive font-semibold">{p.daysLate}d</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${bucketBadge[p.agingBucket] || "bg-slate-100 text-slate-700"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${bucketBadge[p.agingBucket] || "bg-muted text-foreground"}`}>
                       {p.agingBucket}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-red-700">{fmtAEDFull(p.amount)}</td>
+                  <td className="px-4 py-3 font-semibold text-destructive">{fmtAEDFull(p.amount)}</td>
                 </tr>
               ))}
             </tbody>
             {overduePayments.length > 0 && (
-              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+              <tfoot className="bg-muted/50 border-t-2 border-border">
                 <tr>
-                  <td colSpan={7} className="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide text-xs">Total Overdue</td>
-                  <td className="px-4 py-3 font-bold text-red-700">{fmtAEDFull(collections.overdue.total)}</td>
+                  <td colSpan={7} className="px-4 py-3 font-bold text-foreground uppercase tracking-wide text-xs">Total Overdue</td>
+                  <td className="px-4 py-3 font-bold text-destructive">{fmtAEDFull(collections.overdue.total)}</td>
                 </tr>
               </tfoot>
             )}
@@ -742,48 +744,48 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
       </div>
 
       {/* Upcoming payments table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <SectionTitle>Payments Due in Next 7 Days</SectionTitle>
           <ExportMenu csvRows={upcomingCsv} csvName="upcoming-7days.csv" />
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
+          <thead className="bg-muted/50 border-b border-border">
             <tr>
               {["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount"].map((h) => (
-                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-border">
             {upcomingPayments7.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400 text-sm">No payments due in the next 7 days</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground text-sm">No payments due in the next 7 days</td></tr>
             ) : upcomingPayments7.map((p: any) => (
-              <tr key={p.id} className="hover:bg-slate-50/80">
-                <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.deal?.dealNumber}</td>
-                <td className="px-4 py-3 font-semibold text-slate-800">{p.deal?.lead?.firstName} {p.deal?.lead?.lastName}</td>
-                <td className="px-4 py-3 text-slate-700">{p.deal?.unit?.unitNumber}</td>
-                <td className="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title={p.milestoneLabel}>{p.milestoneLabel}</td>
+              <tr key={p.id} className="hover:bg-muted/80">
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.deal?.dealNumber}</td>
+                <td className="px-4 py-3 font-semibold text-foreground">{p.deal?.lead?.firstName} {p.deal?.lead?.lastName}</td>
+                <td className="px-4 py-3 text-foreground">{p.deal?.unit?.unitNumber}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground max-w-[140px] truncate" title={p.milestoneLabel}>{p.milestoneLabel}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   {(() => {
                     const days = Math.ceil((new Date(p.dueDate).getTime() - Date.now()) / 86400000);
                     return (
                       <>
-                        <p className="text-slate-700">{fmtDate(p.dueDate)}</p>
-                        <p className="text-xs text-amber-600 font-medium">{days <= 0 ? "Today" : `in ${days}d`}</p>
+                        <p className="text-foreground">{fmtDate(p.dueDate)}</p>
+                        <p className="text-xs text-warning font-medium">{days <= 0 ? "Today" : `in ${days}d`}</p>
                       </>
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3 font-semibold text-slate-800">{fmtAEDFull(p.amount)}</td>
+                <td className="px-4 py-3 font-semibold text-foreground">{fmtAEDFull(p.amount)}</td>
               </tr>
             ))}
           </tbody>
           {upcomingPayments7.length > 0 && (
-            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+            <tfoot className="bg-muted/50 border-t-2 border-border">
               <tr>
-                <td colSpan={5} className="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide text-xs">Total Upcoming (7d)</td>
-                <td className="px-4 py-3 font-bold text-amber-700">{fmtAEDFull(collections.upcoming.next7Days.total)}</td>
+                <td colSpan={5} className="px-4 py-3 font-bold text-foreground uppercase tracking-wide text-xs">Total Upcoming (7d)</td>
+                <td className="px-4 py-3 font-bold text-warning">{fmtAEDFull(collections.upcoming.next7Days.total)}</td>
               </tr>
             </tfoot>
           )}
@@ -873,7 +875,7 @@ export default function ReportsPage() {
     : "All time";
 
   return (
-    <div className="p-6 space-y-5 print:p-2 print:space-y-3">
+    <div className="flex flex-col h-full print:block">
       {/* Print stylesheet — keeps tables/charts paper-friendly */}
       <style>{`
         @media print {
@@ -888,27 +890,24 @@ export default function ReportsPage() {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Reports & Analytics</h1>
-          <p className="text-slate-400 text-xs mt-0.5">
-            {activeRangeLabel}
-            {generatedAt && <span className="ml-2 text-slate-300">·  Generated {generatedAt.toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}</span>}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 print:hidden">
-          <button
-            onClick={() => window.print()}
-            className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
-            title="Print or save as PDF"
-          >Print / PDF</button>
-        </div>
+      <div className="print:hidden">
+        <PageHeader
+          crumbs={[{ label: "Home", path: "/" }, { label: "Reports" }]}
+          title="Reports & Analytics"
+          subtitle={
+            <>
+              {activeRangeLabel}
+              {generatedAt && <span className="ml-2 text-foreground/80">·  Generated {generatedAt.toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}</span>}
+            </>
+          }
+          actions={<Button variant="outline" onClick={() => window.print()} title="Print or save as PDF">Print / PDF</Button>}
+        />
       </div>
 
+      <PageContainer padding="default" className="space-y-5 print:p-2 print:space-y-3">
       {/* Filter bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3 flex-wrap print:hidden">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Date range</span>
+      <div className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 flex-wrap print:hidden">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range</span>
         <div className="flex gap-1">
           {[
             { id: "30d", label: "30d"  }, { id: "90d", label: "90d" },
@@ -918,7 +917,7 @@ export default function ReportsPage() {
             <button
               key={p.id}
               onClick={() => setRange(presetRange(p.id as any))}
-              className="text-xs px-2.5 py-1 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
+              className="text-xs px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted/50"
             >{p.label}</button>
           ))}
         </div>
@@ -927,30 +926,30 @@ export default function ReportsPage() {
             type="date"
             value={range.startDate}
             onChange={(e) => setRange({ ...range, startDate: e.target.value })}
-            className="text-xs px-2 py-1 border border-slate-200 rounded-md text-slate-700"
+            className="text-xs px-2 py-1 border border-border rounded-md text-foreground"
           />
-          <span className="text-slate-400 text-xs">to</span>
+          <span className="text-muted-foreground text-xs">to</span>
           <input
             type="date"
             value={range.endDate}
             onChange={(e) => setRange({ ...range, endDate: e.target.value })}
-            className="text-xs px-2 py-1 border border-slate-200 rounded-md text-slate-700"
+            className="text-xs px-2 py-1 border border-border rounded-md text-foreground"
           />
         </div>
         {(range.startDate || range.endDate) && (
           <button
             onClick={() => setRange({ startDate: "", endDate: "" })}
-            className="text-xs text-slate-500 hover:text-slate-800 underline ml-1"
+            className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
           >Clear</button>
         )}
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit print:hidden">
+      <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit print:hidden">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              tab === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}>
             {t.label}
           </button>
@@ -959,17 +958,17 @@ export default function ReportsPage() {
 
       {/* Section title for printed page only */}
       <div className="hidden print:block">
-        <h2 className="text-base font-bold text-slate-900">
+        <h2 className="text-base font-bold text-foreground">
           {TABS.find((t) => t.id === tab)?.label}
         </h2>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !overview || !leads ? (
-        <div className="text-center py-16 text-slate-400 text-sm">Failed to load data</div>
+        <div className="text-center py-16 text-muted-foreground text-sm">Failed to load data</div>
       ) : (
         <>
           {tab === "pipeline"  && <PipelineTab  overview={overview} dealStages={dealStages} leads={leads} range={range} />}
@@ -979,6 +978,7 @@ export default function ReportsPage() {
           {tab === "finance"   && <FinanceTab   overview={overview} collections={collections} />}
         </>
       )}
+      </PageContainer>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
 import { getBrokerStatusColor } from "../utils/statusColors";
+import { PageContainer, PageHeader } from "./layout";
+import { Button } from "@/components/ui/button";
 
 const BROKER_STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Active",
@@ -64,10 +66,10 @@ interface BrokerCompany {
   createdAt: string;
 }
 
-const INPUT_CLS = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400";
-const LABEL_CLS = "text-xs text-slate-500 mb-1 block font-medium";
-const SECTION_CLS = "border-t border-slate-100 pt-4 mt-4";
-const SECTION_TITLE_CLS = "text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3";
+const INPUT_CLS = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring";
+const LABEL_CLS = "text-xs text-muted-foreground mb-1 block font-medium";
+const SECTION_CLS = "border-t border-border pt-4 mt-4";
+const SECTION_TITLE_CLS = "text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3";
 
 const emptyCompanyForm = () => ({
   name: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
@@ -124,16 +126,16 @@ function FileUploadField({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 disabled:opacity-50 whitespace-nowrap"
+          className="px-3 py-1.5 text-xs border border-border rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground disabled:opacity-50 whitespace-nowrap"
         >
           {uploading ? "Uploading…" : value ? "Replace" : "Choose File"}
         </button>
         {value ? (
-          <a href={value} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[180px]">
+          <a href={value} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate max-w-[180px]">
             {filename}
           </a>
         ) : (
-          <span className="text-xs text-slate-400">No file selected</span>
+          <span className="text-xs text-muted-foreground">No file selected</span>
         )}
         <input
           ref={inputRef}
@@ -204,8 +206,8 @@ export default function BrokerPage() {
   const reraWarning = (expiry?: string) => {
     if (!expiry) return null;
     const days = Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000);
-    if (days < 0) return { label: "Expired", cls: "bg-red-100 text-red-700" };
-    if (days <= 60) return { label: `Expires in ${days}d`, cls: "bg-amber-100 text-amber-700" };
+    if (days < 0) return { label: "Expired", cls: "bg-destructive-soft text-destructive" };
+    if (days <= 60) return { label: `Expires in ${days}d`, cls: "bg-warning-soft text-warning" };
     return null;
   };
 
@@ -478,68 +480,70 @@ export default function BrokerPage() {
   );
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Brokers</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{companies.length} registered companies</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text" placeholder="Search company…" value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-44 focus:outline-none focus:border-blue-400 bg-slate-50"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus:outline-none focus:border-blue-400"
-          >
-            <option value="ALL">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING_APPROVAL">Pending Approval</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
-          <a href="/broker-onboarding"
-            className="px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5">
-            <span className="text-base leading-none">✓</span> Onboard New Broker
-          </a>
-          <button onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
-            <span className="text-base leading-none">+</span> Add Company
-          </button>
-        </div>
+    <div className="flex flex-col h-full">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Brokers" }]}
+        title="Brokers"
+        subtitle={`${companies.length} registered companies`}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <a href="/broker-onboarding">Onboard new broker</a>
+            </Button>
+            <Button onClick={() => setShowForm(true)}>Add company</Button>
+          </>
+        }
+      />
+
+      <PageContainer padding="default" className="space-y-5">
+      <div className="flex items-center gap-3 flex-wrap">
+        <input
+          type="text" placeholder="Search company…" value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="text-sm border border-border rounded-lg px-3 py-1.5 w-60 focus:outline-none focus:border-ring bg-card"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:border-ring"
+          aria-label="Filter by status"
+        >
+          <option value="ALL">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="PENDING_APPROVAL">Pending Approval</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-48">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Company list */}
           <div className="lg:col-span-1 space-y-2">
-            <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
+            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
             {filtered.length === 0 ? (
               <EmptyState
                 icon="🏢"
                 title={search ? "No companies match your search" : "No broker companies yet"}
                 description={search ? "Try a different keyword." : "Add your first broker company to start managing agents."}
-                action={!search ? { label: "Add Company", onClick: () => setShowForm(true) } : undefined}
+                action={!search ? { label: "Create broker", onClick: () => setShowForm(true) } : undefined}
               />
             ) : filtered.map((company) => {
               const location = [company.neighborhood, company.emirate].filter(Boolean).join(", ");
               return (
               <button key={company.id} onClick={() => setSelected(company)}
-                className={`w-full text-left bg-white rounded-xl border p-4 transition-all hover:border-blue-300 hover:shadow-sm ${selected?.id === company.id ? "border-blue-500 shadow-sm" : "border-slate-200"}`}>
+                className={`w-full text-left bg-card rounded-xl border p-4 transition-all hover:border-primary/40 hover:shadow-sm ${selected?.id === company.id ? "border-primary/40 shadow-sm" : "border-border"}`}>
                 <div className="flex items-start justify-between mb-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-700 font-bold text-sm">
+                  <div className="w-8 h-8 bg-info-soft rounded-lg flex items-center justify-center text-primary font-bold text-sm">
                     {company.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-xs text-slate-400">{company.deals.length} deals</span>
+                  <span className="text-xs text-muted-foreground">{company.deals.length} deals</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-slate-800 text-sm">{company.name}</p>
+                  <p className="font-semibold text-foreground text-sm">{company.name}</p>
                   {(() => {
                     const s = company.status || "PENDING_APPROVAL";
                     const c = getBrokerStatusColor(s);
@@ -550,11 +554,11 @@ export default function BrokerPage() {
                     );
                   })()}
                 </div>
-                {company.email && <p className="text-xs text-slate-400 truncate">{company.email}</p>}
-                {location && <p className="text-[11px] text-slate-400 truncate mt-0.5">📍 {location}</p>}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                  <span className="text-xs text-slate-500">{company.agents.length} agents</span>
-                  <span className="text-xs font-semibold text-emerald-600">AED {getPaidCommission(company).toLocaleString()} paid</span>
+                {company.email && <p className="text-xs text-muted-foreground truncate">{company.email}</p>}
+                {location && <p className="text-[11px] text-muted-foreground truncate mt-0.5">📍 {location}</p>}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                  <span className="text-xs text-muted-foreground">{company.agents.length} agents</span>
+                  <span className="text-xs font-semibold text-success">AED {getPaidCommission(company).toLocaleString()} paid</span>
                 </div>
               </button>
               );
@@ -564,18 +568,18 @@ export default function BrokerPage() {
           {/* Detail panel */}
           <div className="lg:col-span-2">
             {!selected ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
+              <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
                 <p className="text-3xl mb-2 opacity-30">◉</p>
                 <p className="text-sm">Select a company to view details</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50">
+                <div className="px-6 py-5 border-b border-border bg-muted/50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-lg font-bold text-slate-900">{selected.name}</h2>
+                        <h2 className="text-lg font-bold text-foreground">{selected.name}</h2>
                         {(() => {
                           const s = selected.status || "PENDING_APPROVAL";
                           const c = getBrokerStatusColor(s);
@@ -587,13 +591,13 @@ export default function BrokerPage() {
                         })()}
                       </div>
                       <div className="flex flex-wrap gap-3 mt-0.5">
-                        {selected.email && <span className="text-xs text-slate-500">{selected.email}</span>}
-                        {selected.phone && <span className="text-xs text-slate-500">{selected.phone}</span>}
+                        {selected.email && <span className="text-xs text-muted-foreground">{selected.email}</span>}
+                        {selected.phone && <span className="text-xs text-muted-foreground">{selected.phone}</span>}
                         {selected.commissionRate != null && (
-                          <span className="text-xs text-slate-500">Commission: <strong>{selected.commissionRate}%</strong></span>
+                          <span className="text-xs text-muted-foreground">Commission: <strong>{selected.commissionRate}%</strong></span>
                         )}
                         {selected.website && (
-                          <a href={selected.website} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline">{selected.website}</a>
+                          <a href={selected.website} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">{selected.website}</a>
                         )}
                       </div>
 
@@ -601,52 +605,52 @@ export default function BrokerPage() {
                       {(selected.reraLicenseNumber || selected.tradeLicenseNumber || selected.officeRegistrationNo || selected.vatCertificateNo) && (
                         <div className="flex flex-wrap gap-3 mt-1">
                           {selected.reraLicenseNumber && (
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
                               License: {selected.reraLicenseNumber}
                               {(() => { const w = reraWarning(selected.reraLicenseExpiry); return w ? <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${w.cls}`}>{w.label}</span> : null; })()}
                             </span>
                           )}
-                          {selected.tradeLicenseNumber && <span className="text-xs text-slate-500">Trade: {selected.tradeLicenseNumber}</span>}
-                          {selected.officeRegistrationNo && <span className="text-xs text-slate-500">ORN: {selected.officeRegistrationNo}</span>}
-                          {selected.vatCertificateNo && <span className="text-xs text-slate-500">VAT: {selected.vatCertificateNo}</span>}
-                          {selected.officeManagerBrokerId && <span className="text-xs text-slate-500">Broker ID: {selected.officeManagerBrokerId}</span>}
+                          {selected.tradeLicenseNumber && <span className="text-xs text-muted-foreground">Trade: {selected.tradeLicenseNumber}</span>}
+                          {selected.officeRegistrationNo && <span className="text-xs text-muted-foreground">ORN: {selected.officeRegistrationNo}</span>}
+                          {selected.vatCertificateNo && <span className="text-xs text-muted-foreground">VAT: {selected.vatCertificateNo}</span>}
+                          {selected.officeManagerBrokerId && <span className="text-xs text-muted-foreground">Broker ID: {selected.officeManagerBrokerId}</span>}
                         </div>
                       )}
 
                       {/* Location summary */}
                       {(selected.emirate || selected.buildingName || selected.officeNo) && (
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {[selected.officeNo && `Office ${selected.officeNo}`, selected.buildingName, selected.neighborhood, selected.emirate, selected.postalCode].filter(Boolean).join(", ")}
                         </p>
                       )}
 
                       {/* Bank summary */}
                       {selected.bankName && (
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {selected.bankName}{selected.bankAccountName && ` — ${selected.bankAccountName}`}{selected.bankIban && ` · IBAN: ${selected.bankIban.slice(0, 8)}…`}
                         </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 ml-2 shrink-0">
                       {selected.deals.length === 0 && (
-                        <button onClick={handleDeleteCompany} className="text-xs px-2.5 py-1 border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                        <button onClick={handleDeleteCompany} className="text-xs px-2.5 py-1 border border-destructive/30 rounded-lg text-destructive hover:bg-destructive-soft transition-colors">
                           Delete
                         </button>
                       )}
-                      <button onClick={openEditForm} className="text-xs px-2.5 py-1 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors">
+                      <button onClick={openEditForm} className="text-xs px-2.5 py-1 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
                         Edit
                       </button>
-                      <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none ml-1">×</button>
+                      <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground text-xl leading-none ml-1">×</button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: "Agents",     value: selected.agents.length,   color: "text-blue-600" },
-                      { label: "Deals",      value: selected.deals.length,    color: "text-indigo-600" },
-                      { label: "Commission", value: `AED ${(getTotalCommission(selected)/1000).toFixed(0)}K`, color: "text-emerald-600" },
+                      { label: "Agents",     value: selected.agents.length,   color: "text-primary" },
+                      { label: "Deals",      value: selected.deals.length,    color: "text-accent-2" },
+                      { label: "Commission", value: `AED ${(getTotalCommission(selected)/1000).toFixed(0)}K`, color: "text-success" },
                     ].map((s) => (
-                      <div key={s.label} className="bg-white rounded-lg p-3 border border-slate-200 text-center">
-                        <p className="text-xs text-slate-500">{s.label}</p>
+                      <div key={s.label} className="bg-card rounded-lg p-3 border border-border text-center">
+                        <p className="text-xs text-muted-foreground">{s.label}</p>
                         <p className={`font-bold text-base ${s.color}`}>{s.value}</p>
                       </div>
                     ))}
@@ -654,12 +658,12 @@ export default function BrokerPage() {
                 </div>
 
                 {/* Agents */}
-                <div className="px-6 py-4 border-b border-slate-100">
+                <div className="px-6 py-4 border-b border-border">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-slate-700">Agents</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Agents</h3>
                     <button
                       onClick={() => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); }}
-                      className="text-xs px-2.5 py-1 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-1">
+                      className="text-xs px-2.5 py-1 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1">
                       <span className="text-sm leading-none">+</span> Add Agent
                     </button>
                   </div>
@@ -668,35 +672,35 @@ export default function BrokerPage() {
                       icon="👥"
                       title="No agents registered"
                       description="Add agents to this company so deals can be linked to a broker contact."
-                      action={{ label: "Add Agent", onClick: () => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); } }}
+                      action={{ label: "Create agent", onClick: () => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); } }}
                     />
                   ) : (
                     <div className="space-y-2">
                       {selected.agents.map((agent) => (
-                        <div key={agent.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                        <div key={agent.id} className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border border-border">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-semibold">
+                            <div className="w-7 h-7 bg-neutral-200 rounded-full flex items-center justify-center text-muted-foreground text-xs font-semibold">
                               {agent.name.charAt(0)}
                             </div>
                             <div>
-                              <span className="text-sm font-medium text-slate-800">{agent.name}</span>
+                              <span className="text-sm font-medium text-foreground">{agent.name}</span>
                               <div className="flex flex-wrap items-center gap-2 mt-0.5">
                                 {agent.reraCardNumber && (
-                                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
                                     RERA: {agent.reraCardNumber}
                                     {(() => { const w = reraWarning(agent.reraCardExpiry); return w ? <span className={`px-1 py-0.5 rounded text-xs font-medium ${w.cls}`}>{w.label}</span> : null; })()}
                                   </span>
                                 )}
-                                {agent.eidNo && <span className="text-xs text-slate-400">EID: {agent.eidNo}</span>}
+                                {agent.eidNo && <span className="text-xs text-muted-foreground">EID: {agent.eidNo}</span>}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            {agent.phone && <span className="text-xs text-slate-400">{agent.phone}</span>}
+                            {agent.phone && <span className="text-xs text-muted-foreground">{agent.phone}</span>}
                             <button
                               onClick={() => handleDeleteAgent(agent.id)}
                               disabled={deletingAgent === agent.id}
-                              className="text-slate-300 hover:text-red-500 transition-colors text-sm leading-none disabled:opacity-50"
+                              className="text-foreground/80 hover:text-destructive transition-colors text-sm leading-none disabled:opacity-50"
                               title="Remove agent">
                               ×
                             </button>
@@ -709,16 +713,16 @@ export default function BrokerPage() {
 
                 {/* Commission breakdown */}
                 <div className="px-6 py-4">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Commission Breakdown</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Commission Breakdown</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "Total",   amount: getTotalCommission(selected), color: "text-slate-700" },
-                      { label: "Paid",    amount: getPaidCommission(selected),  color: "text-emerald-600" },
-                      { label: "Pending", amount: selected.commissions.filter((c) => ["PENDING_APPROVAL","APPROVED"].includes(c.status)).reduce((s,c)=>s+c.amount,0), color: "text-amber-600" },
-                      { label: "Not Due", amount: selected.commissions.filter((c) => c.status === "NOT_DUE").reduce((s,c)=>s+c.amount,0), color: "text-slate-400" },
+                      { label: "Total",   amount: getTotalCommission(selected), color: "text-foreground" },
+                      { label: "Paid",    amount: getPaidCommission(selected),  color: "text-success" },
+                      { label: "Pending", amount: selected.commissions.filter((c) => ["PENDING_APPROVAL","APPROVED"].includes(c.status)).reduce((s,c)=>s+c.amount,0), color: "text-warning" },
+                      { label: "Not Due", amount: selected.commissions.filter((c) => c.status === "NOT_DUE").reduce((s,c)=>s+c.amount,0), color: "text-muted-foreground" },
                     ].map((item) => (
-                      <div key={item.label} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                        <p className="text-xs text-slate-500">{item.label}</p>
+                      <div key={item.label} className="bg-muted/50 rounded-lg p-3 border border-border">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
                         <p className={`font-bold ${item.color}`}>AED {item.amount.toLocaleString()}</p>
                       </div>
                     ))}
@@ -733,16 +737,16 @@ export default function BrokerPage() {
       {/* Create company modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="font-bold text-slate-900">New Broker Company</h2>
-              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+              <h2 className="font-bold text-foreground">Create broker</h2>
+              <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
             </div>
             <form onSubmit={handleCreate} className="px-6 py-5 space-y-0">
               <CompanyFormFields f={form} setF={setForm} />
               <div className="flex gap-3 pt-5">
-                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm">Create</button>
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Create</button>
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               </div>
             </form>
           </div>
@@ -752,16 +756,16 @@ export default function BrokerPage() {
       {/* Edit company modal */}
       {showEditForm && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="font-bold text-slate-900">Edit Company</h2>
-              <button onClick={() => setShowEditForm(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+              <h2 className="font-bold text-foreground">Edit broker</h2>
+              <button onClick={() => setShowEditForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
             </div>
             <form onSubmit={handleEdit} className="px-6 py-5 space-y-0">
               <CompanyFormFields f={editForm} setF={setEditForm} />
               <div className="flex gap-3 pt-5">
-                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm">Save</button>
-                <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Save changes</button>
+                <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               </div>
             </form>
           </div>
@@ -771,10 +775,10 @@ export default function BrokerPage() {
       {/* Add agent modal */}
       {showAgentForm && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="font-bold text-slate-900">Add Agent</h2>
-              <button onClick={() => setShowAgentForm(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-8">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+              <h2 className="font-bold text-foreground">Add Agent</h2>
+              <button onClick={() => setShowAgentForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
             </div>
             <form onSubmit={handleAddAgent} className="px-6 py-5">
               {/* Identity */}
@@ -839,14 +843,14 @@ export default function BrokerPage() {
                     required
                     checked={agentForm.acceptedConsent}
                     onChange={(e) => setAgentForm({ ...agentForm, acceptedConsent: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600"
+                    className="mt-0.5 w-4 h-4 rounded border-border text-primary"
                   />
-                  <span className="text-sm text-slate-600">
-                    I consent to Samha Development contacting me regarding my inquiry. <span className="text-red-500">*</span>
+                  <span className="text-sm text-muted-foreground">
+                    I consent to Samha Development contacting me regarding my inquiry. <span className="text-destructive">*</span>
                   </span>
                 </label>
                 {(!agentForm.eidFrontUrl || !agentForm.eidBackUrl) && (
-                  <p className="text-[11px] text-amber-600 mt-2">EID front and back uploads are required to add an agent.</p>
+                  <p className="text-[11px] text-warning mt-2">EID front and back uploads are required to add an agent.</p>
                 )}
               </div>
 
@@ -854,9 +858,9 @@ export default function BrokerPage() {
                 <button
                   type="submit"
                   disabled={!agentForm.acceptedConsent || !agentForm.eidFrontUrl || !agentForm.eidBackUrl}
-                  className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >Add Agent</button>
-                <button type="button" onClick={() => setShowAgentForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
+                <button type="button" onClick={() => setShowAgentForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               </div>
             </form>
           </div>
@@ -881,6 +885,7 @@ export default function BrokerPage() {
         onConfirm={doDeleteAgent}
         onCancel={() => setConfirmDeleteAgentId(null)}
       />
+      </PageContainer>
     </div>
   );
 }

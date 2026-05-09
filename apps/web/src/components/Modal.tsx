@@ -107,18 +107,18 @@ export default function Modal({
         aria-label={typeof title === "string" ? title : ariaLabel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-white rounded-xl shadow-2xl w-full ${SIZE[size]} max-h-[90vh] flex flex-col overflow-hidden focus:outline-none`}
+        className={`bg-card rounded-xl shadow-2xl w-full ${SIZE[size]} max-h-[90vh] flex flex-col overflow-hidden focus:outline-none`}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
             {typeof title === "string" ? (
-              <h2 className="font-semibold text-slate-900 text-sm">{title}</h2>
+              <h2 className="font-semibold text-foreground text-sm">{title}</h2>
             ) : title}
             <button
               type="button"
               onClick={onClose}
               aria-label="Close dialog"
-              className="text-slate-400 hover:text-slate-700 text-xl leading-none p-1 -m-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus:outline-none focus:ring-2 focus:ring-ring"
             >
               ×
             </button>
@@ -126,7 +126,7 @@ export default function Modal({
         )}
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/50 flex-shrink-0">
             {footer}
           </div>
         )}

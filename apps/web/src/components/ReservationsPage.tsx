@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import Modal from "./Modal";
 import EmptyState from "./EmptyState";
+import { PageContainer, PageHeader } from "./layout";
 import { SkeletonTableRows } from "./Skeleton";
 
 interface Lead {
@@ -30,19 +31,19 @@ interface Reservation {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE:    "bg-emerald-100 text-emerald-700",
-  EXPIRED:   "bg-red-100 text-red-700",
-  CANCELLED: "bg-slate-100 text-slate-500",
-  CONVERTED: "bg-blue-100 text-blue-700",
+  ACTIVE:    "bg-success-soft text-success",
+  EXPIRED:   "bg-destructive-soft text-destructive",
+  CANCELLED: "bg-muted text-muted-foreground",
+  CONVERTED: "bg-info-soft text-primary",
 };
 
 function expiryCountdown(expiresAt: string) {
   const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return { label: "Expired", color: "text-red-600 font-semibold" };
+  if (diff <= 0) return { label: "Expired", color: "text-destructive font-semibold" };
   const h = Math.floor(diff / 3600000);
   const d = Math.floor(h / 24);
-  if (d > 0) return { label: `${d}d ${h % 24}h left`, color: d < 2 ? "text-amber-600 font-semibold" : "text-emerald-600" };
-  return { label: `${h}h left`, color: "text-red-600 font-semibold" };
+  if (d > 0) return { label: `${d}d ${h % 24}h left`, color: d < 2 ? "text-warning font-semibold" : "text-success" };
+  return { label: `${h}h left`, color: "text-destructive font-semibold" };
 }
 
 export default function ReservationsPage() {
@@ -94,23 +95,20 @@ export default function ReservationsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Reservations</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {reservations.filter((r) => r.status === "ACTIVE").length} active
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Reservations" }]}
+        title="Reservations"
+        subtitle={`${reservations.filter((r) => r.status === "ACTIVE").length} active`}
+      />
+
+      <PageContainer padding="compact" className="flex-shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <input
             type="text"
             placeholder="Search by lead or unit…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-blue-400 bg-slate-50"
+            className="text-sm border border-border rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-ring bg-card"
           />
           <div className="flex gap-1">
             {(["ALL", "ACTIVE", "EXPIRED", "CANCELLED", "CONVERTED"] as const).map((s) => (
@@ -118,18 +116,18 @@ export default function ReservationsPage() {
                 key={s}
                 onClick={() => setFilter(s)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
-                  filter === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"
                 }`}
               >{s.toLowerCase()}</button>
             ))}
           </div>
         </div>
-      </div>
+      </PageContainer>
 
       {/* Table */}
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 <SkeletonTableRows rows={5} cols={7} />
@@ -143,36 +141,36 @@ export default function ReservationsPage() {
             description={search ? "Try clearing your search or switching the status filter." : "Reservations created from leads will appear here."}
           />
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-left border-b border-slate-200">
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Lead</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Expires</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Created</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</th>
+                <tr className="bg-muted/50 text-left border-b border-border">
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lead</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expires</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Created</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {filtered.map((r) => {
                   const countdown = r.status === "ACTIVE" ? expiryCountdown(r.expiresAt) : null;
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/60">
+                    <tr key={r.id} className="hover:bg-muted/60">
                       <td className="px-5 py-3">
-                        <p className="font-medium text-slate-800">{r.lead.firstName} {r.lead.lastName}</p>
-                        <p className="text-xs text-slate-400">{r.lead.email}</p>
+                        <p className="font-medium text-foreground">{r.lead.firstName} {r.lead.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{r.lead.email}</p>
                       </td>
                       <td className="px-5 py-3">
-                        <p className="font-semibold text-slate-900">{r.unit.unitNumber}</p>
-                        <p className="text-xs text-slate-400">
+                        <p className="font-semibold text-foreground">{r.unit.unitNumber}</p>
+                        <p className="text-xs text-muted-foreground">
                           AED {r.unit.askingPrice?.toLocaleString("en-AE") ?? "—"}
                         </p>
                       </td>
                       <td className="px-5 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] ?? "bg-slate-100 text-slate-600"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] ?? "bg-muted text-muted-foreground"}`}>
                           {r.status}
                         </span>
                       </td>
@@ -180,26 +178,26 @@ export default function ReservationsPage() {
                         {countdown ? (
                           <span className={`text-xs ${countdown.color}`}>{countdown.label}</span>
                         ) : (
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(r.expiresAt).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" })}
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-xs text-slate-500">
+                      <td className="px-5 py-3 text-xs text-muted-foreground">
                         {new Date(r.createdAt).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
                       <td className="px-5 py-3 max-w-[180px]">
                         {r.cancelReason ? (
-                          <p className="text-xs text-slate-400 truncate" title={r.cancelReason}>{r.cancelReason}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={r.cancelReason}>{r.cancelReason}</p>
                         ) : r.notes ? (
-                          <p className="text-xs text-slate-400 truncate" title={r.notes}>{r.notes}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={r.notes}>{r.notes}</p>
                         ) : null}
                       </td>
                       <td className="px-5 py-3">
                         {r.status === "ACTIVE" && (
                           <button
                             onClick={() => { setConfirmCancel(r); setCancelReason(""); }}
-                            className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                            className="text-xs text-destructive hover:text-destructive hover:bg-destructive-soft px-2 py-1 rounded transition-colors"
                           >
                             Cancel
                           </button>
@@ -224,14 +222,14 @@ export default function ReservationsPage() {
             <button
               onClick={() => { setConfirmCancel(null); setCancelReason(""); }}
               disabled={!!cancelling}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
             >
               Keep reservation
             </button>
             <button
               onClick={handleCancel}
               disabled={!!cancelling}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-destructive hover:bg-destructive/90 rounded-lg disabled:opacity-50"
             >
               {cancelling ? "Cancelling…" : "Confirm cancel"}
             </button>
@@ -240,19 +238,19 @@ export default function ReservationsPage() {
       >
         {confirmCancel && (
           <div className="px-6 py-5">
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Cancel reservation for{" "}
               <strong>{confirmCancel.lead.firstName} {confirmCancel.lead.lastName}</strong> on unit{" "}
               <strong>{confirmCancel.unit.unitNumber}</strong>?
             </p>
             <div className="mt-4">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Reason (optional)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason (optional)</label>
               <input
                 type="text"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="e.g. Client changed mind"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               />
             </div>
           </div>

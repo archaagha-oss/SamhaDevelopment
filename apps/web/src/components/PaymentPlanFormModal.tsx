@@ -55,8 +55,8 @@ const BLANK_MILESTONE: Milestone = {
   targetAccount: "ESCROW",
 };
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) {
   const isEdit = !!plan;
@@ -149,11 +149,11 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
+      <div className="bg-card rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-          <h2 className="font-bold text-slate-900 text-lg">{isEdit ? "Edit Payment Plan" : "New Payment Plan"}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="font-bold text-foreground text-lg">{isEdit ? "Edit Payment Plan" : "New Payment Plan"}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
         </div>
 
         <form id="plan-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
@@ -170,15 +170,15 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
           </div>
 
           {/* Preview price input */}
-          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
-            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Preview at sale price AED</span>
+          <div className="flex items-center gap-3 bg-muted/50 border border-border rounded-lg px-4 py-3">
+            <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Preview at sale price AED</span>
             <input
               type="number" step="1000" min="0" placeholder="e.g. 1500000"
               value={previewPrice}
               onChange={(e) => setPreviewPrice(e.target.value)}
-              className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400"
+              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
             />
-            <span className={`text-xs font-bold px-2 py-1 rounded ${Math.abs(totalPct - 100) < 0.01 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded ${Math.abs(totalPct - 100) < 0.01 ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
               Total: {totalPct.toFixed(1)}%
             </span>
           </div>
@@ -186,9 +186,9 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
           {/* Milestones */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Milestones</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Milestones</p>
               {isEdit && (
-                <p className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                <p className="text-xs text-warning bg-warning-soft px-2 py-1 rounded">
                   Milestone structure cannot be changed on existing plans. Clone to create a new version.
                 </p>
               )}
@@ -198,32 +198,32 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
               {milestones.map((m, i) => {
                 const estimatedAmt = previewNum > 0 ? (previewNum * (parseFloat(m.percentage) || 0) / 100) : null;
                 return (
-                  <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-2.5 flex items-center gap-3">
+                  <div key={i} className="border border-border rounded-lg overflow-hidden">
+                    <div className="bg-muted/50 px-4 py-2.5 flex items-center gap-3">
                       {/* Reorder */}
                       <div className="flex flex-col gap-0.5">
                         <button type="button" onClick={() => moveMilestone(i, -1)} disabled={i === 0 || isEdit}
-                          className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-20 leading-none">▲</button>
+                          className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none">▲</button>
                         <button type="button" onClick={() => moveMilestone(i, 1)} disabled={i === milestones.length - 1 || isEdit}
-                          className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-20 leading-none">▼</button>
+                          className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none">▼</button>
                       </div>
-                      <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
+                      <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
                       <input
                         required
                         disabled={isEdit}
                         value={m.label}
                         onChange={(e) => updateMilestone(i, "label", e.target.value)}
                         placeholder="Milestone label…"
-                        className="flex-1 text-sm font-medium bg-transparent border-none focus:outline-none text-slate-800 disabled:opacity-60"
+                        className="flex-1 text-sm font-medium bg-transparent border-none focus:outline-none text-foreground disabled:opacity-60"
                       />
                       {estimatedAmt !== null && (
-                        <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
                           ≈ AED {estimatedAmt.toLocaleString("en-AE", { maximumFractionDigits: 0 })}
                         </span>
                       )}
                       {!isEdit && (
                         <button type="button" onClick={() => removeMilestone(i)}
-                          className="text-red-400 hover:text-red-600 text-sm px-1 transition-colors">×</button>
+                          className="text-destructive hover:text-destructive text-sm px-1 transition-colors">×</button>
                       )}
                     </div>
                     <div className="px-4 py-3 grid grid-cols-4 gap-3 items-start">
@@ -238,7 +238,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                             onChange={(e) => updateMilestone(i, "percentage", e.target.value)}
                             className={`${inp} pr-6 disabled:opacity-60`}
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                         </div>
                       </div>
 
@@ -283,7 +283,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                           </>
                         )}
                         {["ON_SPA_SIGNING", "ON_OQOOD", "ON_HANDOVER"].includes(m.triggerType) && (
-                          <div className="mt-4 text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 leading-relaxed">
+                          <div className="mt-4 text-xs text-primary bg-info-soft border border-primary/40 rounded-lg px-3 py-2 leading-relaxed">
                             Due date set automatically when deal reaches this milestone
                           </div>
                         )}
@@ -297,9 +297,9 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                             disabled={isEdit}
                             checked={m.isDLDFee}
                             onChange={(e) => updateMilestone(i, "isDLDFee", e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-slate-300 disabled:opacity-60"
+                            className="w-3.5 h-3.5 rounded border-border disabled:opacity-60"
                           />
-                          <span className="text-xs text-slate-600">DLD Fee</span>
+                          <span className="text-xs text-muted-foreground">DLD Fee</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -307,12 +307,12 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                             disabled={isEdit}
                             checked={m.isAdminFee}
                             onChange={(e) => updateMilestone(i, "isAdminFee", e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-slate-300 disabled:opacity-60"
+                            className="w-3.5 h-3.5 rounded border-border disabled:opacity-60"
                           />
-                          <span className="text-xs text-slate-600">Admin Fee</span>
+                          <span className="text-xs text-muted-foreground">Admin Fee</span>
                         </label>
                         <div className="pt-1">
-                          <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">
+                          <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
                             Account
                           </label>
                           <select
@@ -321,7 +321,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
                             onChange={(e) =>
                               updateMilestone(i, "targetAccount", e.target.value as "ESCROW" | "CORPORATE")
                             }
-                            className="text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 disabled:opacity-60"
+                            className="text-xs border border-border rounded px-2 py-1 bg-muted/50 disabled:opacity-60"
                           >
                             <option value="ESCROW">Escrow</option>
                             <option value="CORPORATE">Corporate</option>
@@ -338,7 +338,7 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
               <button
                 type="button"
                 onClick={addMilestone}
-                className="mt-2 w-full py-2.5 border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-blue-600 hover:border-blue-300 rounded-lg transition-colors"
+                className="mt-2 w-full py-2.5 border-2 border-dashed border-border text-sm text-muted-foreground hover:text-primary hover:border-primary/40 rounded-lg transition-colors"
               >
                 + Add Milestone
               </button>
@@ -346,19 +346,19 @@ export default function PaymentPlanFormModal({ plan, onClose, onSaved }: Props) 
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
           )}
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-border flex gap-3 flex-shrink-0">
           <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors">
+            className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm transition-colors">
             Cancel
           </button>
           <button form="plan-form" type="submit" disabled={submitting}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50">
-            {submitting ? "Saving…" : isEdit ? "Save Changes" : "Create Plan"}
+            className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm transition-colors disabled:opacity-50">
+            {submitting ? "Saving…" : isEdit ? "Save changes" : "Create payment plan"}
           </button>
         </div>
       </div>

@@ -7,10 +7,11 @@ import {
 } from "./Icons";
 import { useSettings } from "../contexts/SettingsContext";
 import { useEventStream } from "../hooks/useEventStream";
+import { FEATURE_DEFAULTS } from "../hooks/useFeatureFlag";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
-type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
+type Role = "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
 
 interface SidebarProps {
   currentPage: Page;
@@ -20,13 +21,21 @@ interface SidebarProps {
 
 type IconType = ComponentType<{ size?: number; className?: string }>;
 
-const salesItems: { page: Page; label: string; Icon: IconType }[] = [
+// `flag` keys reference catalog entries in apps/api/src/routes/settings.ts.
+// When set, the item only renders if the flag is enabled (or the org hasn't
+// explicitly toggled it AND its default is `true`).
+type NavItemDef = { page: Page; label: string; Icon: IconType; flag?: keyof typeof FEATURE_DEFAULTS };
+
+// Order follows the funnel: capture (Leads) → qualify (Contacts) → close (Deals),
+// then inventory (Projects, Units), then daily action stack (Activities, Hot Inbox),
+// then commercial artifacts (Reservations, Offers, Contracts), partner channel last.
+const salesItems: NavItemDef[] = [
   { page: "dashboard",     label: "Dashboard",    Icon: IconDashboard },
+  { page: "leads",         label: "Leads",        Icon: IconUser },
+  { page: "contacts",      label: "Contacts",     Icon: IconUsers },
+  { page: "deals",         label: "Deals",        Icon: IconHandshake },
   { page: "projects",      label: "Projects",     Icon: IconBuilding },
   { page: "units",         label: "Units",        Icon: IconGrid },
-  { page: "contacts",      label: "Contacts",     Icon: IconUsers },
-  { page: "leads",         label: "Leads",        Icon: IconUser },
-  { page: "deals",         label: "Deals",        Icon: IconHandshake },
   { page: "tasks",         label: "Activities",   Icon: IconCheck },
   { page: "inbox",         label: "Hot Inbox",    Icon: IconBookmark },
   { page: "reservations",  label: "Reservations", Icon: IconBookmark },
@@ -35,31 +44,32 @@ const salesItems: { page: Page; label: string; Icon: IconType }[] = [
   { page: "brokers",       label: "Brokers",      Icon: IconBriefcase },
 ];
 
-const financeItems: { page: Page; label: string; Icon: IconType }[] = [
-  { page: "finance",           label: "Finance",       Icon: IconChart },
-  { page: "payments",          label: "Payments",      Icon: IconCard },
-  { page: "payment-plans",     label: "Pay. Plans",    Icon: IconList },
-  { page: "commissions",       label: "Commissions",   Icon: IconCoin },
-  { page: "commission-tiers",  label: "Comm. Tiers",   Icon: IconCoin },
-  { page: "refunds",           label: "Refunds",       Icon: IconCard },
-  { page: "reports",           label: "Reports",       Icon: IconChart },
+const financeItems: NavItemDef[] = [
+  { page: "finance",           label: "Finance",          Icon: IconChart },
+  { page: "payments",          label: "Payments",         Icon: IconCard },
+  { page: "payment-plans",     label: "Payment plans",    Icon: IconList },
+  { page: "commissions",       label: "Commissions",      Icon: IconCoin },
+  { page: "commission-tiers",  label: "Commission tiers", Icon: IconCoin, flag: "commissionTiers" },
+  { page: "refunds",           label: "Refunds",          Icon: IconCard },
+  { page: "reports",           label: "Reports",          Icon: IconChart },
 ];
 
-const adminItems: { page: Page; label: string; Icon: IconType }[] = [
+const adminItems: NavItemDef[] = [
   { page: "compliance",    label: "Compliance",   Icon: IconFile },
   { page: "team",          label: "Team",         Icon: IconUsers },
   { page: "settings",      label: "Settings",     Icon: IconSettings },
 ];
 
-// Role-based section visibility
+// Section visibility by role tier.
+//   ADMIN   → all sections.
+//   MANAGER → sales + finance (finance sign-off authority).
+//   MEMBER  → sales + finance (read-write within their work).
+//   VIEWER  → sales + finance (read-only).
+// Admin section is gated to ADMIN only.
 function visibleSections(role: Role | undefined) {
   const r = role ?? "ADMIN";
   if (r === "ADMIN") return { sales: true, finance: true, admin: true };
-  if (r === "SALES_MANAGER") return { sales: true, finance: true, admin: false };
-  if (r === "SALES" || r === "SALES_AGENT") return { sales: true, finance: false, admin: false };
-  if (r === "FINANCE") return { sales: false, finance: true, admin: false };
-  if (r === "OPERATIONS") return { sales: true, finance: true, admin: false };
-  return { sales: true, finance: true, admin: true };
+  return { sales: true, finance: true, admin: false };
 }
 
 function NavItem({ page, label, Icon, active, collapsed, onNavigate, badge }: {
@@ -74,11 +84,10 @@ function NavItem({ page, label, Icon, active, collapsed, onNavigate, badge }: {
       title={collapsed ? `${label}${badge ? ` (${badge})` : ""}` : undefined}
       aria-label={collapsed ? `${label}${badge ? ` (${badge})` : ""}` : undefined}
       aria-current={active ? "page" : undefined}
-      style={active ? { backgroundColor: "var(--brand-primary)" } : undefined}
-      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 ${
+      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card ${
         active
-          ? "text-white shadow-sm"
-          : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted"
       } ${collapsed ? "justify-center" : ""}`}
     >
       <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center" aria-hidden="true">
@@ -87,7 +96,7 @@ function NavItem({ page, label, Icon, active, collapsed, onNavigate, badge }: {
       {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
       {!!badge && badge > 0 && (
         <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
-          active ? "bg-white/20 text-white" : "bg-amber-500 text-white"
+          active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-warning text-warning-foreground"
         } ${collapsed ? "absolute -mt-4 ml-4" : ""}`}>
           {badge > 99 ? "99+" : badge}
         </span>
@@ -97,9 +106,9 @@ function NavItem({ page, label, Icon, active, collapsed, onNavigate, badge }: {
 }
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
-  if (collapsed) return <div className="my-1 border-t border-slate-800" role="separator" />;
+  if (collapsed) return <div className="my-1 border-t border-border" role="separator" />;
   return (
-    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
       {label}
     </p>
   );
@@ -108,10 +117,15 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const sections = visibleSections(role);
-  const { settings } = useSettings();
+  const { settings, isFeatureEnabled } = useSettings();
 
   const brandName = settings.companyName?.trim() || "Samha CRM";
   const brandInitial = brandName.charAt(0).toUpperCase();
+
+  // Filter items: an item with `flag` set only renders when the flag is on.
+  // Falls back to FEATURE_DEFAULTS when the org hasn't explicitly toggled.
+  const filterByFlags = (items: NavItemDef[]) =>
+    items.filter((it) => !it.flag || isFeatureEnabled(it.flag, FEATURE_DEFAULTS[it.flag] ?? false));
 
   const [inboxCount, setInboxCount] = useState(0);
 
@@ -137,11 +151,11 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
 
   return (
     <aside
-      className={`${collapsed ? "w-14" : "w-56"} bg-slate-900 flex flex-col h-full flex-shrink-0 border-r border-slate-800 transition-all duration-200`}
+      className={`${collapsed ? "w-14" : "w-56"} bg-card flex flex-col h-full flex-shrink-0 border-r border-border transition-all duration-200`}
       aria-label="Primary navigation"
     >
       {/* Brand */}
-      <div className={`px-3 py-4 border-b border-slate-800 flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
+      <div className={`px-3 py-4 border-b border-border flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
         {settings.logoUrl ? (
           <img
             src={settings.logoUrl}
@@ -151,8 +165,7 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
           />
         ) : (
           <div
-            style={{ backgroundColor: "var(--brand-primary)" }}
-            className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+            className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-primary text-primary-foreground text-xs font-bold"
             aria-hidden="true"
           >
             {brandInitial}
@@ -160,8 +173,8 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
         )}
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-white font-semibold text-sm leading-tight truncate">{brandName}</p>
-            <p className="text-slate-500 text-xs truncate">Real Estate Pipeline</p>
+            <p className="text-foreground font-semibold text-sm leading-tight truncate">{brandName}</p>
+            <p className="text-muted-foreground text-xs truncate">Real Estate Pipeline</p>
           </div>
         )}
       </div>
@@ -171,7 +184,7 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
         {sections.sales && (
           <>
             <SectionLabel label="Sales" collapsed={collapsed} />
-            {salesItems.map(({ page, label, Icon }) => (
+            {filterByFlags(salesItems).map(({ page, label, Icon }) => (
               <NavItem key={page} page={page} label={label} Icon={Icon}
                 active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate}
                 badge={page === "inbox" ? inboxCount : undefined} />
@@ -182,7 +195,7 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
         {sections.finance && (
           <>
             <SectionLabel label="Finance" collapsed={collapsed} />
-            {financeItems.map(({ page, label, Icon }) => (
+            {filterByFlags(financeItems).map(({ page, label, Icon }) => (
               <NavItem key={page} page={page} label={label} Icon={Icon}
                 active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
             ))}
@@ -192,7 +205,7 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
         {sections.admin && (
           <>
             <SectionLabel label="Admin" collapsed={collapsed} />
-            {adminItems.map(({ page, label, Icon }) => (
+            {filterByFlags(adminItems).map(({ page, label, Icon }) => (
               <NavItem key={page} page={page} label={label} Icon={Icon}
                 active={currentPage === page} collapsed={collapsed} onNavigate={onNavigate} />
             ))}
@@ -201,13 +214,13 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
       </nav>
 
       {/* Collapse toggle */}
-      <div className="px-2 py-3 border-t border-slate-800">
+      <div className="px-2 py-3 border-t border-border">
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!collapsed}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span aria-hidden="true">{collapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}</span>
           {!collapsed && <span>Collapse</span>}

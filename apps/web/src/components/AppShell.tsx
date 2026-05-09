@@ -11,7 +11,7 @@ import { useEventStream } from "../hooks/useEventStream";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
-type Role = "ADMIN" | "SALES" | "SALES_AGENT" | "SALES_MANAGER" | "FINANCE" | "OPERATIONS";
+type Role = "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
 
 function pathToPage(pathname: string): Page {
   if (pathname === "/" || pathname === "") return "dashboard";
@@ -180,25 +180,25 @@ export default function AppShell() {
   const currentPage = pathToPage(location.pathname);
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0 gap-3">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-card border-b border-border flex-shrink-0 gap-3">
           <button
             onClick={() => setShowSearch(true)}
             aria-label="Open global search (⌘K)"
-            className="flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            className="flex items-center gap-2 px-3 py-1.5 text-muted-foreground hover:text-foreground bg-muted hover:bg-muted rounded-lg text-sm transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <IconSearch size={14} aria-hidden="true" />
             <span className="hidden sm:inline">Search…</span>
-            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-700 text-slate-400 rounded border border-slate-600 font-mono hidden sm:inline">{shortcutLabel}</kbd>
+            <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-card text-muted-foreground rounded border border-border font-mono hidden sm:inline">{shortcutLabel}</kbd>
           </button>
 
           <div className="flex items-center gap-3" ref={notifPanelRef}>
             <button
               onClick={toggleTheme}
-              className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               aria-label="Toggle theme"
             >
@@ -207,36 +207,36 @@ export default function AppShell() {
             <div className="relative">
               <button
                 onClick={() => { setShowNotifPanel((v) => !v); if (!showNotifPanel) fetchNotifications(); }}
-                className="relative p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
                 aria-haspopup="true"
                 aria-expanded={showNotifPanel}
               >
                 <IconBell size={18} aria-hidden="true" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-slate-900" aria-hidden="true">
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-destructive text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-ring" aria-hidden="true">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifPanel && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                    <span className="text-sm font-bold text-slate-900">Notifications</span>
+                <div className="absolute right-0 top-full mt-2 w-80 bg-card rounded-xl shadow-2xl border border-border z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="text-sm font-bold text-foreground">Notifications</span>
                     {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-xs text-blue-600 hover:underline">
+                      <button onClick={markAllRead} className="text-xs text-primary hover:underline">
                         Mark all read
                       </button>
                     )}
                   </div>
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-border">
                     {notifications.length === 0 ? (
-                      <p className="px-4 py-8 text-center text-sm text-slate-400">No notifications</p>
+                      <p className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications</p>
                     ) : notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-blue-50/40" : ""}`}
+                        className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors ${!n.read ? "bg-info-soft/40" : ""}`}
                       >
                         <span
                           className="text-base mt-0.5 flex-shrink-0 cursor-pointer"
@@ -256,8 +256,8 @@ export default function AppShell() {
                             if (n.entityType === "DEAL" && n.entityId) { navigate(`/deals/${n.entityId}`); setShowNotifPanel(false); }
                           }}
                         >
-                          <p className={`text-xs leading-snug ${!n.read ? "font-semibold text-slate-900" : "text-slate-700"}`}>{n.message}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{timeAgo(n.createdAt)}</p>
+                          <p className={`text-xs leading-snug ${!n.read ? "font-semibold text-foreground" : "text-foreground"}`}>{n.message}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{timeAgo(n.createdAt)}</p>
                         </div>
                         <button
                           onClick={(e) => {
@@ -266,7 +266,7 @@ export default function AppShell() {
                             setNotifications((prev) => prev.filter((x) => x.id !== n.id));
                             if (!n.read) setUnreadCount((c) => Math.max(0, c - 1));
                           }}
-                          className="text-slate-300 hover:text-slate-500 text-base leading-none flex-shrink-0 mt-0.5 transition-colors"
+                          className="text-foreground/80 hover:text-foreground text-base leading-none flex-shrink-0 mt-0.5 transition-colors"
                           title="Dismiss"
                         >×</button>
                       </div>
@@ -278,30 +278,30 @@ export default function AppShell() {
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu((v) => !v)}
-                className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold select-none hover:bg-blue-700 transition-colors"
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none hover:bg-primary/90 transition-colors"
                 title="Profile"
               >
                 {user?.firstName?.[0]?.toUpperCase() ?? "U"}
               </button>
               {showProfileMenu && (
-                <div className="absolute right-0 top-10 w-52 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <p className="text-sm font-semibold text-slate-900 truncate" title={user?.fullName ?? "User"}>
+                <div className="absolute right-0 top-10 w-52 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground truncate" title={user?.fullName ?? "User"}>
                       {user?.fullName ?? "User"}
                     </p>
-                    <p className="text-xs text-slate-400 truncate" title={user?.primaryEmailAddress?.emailAddress ?? ""}>
+                    <p className="text-xs text-muted-foreground truncate" title={user?.primaryEmailAddress?.emailAddress ?? ""}>
                       {user?.primaryEmailAddress?.emailAddress ?? ""}
                     </p>
                   </div>
                   <button
                     onClick={() => { setShowProfileMenu(false); navigate("/team"); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors"
                   >
                     My Profile
                   </button>
                   <button
                     onClick={handleSignOut}
-                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
+                    className="w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-destructive-soft transition-colors border-t border-border"
                   >
                     Sign Out
                   </button>

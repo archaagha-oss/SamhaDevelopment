@@ -26,8 +26,8 @@ interface Purchaser {
 }
 
 const inp =
-  "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+  "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 const blank = (sortOrder: number, isPrimary: boolean): Purchaser => ({
   leadId: null,
@@ -177,15 +177,15 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+      <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
           <div>
-            <h2 className="font-bold text-slate-900">Joint Purchasers</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-bold text-foreground">Joint Purchasers</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               All purchasers are jointly and severally liable under the SPA. Ownership must sum to 100%.
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
             ×
           </button>
         </div>
@@ -193,14 +193,14 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
         <div className="px-6 py-5 space-y-5">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
               {purchasers.map((p, idx) => (
-                <div key={idx} className="border border-slate-200 rounded-xl p-4 space-y-3">
+                <div key={idx} className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-800 text-sm">Purchaser {idx + 1}</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Purchaser {idx + 1}</h3>
                     <div className="flex items-center gap-3">
                       <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                         <input
@@ -209,12 +209,12 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
                           checked={p.isPrimary}
                           onChange={() => setPrimary(idx)}
                         />
-                        <span className="text-slate-600">Primary</span>
+                        <span className="text-muted-foreground">Primary</span>
                       </label>
                       {purchasers.length > 1 && (
                         <button
                           onClick={() => removePurchaser(idx)}
-                          className="text-xs text-red-600 hover:text-red-800"
+                          className="text-xs text-destructive hover:text-destructive"
                         >
                           Remove
                         </button>
@@ -304,20 +304,20 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
               <div className="flex items-center justify-between">
                 <button
                   onClick={addPurchaser}
-                  className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                  className="px-3 py-1.5 text-xs font-semibold bg-muted text-foreground rounded-lg hover:bg-muted"
                 >
                   + Add Purchaser
                 </button>
                 <div className="text-xs">
-                  <span className={Math.abs(total - 100) > 0.01 ? "text-red-600 font-semibold" : "text-emerald-700 font-semibold"}>
+                  <span className={Math.abs(total - 100) > 0.01 ? "text-destructive font-semibold" : "text-success font-semibold"}>
                     Total: {total.toFixed(2)}%
                   </span>
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+              {error && <p className="text-sm text-destructive bg-destructive-soft px-3 py-2 rounded-lg">{error}</p>}
               {saved && (
-                <p className="text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                <p className="text-sm text-success bg-success-soft px-3 py-2 rounded-lg">
                   Purchasers saved.
                 </p>
               )}
@@ -325,14 +325,14 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={onClose}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
+                  className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm"
                 >
                   {saved ? "Close" : "Cancel"}
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={submitting}
-                  className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : "Save Purchasers"}
                 </button>

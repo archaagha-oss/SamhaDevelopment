@@ -30,13 +30,13 @@ export default function PaymentBreakdownChart({ data }: PaymentBreakdownProps) {
 
   // Status colors
   const statusColors: Record<string, { bar: string; bg: string; text: string }> = {
-    PAID: { bar: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
-    PENDING: { bar: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
-    OVERDUE: { bar: "bg-red-500", bg: "bg-red-50", text: "text-red-700" },
-    PARTIAL: { bar: "bg-orange-500", bg: "bg-orange-50", text: "text-orange-700" },
-    PDC_PENDING: { bar: "bg-orange-600", bg: "bg-orange-50", text: "text-orange-700" },
-    PDC_CLEARED: { bar: "bg-teal-500", bg: "bg-teal-50", text: "text-teal-700" },
-    CANCELLED: { bar: "bg-slate-300", bg: "bg-slate-50", text: "text-slate-600" },
+    PAID: { bar: "bg-success", bg: "bg-success-soft", text: "text-success" },
+    PENDING: { bar: "bg-warning", bg: "bg-warning-soft", text: "text-warning" },
+    OVERDUE: { bar: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive" },
+    PARTIAL: { bar: "bg-warning", bg: "bg-warning-soft", text: "text-warning" },
+    PDC_PENDING: { bar: "bg-warning", bg: "bg-warning-soft", text: "text-warning" },
+    PDC_CLEARED: { bar: "bg-chart-5", bg: "bg-chart-5/10", text: "text-chart-5" },
+    CANCELLED: { bar: "bg-neutral-300", bg: "bg-muted/50", text: "text-muted-foreground" },
   };
 
   return (
@@ -44,17 +44,17 @@ export default function PaymentBreakdownChart({ data }: PaymentBreakdownProps) {
       {/* Legend + Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {breakdown.map((item) => {
-          const colors = statusColors[item.status] || { bar: "bg-slate-400", bg: "bg-slate-50", text: "text-slate-700" };
+          const colors = statusColors[item.status] || { bar: "bg-neutral-400", bg: "bg-muted/50", text: "text-foreground" };
           return (
             <div key={item.status} className={`${colors.bg} rounded-lg p-3`}>
               <div className="flex items-center justify-between mb-2">
                 <h4 className={`text-sm font-semibold ${colors.text}`}>{item.status.replace(/_/g, " ")}</h4>
                 <span className={`text-xs font-bold ${colors.text}`}>{item.percent}%</span>
               </div>
-              <div className="w-full bg-white rounded h-2 overflow-hidden border border-slate-200">
+              <div className="w-full bg-card rounded h-2 overflow-hidden border border-border">
                 <div className={`${colors.bar} h-full`} style={{ width: `${item.percent}%` }} />
               </div>
-              <div className="flex items-center justify-between mt-2 text-xs text-slate-600">
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                 <span>AED {(item.amount / 1000000).toFixed(1)}M</span>
                 <span>{item.count} payments</span>
               </div>
@@ -64,22 +64,22 @@ export default function PaymentBreakdownChart({ data }: PaymentBreakdownProps) {
       </div>
 
       {/* Summary Stats */}
-      <div className="border-t border-slate-200 pt-4 grid grid-cols-3 gap-4 text-center">
+      <div className="border-t border-border pt-4 grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-xs text-slate-600">Total Payments</p>
-          <p className="text-lg font-bold text-slate-900">
+          <p className="text-xs text-muted-foreground">Total Payments</p>
+          <p className="text-lg font-bold text-foreground">
             {breakdown.reduce((sum, item) => sum + item.count, 0)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-slate-600">Total Amount</p>
-          <p className="text-lg font-bold text-slate-900">
+          <p className="text-xs text-muted-foreground">Total Amount</p>
+          <p className="text-lg font-bold text-foreground">
             AED {(breakdown.reduce((sum, item) => sum + item.amount, 0) / 1000000).toFixed(1)}M
           </p>
         </div>
         <div>
-          <p className="text-xs text-slate-600">Collection %</p>
-          <p className="text-lg font-bold text-emerald-600">
+          <p className="text-xs text-muted-foreground">Collection %</p>
+          <p className="text-lg font-bold text-success">
             {breakdown.find((item) => item.status === "PAID")?.percent || "0"}%
           </p>
         </div>

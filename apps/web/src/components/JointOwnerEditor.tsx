@@ -97,21 +97,21 @@ export default function JointOwnerEditor({ dealId }: { dealId: string }) {
     }
   };
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading parties…</p>;
+  if (loading) return <p className="text-muted-foreground text-sm">Loading parties…</p>;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-sm">Buyers & Joint Owners</h4>
         <span
-          className={`text-xs ${valid ? "text-green-700" : "text-red-700"}`}
+          className={`text-xs ${valid ? "text-success" : "text-destructive"}`}
         >
           Sum: {sum.toFixed(2)}% · {primaries} primary
         </span>
       </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase text-gray-500 border-b">
+          <tr className="text-left text-xs uppercase text-muted-foreground border-b">
             <th className="py-1">Lead</th>
             <th>Role</th>
             <th>Ownership %</th>
@@ -159,7 +159,7 @@ export default function JointOwnerEditor({ dealId }: { dealId: string }) {
               </td>
               <td>
                 <button
-                  className="text-red-600 text-xs hover:underline"
+                  className="text-destructive text-xs hover:underline"
                   onClick={() => removeParty(idx)}
                 >
                   Remove
@@ -170,13 +170,13 @@ export default function JointOwnerEditor({ dealId }: { dealId: string }) {
         </tbody>
       </table>
       <div className="flex gap-2">
-        <button className="text-sm text-blue-600 hover:underline" onClick={addParty}>
+        <button className="text-sm text-primary hover:underline" onClick={addParty}>
           + Add party
         </button>
         <div className="flex-1" />
         <button
           disabled={!valid}
-          className="bg-blue-600 disabled:bg-gray-300 text-white text-sm px-3 py-1 rounded"
+          className="bg-primary disabled:bg-neutral-300 text-white text-sm px-3 py-1 rounded"
           onClick={save}
         >
           Save Parties

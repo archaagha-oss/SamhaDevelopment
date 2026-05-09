@@ -22,8 +22,8 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-slate-200 p-6">
-        <p className="text-red-600 text-sm">Failed to load history</p>
+      <div className="bg-card rounded-lg border border-border p-6">
+        <p className="text-destructive text-sm">Failed to load history</p>
       </div>
     );
   }
@@ -60,28 +60,28 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
   const isEmpty = statusHistory.length === 0 && priceHistory.length === 0;
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-6">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Timeline</p>
+    <div className="bg-card rounded-lg border border-border p-6">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Timeline</p>
 
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 bg-slate-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
           ))}
         </div>
       ) : isEmpty ? (
-        <p className="text-slate-500 text-sm text-center py-6">No changes yet</p>
+        <p className="text-muted-foreground text-sm text-center py-6">No changes yet</p>
       ) : (
         <div className="space-y-0 relative">
           {/* Timeline line */}
-          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-slate-200" />
+          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-neutral-200" />
 
           {timeline.map((event) => {
             const isStatus = event.type === "status";
             const isPrice = event.type === "price";
             const isCreated = event.type === "created";
 
-            const bgColor = isStatus ? "bg-blue-100" : isPrice ? "bg-emerald-100" : "bg-slate-100";
+            const bgColor = isStatus ? "bg-info-soft" : isPrice ? "bg-success-soft" : "bg-muted";
             const dotLabel = isStatus ? "📊" : isPrice ? "💰" : "✨";
 
             return (
@@ -94,9 +94,9 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                 {/* Content */}
                 <div className="flex-1 pt-1 pb-3">
                   {isCreated && (
-                    <div className="bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
-                      <p className="text-xs font-semibold text-slate-700">Unit Created</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
+                    <div className="bg-muted/50 rounded-lg px-3 py-2.5 border border-border">
+                      <p className="text-xs font-semibold text-foreground">Unit Created</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {new Date(event.date).toLocaleDateString("en-AE", {
                           year: "numeric",
                           month: "short",
@@ -107,20 +107,20 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                   )}
 
                   {isStatus && (
-                    <div className="bg-blue-50 rounded-lg px-3 py-2.5 border border-blue-100">
+                    <div className="bg-info-soft rounded-lg px-3 py-2.5 border border-primary/40">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-xs font-semibold text-slate-700">
+                        <span className="font-mono text-xs font-semibold text-foreground">
                           {event.oldStatus?.replace(/_/g, " ")}
                         </span>
-                        <span className="text-slate-400 text-xs">→</span>
-                        <span className="font-mono text-xs font-semibold text-blue-700">
+                        <span className="text-muted-foreground text-xs">→</span>
+                        <span className="font-mono text-xs font-semibold text-primary">
                           {event.newStatus?.replace(/_/g, " ")}
                         </span>
                       </div>
                       {event.reason && (
-                        <p className="text-[10px] text-blue-600 mb-1">{event.reason}</p>
+                        <p className="text-[10px] text-primary mb-1">{event.reason}</p>
                       )}
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-muted-foreground">
                         {new Date(event.date).toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" })}
                         {event.changedBy && <span className="ml-1">· {event.changedBy}</span>}
                       </p>
@@ -128,13 +128,13 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                   )}
 
                   {isPrice && (
-                    <div className="bg-emerald-50 rounded-lg px-3 py-2.5 border border-emerald-100">
+                    <div className="bg-success-soft rounded-lg px-3 py-2.5 border border-success/30">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-slate-700">
+                        <span className="text-xs font-semibold text-foreground">
                           AED {event.oldPrice?.toLocaleString("en-AE")}
                         </span>
-                        <span className="text-slate-400 text-xs">→</span>
-                        <span className="text-xs font-bold text-emerald-700">
+                        <span className="text-muted-foreground text-xs">→</span>
+                        <span className="text-xs font-bold text-success">
                           AED {event.newPrice?.toLocaleString("en-AE")}
                         </span>
                       </div>
@@ -144,8 +144,8 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                             <span
                               className={`text-[10px] font-semibold ${
                                 event.newPrice > event.oldPrice
-                                  ? "text-emerald-600"
-                                  : "text-red-600"
+                                  ? "text-success"
+                                  : "text-destructive"
                               }`}
                             >
                               {event.newPrice > event.oldPrice ? "▲" : "▼"}
@@ -154,7 +154,7 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                               ).toFixed(1)}
                               %
                             </span>
-                            <span className="text-[10px] text-emerald-600">
+                            <span className="text-[10px] text-success">
                               {event.newPrice > event.oldPrice ? "+" : ""}
                               AED {(event.newPrice - event.oldPrice).toLocaleString("en-AE")}
                             </span>
@@ -162,9 +162,9 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                         )}
                       </div>
                       {event.reason && (
-                        <p className="text-[10px] text-emerald-600 mb-1">{event.reason}</p>
+                        <p className="text-[10px] text-success mb-1">{event.reason}</p>
                       )}
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-muted-foreground">
                         {new Date(event.date).toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" })}
                         {event.changedBy && <span className="ml-1">· {event.changedBy}</span>}
                       </p>

@@ -1,43 +1,71 @@
-// Unified color system for deal statuses and UI elements
-export const STATUS_COLORS = {
-  // Deal statuses
-  RESERVATION_PENDING: { bg: "bg-slate-50", border: "border-slate-200", text: "text-slate-700", badge: "bg-slate-100 text-slate-600" },
-  RESERVATION_CONFIRMED: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", badge: "bg-blue-100 text-blue-700" },
-  SPA_PENDING: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", badge: "bg-yellow-100 text-yellow-700" },
-  SPA_SENT: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", badge: "bg-yellow-100 text-yellow-700" },
-  SPA_SIGNED: { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700", badge: "bg-violet-100 text-violet-700" },
-  OQOOD_PENDING: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", badge: "bg-orange-100 text-orange-700" },
-  OQOOD_REGISTERED: { bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", badge: "bg-teal-100 text-teal-700" },
-  INSTALLMENTS_ACTIVE: { bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", badge: "bg-indigo-100 text-indigo-700" },
-  HANDOVER_PENDING: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-700" },
-  COMPLETED: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-700" },
-  CANCELLED: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", badge: "bg-red-100 text-red-700" },
+// Unified status color system. All values use semantic design tokens —
+// see design-system/MASTER.md and src/index.css for the token definitions.
+//
+// Tokens used:
+//   stage-neutral    — pre-action, idle (NEW, PENDING, BLOCKED)
+//   stage-progress   — early forward motion (CONTACTED, CONFIRMED) — brand-tinted
+//   stage-active     — mid-flow (QUALIFIED, SPA_SIGNED) — violet-tinted
+//   stage-info       — viewing/booked/installments — brand-info
+//   stage-attention  — needs action (NEGOTIATING, OQOOD_PENDING, OVERDUE) — warning
+//   stage-success    — done well (CLOSED_WON, COMPLETED, AVAILABLE, PAID)
+//   stage-danger     — failed/cancelled/sold (CLOSED_LOST, CANCELLED, SOLD)
 
-  // Payment statuses
-  PAID: "bg-emerald-100 text-emerald-700",
-  PENDING: "bg-amber-100 text-amber-700",
-  PARTIAL: "bg-amber-100 text-amber-700",
-  OVERDUE: "bg-red-100 text-red-700",
-  PDC_PENDING: "bg-orange-100 text-orange-700",
-  PDC_CLEARED: "bg-teal-100 text-teal-700",
+type StatusEntry = { bg: string; border: string; text: string; badge: string };
+
+const stage = (key: "neutral" | "progress" | "active" | "info" | "attention" | "success" | "danger"): StatusEntry => ({
+  bg: `bg-stage-${key}`,
+  border: `border-stage-${key}-foreground/20`,
+  text: `text-stage-${key}-foreground`,
+  badge: `bg-stage-${key} text-stage-${key}-foreground`,
+});
+
+export const STATUS_COLORS = {
+  // Deal stages
+  RESERVATION_PENDING:   stage("neutral"),
+  RESERVATION_CONFIRMED: stage("progress"),
+  SPA_PENDING:           stage("attention"),
+  SPA_SENT:              stage("attention"),
+  SPA_SIGNED:            stage("active"),
+  OQOOD_PENDING:         stage("attention"),
+  OQOOD_REGISTERED:      stage("info"),
+  INSTALLMENTS_ACTIVE:   stage("info"),
+  HANDOVER_PENDING:      stage("success"),
+  COMPLETED:             stage("success"),
+  CANCELLED:             stage("danger"),
+
+  // Payment statuses (flat string form — used as a single badge class)
+  PAID:        "bg-stage-success text-stage-success-foreground",
+  PENDING:     "bg-stage-attention text-stage-attention-foreground",
+  PARTIAL:     "bg-stage-attention text-stage-attention-foreground",
+  OVERDUE:     "bg-stage-danger text-stage-danger-foreground",
+  PDC_PENDING: "bg-stage-attention text-stage-attention-foreground",
+  PDC_CLEARED: "bg-stage-success text-stage-success-foreground",
 
   // Unit statuses
-  AVAILABLE: "bg-green-100 text-green-700",
-  ON_HOLD: "bg-amber-100 text-amber-700",
-  RESERVED: "bg-emerald-100 text-emerald-700",
-  SOLD: "bg-red-100 text-red-700",
+  AVAILABLE: "bg-stage-success text-stage-success-foreground",
+  ON_HOLD:   "bg-stage-attention text-stage-attention-foreground",
+  RESERVED:  "bg-stage-attention text-stage-attention-foreground",
+  SOLD:      "bg-stage-danger text-stage-danger-foreground",
 
   // Alert levels
-  SUCCESS: "text-emerald-600 bg-emerald-50 border-emerald-200",
-  WARNING: "text-amber-600 bg-amber-50 border-amber-200",
-  ERROR: "text-red-600 bg-red-50 border-red-200",
-  INFO: "text-blue-600 bg-blue-50 border-blue-200",
+  SUCCESS: "text-stage-success-foreground bg-stage-success border-stage-success-foreground/20",
+  WARNING: "text-stage-attention-foreground bg-stage-attention border-stage-attention-foreground/20",
+  ERROR:   "text-stage-danger-foreground bg-stage-danger border-stage-danger-foreground/20",
+  INFO:    "text-stage-info-foreground bg-stage-info border-stage-info-foreground/20",
 } as const;
 
-export const getStatusBadge = (status: string) => {
-  return (STATUS_COLORS as any)[status] || "bg-slate-100 text-slate-600";
+const FALLBACK_BADGE = "bg-stage-neutral text-stage-neutral-foreground";
+const FALLBACK_ENTRY: StatusEntry = stage("neutral");
+
+export const getStatusBadge = (status: string): string => {
+  const entry = (STATUS_COLORS as Record<string, unknown>)[status];
+  if (typeof entry === "string") return entry;
+  if (entry && typeof entry === "object" && "badge" in entry) return (entry as StatusEntry).badge;
+  return FALLBACK_BADGE;
 };
 
-export const getStageColors = (stage: string) => {
-  return (STATUS_COLORS as any)[stage] || { bg: "bg-slate-50", border: "border-slate-200", text: "text-slate-700", badge: "bg-slate-100 text-slate-600" };
+export const getStageColors = (stageKey: string): StatusEntry => {
+  const entry = (STATUS_COLORS as Record<string, unknown>)[stageKey];
+  if (entry && typeof entry === "object" && "bg" in entry) return entry as StatusEntry;
+  return FALLBACK_ENTRY;
 };

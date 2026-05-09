@@ -56,15 +56,24 @@ router.get("/", async (req, res) => {
     if (status) where.status = status;
     if (type) where.type = type;
 
-    // Add search logic
+    // Search: contains on unitNumber (the only String field); enum fields
+    // (type/view/status) only match when the upper-cased query is an exact
+    // enum value — Prisma rejects `contains` on enum columns.
     if (search) {
-      const searchStr = (search as string).toUpperCase();
-      where.OR = [
-        { unitNumber: { contains: searchStr, mode: "insensitive" } },
-        { type: { contains: searchStr, mode: "insensitive" } },
-        { view: { contains: searchStr, mode: "insensitive" } },
-        { status: { contains: searchStr, mode: "insensitive" } },
-      ];
+      const q = (search as string).trim();
+      if (q) {
+        const qUpper = q.toUpperCase();
+        const UNIT_STATUSES = ["NOT_RELEASED", "AVAILABLE", "ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER", "BLOCKED"];
+        const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];
+        const VIEW_TYPES = ["SEA", "GARDEN", "STREET", "BACK", "SIDE", "AMENITIES"];
+
+        const orConditions: any[] = [{ unitNumber: { contains: q } }];
+        if (UNIT_STATUSES.includes(qUpper)) orConditions.push({ status: qUpper });
+        if (UNIT_TYPES.includes(qUpper)) orConditions.push({ type: qUpper });
+        if (VIEW_TYPES.includes(qUpper)) orConditions.push({ view: qUpper });
+
+        where.OR = orConditions;
+      }
     }
 
     const units = await prisma.unit.findMany({
@@ -74,6 +83,7 @@ router.get("/", async (req, res) => {
     });
     res.json({ data: units });
   } catch (error) {
+    console.error("[units] GET / failed:", error);
     res.status(500).json({ error: "Failed to fetch units", code: "FETCH_UNITS_ERROR", statusCode: 500 });
   }
 });

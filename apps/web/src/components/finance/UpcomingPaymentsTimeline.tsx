@@ -62,22 +62,22 @@ export default function UpcomingPaymentsTimeline({
   };
 
   const getUrgencyColor = (daysUntil: number) => {
-    if (daysUntil <= 3) return "border-l-red-500 bg-red-50";
-    if (daysUntil <= 7) return "border-l-amber-500 bg-amber-50";
-    return "border-l-blue-500 bg-blue-50";
+    if (daysUntil <= 3) return "border-l-red-500 bg-destructive-soft";
+    if (daysUntil <= 7) return "border-l-amber-500 bg-warning-soft";
+    return "border-l-blue-500 bg-info-soft";
   };
 
   const getUrgencyBadge = (daysUntil: number) => {
-    if (daysUntil <= 0) return "bg-red-100 text-red-700";
-    if (daysUntil <= 3) return "bg-red-100 text-red-700";
-    if (daysUntil <= 7) return "bg-amber-100 text-amber-700";
-    return "bg-blue-100 text-blue-700";
+    if (daysUntil <= 0) return "bg-destructive-soft text-destructive";
+    if (daysUntil <= 3) return "bg-destructive-soft text-destructive";
+    if (daysUntil <= 7) return "bg-warning-soft text-warning";
+    return "bg-info-soft text-primary";
   };
 
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-slate-600">✓ No upcoming payments due in the next 30 days</p>
+        <p className="text-sm text-muted-foreground">✓ No upcoming payments due in the next 30 days</p>
       </div>
     );
   }
@@ -92,15 +92,15 @@ export default function UpcomingPaymentsTimeline({
           <div
             key={item.date}
             className={`border-l-4 rounded-lg p-4 transition-all cursor-pointer ${getUrgencyColor(daysUntil)} ${
-              isExpanded ? "ring-2 ring-blue-200" : ""
+              isExpanded ? "ring-2 ring-ring" : ""
             }`}
             onClick={() => toggleDate(item.date)}
           >
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h4 className="font-semibold text-slate-900">{formatDate(item.date)}</h4>
-                <p className="text-xs text-slate-600">
+                <h4 className="font-semibold text-foreground">{formatDate(item.date)}</h4>
+                <p className="text-xs text-muted-foreground">
                   {item.count} payments · AED {(item.totalAmount / 1000000).toFixed(1)}M
                 </p>
               </div>
@@ -120,15 +120,15 @@ export default function UpcomingPaymentsTimeline({
                 {item.payments.map((payment) => (
                   <div
                     key={payment.id}
-                    className="flex items-center justify-between p-2 bg-white rounded hover:shadow-sm transition"
+                    className="flex items-center justify-between p-2 bg-card rounded hover:shadow-sm transition"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{payment.dealNumber}</p>
-                      <p className="text-xs text-slate-600">{payment.leadName}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{payment.milestoneLabel}</p>
+                      <p className="text-sm font-semibold text-foreground">{payment.dealNumber}</p>
+                      <p className="text-xs text-muted-foreground">{payment.leadName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{payment.milestoneLabel}</p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                      <span className="font-semibold text-slate-900 text-right whitespace-nowrap">
+                      <span className="font-semibold text-foreground text-right whitespace-nowrap">
                         AED {payment.amount.toLocaleString()}
                       </span>
                       <button
@@ -136,7 +136,7 @@ export default function UpcomingPaymentsTimeline({
                           e.stopPropagation();
                           onNavigateDeal(payment.id); // Assuming payment.id contains dealId
                         }}
-                        className="px-3 py-1 text-xs bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
+                        className="px-3 py-1 text-xs bg-card border border-border rounded hover:bg-muted/50 transition"
                       >
                         View
                       </button>
@@ -150,21 +150,21 @@ export default function UpcomingPaymentsTimeline({
       })}
 
       {/* Summary */}
-      <div className="border-t border-slate-200 pt-4 mt-4">
+      <div className="border-t border-border pt-4 mt-4">
         <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-slate-50 rounded p-3">
-            <p className="text-xs text-slate-600">Due Dates</p>
-            <p className="text-lg font-bold text-slate-900">{data.length}</p>
+          <div className="bg-muted/50 rounded p-3">
+            <p className="text-xs text-muted-foreground">Due Dates</p>
+            <p className="text-lg font-bold text-foreground">{data.length}</p>
           </div>
-          <div className="bg-slate-50 rounded p-3">
-            <p className="text-xs text-slate-600">Total Payments</p>
-            <p className="text-lg font-bold text-slate-900">
+          <div className="bg-muted/50 rounded p-3">
+            <p className="text-xs text-muted-foreground">Total Payments</p>
+            <p className="text-lg font-bold text-foreground">
               {data.reduce((sum, item) => sum + item.count, 0)}
             </p>
           </div>
-          <div className="bg-slate-50 rounded p-3">
-            <p className="text-xs text-slate-600">Total Due</p>
-            <p className="text-lg font-bold text-slate-900">
+          <div className="bg-muted/50 rounded p-3">
+            <p className="text-xs text-muted-foreground">Total Due</p>
+            <p className="text-lg font-bold text-foreground">
               AED {(data.reduce((sum, item) => sum + item.totalAmount, 0) / 1000000).toFixed(1)}M
             </p>
           </div>

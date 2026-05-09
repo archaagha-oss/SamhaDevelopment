@@ -244,7 +244,10 @@ router.get("/inventory", async (req, res) => {
 router.get("/agents/summary", async (req, res) => {
   try {
     const agents = await prisma.user.findMany({
-      where: { role: { in: ["SALES_AGENT", "ADMIN"] } },
+      where: {
+        status: "ACTIVE",
+        role: { in: ["ADMIN", "MANAGER", "MEMBER"] },
+      },
       select: {
         id: true, name: true, role: true,
         assignedLeads: { select: { id: true, stage: true } },
@@ -394,7 +397,10 @@ router.get("/deals/by-stage", async (req, res) => {
 router.get("/agents/performance", async (req, res) => {
   try {
     const agents = await prisma.user.findMany({
-      where: { role: "SALES_AGENT" },
+      where: {
+        status: "ACTIVE",
+        role: { in: ["ADMIN", "MANAGER", "MEMBER"] },
+      },
       include: {
         assignedLeads: {
           select: { id: true, stage: true },

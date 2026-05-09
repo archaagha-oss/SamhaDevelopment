@@ -86,18 +86,18 @@ export default function EscrowPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Escrow Ledger</h1>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">Escrow Ledger</h1>
 
       {accounts.length === 0 ? (
-        <p className="text-gray-500">No escrow accounts configured for this project.</p>
+        <p className="text-muted-foreground">No escrow accounts configured for this project.</p>
       ) : (
         <>
           <div className="flex gap-2">
             {accounts.map((a) => (
               <button
                 key={a.id}
-                className={`text-sm px-3 py-1 rounded border ${active === a.id ? "bg-blue-600 text-white" : "bg-white"}`}
+                className={`text-sm px-3 py-1 rounded border ${active === a.id ? "bg-primary text-white" : "bg-card"}`}
                 onClick={() => setActive(a.id)}
               >
                 {a.bankName} · {a.accountNo}
@@ -108,21 +108,21 @@ export default function EscrowPage() {
           {balance && (
             <div className="grid grid-cols-3 gap-3">
               <div className="border rounded p-4">
-                <div className="text-xs uppercase text-gray-500">Credits</div>
+                <div className="text-xs uppercase text-muted-foreground">Credits</div>
                 <div className="text-2xl font-semibold">AED {balance.credits.toLocaleString()}</div>
               </div>
               <div className="border rounded p-4">
-                <div className="text-xs uppercase text-gray-500">Debits</div>
+                <div className="text-xs uppercase text-muted-foreground">Debits</div>
                 <div className="text-2xl font-semibold">AED {balance.debits.toLocaleString()}</div>
               </div>
-              <div className="border rounded p-4 bg-blue-50">
-                <div className="text-xs uppercase text-gray-500">Balance</div>
+              <div className="border rounded p-4 bg-info-soft">
+                <div className="text-xs uppercase text-muted-foreground">Balance</div>
                 <div className="text-2xl font-semibold">AED {balance.balance.toLocaleString()}</div>
               </div>
             </div>
           )}
 
-          <form className="border rounded p-4 grid grid-cols-6 gap-2 bg-gray-50" onSubmit={post}>
+          <form className="border rounded p-4 grid grid-cols-6 gap-2 bg-muted/50" onSubmit={post}>
             <select
               className="border rounded px-2 py-1 text-sm"
               value={entry.direction}
@@ -167,7 +167,7 @@ export default function EscrowPage() {
               value={entry.notes ?? ""}
               onChange={(e) => setEntry({ ...entry, notes: e.target.value })}
             />
-            <button className="bg-blue-600 text-white text-sm rounded px-3 py-1" type="submit">
+            <button className="bg-primary text-white text-sm rounded px-3 py-1" type="submit">
               Post
             </button>
           </form>
@@ -175,7 +175,7 @@ export default function EscrowPage() {
           <h2 className="font-medium mt-4">Ledger</h2>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-gray-500 border-b">
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
                 <th className="py-1">Posted</th>
                 <th>Direction</th>
                 <th>Reason</th>
@@ -189,7 +189,7 @@ export default function EscrowPage() {
               {ledger.map((e) => (
                 <tr key={e.id} className="border-b">
                   <td className="py-1">{new Date(e.postedAt).toLocaleString()}</td>
-                  <td className={e.direction === "CREDIT" ? "text-green-700" : "text-red-700"}>{e.direction}</td>
+                  <td className={e.direction === "CREDIT" ? "text-success" : "text-destructive"}>{e.direction}</td>
                   <td>{e.reason}</td>
                   <td className="text-right">
                     {e.currency} {e.amount.toLocaleString()}

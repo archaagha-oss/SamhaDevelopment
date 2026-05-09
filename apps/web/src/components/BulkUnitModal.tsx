@@ -20,7 +20,7 @@ interface UnitRow {
 const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];
 const UNIT_VIEWS = ["SEA", "GARDEN", "STREET", "BACK", "SIDE", "AMENITIES"];
 
-const inp = "border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 w-full";
+const inp = "border border-border rounded px-2 py-1 text-sm bg-muted/50 focus:outline-none focus:border-ring w-full";
 
 function buildRows(count: number, defaultType: string, defaultView: string, defaultArea: string, defaultPrice: string): UnitRow[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -174,19 +174,19 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
+      <div className="bg-card rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <div>
-            <h2 className="font-bold text-slate-900">Add Floor</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-bold text-foreground">Add Floor</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {step === "config"  && "Step 1 of 3 — Set floor number and shared defaults"}
               {step === "layout"  && `Step 2 of 3 — Customise each unit · ${activeRows} of ${rows.length} selected`}
               {step === "preview" && `Step 3 of 3 — Review before creating ${activeRows} unit${activeRows !== 1 ? "s" : ""}`}
               {step === "result"  && "Done"}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none" aria-label="Close">×</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none" aria-label="Close">×</button>
         </div>
 
         {/* Step 1 — Config */}
@@ -194,60 +194,60 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
           <form onSubmit={goToLayout} className="px-6 py-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Floor Number *</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Floor Number *</label>
                 <input
                   required type="number" min="0"
                   value={floor} onChange={(e) => setFloor(e.target.value)}
                   placeholder="e.g. 5"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Units on this floor</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Units on this floor</label>
                 <input
                   type="number" min="1" max="100"
                   value={configCount} onChange={(e) => setConfigCount(parseInt(e.target.value) || 8)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                 />
-                <p className="text-xs text-slate-400 mt-0.5">Default from Project Config — adjust per floor</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Default from Project Config — adjust per floor</p>
               </div>
             </div>
 
-            <div className="border-t border-slate-100 pt-4">
-              <p className="text-xs font-semibold text-slate-500 mb-3">Shared defaults — you can override per unit in the next step</p>
+            <div className="border-t border-border pt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Shared defaults — you can override per unit in the next step</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default Type</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Default Type</label>
                   <select value={defaultType} onChange={(e) => setDefaultType(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400">
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring">
                     {UNIT_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default View</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Default View</label>
                   <select value={defaultView} onChange={(e) => setDefaultView(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400">
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring">
                     {UNIT_VIEWS.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default Area (sqm) *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Default Area (sqm) *</label>
                   <input required type="number" min="1" step="0.1" value={defaultArea} onChange={(e) => setDefaultArea(e.target.value)}
                     placeholder="e.g. 85"
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Default Price (AED) *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Default Price (AED) *</label>
                   <input required type="number" min="1" value={defaultPrice} onChange={(e) => setDefaultPrice(e.target.value)}
                     placeholder="e.g. 1200000"
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400" />
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
                 </div>
               </div>
             </div>
 
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">Cancel</button>
-              <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm">
+              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+              <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm">
                 Configure Units →
               </button>
             </div>
@@ -258,51 +258,51 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
         {step === "layout" && (
           <>
             {/* "Apply to all" — categorical */}
-            <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex-shrink-0 space-y-1.5">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="px-6 py-2 bg-muted/50 border-b border-border flex-shrink-0 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-semibold w-20 shrink-0">Apply all:</span>
                 <select onChange={(e) => { applyToAll("type", e.target.value, "Type"); e.currentTarget.value = ""; }} defaultValue=""
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none">
                   <option value="" disabled>Set type…</option>
                   {UNIT_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                 </select>
                 <select onChange={(e) => { applyToAll("view", e.target.value, "View"); e.currentTarget.value = ""; }} defaultValue=""
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none">
                   <option value="" disabled>Set view…</option>
                   {UNIT_VIEWS.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <span className="ml-auto text-slate-400">{activeRows} units will be created</span>
+                <span className="ml-auto text-muted-foreground">{activeRows} units will be created</span>
               </div>
 
               {/* "Apply to all" — numeric */}
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-semibold w-20 shrink-0">Price:</span>
                 <select value={bulkPriceMode} onChange={(e) => setBulkPriceMode(e.target.value as any)}
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none">
                   <option value="SET">Set to</option>
                   <option value="PERCENT">% change</option>
                   <option value="DELTA">+/− AED</option>
                 </select>
                 <input type="number" value={bulkPriceValue} onChange={(e) => setBulkPriceValue(e.target.value)}
                   placeholder={bulkPriceMode === "PERCENT" ? "e.g. 5 or -3" : bulkPriceMode === "DELTA" ? "e.g. 50000" : "e.g. 1200000"}
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none w-32" />
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none w-32" />
                 <button type="button" onClick={() => applyNumericAll("price", bulkPriceMode, bulkPriceValue)}
-                  className="px-2 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                  className="px-2 py-1 text-xs font-semibold bg-info-soft text-primary rounded hover:bg-info-soft">
                   Apply
                 </button>
 
                 <span className="font-semibold w-12 shrink-0 ml-3">Area:</span>
                 <select value={bulkAreaMode} onChange={(e) => setBulkAreaMode(e.target.value as any)}
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none">
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none">
                   <option value="SET">Set to</option>
                   <option value="PERCENT">% change</option>
                   <option value="DELTA">+/− sqm</option>
                 </select>
                 <input type="number" value={bulkAreaValue} onChange={(e) => setBulkAreaValue(e.target.value)}
                   placeholder={bulkAreaMode === "PERCENT" ? "e.g. 5" : "e.g. 85"}
-                  className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none w-24" />
+                  className="border border-border rounded px-1.5 py-1 text-xs bg-card focus:outline-none w-24" />
                 <button type="button" onClick={() => applyNumericAll("area", bulkAreaMode, bulkAreaValue)}
-                  className="px-2 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                  className="px-2 py-1 text-xs font-semibold bg-info-soft text-primary rounded hover:bg-info-soft">
                   Apply
                 </button>
               </div>
@@ -311,17 +311,17 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
             {/* Unit rows */}
             <div className="flex-1 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white border-b border-slate-100">
+                <thead className="sticky top-0 bg-card border-b border-border">
                   <tr>
-                    <th className="px-3 py-2 text-left text-slate-500 w-8"></th>
-                    <th className="px-3 py-2 text-left text-slate-500 w-20">Unit No.</th>
-                    <th className="px-3 py-2 text-left text-slate-500">Type</th>
-                    <th className="px-3 py-2 text-left text-slate-500">View</th>
-                    <th className="px-3 py-2 text-left text-slate-500 w-28">Area (sqm)</th>
-                    <th className="px-3 py-2 text-left text-slate-500 w-32">Price (AED)</th>
+                    <th className="px-3 py-2 text-left text-muted-foreground w-8"></th>
+                    <th className="px-3 py-2 text-left text-muted-foreground w-20">Unit No.</th>
+                    <th className="px-3 py-2 text-left text-muted-foreground">Type</th>
+                    <th className="px-3 py-2 text-left text-muted-foreground">View</th>
+                    <th className="px-3 py-2 text-left text-muted-foreground w-28">Area (sqm)</th>
+                    <th className="px-3 py-2 text-left text-muted-foreground w-32">Price (AED)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-border">
                   {rows.map((row, idx) => (
                     <tr key={idx} className={row.include ? "" : "opacity-40"}>
                       <td className="px-3 py-1.5">
@@ -329,7 +329,7 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
                           onChange={(e) => updateRow(idx, "include", e.target.checked)}
                           className="rounded" />
                       </td>
-                      <td className="px-3 py-1.5 font-mono font-semibold text-slate-700">
+                      <td className="px-3 py-1.5 font-mono font-semibold text-foreground">
                         {floor}-{String(row.suffix).padStart(2, "0")}
                       </td>
                       <td className="px-3 py-1.5">
@@ -358,14 +358,14 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
               </table>
             </div>
 
-            {error && <p className="mx-6 my-2 text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>}
+            {error && <p className="mx-6 my-2 text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>}
 
-            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
-              <button onClick={() => setStep("config")} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">← Back</button>
+            <div className="px-6 py-4 border-t border-border flex gap-3 flex-shrink-0">
+              <button onClick={() => setStep("config")} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">← Back</button>
               <button
                 onClick={validateAndPreview}
                 disabled={activeRows === 0}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50"
               >
                 Preview {activeRows} unit{activeRows !== 1 ? "s" : ""} →
               </button>
@@ -379,42 +379,42 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               {/* Summary cards */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <p className="text-3xl font-bold text-blue-700">{previewSummary.count}</p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">Units to create on F{floorNum}</p>
+                <div className="bg-info-soft rounded-xl p-4">
+                  <p className="text-3xl font-bold text-primary">{previewSummary.count}</p>
+                  <p className="text-xs text-primary font-medium mt-1">Units to create on F{floorNum}</p>
                 </div>
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-slate-800">
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-foreground">
                     {Math.round(previewSummary.totalArea).toLocaleString("en-AE")}
-                    <span className="text-sm font-medium text-slate-500 ml-1">sqm</span>
+                    <span className="text-sm font-medium text-muted-foreground ml-1">sqm</span>
                   </p>
-                  <p className="text-xs text-slate-500 font-medium mt-1">Total area</p>
+                  <p className="text-xs text-muted-foreground font-medium mt-1">Total area</p>
                 </div>
-                <div className="bg-emerald-50 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-emerald-700">
+                <div className="bg-success-soft rounded-xl p-4">
+                  <p className="text-2xl font-bold text-success">
                     AED {(previewSummary.totalPrice / 1_000_000).toLocaleString("en-AE", { maximumFractionDigits: 2 })}M
                   </p>
-                  <p className="text-xs text-emerald-700 font-medium mt-1">Combined list price</p>
+                  <p className="text-xs text-success font-medium mt-1">Combined list price</p>
                 </div>
               </div>
 
               {/* Type / view chips */}
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <p className="font-semibold text-slate-600 mb-1.5">Mix by type</p>
+                  <p className="font-semibold text-muted-foreground mb-1.5">Mix by type</p>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(previewSummary.byType).map(([t, c]) => (
-                      <span key={t} className="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                      <span key={t} className="px-2 py-0.5 rounded-full bg-stage-active text-stage-active-foreground border border-accent-2/30">
                         {t.replace(/_/g, " ")} <span className="font-bold ml-1">{c}</span>
                       </span>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-600 mb-1.5">Mix by view</p>
+                  <p className="font-semibold text-muted-foreground mb-1.5">Mix by view</p>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(previewSummary.byView).map(([v, c]) => (
-                      <span key={v} className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                      <span key={v} className="px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/30">
                         {v} <span className="font-bold ml-1">{c}</span>
                       </span>
                     ))}
@@ -424,10 +424,10 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
 
               {/* Unit list */}
               <div>
-                <p className="font-semibold text-slate-600 text-xs mb-2">Units to be created (atomic — all or nothing)</p>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
+                <p className="font-semibold text-muted-foreground text-xs mb-2">Units to be created (atomic — all or nothing)</p>
+                <div className="bg-muted/50 border border-border rounded-lg max-h-72 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-slate-100 text-slate-500">
+                    <thead className="sticky top-0 bg-muted text-muted-foreground">
                       <tr>
                         <th className="px-3 py-1.5 text-left font-semibold">Unit No.</th>
                         <th className="px-3 py-1.5 text-left font-semibold">Type</th>
@@ -436,14 +436,14 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
                         <th className="px-3 py-1.5 text-right font-semibold">Price (AED)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-border">
                       {rows.filter((r) => r.include).map((r) => (
                         <tr key={r.suffix}>
-                          <td className="px-3 py-1.5 font-mono font-semibold text-slate-700">{floorNum}-{String(r.suffix).padStart(2, "0")}</td>
-                          <td className="px-3 py-1.5 text-slate-700">{r.type.replace(/_/g, " ")}</td>
-                          <td className="px-3 py-1.5 text-slate-600">{r.view}</td>
-                          <td className="px-3 py-1.5 text-right text-slate-600">{r.area} sqm</td>
-                          <td className="px-3 py-1.5 text-right text-slate-700 font-medium">{Number(r.price).toLocaleString("en-AE")}</td>
+                          <td className="px-3 py-1.5 font-mono font-semibold text-foreground">{floorNum}-{String(r.suffix).padStart(2, "0")}</td>
+                          <td className="px-3 py-1.5 text-foreground">{r.type.replace(/_/g, " ")}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">{r.view}</td>
+                          <td className="px-3 py-1.5 text-right text-muted-foreground">{r.area} sqm</td>
+                          <td className="px-3 py-1.5 text-right text-foreground font-medium">{Number(r.price).toLocaleString("en-AE")}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -451,15 +451,15 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>}
+              {error && <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>}
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+            <div className="px-6 py-4 border-t border-border flex gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setStep("layout")}
                 disabled={submitting}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
+                className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm"
               >
                 ← Back to edit
               </button>
@@ -467,7 +467,7 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50"
               >
                 {submitting ? "Creating…" : `Create ${previewSummary.count} unit${previewSummary.count !== 1 ? "s" : ""}`}
               </button>
@@ -479,18 +479,18 @@ export default function BulkUnitModal({ projectId, onClose, onCreated }: Props) 
         {step === "result" && result && (
           <div className="px-6 py-6 space-y-4">
             <div className="flex gap-4">
-              <div className="bg-emerald-50 rounded-xl p-4 flex-1 text-center">
-                <p className="text-3xl font-bold text-emerald-700">{result.created}</p>
-                <p className="text-xs text-emerald-600 font-medium mt-1">Units Created</p>
+              <div className="bg-success-soft rounded-xl p-4 flex-1 text-center">
+                <p className="text-3xl font-bold text-success">{result.created}</p>
+                <p className="text-xs text-success font-medium mt-1">Units Created</p>
               </div>
               {result.skipped > 0 && (
-                <div className="bg-amber-50 rounded-xl p-4 flex-1 text-center">
-                  <p className="text-3xl font-bold text-amber-700">{result.skipped}</p>
-                  <p className="text-xs text-amber-600 font-medium mt-1">Skipped (already existed)</p>
+                <div className="bg-warning-soft rounded-xl p-4 flex-1 text-center">
+                  <p className="text-3xl font-bold text-warning">{result.skipped}</p>
+                  <p className="text-xs text-warning font-medium mt-1">Skipped (already existed)</p>
                 </div>
               )}
             </div>
-            <button onClick={onClose} className="w-full py-2.5 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-700 text-sm">
+            <button onClick={onClose} className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-muted text-sm">
               Done
             </button>
           </div>

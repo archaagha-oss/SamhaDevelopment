@@ -15,6 +15,7 @@ import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
+import { requireFinanceAccess } from "../middleware/auth";
 
 const router = Router();
 
@@ -583,16 +584,10 @@ router.post("/:id/activities", async (req, res) => {
   }
 });
 
-// Add custom milestone to an existing deal (ADMIN/FINANCE only)
-router.post("/:id/payments", async (req, res) => {
+// Add custom milestone to an existing deal — ADMIN or Finance department.
+router.post("/:id/payments", requireFinanceAccess, async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
-    const user = await prisma.user.findFirst({ where: { clerkId: req.auth.userId } });
-    if (!user || !["ADMIN", "FINANCE"].includes(user.role)) {
-      return res.status(403).json({ error: "Only ADMIN or FINANCE can add milestones", code: "FORBIDDEN", statusCode: 403 });
-    }
+    const user = (req as any).resolvedUser;
     const { label, amount, dueDate, notes } = req.body;
     if (!label || !amount || !dueDate) {
       return res.status(400).json({ error: "label, amount, and dueDate are required", code: "MISSING_FIELDS", statusCode: 400 });
@@ -608,16 +603,10 @@ router.post("/:id/payments", async (req, res) => {
   }
 });
 
-// Restructure payment schedule — shift all future payments by N days (ADMIN/FINANCE only)
-router.post("/:id/restructure", async (req, res) => {
+// Restructure payment schedule — shift all future payments by N days. ADMIN or Finance.
+router.post("/:id/restructure", requireFinanceAccess, async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
-    const user = await prisma.user.findFirst({ where: { clerkId: req.auth.userId } });
-    if (!user || !["ADMIN", "FINANCE"].includes(user.role)) {
-      return res.status(403).json({ error: "Only ADMIN or FINANCE can restructure schedules", code: "FORBIDDEN", statusCode: 403 });
-    }
+    const user = (req as any).resolvedUser;
     const { shiftDays, reason } = req.body;
     if (!shiftDays || isNaN(parseInt(shiftDays)) || !reason) {
       return res.status(400).json({ error: "shiftDays and reason are required", code: "MISSING_FIELDS", statusCode: 400 });

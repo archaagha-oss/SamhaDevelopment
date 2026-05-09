@@ -12,14 +12,14 @@ interface Props {
 const DEAL_OWNED = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"];
 
 const STATUS_DISPLAY: Record<string, { label: string; color: string }> = {
-  NOT_RELEASED: { label: "Not Released",  color: "bg-gray-100 text-gray-700 border-gray-200" },
-  AVAILABLE:    { label: "Available",     color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  ON_HOLD:      { label: "On Hold",       color: "bg-orange-100 text-orange-700 border-orange-200" },
-  RESERVED:     { label: "Reserved",      color: "bg-amber-100 text-amber-700 border-amber-200" },
-  BOOKED:       { label: "Booked",        color: "bg-violet-100 text-violet-700 border-violet-200" },
-  SOLD:         { label: "Sold",          color: "bg-red-100 text-red-700 border-red-200" },
-  BLOCKED:      { label: "Blocked",       color: "bg-slate-200 text-slate-600 border-slate-300" },
-  HANDED_OVER:  { label: "Handed Over",   color: "bg-teal-100 text-teal-700 border-teal-200" },
+  NOT_RELEASED: { label: "Not Released",  color: "bg-muted text-foreground border-border" },
+  AVAILABLE:    { label: "Available",     color: "bg-success-soft text-success border-success/30" },
+  ON_HOLD:      { label: "On Hold",       color: "bg-warning-soft text-warning border-warning/30" },
+  RESERVED:     { label: "Reserved",      color: "bg-warning-soft text-warning border-warning/30" },
+  BOOKED:       { label: "Booked",        color: "bg-stage-active text-stage-active-foreground border-accent-2/30" },
+  SOLD:         { label: "Sold",          color: "bg-destructive-soft text-destructive border-destructive/30" },
+  BLOCKED:      { label: "Blocked",       color: "bg-neutral-200 text-muted-foreground border-border" },
+  HANDED_OVER:  { label: "Handed Over",   color: "bg-chart-5/15 text-chart-5 border-chart-5/30" },
 };
 
 type FormMode = "RELEASE" | "BLOCK" | "UNBLOCK" | "UNLIST" | null;
@@ -41,7 +41,7 @@ const FORM_CONFIG: Record<Exclude<FormMode, null>, FormConfig> = {
     placeholder:  "e.g. Phase 1 launch — released after final pricing review",
     newStatus:    "AVAILABLE",
     confirmLabel: "Release unit",
-    confirmTone:  "bg-emerald-600 hover:bg-emerald-700",
+    confirmTone:  "bg-success hover:bg-success/90",
   },
   UNBLOCK: {
     title:        "Unblock unit",
@@ -49,7 +49,7 @@ const FORM_CONFIG: Record<Exclude<FormMode, null>, FormConfig> = {
     placeholder:  "e.g. Legal review cleared, unit may be sold",
     newStatus:    "AVAILABLE",
     confirmLabel: "Unblock unit",
-    confirmTone:  "bg-emerald-600 hover:bg-emerald-700",
+    confirmTone:  "bg-success hover:bg-success/90",
   },
   BLOCK: {
     title:        "Block unit",
@@ -57,7 +57,7 @@ const FORM_CONFIG: Record<Exclude<FormMode, null>, FormConfig> = {
     placeholder:  "e.g. Pending legal review, structural inspection requested",
     newStatus:    "BLOCKED",
     confirmLabel: "Block unit",
-    confirmTone:  "bg-amber-600 hover:bg-amber-700",
+    confirmTone:  "bg-warning hover:bg-warning/90",
     destructive:  true,
   },
   UNLIST: {
@@ -66,7 +66,7 @@ const FORM_CONFIG: Record<Exclude<FormMode, null>, FormConfig> = {
     placeholder:  "e.g. Holding back for next release wave",
     newStatus:    "NOT_RELEASED",
     confirmLabel: "Unlist unit",
-    confirmTone:  "bg-slate-700 hover:bg-slate-800",
+    confirmTone:  "bg-neutral-700 hover:bg-neutral-600",
   },
 };
 
@@ -118,8 +118,8 @@ export default function UnitStatusActions({ unit, onError }: Props) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Status</p>
+    <div className="bg-card rounded-lg border border-border p-5 shadow-sm">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Status</p>
 
       {/* Current status badge */}
       <div className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold mb-4 ${display.color}`}>
@@ -127,7 +127,7 @@ export default function UnitStatusActions({ unit, onError }: Props) {
       </div>
 
       {isDealOwned ? (
-        <div className={`text-xs rounded-lg px-3 py-2 border ${unit.status === "ON_HOLD" ? "bg-orange-50 border-orange-100 text-orange-700" : "bg-slate-50 border-slate-100 text-slate-500"}`}>
+        <div className={`text-xs rounded-lg px-3 py-2 border ${unit.status === "ON_HOLD" ? "bg-warning-soft border-warning/30 text-warning" : "bg-muted/50 border-border text-muted-foreground"}`}>
           <span className="font-medium">{unit.status === "ON_HOLD" ? "On Hold — Offer Pending" : "Managed by deal system"}</span>
           {unit.status === "ON_HOLD" && unit.holdExpiresAt ? (
             <p className="mt-0.5">Hold expires {new Date(unit.holdExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.</p>
@@ -143,14 +143,14 @@ export default function UnitStatusActions({ unit, onError }: Props) {
               <button
                 onClick={() => { setFormMode("RELEASE"); setReason(""); }}
                 disabled={changeStatus.isPending}
-                className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Release to market →
               </button>
               <button
                 onClick={() => { setFormMode("BLOCK"); setReason(""); }}
                 disabled={changeStatus.isPending}
-                className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2 border border-border hover:bg-muted/50 text-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Block unit
               </button>
@@ -162,7 +162,7 @@ export default function UnitStatusActions({ unit, onError }: Props) {
             <button
               onClick={() => { setFormMode("BLOCK"); setReason(""); }}
               disabled={changeStatus.isPending}
-              className="w-full px-3 py-2 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="w-full px-3 py-2 border border-warning/30 bg-warning-soft hover:bg-warning-soft text-warning-soft-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               Block unit
             </button>
@@ -174,14 +174,14 @@ export default function UnitStatusActions({ unit, onError }: Props) {
               <button
                 onClick={() => { setFormMode("UNBLOCK"); setReason(""); }}
                 disabled={changeStatus.isPending}
-                className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Unblock — make available
               </button>
               <button
                 onClick={() => { setFormMode("UNLIST"); setReason(""); }}
                 disabled={changeStatus.isPending}
-                className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2 border border-border hover:bg-muted/50 text-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Unlist (Not Released)
               </button>
@@ -190,20 +190,20 @@ export default function UnitStatusActions({ unit, onError }: Props) {
         </div>
       ) : (
         // Confirmation + reason form (replaces the action buttons until cancelled)
-        <div className="space-y-3 border-t border-slate-100 pt-3">
+        <div className="space-y-3 border-t border-border pt-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800">{FORM_CONFIG[formMode].title}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{FORM_CONFIG[formMode].helper}</p>
+            <p className="text-sm font-semibold text-foreground">{FORM_CONFIG[formMode].title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{FORM_CONFIG[formMode].helper}</p>
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-600">Reason (required for audit)</label>
+            <label className="text-xs font-semibold text-muted-foreground">Reason (required for audit)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder={FORM_CONFIG[formMode].placeholder}
               rows={2}
               autoFocus
-              className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 resize-none"
+              className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:border-ring resize-none"
             />
           </div>
           <div className="flex gap-2">
@@ -217,7 +217,7 @@ export default function UnitStatusActions({ unit, onError }: Props) {
             <button
               onClick={closeForm}
               disabled={changeStatus.isPending}
-              className="px-3 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50"
+              className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted/50"
             >
               Cancel
             </button>

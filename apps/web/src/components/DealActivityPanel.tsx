@@ -75,16 +75,16 @@ export default function DealActivityPanel({
   }, [loadActivities]);
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200">
+    <div className="flex flex-col h-full bg-card border-r border-border">
       {/* Tab Navigation */}
-      <div className="flex-shrink-0 border-b border-slate-200">
+      <div className="flex-shrink-0 border-b border-border">
         <div className="flex gap-4 px-6 py-3">
           <button
             onClick={() => setActiveTab("timeline")}
             className={`text-sm font-medium pb-3 border-b-2 transition ${
               activeTab === "timeline"
-                ? "text-blue-600 border-blue-600"
-                : "text-slate-600 border-transparent hover:text-slate-900"
+                ? "text-primary border-primary/40"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
             Timeline
@@ -93,8 +93,8 @@ export default function DealActivityPanel({
             onClick={() => setActiveTab("activity")}
             className={`text-sm font-medium pb-3 border-b-2 transition ${
               activeTab === "activity"
-                ? "text-blue-600 border-blue-600"
-                : "text-slate-600 border-transparent hover:text-slate-900"
+                ? "text-primary border-primary/40"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
             Activity ({activities.length})
@@ -116,26 +116,26 @@ export default function DealActivityPanel({
         )}
 
         {activeTab === "activity" && (
-          <div className="divide-y divide-slate-200">
+          <div className="divide-y divide-border">
             {activityLoading && (
               <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
 
             {!activityLoading && activities.length === 0 && (
-              <div className="px-6 py-8 text-center text-slate-500">
+              <div className="px-6 py-8 text-center text-muted-foreground">
                 <p className="text-sm">No activities yet</p>
               </div>
             )}
 
             {!activityLoading && activities.map((activity) => (
-              <div key={activity.id} className="px-6 py-4 hover:bg-slate-50 transition">
+              <div key={activity.id} className="px-6 py-4 hover:bg-muted/50 transition">
                 <div className="flex items-start gap-3">
                   <span className="text-lg flex-shrink-0 mt-0.5">{activityIcon(activity.type, activity.summary)}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-900 break-words">{activity.summary}</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-sm text-foreground break-words">{activity.summary}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       {timeAgo(activity.activityDate)}
                       {activity.createdBy && <span> · {activity.createdBy}</span>}
                     </p>

@@ -81,33 +81,33 @@ export default function CommissionTiersPage() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Tiered Commission Rules</h1>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">Tiered Commission Rules</h1>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : rules.length === 0 ? (
-        <p className="text-gray-500">No tiered commission rules configured.</p>
+        <p className="text-muted-foreground">No tiered commission rules configured.</p>
       ) : (
         rules.map((rule) => (
           <section key={rule.id} className="border rounded p-4 space-y-3">
             <header className="flex items-center justify-between">
               <div>
                 <h2 className="font-medium">{rule.name}</h2>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {rule.projectId ? "Project-scoped" : "Global"} · priority {rule.priority} · {rule.isActive ? "active" : "inactive"}
                 </p>
               </div>
               {editingId !== rule.id ? (
-                <button className="text-sm text-blue-600 hover:underline" onClick={() => startEdit(rule)}>
+                <button className="text-sm text-primary hover:underline" onClick={() => startEdit(rule)}>
                   Edit Tiers
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button className="text-sm text-gray-500 hover:underline" onClick={() => setEditingId(null)}>
+                  <button className="text-sm text-muted-foreground hover:underline" onClick={() => setEditingId(null)}>
                     Cancel
                   </button>
-                  <button className="bg-blue-600 text-white text-sm px-3 py-1 rounded" onClick={save}>
+                  <button className="bg-primary text-white text-sm px-3 py-1 rounded" onClick={save}>
                     Save
                   </button>
                 </div>
@@ -116,7 +116,7 @@ export default function CommissionTiersPage() {
 
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-gray-500 border-b">
+                <tr className="text-left text-xs uppercase text-muted-foreground border-b">
                   <th className="py-1">Min Sale</th>
                   <th>Max Sale</th>
                   <th>Rate %</th>
@@ -146,7 +146,7 @@ export default function CommissionTiersPage() {
               </tbody>
             </table>
             {editingId === rule.id && (
-              <button className="text-xs text-blue-600 hover:underline" onClick={addTier}>
+              <button className="text-xs text-primary hover:underline" onClick={addTier}>
                 + Add tier
               </button>
             )}

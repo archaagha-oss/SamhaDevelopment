@@ -20,10 +20,10 @@ export default function DealStepper({ current, cancelled = false }: Props) {
   const currentIndex = STEPS.findIndex((s) => s.stage === current);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
+    <div className="bg-card rounded-xl border border-border p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Deal Progress</h3>
-        <span className="text-[11px] text-slate-400">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deal Progress</h3>
+        <span className="text-[11px] text-muted-foreground">
           {cancelled ? "Cancelled" : `${Math.max(currentIndex, 0) + 1} of ${STEPS.length}`}
         </span>
       </div>
@@ -34,16 +34,16 @@ export default function DealStepper({ current, cancelled = false }: Props) {
           const active = !cancelled && i === currentIndex;
 
           const dot = done
-            ? "bg-emerald-500 text-white"
+            ? "bg-success text-white"
             : active
-              ? "bg-blue-600 text-white ring-4 ring-blue-100"
-              : "bg-slate-200 text-slate-400";
+              ? "bg-primary text-white ring-4 ring-ring"
+              : "bg-neutral-200 text-muted-foreground";
 
           const labelCls = done
-            ? "text-slate-500"
+            ? "text-muted-foreground"
             : active
-              ? "text-slate-900 font-semibold"
-              : "text-slate-400";
+              ? "text-foreground font-semibold"
+              : "text-muted-foreground";
 
           return (
             <div key={s.stage} className="flex items-start gap-3 relative">
@@ -51,7 +51,7 @@ export default function DealStepper({ current, cancelled = false }: Props) {
               {i < STEPS.length - 1 && (
                 <div
                   className={`absolute left-3 top-6 w-0.5 h-[calc(100%-12px)] ${
-                    !cancelled && i < currentIndex ? "bg-emerald-300" : "bg-slate-200"
+                    !cancelled && i < currentIndex ? "bg-success/50" : "bg-neutral-200"
                   }`}
                 />
               )}
@@ -63,7 +63,7 @@ export default function DealStepper({ current, cancelled = false }: Props) {
               <div className={`flex-1 pb-3 text-sm ${labelCls}`}>
                 {s.label}
                 {active && !cancelled && (
-                  <span className="ml-2 text-[10px] uppercase tracking-wider text-blue-500 font-bold">Current</span>
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-primary font-bold">Current</span>
                 )}
               </div>
             </div>
@@ -71,7 +71,7 @@ export default function DealStepper({ current, cancelled = false }: Props) {
         })}
 
         {cancelled && (
-          <div className="mt-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          <div className="mt-2 text-xs text-destructive bg-destructive-soft border border-destructive/30 rounded-lg px-3 py-2">
             This deal was cancelled.
           </div>
         )}

@@ -25,10 +25,10 @@ interface SnagList {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  COSMETIC: "bg-gray-200 text-gray-800",
-  MINOR: "bg-blue-100 text-blue-800",
-  MAJOR: "bg-amber-100 text-amber-800",
-  CRITICAL: "bg-red-100 text-red-800",
+  COSMETIC: "bg-neutral-200 text-foreground",
+  MINOR: "bg-info-soft text-primary",
+  MAJOR: "bg-warning-soft text-warning-soft-foreground",
+  CRITICAL: "bg-destructive-soft text-destructive-soft-foreground",
 };
 
 const STATUS_OPTIONS = ["RAISED", "ACKNOWLEDGED", "IN_PROGRESS", "FIXED", "REJECTED", "CLOSED"];
@@ -103,11 +103,11 @@ export default function SnagListPage() {
   if (!unitId) return <div className="p-6">Unit ID required.</div>;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Snag Lists</h1>
         <button
-          className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+          className="bg-primary text-white px-3 py-1 rounded text-sm"
           onClick={ensureList}
         >
           + New List
@@ -115,27 +115,27 @@ export default function SnagListPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : lists.length === 0 ? (
-        <p className="text-gray-500">No snag lists for this unit yet.</p>
+        <p className="text-muted-foreground">No snag lists for this unit yet.</p>
       ) : (
         lists.map((list) => (
           <section key={list.id} className="border rounded p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">
                 {list.label}{" "}
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   · raised {new Date(list.raisedAt).toLocaleDateString()}
                 </span>
               </h2>
               {list.closedAt && (
-                <span className="text-xs text-green-700">Closed {new Date(list.closedAt).toLocaleDateString()}</span>
+                <span className="text-xs text-success">Closed {new Date(list.closedAt).toLocaleDateString()}</span>
               )}
             </div>
 
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-gray-500 border-b">
+                <tr className="text-left text-xs uppercase text-muted-foreground border-b">
                   <th className="py-1">Room</th>
                   <th>Category</th>
                   <th>Description</th>
@@ -185,7 +185,7 @@ export default function SnagListPage() {
                   <td><input className="border rounded px-1 py-0.5 text-xs w-full" placeholder="Contractor" value={newItem.contractorName ?? ""} onChange={(e) => setNewItem({ ...newItem, contractorName: e.target.value })} /></td>
                   <td><input className="border rounded px-1 py-0.5 text-xs w-full" type="date" value={newItem.dueDate ?? ""} onChange={(e) => setNewItem({ ...newItem, dueDate: e.target.value })} /></td>
                   <td>
-                    <button className="bg-blue-600 text-white text-xs px-2 py-1 rounded" onClick={() => addItem(list.id)}>
+                    <button className="bg-primary text-white text-xs px-2 py-1 rounded" onClick={() => addItem(list.id)}>
                       + Add
                     </button>
                   </td>

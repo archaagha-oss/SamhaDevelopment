@@ -62,20 +62,20 @@ export default function OverdueAlertsTable({
 
   // Get urgency color
   const getUrgencyColor = (daysOverdue: number): string => {
-    if (daysOverdue > 7) return "bg-red-100 text-red-900";
-    if (daysOverdue > 3) return "bg-orange-100 text-orange-900";
-    return "bg-amber-100 text-amber-900";
+    if (daysOverdue > 7) return "bg-destructive-soft text-destructive-soft-foreground";
+    if (daysOverdue > 3) return "bg-warning-soft text-warning-soft-foreground";
+    return "bg-warning-soft text-warning-soft-foreground";
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span className="text-slate-300">↕</span>;
-    return sortOrder === "asc" ? <span className="text-blue-600">↑</span> : <span className="text-blue-600">↓</span>;
+    if (sortField !== field) return <span className="text-foreground/80">↕</span>;
+    return sortOrder === "asc" ? <span className="text-primary">↑</span> : <span className="text-primary">↓</span>;
   };
 
   if (loading && data.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -83,7 +83,7 @@ export default function OverdueAlertsTable({
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-slate-600">✓ No overdue payments - All on track!</p>
+        <p className="text-sm text-muted-foreground">✓ No overdue payments - All on track!</p>
       </div>
     );
   }
@@ -94,42 +94,42 @@ export default function OverdueAlertsTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200">
-              <th className="text-left px-4 py-3 font-semibold text-slate-900">Deal</th>
-              <th className="text-left px-4 py-3 font-semibold text-slate-900">Lead Name</th>
+            <tr className="border-b border-border">
+              <th className="text-left px-4 py-3 font-semibold text-foreground">Deal</th>
+              <th className="text-left px-4 py-3 font-semibold text-foreground">Lead Name</th>
               <th
-                className="text-right px-4 py-3 font-semibold text-slate-900 cursor-pointer hover:text-blue-600"
+                className="text-right px-4 py-3 font-semibold text-foreground cursor-pointer hover:text-primary"
                 onClick={() => handleSort("amount")}
               >
                 <div className="flex items-center justify-end gap-1">
                   Amount <SortIcon field="amount" />
                 </div>
               </th>
-              <th className="text-left px-4 py-3 font-semibold text-slate-900">Milestone</th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-900 cursor-pointer hover:text-blue-600" onClick={() => handleSort("daysOverdue")}>
+              <th className="text-left px-4 py-3 font-semibold text-foreground">Milestone</th>
+              <th className="text-center px-4 py-3 font-semibold text-foreground cursor-pointer hover:text-primary" onClick={() => handleSort("daysOverdue")}>
                 <div className="flex items-center justify-center gap-1">
                   Days Overdue <SortIcon field="daysOverdue" />
                 </div>
               </th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-900">Action</th>
+              <th className="text-center px-4 py-3 font-semibold text-foreground">Action</th>
             </tr>
           </thead>
           <tbody>
             {sortedData.map((payment) => (
-              <tr key={payment.id} className="border-b border-slate-200 hover:bg-slate-50 transition">
+              <tr key={payment.id} className="border-b border-border hover:bg-muted/50 transition">
                 <td className="px-4 py-3">
                   <button
                     onClick={() => onNavigateDeal(payment.dealId)}
-                    className="font-semibold text-blue-600 hover:underline"
+                    className="font-semibold text-primary hover:underline"
                   >
                     {payment.dealNumber}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{payment.leadName}</td>
-                <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                <td className="px-4 py-3 text-foreground">{payment.leadName}</td>
+                <td className="px-4 py-3 text-right font-semibold text-foreground">
                   AED {payment.amount.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{payment.milestoneLabel}</td>
+                <td className="px-4 py-3 text-muted-foreground">{payment.milestoneLabel}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={`inline-block px-3 py-1 rounded font-semibold ${getUrgencyColor(payment.daysOverdue)}`}>
                     {payment.daysOverdue}d
@@ -138,7 +138,7 @@ export default function OverdueAlertsTable({
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => onNavigateDeal(payment.dealId)}
-                    className="px-3 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition"
+                    className="px-3 py-1 text-xs bg-info-soft text-primary hover:bg-info-soft rounded transition"
                   >
                     View Deal
                   </button>
@@ -151,21 +151,21 @@ export default function OverdueAlertsTable({
 
       {/* Pagination */}
       {pageCount > 1 && onPageChange && (
-        <div className="flex items-center justify-center gap-2 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-center gap-2 pt-4 border-t border-border">
           <button
             disabled={currentPage === 0}
             onClick={() => onPageChange(currentPage - 1)}
-            className="px-3 py-1 text-sm border border-slate-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            className="px-3 py-1 text-sm border border-border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50"
           >
             ← Previous
           </button>
-          <span className="text-xs text-slate-600">
+          <span className="text-xs text-muted-foreground">
             Page {currentPage + 1} of {pageCount}
           </span>
           <button
             disabled={currentPage >= pageCount - 1}
             onClick={() => onPageChange(currentPage + 1)}
-            className="px-3 py-1 text-sm border border-slate-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            className="px-3 py-1 text-sm border border-border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50"
           >
             Next →
           </button>
@@ -173,7 +173,7 @@ export default function OverdueAlertsTable({
       )}
 
       {/* Mobile Responsive Note */}
-      <p className="text-xs text-slate-500 mt-4 md:hidden">
+      <p className="text-xs text-muted-foreground mt-4 md:hidden">
         💡 Swipe left/right to see more columns
       </p>
     </div>

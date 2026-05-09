@@ -8,14 +8,14 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  NOT_RELEASED: { bg: "bg-gray-100",    text: "text-gray-700" },
-  AVAILABLE:    { bg: "bg-emerald-100", text: "text-emerald-700" },
-  ON_HOLD:      { bg: "bg-orange-100",  text: "text-orange-700" },
-  RESERVED:     { bg: "bg-amber-100",   text: "text-amber-700" },
-  BOOKED:       { bg: "bg-violet-100",  text: "text-violet-700" },
-  SOLD:         { bg: "bg-red-100",     text: "text-red-700" },
-  BLOCKED:      { bg: "bg-slate-200",   text: "text-slate-600" },
-  HANDED_OVER:  { bg: "bg-teal-100",    text: "text-teal-700" },
+  NOT_RELEASED: { bg: "bg-muted",    text: "text-foreground" },
+  AVAILABLE:    { bg: "bg-success-soft", text: "text-success" },
+  ON_HOLD:      { bg: "bg-warning-soft",  text: "text-warning" },
+  RESERVED:     { bg: "bg-warning-soft",   text: "text-warning" },
+  BOOKED:       { bg: "bg-stage-active",  text: "text-accent-2" },
+  SOLD:         { bg: "bg-destructive-soft",     text: "text-destructive" },
+  BLOCKED:      { bg: "bg-neutral-200",   text: "text-muted-foreground" },
+  HANDED_OVER:  { bg: "bg-chart-5/15",    text: "text-chart-5" },
 };
 
 export default function UnitHeader({ unitNumber, status, projectId, projectName }: Props) {
@@ -23,23 +23,23 @@ export default function UnitHeader({ unitNumber, status, projectId, projectName 
   const statusConfig = STATUS_COLORS[status] || STATUS_COLORS.AVAILABLE;
 
   return (
-    <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div className="bg-card border-b border-border sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-6 py-3">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
-          <button onClick={() => navigate("/projects")} className="hover:text-slate-700 transition-colors">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+          <button onClick={() => navigate("/projects")} className="hover:text-foreground transition-colors">
             Projects
           </button>
           <span>/</span>
-          <button onClick={() => navigate(`/projects/${projectId}`)} className="hover:text-slate-700 transition-colors">
+          <button onClick={() => navigate(`/projects/${projectId}`)} className="hover:text-foreground transition-colors">
             {projectName || "Project"}
           </button>
           <span>/</span>
-          <span className="text-slate-600 font-medium">Unit {unitNumber}</span>
+          <span className="text-muted-foreground font-medium">Unit {unitNumber}</span>
         </div>
 
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-slate-900">Unit {unitNumber}</h1>
+          <h1 className="text-xl font-bold text-foreground">Unit {unitNumber}</h1>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
             {status.replace(/_/g, " ")}
           </span>

@@ -25,7 +25,7 @@ describe("Deal Lifecycle Integration Tests", () => {
         clerkId: "test-clerk-123",
         email: "test-agent@example.com",
         name: "Test Agent",
-        role: "SALES_AGENT",
+        role: "MEMBER",
       },
     });
     userId = user.id;

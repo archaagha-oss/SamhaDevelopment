@@ -32,25 +32,25 @@ export default class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div role="alert" className="min-h-[60vh] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white border border-red-200 rounded-xl shadow-sm p-6">
-          <h2 className="text-base font-semibold text-red-700">Something went wrong</h2>
-          <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">
+        <div className="max-w-md w-full bg-card border border-destructive/30 rounded-xl shadow-sm p-6">
+          <h2 className="text-base font-semibold text-destructive">Something went wrong</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
             The page hit an unexpected error. You can retry or return to the dashboard.
           </p>
-          <pre className="mt-3 max-h-32 overflow-auto rounded bg-slate-50 border border-slate-200 p-2 text-[11px] text-slate-700 whitespace-pre-wrap break-words">
+          <pre className="mt-3 max-h-32 overflow-auto rounded bg-muted/50 border border-border p-2 text-[11px] text-foreground whitespace-pre-wrap break-words">
             {error.message}
           </pre>
           <div className="mt-4 flex gap-2 justify-end">
             <a
               href="/"
-              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors"
             >
               Go home
             </a>
             <button
               type="button"
               onClick={this.reset}
-              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
             >
               Try again
             </button>

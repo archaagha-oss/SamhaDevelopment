@@ -51,7 +51,7 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
   if (compact) {
     return (
       <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-        allMet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+        allMet ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
       }`}>
         <span>{allMet ? "✓" : "!"}</span>
         <span>{allMet ? "Docs complete" : `${missing.length} doc${missing.length !== 1 ? "s" : ""} missing`}</span>
@@ -60,13 +60,13 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
   }
 
   return (
-    <div className={`rounded-xl border p-4 ${allMet ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+    <div className={`rounded-xl border p-4 ${allMet ? "border-success/30 bg-success-soft" : "border-warning/30 bg-warning-soft"}`}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-slate-800">
+        <p className="text-sm font-semibold text-foreground">
           Document Requirements for <span className="font-bold">{targetStage.replace(/_/g, " ")}</span>
         </p>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-          allMet ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+          allMet ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
         }`}>
           {allMet ? "All Complete" : `${missing.length} Missing`}
         </span>
@@ -74,20 +74,20 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
       <div className="space-y-1.5">
         {requirements.map((req) => (
           <div key={req.documentType} className="flex items-center gap-2">
-            <span className={`text-sm ${req.uploaded ? "text-emerald-600" : "text-amber-600"}`}>
+            <span className={`text-sm ${req.uploaded ? "text-success" : "text-warning"}`}>
               {req.uploaded ? "✓" : "○"}
             </span>
-            <span className={`text-sm ${req.uploaded ? "text-slate-600" : "text-slate-800 font-medium"}`}>
+            <span className={`text-sm ${req.uploaded ? "text-muted-foreground" : "text-foreground font-medium"}`}>
               {req.label || TYPE_LABELS[req.documentType] || req.documentType}
             </span>
             {!req.uploaded && req.required && (
-              <span className="text-xs text-amber-600 font-medium">Required</span>
+              <span className="text-xs text-warning font-medium">Required</span>
             )}
           </div>
         ))}
       </div>
       {!allMet && (
-        <p className="text-xs text-amber-600 mt-3">
+        <p className="text-xs text-warning mt-3">
           Upload the missing documents before moving to this stage.
         </p>
       )}

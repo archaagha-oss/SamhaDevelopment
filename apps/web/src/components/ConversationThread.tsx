@@ -36,24 +36,24 @@ const CHANNEL_ICON: Record<string, string> = {
 };
 
 const CHANNEL_TINT_OUT: Record<string, string> = {
-  EMAIL:    "bg-blue-50 border-blue-100 text-blue-900",
-  WHATSAPP: "bg-emerald-50 border-emerald-100 text-emerald-900",
-  SMS:      "bg-violet-50 border-violet-100 text-violet-900",
+  EMAIL:    "bg-info-soft border-primary/40 text-info-soft-foreground",
+  WHATSAPP: "bg-success-soft border-success/30 text-success-soft-foreground",
+  SMS:      "bg-stage-active border-accent-2/30 text-accent-2",
 };
 
 const CHANNEL_TINT_IN: Record<string, string> = {
-  EMAIL:    "bg-white border-slate-200 text-slate-800",
-  WHATSAPP: "bg-white border-slate-200 text-slate-800",
-  SMS:      "bg-white border-slate-200 text-slate-800",
+  EMAIL:    "bg-card border-border text-foreground",
+  WHATSAPP: "bg-card border-border text-foreground",
+  SMS:      "bg-card border-border text-foreground",
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  queued:    "text-slate-400",
-  sent:      "text-slate-500",
-  delivered: "text-emerald-600",
-  read:      "text-emerald-700 font-semibold",
-  failed:    "text-red-600 font-semibold",
-  received:  "text-slate-400",
+  queued:    "text-muted-foreground",
+  sent:      "text-muted-foreground",
+  delivered: "text-success",
+  read:      "text-success font-semibold",
+  failed:    "text-destructive font-semibold",
+  received:  "text-muted-foreground",
 };
 
 function timeAgo(dateStr: string): string {
@@ -86,7 +86,7 @@ export default function ConversationThread({ activities, emptyMessage = "No conv
   }, [activities]);
 
   if (ordered.length === 0) {
-    return <div className="px-5 py-10 text-center text-slate-400 text-sm">{emptyMessage}</div>;
+    return <div className="px-5 py-10 text-center text-muted-foreground text-sm">{emptyMessage}</div>;
   }
 
   return (
@@ -106,11 +106,11 @@ export default function ConversationThread({ activities, emptyMessage = "No conv
 function Bubble({ act }: { act: ConversationActivity }) {
   const isOutbound = (act.direction ?? "OUTBOUND") === "OUTBOUND";
   const tint = isOutbound
-    ? CHANNEL_TINT_OUT[act.type] ?? "bg-slate-50 border-slate-200 text-slate-800"
-    : CHANNEL_TINT_IN[act.type]  ?? "bg-white border-slate-200 text-slate-800";
+    ? CHANNEL_TINT_OUT[act.type] ?? "bg-muted/50 border-border text-foreground"
+    : CHANNEL_TINT_IN[act.type]  ?? "bg-card border-border text-foreground";
 
   const status = act.deliveryStatus ?? (isOutbound ? "sent" : "received");
-  const statusClass = STATUS_BADGE[status] ?? "text-slate-400";
+  const statusClass = STATUS_BADGE[status] ?? "text-muted-foreground";
 
   return (
     <div className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
@@ -138,8 +138,8 @@ function Bubble({ act }: { act: ConversationActivity }) {
 function SystemEvent({ act }: { act: ConversationActivity }) {
   return (
     <div className="flex items-center gap-2 my-1">
-      <div className="flex-1 h-px bg-slate-100" />
-      <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+      <div className="flex-1 h-px bg-muted" />
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <span>{CHANNEL_ICON[act.type] ?? "📋"}</span>
         <span className="font-medium uppercase tracking-wide">{act.type.replace("_", " ")}</span>
         <span className="opacity-60">·</span>
@@ -147,7 +147,7 @@ function SystemEvent({ act }: { act: ConversationActivity }) {
         <span className="opacity-50">·</span>
         <span className="opacity-60">{timeAgo(act.activityDate ?? act.createdAt)}</span>
       </div>
-      <div className="flex-1 h-px bg-slate-100" />
+      <div className="flex-1 h-px bg-muted" />
     </div>
   );
 }
@@ -198,14 +198,14 @@ export function ConversationReplyBox({
 
   if (availableChannels.length === 0) {
     return (
-      <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-400 italic">
+      <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground italic">
         No deliverable channel for this recipient (no email or phone on file, or all channels opted out).
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+    <div className="px-4 py-3 border-t border-border bg-muted/50 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         {availableChannels.map((c) => (
           <button
@@ -215,8 +215,8 @@ export function ConversationReplyBox({
             onClick={() => setChannel(c)}
             className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
               channel === c
-                ? "bg-slate-800 text-white"
-                : "bg-white text-slate-600 border border-slate-200 hover:border-slate-400"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground border border-border hover:border-border"
             } disabled:opacity-40`}
           >
             {CHANNEL_ICON[c]} {CHANNEL_LABEL[c]}
@@ -228,7 +228,7 @@ export function ConversationReplyBox({
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           placeholder="Subject (optional)"
-          className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400"
+          className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
         />
       )}
       <textarea
@@ -236,11 +236,11 @@ export function ConversationReplyBox({
         onChange={(e) => setBody(e.target.value)}
         rows={3}
         placeholder={`Type your ${CHANNEL_LABEL[channel]?.toLowerCase() ?? ""} message…`}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 resize-y"
+        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-y"
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex items-center justify-between">
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-muted-foreground">
           {channel === "WHATSAPP"
             ? "Freeform WhatsApp only delivers within the 24h service window or in sandbox."
             : channel === "SMS"
@@ -251,7 +251,7 @@ export function ConversationReplyBox({
           type="button"
           disabled={sending || !body.trim()}
           onClick={handleSend}
-          className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
         >
           {sending ? "Sending…" : "Send"}
         </button>

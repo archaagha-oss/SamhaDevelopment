@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireRole } from "../middleware/auth";
+import { requireFinanceAccess } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { markPaymentPaidSchema } from "../schemas/validation";
 import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
@@ -85,7 +85,7 @@ router.get("/:id", async (req, res) => {
 // Mark payment as paid — FINANCE or ADMIN only
 router.patch(
   "/:id/paid",
-  requireRole(["FINANCE", "ADMIN"]),
+  requireFinanceAccess,
   validate(markPaymentPaidSchema),
   async (req, res) => {
     try {
@@ -111,7 +111,7 @@ router.patch(
 );
 
 // Mark payment as PDC — FINANCE or ADMIN only
-router.patch("/:id/pdc", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/pdc", requireFinanceAccess, async (req, res) => {
   try {
     const { pdcNumber, pdcBank, pdcDate } = req.body;
     const payment = await prisma.payment.update({
@@ -130,7 +130,7 @@ router.patch("/:id/pdc", requireRole(["FINANCE", "ADMIN"]), async (req, res) => 
 });
 
 // Mark PDC as cleared — FINANCE or ADMIN only
-router.patch("/:id/pdc-cleared", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/pdc-cleared", requireFinanceAccess, async (req, res) => {
   try {
     const payment = await prisma.payment.update({
       where: { id: req.params.id },
@@ -143,7 +143,7 @@ router.patch("/:id/pdc-cleared", requireRole(["FINANCE", "ADMIN"]), async (req, 
 });
 
 // Mark PDC as bounced — FINANCE or ADMIN only
-router.patch("/:id/pdc-bounced", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/pdc-bounced", requireFinanceAccess, async (req, res) => {
   try {
     const payment = await prisma.payment.update({
       where: { id: req.params.id },
@@ -156,7 +156,7 @@ router.patch("/:id/pdc-bounced", requireRole(["FINANCE", "ADMIN"]), async (req, 
 });
 
 // Record partial payment — FINANCE or ADMIN only
-router.post("/:id/partial", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.post("/:id/partial", requireFinanceAccess, async (req, res) => {
   try {
     const { amount, paymentMethod, receiptKey, notes } = req.body;
     if (!amount || isNaN(parseFloat(amount))) {
@@ -177,7 +177,7 @@ router.post("/:id/partial", requireRole(["FINANCE", "ADMIN"]), async (req, res) 
 });
 
 // Waive a payment — FINANCE or ADMIN only
-router.patch("/:id/waive", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/waive", requireFinanceAccess, async (req, res) => {
   try {
     const resolvedUser = (req as any).resolvedUser;
     const { reason } = req.body;
@@ -192,7 +192,7 @@ router.patch("/:id/waive", requireRole(["FINANCE", "ADMIN"]), async (req, res) =
 });
 
 // Approve a payment — FINANCE or ADMIN only
-router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/approve", requireFinanceAccess, async (req, res) => {
   try {
     const resolvedUser = (req as any).resolvedUser;
     const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });

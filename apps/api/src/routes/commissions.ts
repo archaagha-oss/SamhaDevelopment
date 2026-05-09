@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { requireRole } from "../middleware/auth";
+import { requireFinanceAccess } from "../middleware/auth";
 import { commissionLogger } from "../lib/logger";
 
 const router = Router();
@@ -102,7 +102,7 @@ router.get("/stats", async (req, res) => {
 });
 
 // PATCH /:id/approve — FINANCE or ADMIN only
-router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/approve", requireFinanceAccess, async (req, res) => {
   try {
     const resolvedUser = (req as any).resolvedUser;
     const commission = await prisma.commission.findUnique({
@@ -147,7 +147,7 @@ router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), async (req, res)
 });
 
 // Mark commission as paid — FINANCE or ADMIN only
-router.patch("/:id/paid", requireRole(["FINANCE", "ADMIN"]), async (req, res) => {
+router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
   try {
     const commission = await prisma.commission.findUnique({ where: { id: req.params.id } });
     if (!commission) {

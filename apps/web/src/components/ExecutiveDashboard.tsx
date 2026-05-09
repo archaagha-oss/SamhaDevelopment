@@ -5,6 +5,8 @@ import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
+import { PageContainer, PageHeader } from "./layout";
+import { Button } from "@/components/ui/button";
 
 // ===== Types =====
 interface Overview {
@@ -75,16 +77,52 @@ const fmtAED = (n: number) =>
 
 const fmtNum = (n: number) => n.toLocaleString();
 
-// ===== Color tokens =====
-const STAGE_COLORS: Record<string, string> = {
-  NEW: "#64748b", CONTACTED: "#3b82f6", QUALIFIED: "#0ea5e9",
-  OFFER_SENT: "#8b5cf6", SITE_VISIT: "#06b6d4", NEGOTIATING: "#f59e0b",
-  CLOSED_WON: "#10b981", CLOSED_LOST: "#ef4444",
+// ===== Token-driven chart colors =====
+// All series colors come from CSS vars so they follow the brand and dark mode.
+const cssVar = (name: string) => `hsl(var(${name}))`;
+
+const STAGE_COLOR_VAR: Record<string, string> = {
+  NEW:           "--neutral-400",
+  CONTACTED:     "--chart-1",       // primary brand
+  QUALIFIED:     "--brand2-500",    // secondary brand
+  VIEWING:       "--chart-5",
+  PROPOSAL:      "--brand2-500",    // secondary brand
+  NEGOTIATING:   "--chart-3",
+  CLOSED_WON:    "--success",
+  CLOSED_LOST:   "--chart-6",
 };
-const UNIT_COLORS: Record<string, string> = {
-  AVAILABLE: "#10b981", INTERESTED: "#06b6d4", RESERVED: "#8b5cf6",
-  BOOKED: "#3b82f6", SOLD: "#22c55e", BLOCKED: "#ef4444", HANDED_OVER: "#0ea5e9",
+
+const UNIT_COLOR_VAR: Record<string, string> = {
+  AVAILABLE:    "--success",
+  INTERESTED:   "--chart-5",
+  RESERVED:     "--brand2-500",     // secondary brand
+  BOOKED:       "--chart-1",        // primary brand
+  SOLD:         "--success",
+  BLOCKED:      "--chart-6",
+  HANDED_OVER:  "--chart-5",
 };
+
+// KPI tile decorative tones — distinct accents that stay brand-coordinated.
+// `active` is wired to the secondary brand so it appears on every dashboard.
+const KPI_TONES = {
+  success: { from: "from-success/15",     to: "to-success/5",     accent: "text-success" },
+  brand:   { from: "from-chart-1/15",     to: "to-chart-1/5",     accent: "text-chart-1" },
+  active:  { from: "from-accent-2/15",    to: "to-accent-2/5",    accent: "text-accent-2" },
+  info:    { from: "from-chart-5/15",     to: "to-chart-5/5",     accent: "text-chart-5" },
+  danger:  { from: "from-destructive/15", to: "to-destructive/5", accent: "text-destructive" },
+} as const;
+
+// Quick Action tile tones. `secondary` follows the brand-2 axis.
+const QUICK_ACTION_TONE = {
+  brand:     "bg-chart-1/15 text-chart-1",
+  secondary: "bg-accent-2-soft text-accent-2-soft-foreground",
+  amber:     "bg-chart-3/15 text-chart-3",
+  emerald:   "bg-success-soft text-success",
+  cyan:      "bg-chart-5/15 text-chart-5",
+  pink:      "bg-chart-7/15 text-chart-7",
+  orange:    "bg-chart-8/15 text-chart-8",
+  neutral:   "bg-muted text-muted-foreground",
+} as const;
 
 // ===== Component =====
 export default function ExecutiveDashboard(): React.ReactNode {
@@ -103,10 +141,9 @@ export default function ExecutiveDashboard(): React.ReactNode {
 
   // Filters
   const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [projectId, setProjectId] = useState<string>("all"); // "all" or project id
+  const [projectId, setProjectId] = useState<string>("all");
   const [period, setPeriod] = useState<PeriodKey>("12M");
 
-  // Load projects once for the dropdown
   useEffect(() => {
     axios.get("/api/projects")
       .then((res) => {
@@ -147,7 +184,6 @@ export default function ExecutiveDashboard(): React.ReactNode {
       .finally(() => { setLoading(false); setRefreshing(false); });
   }, [projectId, period]);
 
-  // Refetch whenever filters change (silent so the page doesn't blank out)
   useEffect(() => { fetchAll(overview !== null); /* eslint-disable-next-line */ }, [projectId, period]);
 
   const activeProjectName = projectId === "all"
@@ -155,12 +191,11 @@ export default function ExecutiveDashboard(): React.ReactNode {
     : projects.find((p) => p.id === projectId)?.name || "All projects";
   const activePeriodLabel = PERIOD_OPTIONS.find((p) => p.key === period)?.label || "Last 12mo";
 
-  // Derived data
   const unitChartData = useMemo(
     () => Object.entries(unitStatus).map(([status, count]) => ({
       name: status.replace(/_/g, " "),
       value: count,
-      fill: UNIT_COLORS[status] || "#94a3b8",
+      fill: cssVar(UNIT_COLOR_VAR[status] || "--neutral-400"),
     })),
     [unitStatus],
   );
@@ -171,10 +206,8 @@ export default function ExecutiveDashboard(): React.ReactNode {
   );
   const totalStageLeads = stageEntries.reduce((s, [, v]) => s + v, 0);
 
-  // Overdue payments needing action (top 3)
   const overdueAlertsCount = collections?.overdue.count ?? 0;
   const oqoodDueSoon = useMemo(() => {
-    // tasks with type containing "OQOOD" or "DEADLINE" or due within 7 days
     const inOneWeek = Date.now() + 7 * 86400000;
     return tasks.filter((t) =>
       (t.type || "").toUpperCase().includes("OQOOD") ||
@@ -184,14 +217,19 @@ export default function ExecutiveDashboard(): React.ReactNode {
   }, [tasks]);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full bg-slate-950">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex items-center justify-center h-full bg-background">
+      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   );
   if (error) return (
-    <div className="p-6 flex flex-col items-center justify-center h-full gap-3 bg-slate-950">
-      <p className="text-red-400 font-medium">{error}</p>
-      <button onClick={() => fetchAll()} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">Retry</button>
+    <div className="p-6 flex flex-col items-center justify-center h-full gap-3 bg-background">
+      <p className="text-destructive font-medium">{error}</p>
+      <button
+        onClick={() => fetchAll()}
+        className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   );
   if (!overview || !leadsReport || !collections) return null;
@@ -202,102 +240,101 @@ export default function ExecutiveDashboard(): React.ReactNode {
       label: "Revenue Collected",
       value: `AED ${fmtAED(overview.revenueCollected)}`,
       sub: period === "ALL" ? "All time" : activePeriodLabel,
-      tone: "from-emerald-500/15 to-emerald-500/5", accent: "text-emerald-400", icon: "↑",
+      tone: KPI_TONES.success, icon: "↑",
     },
     {
       label: "Pipeline Value",
       value: `AED ${fmtAED(overview.pipelineValue)}`,
       sub: `${overview.totalDeals} active deals`,
-      tone: "from-blue-500/15 to-blue-500/5", accent: "text-blue-400", icon: "◈",
+      tone: KPI_TONES.brand, icon: "◈",
     },
     {
       label: "Units Sold",
       value: `${overview.unitsSold} / ${overview.totalUnits}`,
       sub: `${overview.soldPercentage}% sold`,
-      tone: "from-indigo-500/15 to-indigo-500/5", accent: "text-indigo-400", icon: "⊞",
+      tone: KPI_TONES.active, icon: "⊞",
     },
     {
       label: "Conversion Rate",
       value: `${leadsReport.conversionRate}%`,
       sub: `${leadsReport.convertedToDeals} of ${leadsReport.totalLeads} leads`,
-      tone: "from-purple-500/15 to-purple-500/5", accent: "text-purple-400", icon: "↗",
+      tone: KPI_TONES.info, icon: "↗",
     },
     {
       label: "Overdue Payments",
       value: `AED ${fmtAED(overview.overduePayments)}`,
       sub: `${overdueAlertsCount} payment${overdueAlertsCount === 1 ? "" : "s"}`,
-      tone: "from-red-500/15 to-red-500/5", accent: "text-red-400", icon: "!",
+      tone: KPI_TONES.danger, icon: "!",
       onClick: () => navigate("/payments"),
     },
   ];
 
-  // Action items count
   const actionItemsCount =
     overdueAlertsCount +
     (collections.upcoming.next7Days.count) +
     oqoodDueSoon.length;
 
   return (
-    <div className="p-6 space-y-6 bg-slate-950 min-h-full">
-      {/* ===== Header ===== */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Command Center</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            <span className="text-slate-300">{activeProjectName}</span>
-            <span className="mx-1.5 text-slate-600">·</span>
-            <span className="text-slate-300">{activePeriodLabel}</span>
-            <span className="mx-1.5 text-slate-600">·</span>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          <>
+            <span className="text-foreground/80">{activeProjectName}</span>
+            <span className="mx-1.5 text-muted-foreground/60">·</span>
+            <span className="text-foreground/80">{activePeriodLabel}</span>
+            <span className="mx-1.5 text-muted-foreground/60">·</span>
             {new Date().toLocaleDateString("en-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Project filter */}
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg pl-3 pr-1 py-1">
-            <span className="text-xs text-slate-500">Project</span>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="bg-slate-900 text-slate-100 text-xs font-medium px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[160px]"
-            >
-              <option value="all">All projects</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-
-          {/* Period filter */}
-          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
-            {PERIOD_OPTIONS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPeriod(p.key)}
-                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                  period === p.key ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
-                }`}
-                title={p.label}
+          </>
+        }
+        actions={
+          <>
+            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg pl-3 pr-1 py-1">
+              <span className="text-xs text-muted-foreground">Project</span>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="bg-card text-foreground text-xs font-medium px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-ring max-w-[160px]"
+                aria-label="Filter by project"
               >
-                {p.key}
-              </button>
-            ))}
-          </div>
+                <option value="all">All projects</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
 
-          <button
-            onClick={() => fetchAll(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <span className={refreshing ? "animate-spin inline-block" : "inline-block"}>↻</span>
-          </button>
-          <button
-            onClick={() => navigate("/reports")}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
-          >
-            View Reports
-          </button>
-        </div>
-      </div>
+            <div className="flex items-center bg-card border border-border rounded-lg p-0.5">
+              {PERIOD_OPTIONS.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                    period === p.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={p.label}
+                >
+                  {p.key}
+                </button>
+              ))}
+            </div>
 
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => fetchAll(true)}
+              disabled={refreshing}
+              title="Refresh"
+              aria-label="Refresh dashboard"
+            >
+              <span className={refreshing ? "animate-spin inline-block" : "inline-block"} aria-hidden="true">↻</span>
+            </Button>
+            <Button onClick={() => navigate("/reports")}>View Reports</Button>
+          </>
+        }
+      />
+
+      <PageContainer padding="default" className="space-y-5">
       {/* ===== KPI Strip ===== */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {kpis.map((k) => (
@@ -305,92 +342,92 @@ export default function ExecutiveDashboard(): React.ReactNode {
             key={k.label}
             onClick={k.onClick}
             disabled={!k.onClick}
-            className={`text-left bg-gradient-to-br ${k.tone} bg-slate-900 border border-slate-800 rounded-xl p-4 ${k.onClick ? "hover:border-slate-700 cursor-pointer" : "cursor-default"} transition-colors`}
+            className={`text-left bg-gradient-to-br ${k.tone.from} ${k.tone.to} bg-card border border-border rounded-xl p-4 ${k.onClick ? "hover:border-foreground/20 cursor-pointer" : "cursor-default"} transition-colors`}
           >
             <div className="flex items-start justify-between mb-2">
-              <p className="text-xs font-medium text-slate-400">{k.label}</p>
-              <span className={`text-base ${k.accent} leading-none`}>{k.icon}</span>
+              <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+              <span className={`text-base ${k.tone.accent} leading-none`}>{k.icon}</span>
             </div>
-            <p className="text-xl font-bold text-white tracking-tight">{k.value}</p>
-            <p className="text-xs text-slate-500 mt-1 truncate">{k.sub}</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight tabular-nums">{k.value}</p>
+            <p className="text-xs text-muted-foreground mt-1 truncate">{k.sub}</p>
           </button>
         ))}
       </div>
 
       {/* ===== Action Items / Alerts ===== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400">⚠</span>
-            <h2 className="text-sm font-semibold text-white">Action Items</h2>
+            <span className="text-warning">⚠</span>
+            <h2 className="text-sm font-semibold text-foreground">Action Items</h2>
             {actionItemsCount > 0 && (
-              <span className="px-2 py-0.5 bg-amber-500/15 text-amber-400 text-xs font-bold rounded-full">
+              <span className="px-2 py-0.5 bg-warning-soft text-warning-soft-foreground text-xs font-bold rounded-full">
                 {actionItemsCount}
               </span>
             )}
           </div>
-          <button onClick={() => navigate("/tasks")} className="text-xs text-blue-400 hover:text-blue-300">View all →</button>
+          <button onClick={() => navigate("/tasks")} className="text-xs text-primary hover:text-primary/80 transition-colors">View all →</button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
           {/* Overdue */}
           <button
             onClick={() => navigate("/payments")}
-            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+            className="text-left p-5 hover:bg-muted/40 transition-colors"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Overdue Payments</p>
+              <span className="w-2 h-2 rounded-full bg-destructive" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Overdue Payments</p>
             </div>
-            <p className="text-2xl font-bold text-white">{collections.overdue.count}</p>
-            <p className="text-xs text-red-400 mt-1">AED {fmtAED(collections.overdue.total)} past due</p>
+            <p className="text-2xl font-semibold text-foreground tabular-nums">{collections.overdue.count}</p>
+            <p className="text-xs text-destructive mt-1 tabular-nums">AED {fmtAED(collections.overdue.total)} past due</p>
           </button>
 
           {/* Upcoming 7 days */}
           <button
             onClick={() => navigate("/payments")}
-            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+            className="text-left p-5 hover:bg-muted/40 transition-colors"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Due in 7 Days</p>
+              <span className="w-2 h-2 rounded-full bg-warning" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Due in 7 Days</p>
             </div>
-            <p className="text-2xl font-bold text-white">{collections.upcoming.next7Days.count}</p>
-            <p className="text-xs text-amber-400 mt-1">AED {fmtAED(collections.upcoming.next7Days.total)} expected</p>
+            <p className="text-2xl font-semibold text-foreground tabular-nums">{collections.upcoming.next7Days.count}</p>
+            <p className="text-xs text-warning mt-1 tabular-nums">AED {fmtAED(collections.upcoming.next7Days.total)} expected</p>
           </button>
 
           {/* Pending Tasks */}
           <button
             onClick={() => navigate("/tasks")}
-            className="text-left p-5 hover:bg-slate-800/40 transition-colors"
+            className="text-left p-5 hover:bg-muted/40 transition-colors"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pending Tasks</p>
+              <span className="w-2 h-2 rounded-full bg-info" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pending Tasks</p>
             </div>
-            <p className="text-2xl font-bold text-white">{tasks.length}</p>
-            <p className="text-xs text-blue-400 mt-1">{oqoodDueSoon.length} urgent / due soon</p>
+            <p className="text-2xl font-semibold text-foreground tabular-nums">{tasks.length}</p>
+            <p className="text-xs text-info mt-1">{oqoodDueSoon.length} urgent / due soon</p>
           </button>
         </div>
       </div>
 
       {/* ===== Revenue Trend ===== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-baseline justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-white">Revenue Trend</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h2 className="text-sm font-semibold text-foreground">Revenue Trend</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Collected vs expected · {activePeriodLabel.toLowerCase()} · {activeProjectName}
             </p>
           </div>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-              <span className="text-slate-400">Collected</span>
+              <span className="w-2.5 h-2.5 rounded-sm bg-success" />
+              <span className="text-muted-foreground">Collected</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-blue-500/50" />
-              <span className="text-slate-400">Expected</span>
+              <span className="w-2.5 h-2.5 rounded-sm bg-chart-1/60" />
+              <span className="text-muted-foreground">Expected</span>
             </div>
           </div>
         </div>
@@ -399,43 +436,49 @@ export default function ExecutiveDashboard(): React.ReactNode {
             <AreaChart data={monthly} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colCollected" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="0%"   stopColor={cssVar("--success")} stopOpacity={0.5} />
+                  <stop offset="100%" stopColor={cssVar("--success")} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colExpected" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="0%"   stopColor={cssVar("--chart-1")} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={cssVar("--chart-1")} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={cssVar("--border")} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: cssVar("--muted-foreground") }} axisLine={false} tickLine={false} />
               <YAxis
-                tick={{ fontSize: 10, fill: "#64748b" }}
+                tick={{ fontSize: 10, fill: cssVar("--muted-foreground") }}
                 axisLine={false} tickLine={false}
                 tickFormatter={(v) => fmtAED(v)}
               />
               <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: "#cbd5e1" }}
+                contentStyle={{
+                  background: cssVar("--popover"),
+                  border: `1px solid ${cssVar("--border")}`,
+                  borderRadius: "var(--radius-md)",
+                  fontSize: 12,
+                  color: cssVar("--popover-foreground"),
+                }}
+                labelStyle={{ color: cssVar("--foreground") }}
                 formatter={(v) => `AED ${fmtAED(Number(v) || 0)}`}
               />
-              <Area type="monotone" dataKey="expected"  stroke="#3b82f6" strokeWidth={2} fill="url(#colExpected)"  />
-              <Area type="monotone" dataKey="collected" stroke="#10b981" strokeWidth={2} fill="url(#colCollected)" />
+              <Area type="monotone" dataKey="expected"  stroke={cssVar("--chart-1")} strokeWidth={2} fill="url(#colExpected)"  />
+              <Area type="monotone" dataKey="collected" stroke={cssVar("--success")} strokeWidth={2} fill="url(#colCollected)" />
             </AreaChart>
           </ResponsiveContainer>
-        ) : <p className="text-slate-500 text-sm py-8 text-center">No revenue data yet</p>}
+        ) : <p className="text-muted-foreground text-sm py-8 text-center">No revenue data yet</p>}
       </div>
 
       {/* ===== Inventory + Lead Pipeline ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Inventory donut */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-baseline justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-white">Unit Inventory</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{activeProjectName}</p>
+              <h2 className="text-sm font-semibold text-foreground">Unit Inventory</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{activeProjectName}</p>
             </div>
-            <button onClick={() => navigate("/units")} className="text-xs text-blue-400 hover:text-blue-300">Manage →</button>
+            <button onClick={() => navigate("/units")} className="text-xs text-primary hover:text-primary/80 transition-colors">Manage →</button>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-40 h-40 flex-shrink-0">
@@ -453,27 +496,33 @@ export default function ExecutiveDashboard(): React.ReactNode {
                       {unitChartData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: "#cbd5e1" }}
+                      contentStyle={{
+                        background: cssVar("--popover"),
+                        border: `1px solid ${cssVar("--border")}`,
+                        borderRadius: "var(--radius-md)",
+                        fontSize: 12,
+                        color: cssVar("--popover-foreground"),
+                      }}
+                      labelStyle={{ color: cssVar("--foreground") }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">No data</div>}
+              ) : <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No data</div>}
             </div>
             <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-3 gap-y-1.5">
               {unitChartData.map((u) => (
                 <div key={u.name} className="flex items-center gap-2 min-w-0">
                   <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: u.fill }} />
-                  <span className="text-xs text-slate-400 truncate">{u.name}</span>
-                  <span className="text-xs font-semibold text-white ml-auto">{u.value}</span>
+                  <span className="text-xs text-muted-foreground truncate">{u.name}</span>
+                  <span className="text-xs font-semibold text-foreground ml-auto tabular-nums">{u.value}</span>
                 </div>
               ))}
             </div>
           </div>
-          {/* Per-project mini-rows (hidden when a single project is filtered) */}
+          {/* Per-project mini-rows */}
           {projectId === "all" && inventory.length > 1 && (
-            <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Sold rate by project</p>
+            <div className="mt-4 pt-4 border-t border-border space-y-2">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Sold rate by project</p>
               {inventory.slice(0, 4).map((p) => {
                 const sold = p.byStatus["SOLD"] || 0;
                 const pct = p.total > 0 ? Math.round((sold / p.total) * 100) : 0;
@@ -481,13 +530,13 @@ export default function ExecutiveDashboard(): React.ReactNode {
                   <button
                     key={p.projectId}
                     onClick={() => setProjectId(p.projectId)}
-                    className="w-full flex items-center gap-3 hover:bg-slate-800/40 rounded -mx-2 px-2 py-1 transition-colors"
+                    className="w-full flex items-center gap-3 hover:bg-muted/40 rounded -mx-2 px-2 py-1 transition-colors"
                   >
-                    <span className="text-xs text-slate-300 truncate w-24 text-left">{p.projectName}</span>
-                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                    <span className="text-xs text-foreground/80 truncate w-24 text-left">{p.projectName}</span>
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-success" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-xs text-slate-400 w-16 text-right">{sold}/{p.total}</span>
+                    <span className="text-xs text-muted-foreground w-16 text-right tabular-nums">{sold}/{p.total}</span>
                   </button>
                 );
               })}
@@ -496,25 +545,25 @@ export default function ExecutiveDashboard(): React.ReactNode {
         </div>
 
         {/* Lead pipeline */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white">Lead Pipeline</h2>
-            <button onClick={() => navigate("/leads")} className="text-xs text-blue-400 hover:text-blue-300">View leads →</button>
+            <h2 className="text-sm font-semibold text-foreground">Lead Pipeline</h2>
+            <button onClick={() => navigate("/leads")} className="text-xs text-primary hover:text-primary/80 transition-colors">View leads →</button>
           </div>
           {stageEntries.length > 0 ? (
             <div className="space-y-3">
               {stageEntries.map(([stage, count]) => {
                 const pct = totalStageLeads > 0 ? Math.round((count / totalStageLeads) * 100) : 0;
-                const color = STAGE_COLORS[stage] || "#94a3b8";
+                const color = cssVar(STAGE_COLOR_VAR[stage] || "--neutral-400");
                 return (
                   <div key={stage}>
                     <div className="flex justify-between items-baseline text-xs mb-1.5">
-                      <span className="text-slate-300 font-medium">{stage.replace(/_/g, " ")}</span>
-                      <span className="text-slate-500">
-                        <span className="text-white font-semibold">{count}</span> · {pct}%
+                      <span className="text-foreground/80 font-medium">{stage.replace(/_/g, " ")}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        <span className="text-foreground font-semibold">{count}</span> · {pct}%
                       </span>
                     </div>
-                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${pct}%`, background: color }}
@@ -524,77 +573,84 @@ export default function ExecutiveDashboard(): React.ReactNode {
                 );
               })}
             </div>
-          ) : <p className="text-slate-500 text-sm py-8 text-center">No leads yet</p>}
+          ) : <p className="text-muted-foreground text-sm py-8 text-center">No leads yet</p>}
         </div>
       </div>
 
       {/* ===== Top Agents + Today's Tasks ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top agents leaderboard */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="flex items-baseline justify-between px-5 py-3 border-b border-slate-800">
-            <h2 className="text-sm font-semibold text-white">Top Performers</h2>
-            <button onClick={() => navigate("/team")} className="text-xs text-blue-400 hover:text-blue-300">Team →</button>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-baseline justify-between px-5 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">Top Performers</h2>
+            <button onClick={() => navigate("/team")} className="text-xs text-primary hover:text-primary/80 transition-colors">Team →</button>
           </div>
           {agents.length > 0 ? (
-            <div className="divide-y divide-slate-800">
-              {agents.slice(0, 5).map((a, i) => (
-                <div key={a.agentId} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
-                    ${i === 0 ? "bg-amber-500/20 text-amber-400"
-                    : i === 1 ? "bg-slate-500/20 text-slate-300"
-                    : i === 2 ? "bg-orange-700/20 text-orange-400"
-                    : "bg-slate-800 text-slate-500"}`}>
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{a.agentName}</p>
-                    <p className="text-xs text-slate-500">
-                      {a.totalDeals} deals · {a.closeRate}% close rate
-                    </p>
+            <div className="divide-y divide-border">
+              {agents.slice(0, 5).map((a, i) => {
+                const rankTone =
+                  i === 0 ? "bg-warning-soft text-warning-soft-foreground"
+                  : i === 1 ? "bg-muted text-foreground/80"
+                  : i === 2 ? "bg-stage-attention text-stage-attention-foreground"
+                  : "bg-muted text-muted-foreground";
+                return (
+                  <div key={a.agentId} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40 transition-colors">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${rankTone}`}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{a.agentName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {a.totalDeals} deals · {a.closeRate}% close rate
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-semibold text-success tabular-nums">AED {fmtAED(a.dealRevenue)}</p>
+                      <p className="text-xs text-muted-foreground">revenue</p>
+                    </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-emerald-400">AED {fmtAED(a.dealRevenue)}</p>
-                    <p className="text-xs text-slate-500">revenue</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          ) : <p className="text-slate-500 text-sm py-12 text-center">No agent activity yet</p>}
+          ) : <p className="text-muted-foreground text-sm py-12 text-center">No agent activity yet</p>}
         </div>
 
         {/* Tasks */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="flex items-baseline justify-between px-5 py-3 border-b border-slate-800">
-            <h2 className="text-sm font-semibold text-white">Open Tasks</h2>
-            <button onClick={() => navigate("/tasks")} className="text-xs text-blue-400 hover:text-blue-300">All tasks →</button>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-baseline justify-between px-5 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">Open Tasks</h2>
+            <button onClick={() => navigate("/tasks")} className="text-xs text-primary hover:text-primary/80 transition-colors">All tasks →</button>
           </div>
           {tasks.length > 0 ? (
-            <div className="divide-y divide-slate-800">
+            <div className="divide-y divide-border">
               {tasks.slice(0, 5).map((t) => {
                 const due  = new Date(t.dueDate);
                 const days = Math.floor((due.getTime() - Date.now()) / 86400000);
                 const overdue = days < 0;
                 const target = t.deal ? `/deals/${t.deal.id}` : t.lead ? `/leads/${t.lead.id}` : "/tasks";
+                const priorityDot =
+                  t.priority === "URGENT" ? "bg-destructive"
+                  : t.priority === "HIGH" ? "bg-warning"
+                  : t.priority === "MEDIUM" ? "bg-info"
+                  : "bg-neutral-400";
+                const dueTone =
+                  overdue ? "text-destructive"
+                  : days <= 1 ? "text-warning"
+                  : "text-muted-foreground";
                 return (
                   <button
                     key={t.id}
                     onClick={() => navigate(target)}
-                    className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors"
+                    className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-muted/40 transition-colors"
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0
-                      ${t.priority === "URGENT" ? "bg-red-500"
-                      : t.priority === "HIGH" ? "bg-orange-500"
-                      : t.priority === "MEDIUM" ? "bg-amber-500"
-                      : "bg-slate-500"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityDot}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-200 font-medium truncate">{t.title}</p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-sm text-foreground font-medium truncate">{t.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {t.lead ? `${t.lead.firstName} ${t.lead.lastName}` : t.deal ? t.deal.dealNumber : t.type.replace(/_/g, " ")}
                       </p>
                     </div>
-                    <span className={`text-xs font-medium flex-shrink-0
-                      ${overdue ? "text-red-400" : days <= 1 ? "text-amber-400" : "text-slate-400"}`}>
+                    <span className={`text-xs font-medium flex-shrink-0 ${dueTone}`}>
                       {overdue ? `${Math.abs(days)}d overdue`
                        : days === 0 ? "Today"
                        : days === 1 ? "Tomorrow"
@@ -604,38 +660,38 @@ export default function ExecutiveDashboard(): React.ReactNode {
                 );
               })}
             </div>
-          ) : <p className="text-slate-500 text-sm py-12 text-center">No pending tasks 🎉</p>}
+          ) : <p className="text-muted-foreground text-sm py-12 text-center">No pending tasks</p>}
         </div>
       </div>
 
       {/* ===== Quick Actions ===== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-sm font-semibold text-white">Quick Actions</h2>
-          <p className="text-xs text-slate-500">Jump straight into common flows</p>
+          <h2 className="text-sm font-semibold text-foreground">Quick Actions</h2>
+          <p className="text-xs text-muted-foreground">Jump straight into common flows</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
           {[
-            { label: "New Lead",     desc: "Capture inquiry",     icon: "◉", to: "/leads",        tone: "bg-blue-600/20 text-blue-400" },
-            { label: "New Deal",     desc: "Start sales process", icon: "◈", to: "/deals",        tone: "bg-emerald-600/20 text-emerald-400" },
-            { label: "Reservation",  desc: "Hold a unit",         icon: "⊗", to: "/reservations", tone: "bg-purple-600/20 text-purple-400" },
-            { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: "bg-cyan-600/20 text-cyan-400" },
-            { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: "bg-amber-600/20 text-amber-400" },
-            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: "bg-pink-600/20 text-pink-400" },
-            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: "bg-indigo-600/20 text-indigo-400" },
-            { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: "bg-slate-600/20 text-slate-300" },
+            { label: "Create lead",  desc: "Capture inquiry",     icon: "◉", to: "/leads",        tone: QUICK_ACTION_TONE.brand },
+            { label: "Create deal",  desc: "Start sales process", icon: "◈", to: "/deals",        tone: QUICK_ACTION_TONE.emerald },
+            { label: "Reservation",  desc: "Hold a unit",         icon: "⊗", to: "/reservations", tone: QUICK_ACTION_TONE.secondary },
+            { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: QUICK_ACTION_TONE.cyan },
+            { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: QUICK_ACTION_TONE.amber },
+            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: QUICK_ACTION_TONE.pink },
+            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: QUICK_ACTION_TONE.secondary },
+            { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: QUICK_ACTION_TONE.neutral },
           ].map((a) => (
             <button
               key={a.label}
               onClick={() => navigate(a.to)}
-              className="flex items-center gap-3 px-3 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors text-left"
+              className="flex items-center gap-3 px-3 py-3 bg-muted/60 hover:bg-muted border border-border hover:border-foreground/20 rounded-lg transition-colors text-left"
             >
               <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 ${a.tone}`}>
                 {a.icon}
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{a.label}</p>
-                <p className="text-[10px] text-slate-500 truncate">{a.desc}</p>
+                <p className="text-xs font-semibold text-foreground truncate">{a.label}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{a.desc}</p>
               </div>
             </button>
           ))}
@@ -643,29 +699,30 @@ export default function ExecutiveDashboard(): React.ReactNode {
       </div>
 
       {/* ===== Footer summary ===== */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-800 rounded-xl p-5">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Snapshot</h2>
+      <div className="bg-gradient-to-r from-muted/60 to-muted/30 border border-border rounded-xl p-5">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Snapshot</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <p className="text-xs text-slate-500">Total Leads</p>
-            <p className="text-xl font-bold text-white mt-0.5">{fmtNum(overview.totalLeads)}</p>
+            <p className="text-xs text-muted-foreground">Total Leads</p>
+            <p className="text-xl font-semibold text-foreground mt-0.5 tabular-nums">{fmtNum(overview.totalLeads)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Active Deals</p>
-            <p className="text-xl font-bold text-white mt-0.5">{fmtNum(overview.totalDeals)}</p>
+            <p className="text-xs text-muted-foreground">Active Deals</p>
+            <p className="text-xl font-semibold text-foreground mt-0.5 tabular-nums">{fmtNum(overview.totalDeals)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Sold Rate</p>
-            <p className="text-xl font-bold text-emerald-400 mt-0.5">{overview.soldPercentage}%</p>
+            <p className="text-xs text-muted-foreground">Sold Rate</p>
+            <p className="text-xl font-semibold text-success mt-0.5 tabular-nums">{overview.soldPercentage}%</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">DLD Waived</p>
-            <p className="text-xl font-bold text-blue-400 mt-0.5">
+            <p className="text-xs text-muted-foreground">DLD Waived</p>
+            <p className="text-xl font-semibold text-primary mt-0.5 tabular-nums">
               AED {fmtAED(overview.developerIncentives?.dldWaivedTotal ?? 0)}
             </p>
           </div>
         </div>
       </div>
+      </PageContainer>
     </div>
   );
 }

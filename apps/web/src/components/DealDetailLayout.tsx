@@ -104,7 +104,7 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -112,12 +112,12 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
   if (error || !deal) {
     return (
       <div className="p-6 space-y-4">
-        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
+        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           ← Back
         </button>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600 font-medium">{error || "Deal not found"}</p>
-          <button onClick={handleBack} className="mt-3 text-sm text-red-500 underline">
+        <div className="bg-destructive-soft border border-destructive/30 rounded-xl p-6 text-center">
+          <p className="text-destructive font-medium">{error || "Deal not found"}</p>
+          <button onClick={handleBack} className="mt-3 text-sm text-destructive underline">
             Go back
           </button>
         </div>
@@ -126,9 +126,9 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-muted/50">
       {/* Breadcrumb Header */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4">
+      <div className="flex-shrink-0 bg-card border-b border-border px-6 py-4">
         <Breadcrumbs
           crumbs={[
             { label: "Deals", path: "/deals" },
@@ -140,7 +140,7 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
       {/* Three-Column Layout: Responsive */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
         {/* Left Column: Timeline + Activity (25% on desktop) */}
-        <div className="hidden lg:flex overflow-hidden flex-col border-r border-slate-200">
+        <div className="hidden lg:flex overflow-hidden flex-col border-r border-border">
           <DealActivityPanel
             dealId={dealId}
             stage={deal.stage}
@@ -168,12 +168,12 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
             deal={deal}
             onPrimaryAction={handlePrimaryAction}
             primaryActionLabel="Next Step"
-            primaryActionColor="bg-blue-600 hover:bg-blue-700"
+            primaryActionColor="bg-primary hover:bg-primary/90"
           />
         </div>
 
         {/* Mobile: Activity on top (md:hidden) */}
-        <div className="lg:hidden overflow-hidden flex flex-col border-b border-slate-200">
+        <div className="lg:hidden overflow-hidden flex flex-col border-b border-border">
           <DealActivityPanel
             dealId={dealId}
             stage={deal.stage}
@@ -187,24 +187,24 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
       </div>
 
       {/* Mobile Summary (visible only on mobile, below layout) */}
-      <div className="lg:hidden flex-shrink-0 border-t border-slate-200 bg-white">
+      <div className="lg:hidden flex-shrink-0 border-t border-border bg-card">
         <div className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs text-slate-600 font-medium">Deal</p>
-              <p className="text-sm font-bold text-slate-900">{deal.dealNumber}</p>
+              <p className="text-xs text-muted-foreground font-medium">Deal</p>
+              <p className="text-sm font-bold text-foreground">{deal.dealNumber}</p>
             </div>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               {deal.lead.firstName} {deal.lead.lastName}
             </p>
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-600">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Sale Price: AED {deal.salePrice.toLocaleString()}</span>
             <span>Unit: {deal.unit.unitNumber}</span>
           </div>
           <button
             onClick={handlePrimaryAction}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+            className="w-full px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition"
           >
             Next Step
           </button>

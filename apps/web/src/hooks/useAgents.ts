@@ -13,7 +13,7 @@ export function useAgents() {
     queryFn: async () => {
       const res = await axios.get('/api/users');
       return (res.data || []).filter(
-        (u: any) => u.role === 'SALES_AGENT' || u.role === 'OPERATIONS'
+        (u: any) => u.status === 'ACTIVE' && u.role !== 'VIEWER'
       ) as Agent[];
     },
     staleTime: 30 * 60 * 1000,  // 30 minutes

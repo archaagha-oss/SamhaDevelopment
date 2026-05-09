@@ -65,22 +65,22 @@ export default function DealTimeline({ stage, reservationDate, spaSignedDate, oq
           const isActive = status === "active";
           const isCancelled = status === "cancelled";
 
-          let dotColor = "bg-slate-300";
-          let lineColor = "bg-slate-200";
-          let labelColor = "text-slate-500";
+          let dotColor = "bg-neutral-300";
+          let lineColor = "bg-neutral-200";
+          let labelColor = "text-muted-foreground";
 
           if (isCompleted) {
-            dotColor = "bg-emerald-500";
-            lineColor = "bg-emerald-200";
-            labelColor = "text-slate-700";
+            dotColor = "bg-success";
+            lineColor = "bg-success/30";
+            labelColor = "text-foreground";
           } else if (isActive) {
-            dotColor = "bg-blue-500 animate-pulse";
-            lineColor = "bg-blue-200";
-            labelColor = "text-slate-800 font-semibold";
+            dotColor = "bg-primary animate-pulse";
+            lineColor = "bg-info/30";
+            labelColor = "text-foreground font-semibold";
           } else if (isCancelled) {
-            dotColor = "bg-red-300";
-            lineColor = "bg-red-200";
-            labelColor = "text-red-600";
+            dotColor = "bg-destructive/50";
+            lineColor = "bg-destructive/30";
+            labelColor = "text-destructive";
           }
 
           return (
@@ -99,10 +99,10 @@ export default function DealTimeline({ stage, reservationDate, spaSignedDate, oq
               <div className="flex-1 pb-6">
                 <p className={`text-sm ${labelColor} transition-colors`}>{milestone.label}</p>
                 {dateStr && dateStr !== "—" && (
-                  <p className="text-xs text-slate-500 mt-1">{formatDate(dateStr)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDate(dateStr)}</p>
                 )}
                 {milestone.key === "oqood" && daysRemaining !== null && (
-                  <p className={`text-xs mt-1 font-medium ${isOqoodUrgent ? "text-red-600" : "text-slate-500"}`}>
+                  <p className={`text-xs mt-1 font-medium ${isOqoodUrgent ? "text-destructive" : "text-muted-foreground"}`}>
                     {daysRemaining} days remaining
                   </p>
                 )}
@@ -114,15 +114,15 @@ export default function DealTimeline({ stage, reservationDate, spaSignedDate, oq
 
       {/* Cancellation notice */}
       {stage === "CANCELLED" && (
-        <div className="mt-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700 font-medium">Deal has been cancelled</p>
+        <div className="mt-6 px-4 py-3 bg-destructive-soft border border-destructive/30 rounded-lg">
+          <p className="text-sm text-destructive font-medium">Deal has been cancelled</p>
         </div>
       )}
 
       {/* Oqood deadline alert */}
       {isOqoodUrgent && stage !== "COMPLETED" && stage !== "CANCELLED" && (
-        <div className="mt-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800 font-medium">
+        <div className="mt-6 px-4 py-3 bg-warning-soft border border-warning/30 rounded-lg">
+          <p className="text-sm text-warning-soft-foreground font-medium">
             ⏰ {daysRemaining} days until Oqood registration deadline
           </p>
         </div>

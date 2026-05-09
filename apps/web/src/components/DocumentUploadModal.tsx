@@ -150,7 +150,7 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
         <div className="px-6 py-6 space-y-6">
           {/* Document Type Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-2">
+            <label className="block text-xs font-semibold text-muted-foreground mb-2">
               Document Type
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -160,8 +160,8 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
                   onClick={() => setSelectedType(type)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedType === type
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      ? "bg-primary text-white"
+                      : "bg-muted text-foreground hover:bg-muted"
                   }`}
                 >
                   {TYPE_LABELS[type]}
@@ -178,8 +178,8 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
               isDragActive
-                ? "border-blue-400 bg-blue-50"
-                : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                ? "border-primary/40 bg-info-soft"
+                : "border-border bg-muted/50 hover:border-border"
             }`}
           >
             <input
@@ -192,7 +192,7 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
             />
             <label htmlFor="file-input" className="cursor-pointer block">
               <svg
-                className="w-12 h-12 mx-auto text-slate-400 mb-3"
+                className="w-12 h-12 mx-auto text-muted-foreground mb-3"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -204,10 +204,10 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {isDragActive ? "Drop files here" : "Drag files here or click to browse"}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 PDF, DOC, DOCX, JPEG, PNG • Max 50MB each
               </p>
             </label>
@@ -217,25 +217,25 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
           {files.length > 0 && (
             <div className="space-y-2">
               {files.map((file, idx) => (
-                <div key={`${file.name}-${idx}`} className="bg-slate-50 rounded-lg p-3">
+                <div key={`${file.name}-${idx}`} className="bg-muted/50 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-slate-900">{file.name}</p>
+                    <p className="text-sm font-medium text-foreground">{file.name}</p>
                     {!uploading && (
                       <button
                         onClick={() => removeFile(idx)}
-                        className="text-red-500 hover:text-red-700 text-sm"
+                        className="text-destructive hover:text-destructive text-sm"
                       >
                         Remove
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mb-2">
+                  <p className="text-xs text-muted-foreground mb-2">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                   {uploadProgress[file.name] !== undefined && (
-                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                    <div className="w-full bg-neutral-200 rounded-full h-1.5">
                       <div
-                        className="bg-blue-600 h-1.5 rounded-full transition-all"
+                        className="bg-primary h-1.5 rounded-full transition-all"
                         style={{ width: `${uploadProgress[file.name]}%` }}
                       />
                     </div>
@@ -247,7 +247,7 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
 
           {/* Error Message */}
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft px-3 py-2 rounded-lg">{error}</p>
           )}
         </div>
 

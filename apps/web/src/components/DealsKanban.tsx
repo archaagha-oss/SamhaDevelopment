@@ -30,17 +30,17 @@ const STAGES = [
 ];
 
 const STAGE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  RESERVATION_PENDING: { bg: "bg-slate-50", border: "border-slate-200", text: "text-slate-700" },
-  RESERVATION_CONFIRMED: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  SPA_PENDING: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700" },
-  SPA_SENT: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700" },
-  SPA_SIGNED: { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
-  OQOOD_PENDING: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700" },
-  OQOOD_REGISTERED: { bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  INSTALLMENTS_ACTIVE: { bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
-  HANDOVER_PENDING: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  COMPLETED: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  CANCELLED: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700" },
+  RESERVATION_PENDING: { bg: "bg-muted/50", border: "border-border", text: "text-foreground" },
+  RESERVATION_CONFIRMED: { bg: "bg-info-soft", border: "border-primary/40", text: "text-primary" },
+  SPA_PENDING: { bg: "bg-warning-soft", border: "border-warning/30", text: "text-warning" },
+  SPA_SENT: { bg: "bg-warning-soft", border: "border-warning/30", text: "text-warning" },
+  SPA_SIGNED: { bg: "bg-stage-active", border: "border-accent-2/30", text: "text-accent-2" },
+  OQOOD_PENDING: { bg: "bg-warning-soft", border: "border-warning/30", text: "text-warning" },
+  OQOOD_REGISTERED: { bg: "bg-chart-5/10", border: "border-chart-5/30", text: "text-chart-5" },
+  INSTALLMENTS_ACTIVE: { bg: "bg-stage-active", border: "border-accent-2/30", text: "text-accent-2" },
+  HANDOVER_PENDING: { bg: "bg-success-soft", border: "border-success/30", text: "text-success" },
+  COMPLETED: { bg: "bg-success-soft", border: "border-success/30", text: "text-success" },
+  CANCELLED: { bg: "bg-destructive-soft", border: "border-destructive/30", text: "text-destructive" },
 };
 
 interface Props {
@@ -134,7 +134,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -155,7 +155,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
               className={`flex-shrink-0 ${isCollapsed ? "w-20" : "w-80"} ${colors.bg} rounded-xl border-2 ${colors.border} flex flex-col transition-all duration-200`}
             >
               {/* Column header */}
-              <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <div className={`flex-1 ${isCollapsed ? "hidden" : ""}`}>
                   <div className="flex items-center justify-between mb-1">
                     <h3 className={`font-semibold text-sm ${colors.text}`}>{stage.replace(/_/g, " ")}</h3>
@@ -163,7 +163,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                       {stageDealCount}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     {stageDealCount === 0
                       ? "No deals"
                       : stageDealCount === 1
@@ -195,7 +195,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                 className="flex-1 flex flex-col gap-3 p-4 overflow-y-auto scrollbar-thin"
               >
                 {dealsByStage[stage].length === 0 ? (
-                  <div className="flex items-center justify-center h-20 text-slate-300 text-sm">
+                  <div className="flex items-center justify-center h-20 text-foreground/80 text-sm">
                     Drop deals here
                   </div>
                 ) : (
@@ -209,37 +209,37 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                         draggable
                         onDragStart={(e) => handleDragStart(e, deal)}
                         onClick={() => onViewDeal(deal.id)}
-                        className={`p-3 bg-white rounded-lg border-2 border-slate-200 cursor-move transition-all ${
+                        className={`p-3 bg-card rounded-lg border-2 border-border cursor-move transition-all ${
                           isDragging ? "opacity-50 scale-95" : ""
-                        } ${updatingDeal === deal.id ? "opacity-75 pointer-events-none" : ""} hover:shadow-md hover:border-blue-400 group`}
+                        } ${updatingDeal === deal.id ? "opacity-75 pointer-events-none" : ""} hover:shadow-md hover:border-primary/40 group`}
                       >
                         {/* Deal header */}
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-mono text-xs text-slate-400 truncate">{deal.dealNumber}</p>
-                            <p className="font-semibold text-sm text-slate-800 group-hover:text-blue-600 truncate">
+                            <p className="font-mono text-xs text-muted-foreground truncate">{deal.dealNumber}</p>
+                            <p className="font-semibold text-sm text-foreground group-hover:text-primary truncate">
                               {deal.lead.firstName} {deal.lead.lastName}
                             </p>
                           </div>
                           {updatingDeal === deal.id && (
-                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin ml-2" />
+                            <div className="w-4 h-4 border-2 border-primary/40 border-t-transparent rounded-full animate-spin ml-2" />
                           )}
                         </div>
 
                         {/* Unit info */}
-                        <div className="mb-2 pb-2 border-b border-slate-100">
-                          <p className="text-xs font-medium text-slate-700">
+                        <div className="mb-2 pb-2 border-b border-border">
+                          <p className="text-xs font-medium text-foreground">
                             Unit: {deal.unit.unitNumber}
                           </p>
-                          <p className="text-xs text-slate-400">{deal.unit.type}</p>
+                          <p className="text-xs text-muted-foreground">{deal.unit.type}</p>
                         </div>
 
                         {/* Price & discount */}
                         <div className="mb-2">
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-muted-foreground">
                             <span className="font-semibold">AED {deal.salePrice.toLocaleString()}</span>
                             {deal.discount > 0 && (
-                              <span className="text-emerald-600 ml-1">-{deal.discount.toLocaleString()}</span>
+                              <span className="text-success ml-1">-{deal.discount.toLocaleString()}</span>
                             )}
                           </p>
                         </div>
@@ -247,13 +247,13 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                         {/* Payment progress */}
                         <div className="mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1 bg-neutral-200 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-blue-500 rounded-full transition-all"
+                                className="h-full bg-primary rounded-full transition-all"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-xs font-semibold text-slate-600">{pct}%</span>
+                            <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
                           </div>
                         </div>
 
@@ -261,16 +261,16 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                         {deal.commission && (
                           <div className="text-xs">
                             {deal.commission.status === "PENDING_APPROVAL" && (
-                              <span className="text-amber-600 font-semibold">⏳ Approval Pending</span>
+                              <span className="text-warning font-semibold">⏳ Approval Pending</span>
                             )}
                             {deal.commission.status === "APPROVED" && (
-                              <span className="text-blue-600 font-semibold">✓ Approved</span>
+                              <span className="text-primary font-semibold">✓ Approved</span>
                             )}
                             {deal.commission.status === "PAID" && (
-                              <span className="text-emerald-600 font-semibold">💰 Paid</span>
+                              <span className="text-success font-semibold">💰 Paid</span>
                             )}
                             {deal.commission.status === "NOT_DUE" && (
-                              <span className="text-slate-400">— Not due</span>
+                              <span className="text-muted-foreground">— Not due</span>
                             )}
                           </div>
                         )}

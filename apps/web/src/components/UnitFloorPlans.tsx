@@ -17,7 +17,7 @@ export default function UnitFloorPlans({ images, onOpenFloorPlan }: Props) {
         <button
           key={plan.id}
           onClick={() => onOpenFloorPlan(plan)}
-          className="group relative rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 transition-colors"
+          className="group relative rounded-lg overflow-hidden border-2 border-border hover:border-primary/40 transition-colors"
         >
           <img
             src={plan.url}
@@ -40,10 +40,10 @@ export default function UnitFloorPlans({ images, onOpenFloorPlan }: Props) {
   return (
     <div className="space-y-4">
       {floorPlans.length > 0 && (
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
+        <div className="bg-card rounded-lg border border-border p-5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
             Floor Plans
-            <span className="ml-2 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-xs">
+            <span className="ml-2 bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full text-xs">
               {floorPlans.length}
             </span>
           </p>
@@ -52,10 +52,10 @@ export default function UnitFloorPlans({ images, onOpenFloorPlan }: Props) {
       )}
 
       {floorMaps.length > 0 && (
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
+        <div className="bg-card rounded-lg border border-border p-5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
             Floor Location Map
-            <span className="ml-2 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-xs">
+            <span className="ml-2 bg-warning-soft text-warning px-1.5 py-0.5 rounded-full text-xs">
               {floorMaps.length}
             </span>
           </p>

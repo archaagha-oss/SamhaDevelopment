@@ -115,10 +115,23 @@ enum SpecificationArea {
 
 enum UserRole {
   ADMIN
-  SALES_AGENT
-  OPERATIONS
-  FINANCE
-  DEVELOPER
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
 }
 
 enum ProjectRole {
@@ -134,8 +147,8 @@ enum LeadStage {
   NEW
   CONTACTED
   QUALIFIED
-  OFFER_SENT
-  SITE_VISIT
+  VIEWING
+  PROPOSAL
   NEGOTIATING
   CLOSED_WON
   CLOSED_LOST
@@ -535,20 +548,45 @@ model User {
   name     String
   role     UserRole
 
-  phone      String?
-  department String?
+  // Organization
+  jobTitle  String? @db.VarChar(255)
+  managerId String?
+  manager   User?   @relation("ManagerReports", fields: [managerId], references: [id])
+  reports   User[]  @relation("ManagerReports")
 
-  assignedLeads  Lead[]             @relation("AssignedLeads")
-  assignedUnits  Unit[]             @relation("AssignedUnits")
-  notifications  Notification[]
-  projectAccess  UserProjectAccess[]
-  tasks          Task[]             @relation("AssignedTasks")
+  // Employment
+  status         UserStatus      @default(ACTIVE)
+  employeeId     String?         @unique @db.VarChar(64)
+  employmentType EmploymentType?
+  joinedAt       DateTime?
+
+  // Contact
+  phone     String?
+  avatarUrl String? @db.VarChar(500)
+
+  // Activity
+  lastLoginAt DateTime?
+  lastSeenAt  DateTime?
+
+  // Existing relations
+  assignedLeads     Lead[]              @relation("AssignedLeads")
+  assignedUnits     Unit[]              @relation("AssignedUnits")
+  notifications     Notification[]
+  projectAccess     UserProjectAccess[]
+  tasks             Task[]              @relation("AssignedTasks")
+  settingsAuditLogs SettingsAuditLog[]  @relation("SettingsAuditUser")
+  apiKeysCreated    ApiKey[]            @relation("ApiKeyCreator")
+
+  // Per-user notification preferences — overrides org defaults.
+  notificationPrefs Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([role])
+  @@index([managerId])
+  @@index([status])
 }
 
 // ============================================================
@@ -1585,9 +1623,10 @@ model AppSettings {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Branding
-  companyName  String?
-  logoUrl      String?
-  primaryColor String?
+  companyName    String?
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
 
   // Localization
   timezone   String @default("Asia/Dubai")
@@ -1631,8 +1670,66 @@ model AppSettings {
   // Notification preferences stored as JSON blob
   notificationPrefs Json?
 
+  // UI theme — "light" | "dark" | "system" (default — follows OS preference)
+  theme String @default("system")
+
+  // Feature flags — operator-controlled toggles for in-development modules.
+  // Schema: { [flagKey: string]: boolean }. See FEATURE_FLAGS catalog in code.
+  featureFlags Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// API Keys — service tokens for portal apps, broker mobile, public website
+// lead-form, and other integrations that aren't logged-in CRM users.
+//
+// We never store the raw token: only a SHA-256 hash. The plaintext is shown
+// to the admin exactly once at creation time, then is unrecoverable. `prefix`
+// is the first 8 chars (kept in plaintext) so admins can identify which key
+// is in use without revealing it.
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String    // human label, e.g. "iOS Buyer Portal — production"
+  prefix         String    @unique // e.g. "sk_a8f3" — first 8 chars of the plaintext, for identification
+  hashedKey      String    @unique // SHA-256 hex of the plaintext
+  scopes         Json      // string[] e.g. ["leads:create", "deals:read"]
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+
+  createdById String?
+  createdBy   User?   @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([organizationId, revokedAt])
+  @@index([prefix])
+}
+
+// Settings audit log — every PATCH against AppSettings is recorded so admins
+// can answer "who changed what, when, and why?". Lives in its own table to
+// keep AppSettings small and queries fast.
+model SettingsAuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  section        String   // "branding" | "localization" | "communication" | "finance" | "templates" | "notifications" | "integrations"
+  changedFields  Json     // string[] of keys that actually changed
+  before         Json?    // snapshot of changed fields, pre-edit (secrets masked)
+  after          Json?    // snapshot of changed fields, post-edit (secrets masked)
+  reason         String?  @db.Text
+
+  // Actor metadata
+  userId    String?
+  user      User?   @relation("SettingsAuditUser", fields: [userId], references: [id], onDelete: SetNull)
+  ip        String?
+  userAgent String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([section, createdAt])
+  @@index([userId])
 }
 
 // ============================================================

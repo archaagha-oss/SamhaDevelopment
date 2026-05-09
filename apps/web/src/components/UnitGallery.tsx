@@ -45,15 +45,15 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
   return (
     <>
       {/* Thumbnail strip */}
-      <div className="px-6 py-3 border-b border-slate-100">
+      <div className="px-6 py-3 border-b border-border">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {images.map((img, idx) => (
             <div key={img.id} className="flex-shrink-0 relative group">
               <button
                 onClick={() => setLightboxIndex(idx)}
                 className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                  lightboxIndex === idx ? "border-blue-500" : "border-slate-200"
-                } hover:border-blue-400`}
+                  lightboxIndex === idx ? "border-primary/40" : "border-border"
+                } hover:border-primary/40`}
               >
                 <img src={img.url} alt={img.caption || "Unit"} className="w-full h-full object-cover" />
               </button>
@@ -68,7 +68,7 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
                     }
                   }}
                   disabled={deleting === img.id}
-                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                  className="absolute -top-2 -right-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
                   title="Delete image"
                 >
                   ×
@@ -79,7 +79,7 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
           {onUpload && (
             <button
               onClick={onUpload}
-              className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 flex items-center justify-center text-2xl transition-colors"
+              className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-primary/40 hover:bg-info-soft flex items-center justify-center text-2xl transition-colors"
               title="Upload image"
             >
               +
@@ -103,7 +103,7 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
               <img src={currentImage.url} alt={currentImage.caption || "Unit"} className="w-full h-auto max-h-[70vh] object-contain" />
 
               {/* Type badge */}
-              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-900/70 text-white">
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
                 {currentImage.type === "PHOTO" ? "📷 Photo" : "📐 Floor Plan"}
               </span>
 
@@ -130,14 +130,14 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
               </button>
 
               {/* Counter */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/70 text-white text-xs px-3 py-1.5 rounded-full">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-neutral-900/70 text-white text-xs px-3 py-1.5 rounded-full">
                 {lightboxIndex! + 1} / {images.length}
               </div>
             </div>
 
             {/* Caption */}
             {currentImage.caption && (
-              <div className="bg-slate-900 px-4 py-3 text-sm text-slate-100">{currentImage.caption}</div>
+              <div className="bg-card px-4 py-3 text-sm text-foreground">{currentImage.caption}</div>
             )}
           </div>
         </div>

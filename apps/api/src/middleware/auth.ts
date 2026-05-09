@@ -30,8 +30,13 @@ export const requireAuthentication = (
  *     so the mock "dev-user-1" account can reach all routes.
  *  3. In production, unknown users get 403.
  *
+ * Roles: ADMIN, MANAGER, MEMBER, VIEWER. Finance-sensitive operations gate
+ * to ["ADMIN", "MANAGER"] — promote a user to MANAGER to give them sign-off
+ * authority on payments/commissions.
+ *
  * Usage:
- *   router.patch("/:id/approve", requireRole(["FINANCE", "ADMIN"]), handler)
+ *   router.post("/", requireRole(["ADMIN"]), handler)
+ *   router.patch("/:id/approve", requireRole(["ADMIN", "MANAGER"]), handler)
  */
 export const requireRole = (allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -79,3 +84,6 @@ export const requireRole = (allowedRoles: string[]) => {
     }
   };
 };
+
+/** Shorthand: ADMIN or MANAGER. Used for finance-sensitive operations. */
+export const requireFinanceAccess = requireRole(["ADMIN", "MANAGER"]);

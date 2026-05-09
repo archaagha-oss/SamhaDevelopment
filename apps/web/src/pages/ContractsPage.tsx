@@ -3,6 +3,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import ContractStatusModal, { ContractDoc, ContractStatus } from "../components/ContractStatusModal";
 import DocumentUploadModal from "../components/DocumentUploadModal";
+import { PageContainer, PageHeader } from "../components/layout";
+import { Button } from "@/components/ui/button";
 import EmptyState from "../components/EmptyState";
 import { Skeleton, SkeletonTableRows } from "../components/Skeleton";
 
@@ -15,21 +17,21 @@ interface Document extends ContractDoc {
 }
 
 const CONTRACT_STATUS_CONFIG: Record<ContractStatus, { label: string; badge: string }> = {
-  DRAFT:    { label: "Draft",    badge: "bg-slate-100 text-slate-600" },
-  SENT:     { label: "Sent",     badge: "bg-blue-100 text-blue-700"   },
-  SIGNED:   { label: "Signed",   badge: "bg-emerald-100 text-emerald-700" },
-  ARCHIVED: { label: "Archived", badge: "bg-slate-200 text-slate-500" },
+  DRAFT:    { label: "Draft",    badge: "bg-muted text-muted-foreground" },
+  SENT:     { label: "Sent",     badge: "bg-info-soft text-primary"   },
+  SIGNED:   { label: "Signed",   badge: "bg-success-soft text-success" },
+  ARCHIVED: { label: "Archived", badge: "bg-neutral-200 text-muted-foreground" },
 };
 
 const DOC_TYPE_CONFIG: Record<string, { label: string; badge: string }> = {
-  SPA:               { label: "SPA",              badge: "bg-blue-100 text-blue-700"    },
-  OQOOD_CERTIFICATE: { label: "Oqood",            badge: "bg-purple-100 text-purple-700" },
-  RESERVATION_FORM:  { label: "Reservation Form", badge: "bg-orange-100 text-orange-700" },
-  PAYMENT_RECEIPT:   { label: "Payment Receipt",  badge: "bg-green-100 text-green-700"  },
-  PASSPORT:          { label: "Passport",         badge: "bg-pink-100 text-pink-700"    },
-  EMIRATES_ID:       { label: "Emirates ID",      badge: "bg-indigo-100 text-indigo-700"},
-  VISA:              { label: "Visa",             badge: "bg-teal-100 text-teal-700"    },
-  OTHER:             { label: "Other",            badge: "bg-slate-100 text-slate-600"  },
+  SPA:               { label: "SPA",              badge: "bg-info-soft text-primary"    },
+  OQOOD_CERTIFICATE: { label: "Oqood",            badge: "bg-chart-7/15 text-chart-7" },
+  RESERVATION_FORM:  { label: "Reservation Form", badge: "bg-warning-soft text-warning" },
+  PAYMENT_RECEIPT:   { label: "Payment Receipt",  badge: "bg-success-soft text-success"  },
+  PASSPORT:          { label: "Passport",         badge: "bg-chart-7/15 text-chart-7"    },
+  EMIRATES_ID:       { label: "Emirates ID",      badge: "bg-stage-active text-stage-active-foreground"},
+  VISA:              { label: "Visa",             badge: "bg-chart-5/15 text-chart-5"    },
+  OTHER:             { label: "Other",            badge: "bg-muted text-muted-foreground"  },
 };
 
 const CONTRACT_STATUS_ORDER: ContractStatus[] = ["DRAFT", "SENT", "SIGNED", "ARCHIVED"];
@@ -81,17 +83,15 @@ export default function ContractsPage() {
   }, {});
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Contracts & Documents</h1>
-          <p className="text-slate-400 text-xs mt-0.5">Manage contract lifecycle across all deals</p>
-        </div>
-        <button onClick={load} className="text-xs text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors">
-          Refresh
-        </button>
-      </div>
+    <div className="flex flex-col h-full">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Contracts" }]}
+        title="Contracts & Documents"
+        subtitle="Manage contract lifecycle across all deals"
+        actions={<Button variant="outline" onClick={load}>Refresh</Button>}
+      />
 
+      <PageContainer padding="default" className="space-y-5">
       {/* Status KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CONTRACT_STATUS_ORDER.map((status) => {
@@ -101,15 +101,15 @@ export default function ContractsPage() {
             <button
               key={status}
               onClick={() => setFilterStatus(isActive ? "ALL" : status)}
-              className={`rounded-xl p-4 text-left border-2 transition-all bg-white ${
-                isActive ? "border-slate-800 shadow-sm" : "border-transparent hover:border-slate-300"
+              className={`rounded-xl p-4 text-left border-2 transition-all bg-card ${
+                isActive ? "border-border shadow-sm" : "border-transparent hover:border-border"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{cfg.label}</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cfg.label}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.badge}`}>{counts[status] ?? 0}</span>
               </div>
-              <p className="text-2xl font-bold text-slate-800">{counts[status] ?? 0}</p>
+              <p className="text-2xl font-bold text-foreground">{counts[status] ?? 0}</p>
             </button>
           );
         })}
@@ -122,12 +122,12 @@ export default function ContractsPage() {
           placeholder="Search by name, deal #, buyer, unit..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
+          className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring w-72"
         />
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="ALL">All Types</option>
           {docTypes.map((t) => (
@@ -137,18 +137,18 @@ export default function ContractsPage() {
         {(filterStatus !== "ALL" || filterType !== "ALL" || search) && (
           <button
             onClick={() => { setFilterStatus("ALL"); setFilterType("ALL"); setSearch(""); }}
-            className="text-xs text-slate-500 hover:text-slate-800 underline"
+            className="text-xs text-muted-foreground hover:text-foreground underline"
           >
             Clear filters
           </button>
         )}
-        <span className="text-xs text-slate-400 ml-auto">{filtered.length} document{filtered.length !== 1 ? "s" : ""}</span>
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} document{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
       {/* Table (md+) / Card list (mobile) */}
       {loading ? (
         <>
-          <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 <SkeletonTableRows rows={5} cols={8} />
@@ -157,7 +157,7 @@ export default function ContractsPage() {
           </div>
           <div className="md:hidden space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+              <div key={i} className="bg-card rounded-xl border border-border p-4 space-y-2">
                 <Skeleton className="h-4 w-2/3" />
                 <Skeleton className="h-3 w-1/2" />
                 <Skeleton className="h-3 w-1/3" />
@@ -174,53 +174,53 @@ export default function ContractsPage() {
       ) : (
         <>
           {/* Desktop / tablet table */}
-          <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-sm min-w-[900px]">
-                <thead className="bg-slate-50 border-b border-slate-100">
+                <thead className="bg-muted/50 border-b border-border">
                   <tr>
                     {["Document", "Type", "Deal", "Buyer", "Unit", "Contract Status", "Uploaded", "Actions"].map((h) => (
-                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-border">
                   {filtered.map((doc) => {
-                    const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-slate-100 text-slate-600" };
-                    const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-slate-100 text-slate-600" };
+                    const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-muted text-muted-foreground" };
+                    const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-muted text-muted-foreground" };
                     return (
-                      <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={doc.id} className="hover:bg-muted/80 transition-colors">
                         <td className="px-4 py-3 max-w-[200px]">
-                          <p className="font-medium text-slate-800 truncate" title={doc.name}>{doc.name}</p>
-                          <p className="text-xs text-slate-400">{doc.mimeType.split("/")[1]?.toUpperCase()}</p>
+                          <p className="font-medium text-foreground truncate" title={doc.name}>{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">{doc.mimeType.split("/")[1]?.toUpperCase()}</p>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeCfg.badge}`}>
                             {typeCfg.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-500">{doc.deal.dealNumber}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{doc.deal.dealNumber}</td>
                         <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
+                          <p className="font-medium text-foreground">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
                         </td>
-                        <td className="px-4 py-3 text-slate-700">{doc.deal.unit.unitNumber}</td>
+                        <td className="px-4 py-3 text-foreground">{doc.deal.unit.unitNumber}</td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.badge}`}>
                             {statusCfg.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fmtDate(doc.createdAt)}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmtDate(doc.createdAt)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => setStatusModal(doc)}
-                              className="text-xs font-medium px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                              className="text-xs font-medium px-2 py-1 rounded-md border border-primary/40 bg-info-soft text-primary hover:bg-info-soft transition-colors whitespace-nowrap"
                             >
                               Update Status
                             </button>
                             <button
                               onClick={() => setUploadDealId(doc.dealId)}
-                              className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+                              className="text-xs font-medium px-2 py-1 rounded-md border border-border bg-muted/50 text-muted-foreground hover:bg-muted transition-colors"
                             >
                               + Upload
                             </button>
@@ -237,29 +237,29 @@ export default function ContractsPage() {
           {/* Mobile card list */}
           <ul className="md:hidden space-y-3" aria-label="Documents list">
             {filtered.map((doc) => {
-              const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-slate-100 text-slate-600" };
-              const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-slate-100 text-slate-600" };
+              const typeCfg   = DOC_TYPE_CONFIG[doc.type]   || { label: doc.type,             badge: "bg-muted text-muted-foreground" };
+              const statusCfg = CONTRACT_STATUS_CONFIG[doc.contractStatus] || { label: doc.contractStatus, badge: "bg-muted text-muted-foreground" };
               return (
-                <li key={doc.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                <li key={doc.id} className="bg-card rounded-xl border border-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-800 truncate" title={doc.name}>{doc.name}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{doc.mimeType.split("/")[1]?.toUpperCase()} · uploaded {fmtDate(doc.createdAt)}</p>
+                      <p className="font-medium text-foreground truncate" title={doc.name}>{doc.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{doc.mimeType.split("/")[1]?.toUpperCase()} · uploaded {fmtDate(doc.createdAt)}</p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${typeCfg.badge}`}>{typeCfg.label}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <p className="text-slate-400">Deal</p>
-                      <p className="font-mono text-slate-700">{doc.deal.dealNumber}</p>
+                      <p className="text-muted-foreground">Deal</p>
+                      <p className="font-mono text-foreground">{doc.deal.dealNumber}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Unit</p>
-                      <p className="text-slate-700">{doc.deal.unit.unitNumber}</p>
+                      <p className="text-muted-foreground">Unit</p>
+                      <p className="text-foreground">{doc.deal.unit.unitNumber}</p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-slate-400">Buyer</p>
-                      <p className="text-slate-800 font-medium truncate">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
+                      <p className="text-muted-foreground">Buyer</p>
+                      <p className="text-foreground font-medium truncate">{doc.deal.lead.firstName} {doc.deal.lead.lastName}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
@@ -267,13 +267,13 @@ export default function ContractsPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setStatusModal(doc)}
-                        className="text-xs font-medium px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        className="text-xs font-medium px-2 py-1 rounded-md border border-primary/40 bg-info-soft text-primary hover:bg-info-soft transition-colors"
                       >
                         Update
                       </button>
                       <button
                         onClick={() => setUploadDealId(doc.dealId)}
-                        className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="text-xs font-medium px-2 py-1 rounded-md border border-border bg-muted/50 text-muted-foreground hover:bg-muted transition-colors"
                       >
                         + Upload
                       </button>
@@ -288,8 +288,8 @@ export default function ContractsPage() {
 
       {/* Stage requirements summary */}
       {!loading && documents.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-800 mb-3">Document Type Summary</h3>
+        <div className="bg-card rounded-xl border border-border p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Document Type Summary</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(
               documents.reduce<Record<string, { total: number; signed: number }>>((acc, d) => {
@@ -300,12 +300,12 @@ export default function ContractsPage() {
                 return acc;
               }, {})
             ).map(([type, stats]) => {
-              const cfg = DOC_TYPE_CONFIG[type] || { label: type, badge: "bg-slate-100 text-slate-600" };
+              const cfg = DOC_TYPE_CONFIG[type] || { label: type, badge: "bg-muted text-muted-foreground" };
               return (
-                <div key={type} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50">
+                <div key={type} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50">
                   <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cfg.badge}`}>{cfg.label}</span>
-                  <span className="text-xs text-slate-500">{stats.total} total</span>
-                  <span className="text-xs text-emerald-600 font-medium">{stats.signed} signed</span>
+                  <span className="text-xs text-muted-foreground">{stats.total} total</span>
+                  <span className="text-xs text-success font-medium">{stats.signed} signed</span>
                 </div>
               );
             })}
@@ -328,6 +328,7 @@ export default function ContractsPage() {
           onSaved={() => { setUploadDealId(null); load(); }}
         />
       )}
+      </PageContainer>
     </div>
   );
 }

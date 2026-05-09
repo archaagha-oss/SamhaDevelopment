@@ -162,7 +162,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <div>
-            <h2 className="font-bold text-foreground text-lg">New Lead</h2>
+            <h2 className="font-bold text-foreground text-lg">Create lead</h2>
             <p className="text-muted-foreground text-xs mt-0.5">Fields marked * are required</p>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                 className={inp + " pr-24"}
                 placeholder="+971 50 000 0000"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">UAE format</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">UAE format</span>
             </div>
           </div>
 
@@ -263,8 +263,8 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
 
           {/* Broker fields — only when source = BROKER */}
           {isBroker && (
-            <div className="space-y-3 border border-purple-100 bg-purple-50/40 rounded-xl p-4">
-              <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Broker Details</p>
+            <div className="space-y-3 border border-chart-7/30 bg-chart-7/40 rounded-xl p-4">
+              <p className="text-xs font-semibold text-chart-7 uppercase tracking-wide">Broker Details</p>
               <div>
                 <label className={lbl}>Broker Company</label>
                 <select
@@ -319,11 +319,11 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
           </div>
 
           {/* KYC / SPA particulars — optional at lead creation, required before SPA generation */}
-          <details className="border border-slate-200 rounded-lg">
-            <summary className="px-4 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+          <details className="border border-border rounded-lg">
+            <summary className="px-4 py-2 text-xs font-semibold text-foreground cursor-pointer select-none">
               KYC & SPA particulars
             </summary>
-            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-slate-100">
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border">
               <div>
                 <label className={lbl}>Residential Address</label>
                 <input
@@ -385,12 +385,12 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
           </details>
 
           {/* Unit Interests */}
-          <div className="border border-emerald-100 bg-emerald-50/30 rounded-xl p-4 space-y-3">
+          <div className="border border-success/30 bg-success-soft/30 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+              <p className="text-xs font-semibold text-success uppercase tracking-wide">
                 Interested Units
                 {selectedUnitIds.size > 0 && (
-                  <span className="ml-2 bg-emerald-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">
+                  <span className="ml-2 bg-success text-white px-1.5 py-0.5 rounded-full text-[10px]">
                     {selectedUnitIds.size}
                   </span>
                 )}
@@ -398,7 +398,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
               <button
                 type="button"
                 onClick={() => setShowUnits((v) => !v)}
-                className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
+                className="text-xs text-success font-semibold hover:text-success"
               >
                 {showUnits ? "− Hide" : "+ Add Units"}
               </button>
@@ -412,8 +412,8 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                     key={u.id}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium border ${
                       primaryUnitId === u.id
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-white text-slate-700 border-slate-200"
+                        ? "bg-success text-white border-success/30"
+                        : "bg-card text-foreground border-border"
                     }`}
                   >
                     <button
@@ -444,30 +444,30 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                   placeholder="Search by unit number or type…"
                   value={unitSearch}
                   onChange={(e) => setUnitSearch(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:border-emerald-400"
+                  className="w-full border border-border rounded-lg px-3 py-1.5 text-xs bg-card focus:outline-none focus:border-success/30"
                 />
-                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white divide-y divide-slate-50">
+                <div className="max-h-40 overflow-y-auto border border-border rounded-lg bg-card divide-y divide-border">
                   {filteredUnits.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-4">No available units found</p>
+                    <p className="text-xs text-muted-foreground text-center py-4">No available units found</p>
                   ) : (
                     filteredUnits.map((u) => {
                       const checked = selectedUnitIds.has(u.id);
                       return (
                         <label
                           key={u.id}
-                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer"
+                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 cursor-pointer"
                         >
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleUnit(u.id)}
-                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            className="rounded border-border text-success focus:ring-emerald-500"
                           />
                           <div className="flex-1 min-w-0">
-                            <span className="text-xs font-semibold text-slate-800">{u.unitNumber}</span>
-                            <span className="text-xs text-slate-400 ml-2">{u.type.replace(/_/g, " ")} · Floor {u.floor}</span>
+                            <span className="text-xs font-semibold text-foreground">{u.unitNumber}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{u.type.replace(/_/g, " ")} · Floor {u.floor}</span>
                           </div>
-                          <span className="text-xs font-bold text-blue-600 flex-shrink-0">
+                          <span className="text-xs font-bold text-primary flex-shrink-0">
                             AED {u.price.toLocaleString()}
                           </span>
                         </label>
@@ -476,7 +476,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                   )}
                 </div>
                 {selectedUnitIds.size > 0 && (
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-muted-foreground">
                     Click a selected unit above to set it as the primary interest (★)
                   </p>
                 )}
@@ -485,24 +485,24 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
           </div>
 
           {/* Consent */}
-          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+          <div className="border border-border rounded-xl p-3 bg-muted/50">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
                 required
                 checked={form.consent}
                 onChange={(e) => set({ consent: e.target.checked })}
-                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring"
               />
-              <span className="text-xs text-slate-600 leading-relaxed">
+              <span className="text-xs text-muted-foreground leading-relaxed">
                 The lead has consented to being contacted about properties and consents to data
-                processing under our privacy policy. <span className="text-red-500">*</span>
+                processing under our privacy policy. <span className="text-destructive">*</span>
               </span>
             </label>
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
           )}
         </form>
 

@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, ViewType } from "@prisma/client";
+import { PrismaClient, UserRole, EmploymentType, ViewType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -71,36 +71,67 @@ const STATUS_DISTRIBUTION = {
   BLOCKED: 0.05,
 };
 
-const USERS: Array<{ name: string; email: string; role: UserRole; clerkId: string }> = [
+interface SeedUser {
+  name: string;
+  email: string;
+  clerkId: string;
+  role: UserRole;
+  jobTitle: string;
+  employeeId: string;
+  employmentType: EmploymentType;
+  reportsTo: string | null; // email of manager
+}
+
+const USERS: SeedUser[] = [
   {
     name: "Mohamed Admin",
     email: "admin@samha.ae",
-    role: "ADMIN" as UserRole,
     clerkId: "admin_001",
+    role: "ADMIN" as UserRole,
+    jobTitle: "System Administrator",
+    employeeId: "EMP-001",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: null,
   },
   {
     name: "Sara Sales",
     email: "sara@samha.ae",
-    role: "SALES_AGENT" as UserRole,
     clerkId: "sales_001",
+    role: "MANAGER" as UserRole,
+    jobTitle: "Sales Manager",
+    employeeId: "EMP-002",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: "admin@samha.ae",
   },
   {
     name: "Khalid Sales",
     email: "khalid@samha.ae",
-    role: "SALES_AGENT" as UserRole,
     clerkId: "sales_002",
+    role: "MEMBER" as UserRole,
+    jobTitle: "Senior Sales Agent",
+    employeeId: "EMP-003",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: "sara@samha.ae",
   },
   {
     name: "Fatima Operations",
     email: "fatima@samha.ae",
-    role: "OPERATIONS" as UserRole,
     clerkId: "ops_001",
+    role: "MANAGER" as UserRole,
+    jobTitle: "Operations Manager",
+    employeeId: "EMP-004",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: "admin@samha.ae",
   },
   {
     name: "Omar Finance",
     email: "omar@samha.ae",
-    role: "FINANCE" as UserRole,
     clerkId: "finance_001",
+    role: "MANAGER" as UserRole,
+    jobTitle: "Finance Manager",
+    employeeId: "EMP-005",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: "admin@samha.ae",
   },
 ];
 
@@ -181,6 +212,8 @@ async function seed() {
   await prisma.unitStatusHistory.deleteMany({});
   await prisma.unit.deleteMany({});
   await prisma.project.deleteMany({});
+  // Clear manager links so users can be deleted (self-relation FK).
+  await prisma.user.updateMany({ data: { managerId: null } });
   await prisma.user.deleteMany({});
 
   // Create project
@@ -190,12 +223,40 @@ async function seed() {
   });
   console.log(`✓ Project created: ${project.name}`);
 
-  // Create users
+  // Create users — pass 1: without managerId (self-relation needs all users to exist first).
   console.log("Creating users...");
   const users = await Promise.all(
-    USERS.map((user) => prisma.user.create({ data: user }))
+    USERS.map((u) =>
+      prisma.user.create({
+        data: {
+          name: u.name,
+          email: u.email,
+          clerkId: u.clerkId,
+          role: u.role,
+          jobTitle: u.jobTitle,
+          employeeId: u.employeeId,
+          employmentType: u.employmentType,
+          status: "ACTIVE",
+          joinedAt: new Date("2025-01-01"),
+        },
+      }),
+    ),
   );
   console.log(`✓ ${users.length} users created`);
+
+  // Pass 2: link managers (reportsTo email → manager userId).
+  const userByEmail = new Map(users.map((u) => [u.email, u]));
+  for (const seed of USERS) {
+    if (!seed.reportsTo) continue;
+    const self = userByEmail.get(seed.email)!;
+    const manager = userByEmail.get(seed.reportsTo);
+    if (!manager) continue;
+    await prisma.user.update({
+      where: { id: self.id },
+      data: { managerId: manager.id },
+    });
+  }
+  console.log(`✓ Manager hierarchy linked`);
 
   // Create units from actual building layout
   console.log("Creating 175 units...");
@@ -413,7 +474,7 @@ async function seed() {
         source: "BROKER",
         budget: 1800000,
         assignedAgentId: users[2].id,
-        stage: "OFFER_SENT",
+        stage: "PROPOSAL",
       },
     }),
     prisma.lead.create({
@@ -426,7 +487,7 @@ async function seed() {
         source: "WEBSITE",
         budget: 2200000,
         assignedAgentId: users[1].id,
-        stage: "SITE_VISIT",
+        stage: "VIEWING",
       },
     }),
   ]);
@@ -587,7 +648,10 @@ async function seed() {
   console.log(`Leads: ${leads.length}`);
   console.log(`Deals: ${deals.length}`);
   console.log(`\nUsers created:`);
-  users.forEach((u) => console.log(`  • ${u.name} (${u.role})`));
+  users.forEach((u) => {
+    const seed = USERS.find((s) => s.email === u.email)!;
+    console.log(`  • ${u.name} (${u.role}, ${seed.jobTitle})`);
+  });
 }
 
 seed()

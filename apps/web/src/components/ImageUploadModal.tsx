@@ -85,12 +85,12 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">Upload Image</h2>
+      <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="font-bold text-foreground">Upload Image</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
             type="button"
           >
             ×
@@ -103,20 +103,20 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.classList.remove("bg-blue-50");
+              e.currentTarget.classList.remove("bg-info-soft");
               handleDrop(e);
             }}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.classList.add("bg-blue-50");
+              e.currentTarget.classList.add("bg-info-soft");
             }}
             onDragLeave={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.classList.remove("bg-blue-50");
+              e.currentTarget.classList.remove("bg-info-soft");
             }}
-            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer transition-colors relative"
+            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer transition-colors relative"
           >
             <input
               ref={fileInputRef}
@@ -133,7 +133,7 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
                   alt="Preview"
                   className="w-full h-40 object-cover rounded-lg mb-3"
                 />
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-foreground">
                   {file?.name}
                 </p>
                 <button
@@ -144,7 +144,7 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
                     setPreview(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="text-blue-600 hover:text-blue-800 text-xs mt-2 font-medium"
+                  className="text-primary hover:text-primary text-xs mt-2 font-medium"
                 >
                   Change file
                 </button>
@@ -152,10 +152,10 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
             ) : (
               <div>
                 <p className="text-2xl mb-2">📸</p>
-                <p className="text-sm font-medium text-slate-900 mb-1">
+                <p className="text-sm font-medium text-foreground mb-1">
                   Drop image here or click to select
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   JPEG, PNG, or WebP up to 10MB
                 </p>
               </div>
@@ -174,7 +174,7 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
 
           {/* Caption */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
               Caption (optional)
             </label>
             <input
@@ -182,19 +182,19 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="e.g. Living room view"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
             />
           </div>
 
           {/* Image Type */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
               Image Type
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
             >
               <option value="PHOTO">Photo</option>
               <option value="FLOOR_PLAN">Floor Plan</option>
@@ -205,32 +205,32 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
                 <option value="SCHEDULE_FLOOR_PLAN">Schedule 3 — Floor plan</option>
               </optgroup>
             </select>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Schedule images appear automatically in the generated SPA. One image per schedule type per unit.
             </p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="px-6 py-3 border-t border-slate-100 flex gap-2">
+        <div className="px-6 py-3 border-t border-border flex gap-2">
           <button
             onClick={onClose}
             disabled={uploading}
-            className="flex-1 px-3 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+            className="flex-1 px-3 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
             disabled={!file || uploading}
-            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? "Uploading..." : "Upload"}
           </button>

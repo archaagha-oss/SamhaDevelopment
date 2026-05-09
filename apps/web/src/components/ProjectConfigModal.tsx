@@ -15,9 +15,9 @@ const DEFAULTS = {
   disposalThresholdPercent: 30, resaleProcessingFee: 3000, gracePeriodMonths: 12,
 };
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white";
-const lbl = "block text-xs font-semibold text-slate-600 mb-0.5";
-const hint = "text-xs text-slate-400 mt-0.5";
+const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-0.5";
+const hint = "text-xs text-muted-foreground mt-0.5";
 
 export default function ProjectConfigModal({ projectId, onClose }: Props) {
   const [form, setForm] = useState({
@@ -101,18 +101,18 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div className="bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-bold text-slate-900">Project Configuration</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Affects future deals — does not retroactively change existing ones</p>
+            <h2 className="font-bold text-foreground">Project Configuration</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Affects future deals — does not retroactively change existing ones</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-40">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
@@ -153,7 +153,7 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="max-w-[160px]">
                 <label className={lbl}>Units Per Floor</label>
                 <input type="number" min="1" max="100" value={form.unitsPerFloor} onChange={(e) => set("unitsPerFloor", e.target.value)} className={inp} />
@@ -164,11 +164,11 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
             {/* SPA business-rule constants — Late Fee, Delay Compensation,
                 Liquidated Damages, Disposal Threshold, Resale Fee, Grace Period.
                 Defaults reflect the SAMHA legal SPA template. */}
-            <details className="border border-slate-200 rounded-lg" open>
-              <summary className="px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer select-none">
+            <details className="border border-border rounded-lg" open>
+              <summary className="px-4 py-2 text-sm font-semibold text-foreground cursor-pointer select-none">
                 SPA business rules
               </summary>
-              <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-100">
+              <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className={lbl}>Late Fee % / month</label>
@@ -211,14 +211,14 @@ export default function ProjectConfigModal({ projectId, onClose }: Props) {
               </div>
             </details>
 
-            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-            {saved && <p className="text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">Configuration saved successfully.</p>}
+            {error && <p className="text-sm text-destructive bg-destructive-soft px-3 py-2 rounded-lg">{error}</p>}
+            {saved && <p className="text-sm text-success bg-success-soft px-3 py-2 rounded-lg">Configuration saved successfully.</p>}
 
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
+              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
                 {saved ? "Close" : "Cancel"}
               </button>
-              <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
+              <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
                 {submitting ? "Saving…" : "Save Config"}
               </button>
             </div>

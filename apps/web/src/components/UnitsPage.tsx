@@ -1,14 +1,14 @@
 import UnitsTable from "./UnitsTable";
-import Breadcrumbs from "./Breadcrumbs";
+import { PageHeader } from "./layout";
 
 export default function UnitsPage() {
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 sm:px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <Breadcrumbs variant="light" className="mb-2" crumbs={[{ label: "Home", path: "/" }, { label: "Units" }]} />
-        <h1 className="text-lg font-bold text-slate-900">Units</h1>
-        <p className="text-slate-400 text-xs mt-0.5">All inventory across all projects</p>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Units" }]}
+        title="Units"
+        subtitle="All inventory across all projects"
+      />
       <div className="flex-1 overflow-hidden">
         <UnitsTable />
       </div>

@@ -19,6 +19,7 @@ import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ActivitiesPage from "./pages/ActivitiesPage";
 import TeamPage from "./pages/TeamPage";
+import MemberDetailPage from "./pages/MemberDetailPage";
 import PaymentPlansPage from "./components/PaymentPlansPage";
 import OfferPrintPage from "./components/OfferPrintPage";
 import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
@@ -45,6 +46,8 @@ import DealJointOwnersPage from "./pages/DealJointOwnersPage";
 import PublicUnitView from "./components/PublicUnitView";
 import HotInboxPage from "./pages/HotInboxPage";
 import CompliancePage from "./pages/CompliancePage";
+import FeatureFlagGate from "./components/FeatureFlagGate";
+import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 
 export const router = createBrowserRouter([
   // Standalone pages (no app shell — full-page layout)
@@ -85,20 +88,23 @@ export const router = createBrowserRouter([
       { path: "reservations",                             element: <ReservationsPage /> },
       { path: "offers-list",                              element: <OffersPage /> },
       { path: "team",                                      element: <TeamPage /> },
+      { path: "team/:userId",                              element: <MemberDetailPage /> },
       { path: "reports",                                   element: <ReportsPage /> },
       { path: "contacts",                                  element: <ContactsPage /> },
       { path: "settings",                                  element: <SettingsPage /> },
-      // Phase 4 expansion routes
+      { path: "profile/notifications",                     element: <NotificationPreferencesPage /> },
+      // Phase 4 expansion routes — gated by feature flags so they're hidden
+      // until an admin enables the corresponding module under Settings → Feature Flags.
       { path: "projects/:projectId/phases",                element: <PhasesPage /> },
       { path: "projects/:projectId/type-plans",            element: <UnitTypePlansPage /> },
-      { path: "projects/:projectId/construction",          element: <ConstructionProgressPage /> },
-      { path: "projects/:projectId/escrow",                element: <EscrowPage /> },
-      { path: "units/:unitId/snags",                       element: <SnagListPage /> },
-      { path: "deals/:dealId/handover",                    element: <HandoverChecklistPage /> },
+      { path: "projects/:projectId/construction",          element: <FeatureFlagGate flag="constructionProgress"><ConstructionProgressPage /></FeatureFlagGate> },
+      { path: "projects/:projectId/escrow",                element: <FeatureFlagGate flag="escrowModule"><EscrowPage /></FeatureFlagGate> },
+      { path: "units/:unitId/snags",                       element: <FeatureFlagGate flag="snagList"><SnagListPage /></FeatureFlagGate> },
+      { path: "deals/:dealId/handover",                    element: <FeatureFlagGate flag="handoverChecklist"><HandoverChecklistPage /></FeatureFlagGate> },
       { path: "deals/:dealId/parties",                     element: <DealJointOwnersPage /> },
-      { path: "leads/:leadId/kyc",                         element: <LeadKycPage /> },
+      { path: "leads/:leadId/kyc",                         element: <FeatureFlagGate flag="kycVerification"><LeadKycPage /></FeatureFlagGate> },
       { path: "refunds",                                   element: <RefundsPage /> },
-      { path: "commission-tiers",                          element: <CommissionTiersPage /> },
+      { path: "commission-tiers",                          element: <FeatureFlagGate flag="commissionTiers"><CommissionTiersPage /></FeatureFlagGate> },
       { path: "*",                                        element: <NotFoundPage /> },
     ],
   },

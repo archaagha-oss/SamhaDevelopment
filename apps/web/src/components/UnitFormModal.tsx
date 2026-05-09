@@ -32,8 +32,8 @@ const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMER
 const UNIT_VIEWS = ["SEA", "GARDEN", "STREET", "BACK", "SIDE", "AMENITIES"];
 const LOCKED_STATUSES = ["RESERVED", "BOOKED", "SOLD", "HANDED_OVER"];
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Props) {
   const isEdit = !!unit;
@@ -101,14 +101,14 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">{isEdit ? `Edit Unit ${unit!.unitNumber}` : "Add New Unit"}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+      <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="font-bold text-foreground">{isEdit ? `Edit Unit ${unit!.unitNumber}` : "Add New Unit"}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
         </div>
 
         {isLocked && (
-          <div className="mx-6 mt-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+          <div className="mx-6 mt-4 px-3 py-2 bg-warning-soft border border-warning/30 rounded-lg text-xs text-warning">
             This unit has an active deal — price, type, and area are locked. Only floor and view can be edited.
           </div>
         )}
@@ -183,7 +183,7 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
                 disabled={isLocked}
                 className={inp}
               />
-              <p className="text-xs text-blue-600 font-medium mt-1">
+              <p className="text-xs text-primary font-medium mt-1">
                 = {Math.round(parseFloat(form.area || "0") * 10.764).toLocaleString()} sqft
               </p>
             </div>
@@ -202,8 +202,8 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-4">
-            <p className="text-xs font-semibold text-slate-500 mb-3">Physical Details</p>
+          <div className="border-t border-border pt-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-3">Physical Details</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Parking Spaces</label>
@@ -245,11 +245,11 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
           </div>
 
           {/* SPA particulars — area in sqft, rate per sqft, smart home, anticipated date */}
-          <details className="border border-slate-200 rounded-lg" open={isEdit}>
-            <summary className="px-4 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+          <details className="border border-border rounded-lg" open={isEdit}>
+            <summary className="px-4 py-2 text-xs font-semibold text-foreground cursor-pointer select-none">
               SPA particulars
             </summary>
-            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-slate-100">
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={lbl}>Total Area (sqft)</label>
@@ -299,30 +299,30 @@ export default function UnitFormModal({ projectId, unit, onClose, onSaved }: Pro
                     onChange={(e) => set("anticipatedCompletionDate", e.target.value)}
                     className={inp}
                   />
-                  <p className="text-xs text-slate-400 mt-0.5">Overrides project handover date for this unit's SPA</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Overrides project handover date for this unit's SPA</p>
                 </div>
               </div>
             </div>
           </details>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft px-3 py-2 rounded-lg">{error}</p>
           )}
 
           <div className="flex gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm"
+              className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50"
             >
-              {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Unit"}
+              {submitting ? "Saving…" : isEdit ? "Save changes" : "Create unit"}
             </button>
           </div>
         </form>

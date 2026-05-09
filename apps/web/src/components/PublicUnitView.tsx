@@ -58,7 +58,7 @@ export default function PublicUnitView() {
   if (result.isLoading) {
     return (
       <div style={containerStyle}>
-        <p style={{ color: "#666" }}>Loading…</p>
+        <p style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
       </div>
     );
   }
@@ -77,8 +77,8 @@ export default function PublicUnitView() {
       <div style={containerStyle}>
         <div style={emptyStyle}>
           <h1 style={{ margin: 0, fontSize: 22 }}>Link unavailable</h1>
-          <p style={{ marginTop: 12, color: "#555" }}>{headline}</p>
-          <p style={{ marginTop: 8, color: "#888", fontSize: 14 }}>
+          <p style={{ marginTop: 12, color: "hsl(var(--muted-foreground))" }}>{headline}</p>
+          <p style={{ marginTop: 8, color: "hsl(var(--muted-foreground))", fontSize: 14 }}>
             Please contact the agent who shared this link with you.
           </p>
         </div>
@@ -105,7 +105,7 @@ export default function PublicUnitView() {
     <div style={containerStyle}>
       <header style={headerStyle}>
         <div>
-          <p style={{ margin: 0, color: "#888", fontSize: 13, letterSpacing: 1, textTransform: "uppercase" }}>
+          <p style={{ margin: 0, color: "hsl(var(--muted-foreground))", fontSize: 13, letterSpacing: 1, textTransform: "uppercase" }}>
             {view.project.name} · {view.project.location}
           </p>
           <h1 style={{ margin: "6px 0 0 0", fontSize: 28 }}>
@@ -172,7 +172,7 @@ export default function PublicUnitView() {
               <li key={doc.id} style={docItemStyle}>
                 <div>
                   <p style={{ margin: 0, fontWeight: 600 }}>{doc.name}</p>
-                  <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "#888" }}>
+                  <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
                     {doc.type.replace(/_/g, " ")} · {formatDate(doc.uploadedAt)}
                   </p>
                 </div>
@@ -193,20 +193,20 @@ export default function PublicUnitView() {
       <section style={sectionStyle}>
         <h2 style={h2Style}>Latest updates</h2>
         {feed.length === 0 ? (
-          <p style={{ color: "#888" }}>No updates yet — check back soon.</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>No updates yet — check back soon.</p>
         ) : (
           <ol style={timelineStyle}>
             {feed.map((item, idx) =>
               item.kind === "status" ? (
                 <li key={`s-${item.entry.id}-${idx}`} style={timelineItemStyle}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{formatDate(item.date)}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "hsl(var(--muted-foreground))" }}>{formatDate(item.date)}</p>
                   <p style={{ margin: "4px 0 0 0" }}>{formatStatusEntry(item.entry)}</p>
                 </li>
               ) : (
                 <li key={`u-${item.update.id}-${idx}`} style={timelineItemStyle}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{formatDate(item.date)}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "hsl(var(--muted-foreground))" }}>{formatDate(item.date)}</p>
                   <h3 style={{ margin: "4px 0 0 0", fontSize: 18 }}>{item.update.title}</h3>
-                  <p style={{ margin: "8px 0 0 0", whiteSpace: "pre-wrap", color: "#333" }}>{item.update.body}</p>
+                  <p style={{ margin: "8px 0 0 0", whiteSpace: "pre-wrap", color: "hsl(var(--foreground))" }}>{item.update.body}</p>
                   {item.update.media.length > 0 && (
                     <div style={{ ...galleryStyle, marginTop: 12 }}>
                       {item.update.media.map((m) =>
@@ -241,7 +241,7 @@ export default function PublicUnitView() {
 function Spec({ label, value }: { label: string; value: string }) {
   return (
     <div style={specStyle}>
-      <dt style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>{label}</dt>
+      <dt style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: 1 }}>{label}</dt>
       <dd style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 500 }}>{value}</dd>
     </div>
   );
@@ -252,7 +252,7 @@ const containerStyle: React.CSSProperties = {
   margin: "0 auto",
   padding: "32px 24px 64px",
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  color: "#222",
+  color: "hsl(var(--foreground))",
   background: "#fff",
 };
 const headerStyle: React.CSSProperties = {
@@ -272,7 +272,7 @@ const badgeStyle: React.CSSProperties = {
   borderRadius: 999,
   background: "#f1f1f4",
   fontSize: 12,
-  color: "#444",
+  color: "hsl(var(--foreground))",
 };
 const sectionStyle: React.CSSProperties = { marginBottom: 40 };
 const h2Style: React.CSSProperties = { fontSize: 18, margin: "0 0 16px 0" };
@@ -289,7 +289,7 @@ const imgStyle: React.CSSProperties = {
   borderRadius: 8,
   background: "#f6f6f8",
 };
-const captionStyle: React.CSSProperties = { fontSize: 12, color: "#888", marginTop: 6 };
+const captionStyle: React.CSSProperties = { fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 6 };
 const dlStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
@@ -303,7 +303,7 @@ const docItemStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   padding: "12px 14px",
-  border: "1px solid #ececef",
+  border: "1px solid hsl(var(--border))",
   borderRadius: 8,
   marginBottom: 8,
 };
@@ -326,20 +326,20 @@ const timelineStyle: React.CSSProperties = {
 };
 const timelineItemStyle: React.CSSProperties = {
   padding: 16,
-  border: "1px solid #ececef",
+  border: "1px solid hsl(var(--border))",
   borderRadius: 8,
 };
 const footerStyle: React.CSSProperties = {
   borderTop: "1px solid #eee",
   paddingTop: 16,
   textAlign: "center",
-  color: "#888",
+  color: "hsl(var(--muted-foreground))",
   fontSize: 13,
 };
 const emptyStyle: React.CSSProperties = {
   marginTop: 80,
   padding: 32,
   textAlign: "center",
-  border: "1px solid #ececef",
+  border: "1px solid hsl(var(--border))",
   borderRadius: 12,
 };

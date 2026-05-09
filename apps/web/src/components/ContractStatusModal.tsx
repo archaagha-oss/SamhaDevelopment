@@ -22,10 +22,10 @@ interface Props {
 }
 
 const STATUS_OPTIONS: { value: ContractStatus; label: string; description: string; color: string }[] = [
-  { value: "DRAFT",    label: "Draft",    description: "Document is being prepared, not yet sent to client", color: "text-slate-600" },
-  { value: "SENT",     label: "Sent",     description: "Document has been sent to the client for signing",   color: "text-blue-600"  },
-  { value: "SIGNED",   label: "Signed",   description: "Document has been signed by all parties",            color: "text-emerald-600" },
-  { value: "ARCHIVED", label: "Archived", description: "Document is archived (no longer active)",            color: "text-slate-400"  },
+  { value: "DRAFT",    label: "Draft",    description: "Document is being prepared, not yet sent to client", color: "text-muted-foreground" },
+  { value: "SENT",     label: "Sent",     description: "Document has been sent to the client for signing",   color: "text-primary"  },
+  { value: "SIGNED",   label: "Signed",   description: "Document has been signed by all parties",            color: "text-success" },
+  { value: "ARCHIVED", label: "Archived", description: "Document is archived (no longer active)",            color: "text-muted-foreground"  },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -61,20 +61,20 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-semibold text-slate-900 text-sm">Update Contract Status</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-semibold text-foreground text-sm">Update Contract Status</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {document.deal.dealNumber} · {document.deal.lead.firstName} {document.deal.lead.lastName} · {document.deal.unit.unitNumber}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
         </div>
 
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-100">
-          <p className="text-xs text-slate-500">{TYPE_LABELS[document.type] || document.type}</p>
-          <p className="text-sm font-medium text-slate-800 truncate">{document.name}</p>
+        <div className="px-6 py-3 bg-muted/50 border-b border-border">
+          <p className="text-xs text-muted-foreground">{TYPE_LABELS[document.type] || document.type}</p>
+          <p className="text-sm font-medium text-foreground truncate">{document.name}</p>
         </div>
 
         <div className="px-6 py-5 space-y-2">
@@ -83,8 +83,8 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
               key={opt.value}
               className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                 selected === opt.value
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-slate-100 hover:border-slate-300"
+                  ? "border-primary/40 bg-info-soft"
+                  : "border-border hover:border-border"
               }`}
             >
               <input
@@ -93,26 +93,26 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
                 value={opt.value}
                 checked={selected === opt.value}
                 onChange={() => setSelected(opt.value)}
-                className="mt-0.5 accent-blue-600"
+                className="mt-0.5 accent-primary"
               />
               <div>
                 <p className={`text-sm font-semibold ${opt.color}`}>{opt.label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{opt.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
               </div>
             </label>
           ))}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">{error}</div>
+            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">{error}</div>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
           <button
             onClick={submit}
             disabled={loading}
-            className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
+            className="px-5 py-2 text-sm font-medium rounded-lg bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors"
           >
             {loading ? "Saving..." : "Update Status"}
           </button>

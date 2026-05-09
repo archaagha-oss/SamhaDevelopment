@@ -161,11 +161,11 @@ export default function CreateOfferModal({
       <div className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity" onClick={onClose} />
 
       {/* Slide-over Modal */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto">
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Create Offer</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-foreground">Create Offer</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
             ×
           </button>
         </div>
@@ -174,7 +174,7 @@ export default function CreateOfferModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Lead Selection */}
           <div>
-            <label htmlFor="lead" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="lead" className="block text-sm font-medium text-foreground mb-2">
               Lead *
             </label>
             <select
@@ -182,7 +182,7 @@ export default function CreateOfferModal({
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
               disabled={!!initialLeadId || leadsLoading}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-slate-50"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition disabled:bg-muted/50"
             >
               <option value="">Select a lead...</option>
               {leads.map((lead) => (
@@ -195,7 +195,7 @@ export default function CreateOfferModal({
 
           {/* Unit Selection */}
           <div>
-            <label htmlFor="unit" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="unit" className="block text-sm font-medium text-foreground mb-2">
               Unit *
             </label>
             <select
@@ -218,7 +218,7 @@ export default function CreateOfferModal({
                 }
               }}
               disabled={!!initialUnitId || unitsLoading}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-slate-50"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition disabled:bg-muted/50"
             >
               <option value="">Select a unit...</option>
               {units.map((unit) => (
@@ -231,23 +231,23 @@ export default function CreateOfferModal({
 
           {/* Unit Details (if selected) */}
           {unitNumber && (
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Unit:</span>
-                <span className="font-medium text-slate-900">{unitNumber}</span>
+                <span className="text-muted-foreground">Unit:</span>
+                <span className="font-medium text-foreground">{unitNumber}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">List Price:</span>
-                <span className="font-medium text-slate-900">AED {unitPrice.toLocaleString()}</span>
+                <span className="text-muted-foreground">List Price:</span>
+                <span className="font-medium text-foreground">AED {unitPrice.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Area:</span>
-                <span className="font-medium text-slate-900">{unitArea.toFixed(2)} sqft</span>
+                <span className="text-muted-foreground">Area:</span>
+                <span className="font-medium text-foreground">{unitArea.toFixed(2)} sqft</span>
               </div>
               {unitArea > 0 && (
-                <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
-                  <span className="text-slate-600">Price/sqft:</span>
-                  <span className="font-medium text-slate-900">AED {Math.round(unitPrice / unitArea).toLocaleString()}</span>
+                <div className="flex justify-between text-sm border-t border-border pt-2">
+                  <span className="text-muted-foreground">Price/sqft:</span>
+                  <span className="font-medium text-foreground">AED {Math.round(unitPrice / unitArea).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -255,7 +255,7 @@ export default function CreateOfferModal({
 
           {/* Offered Price */}
           <div>
-            <label htmlFor="offeredPrice" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="offeredPrice" className="block text-sm font-medium text-foreground mb-2">
               Offered Price (AED) *
             </label>
             <input
@@ -263,16 +263,16 @@ export default function CreateOfferModal({
               type="number"
               value={offeredPrice}
               onChange={(e) => setOfferedPrice(Math.max(0, Number(e.target.value)))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
               required
             />
             {discount > 0 && (
-              <p className="text-xs text-emerald-600 mt-1 font-medium">
+              <p className="text-xs text-success mt-1 font-medium">
                 Discount: AED {discount.toLocaleString()}
               </p>
             )}
             {unitArea > 0 && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 AED {pricePerSqft.toLocaleString()} per sqft
               </p>
             )}
@@ -280,7 +280,7 @@ export default function CreateOfferModal({
 
           {/* Validity */}
           <div>
-            <label htmlFor="validityDays" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="validityDays" className="block text-sm font-medium text-foreground mb-2">
               Valid For (Days)
             </label>
             <input
@@ -289,25 +289,25 @@ export default function CreateOfferModal({
               min="1"
               value={validityDays}
               onChange={(e) => setValidityDays(Math.max(1, Number(e.target.value)))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Expires: {expiryDate.toLocaleDateString("en-AE")}
             </p>
           </div>
 
           {/* Summary */}
           {offeredPrice > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-medium text-blue-900">Offer Summary</p>
+            <div className="bg-info-soft border border-primary/40 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-medium text-info-soft-foreground">Offer Summary</p>
               <div className="flex justify-between text-sm">
-                <span className="text-blue-700">Sale Price:</span>
-                <span className="font-bold text-blue-900">AED {offeredPrice.toLocaleString()}</span>
+                <span className="text-primary">Sale Price:</span>
+                <span className="font-bold text-info-soft-foreground">AED {offeredPrice.toLocaleString()}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-blue-700">Your Discount:</span>
-                  <span className="font-bold text-emerald-600">-AED {discount.toLocaleString()}</span>
+                  <span className="text-primary">Your Discount:</span>
+                  <span className="font-bold text-success">-AED {discount.toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -318,14 +318,14 @@ export default function CreateOfferModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+              className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted/50 transition"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition flex items-center justify-center gap-2"
               disabled={loading || !leadId || !unitId || !offeredPrice}
             >
               {loading && <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}

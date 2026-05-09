@@ -74,7 +74,7 @@ const ALL_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERC
 type SortKey = "project" | "unitNumber" | "floor" | "type" | "area" | "view" | "price" | "status";
 
 const SortIcon = ({ active, asc }: { active: boolean; asc: boolean }) => (
-  <span className={`ml-1 text-xs ${active ? "text-blue-600" : "text-slate-300"}`}>
+  <span className={`ml-1 text-xs ${active ? "text-primary" : "text-foreground/80"}`}>
     {active ? (asc ? "↑" : "↓") : "⇅"}
   </span>
 );
@@ -173,7 +173,7 @@ export default function UnitsTable({ projectId }: Props) {
       .then(([unitsRes, usersRes, projectsRes]) => {
         setUnits(unitsRes.data.data || unitsRes.data || []);
         setAgents(
-          (usersRes.data || []).filter((u: any) => u.role === "SALES_AGENT" || u.role === "OPERATIONS")
+          (usersRes.data || []).filter((u: any) => u.status === "ACTIVE" && u.role !== "VIEWER")
         );
         if (projectsRes) setProjects(projectsRes.data.data || projectsRes.data || []);
       })
@@ -322,7 +322,7 @@ export default function UnitsTable({ projectId }: Props) {
     <th className={`px-4 py-2.5 text-${align}`}>
       <button
         onClick={() => toggleSort(sk)}
-        className={`text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-0.5 ${align === "right" ? "ml-auto" : ""}`}
+        className={`text-xs font-semibold text-muted-foreground hover:text-primary flex items-center gap-0.5 ${align === "right" ? "ml-auto" : ""}`}
       >
         {label}<SortIcon active={sortKey === sk} asc={sortAsc} />
       </button>
@@ -333,7 +333,7 @@ export default function UnitsTable({ projectId }: Props) {
     <div className="flex flex-col h-full">
 
       {/* ── Action bar ── */}
-      <div className="flex items-center gap-2 px-6 py-3 bg-white border-b border-slate-100 flex-shrink-0 flex-wrap">
+      <div className="flex items-center gap-2 px-6 py-3 bg-card border-b border-border flex-shrink-0 flex-wrap">
         {!selectionMode ? (
           <>
             {/* Project-mode actions */}
@@ -341,13 +341,13 @@ export default function UnitsTable({ projectId }: Props) {
               <>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1.5"
                 >
                   + Add Unit
                 </button>
                 <button
                   onClick={() => setShowBulkModal(true)}
-                  className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                  className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
                 >
                   ⊞ Add Floor
                 </button>
@@ -356,7 +356,7 @@ export default function UnitsTable({ projectId }: Props) {
 
             <button
               onClick={() => setSelectionMode(true)}
-              className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+              className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
             >
               ☑ Select
             </button>
@@ -365,7 +365,7 @@ export default function UnitsTable({ projectId }: Props) {
             <div className="relative" ref={columnMenuRef}>
               <button
                 onClick={() => setColumnMenuOpen((v) => !v)}
-                className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
                 title="Show / hide columns"
                 aria-haspopup="menu"
                 aria-expanded={columnMenuOpen}
@@ -373,7 +373,7 @@ export default function UnitsTable({ projectId }: Props) {
                 ⋯ Columns{hiddenColumns.size > 0 ? ` (${hiddenColumns.size} hidden)` : ""}
               </button>
               {columnMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-lg shadow-lg py-2 w-48" role="menu">
+                <div className="absolute left-0 top-full mt-1 z-30 bg-card border border-border rounded-lg shadow-lg py-2 w-48" role="menu">
                   {(Object.keys(COLUMN_LABELS) as ColumnKey[])
                     .filter((k) => k !== "project" || isGlobal) // Project column only in global mode
                     .map((k) => {
@@ -381,7 +381,7 @@ export default function UnitsTable({ projectId }: Props) {
                       return (
                         <label
                           key={k}
-                          className={`flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer ${locked ? "text-slate-400 cursor-not-allowed" : "text-slate-700 hover:bg-slate-50"}`}
+                          className={`flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer ${locked ? "text-muted-foreground cursor-not-allowed" : "text-foreground hover:bg-muted/50"}`}
                         >
                           <input
                             type="checkbox"
@@ -391,7 +391,7 @@ export default function UnitsTable({ projectId }: Props) {
                             className="rounded"
                           />
                           {COLUMN_LABELS[k]}
-                          {locked && <span className="ml-auto text-[10px] text-slate-400">always</span>}
+                          {locked && <span className="ml-auto text-[10px] text-muted-foreground">always</span>}
                         </label>
                       );
                     })}
@@ -399,7 +399,7 @@ export default function UnitsTable({ projectId }: Props) {
                     <button
                       type="button"
                       onClick={() => setHiddenColumns(new Set())}
-                      className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 border-t border-slate-100 mt-1"
+                      className="w-full text-left px-3 py-1.5 text-xs text-primary hover:bg-info-soft border-t border-border mt-1"
                     >
                       Show all columns
                     </button>
@@ -408,14 +408,14 @@ export default function UnitsTable({ projectId }: Props) {
               )}
             </div>
 
-            <div className="h-5 w-px bg-slate-200 mx-1" />
+            <div className="h-5 w-px bg-neutral-200 mx-1" />
 
             {/* Search */}
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search unit no…"
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 w-36"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm bg-muted/50 focus:outline-none focus:border-ring w-36"
             />
 
             {/* Project filter — global mode only */}
@@ -423,7 +423,7 @@ export default function UnitsTable({ projectId }: Props) {
               <select
                 value={filterProject}
                 onChange={(e) => setFilterProject(e.target.value)}
-                className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                className="border border-border rounded-lg px-2.5 py-1.5 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               >
                 <option value="ALL">All Projects</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -433,7 +433,7 @@ export default function UnitsTable({ projectId }: Props) {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm bg-muted/50 focus:outline-none focus:border-ring"
             >
               <option value="ALL">All Statuses</option>
               {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -442,7 +442,7 @@ export default function UnitsTable({ projectId }: Props) {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm bg-muted/50 focus:outline-none focus:border-ring"
             >
               <option value="ALL">All Types</option>
               {ALL_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
@@ -450,35 +450,35 @@ export default function UnitsTable({ projectId }: Props) {
 
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-info-soft rounded-lg transition-colors"
             >
               {showAdvanced ? "Less ▲" : "More ▼"}
             </button>
 
             {hasFilters && (
-              <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 font-medium">
+              <button onClick={clearFilters} className="text-xs text-destructive hover:text-destructive font-medium">
                 Clear ×
               </button>
             )}
 
-            <span className="ml-auto text-xs text-slate-400">
+            <span className="ml-auto text-xs text-muted-foreground">
               {filtered.length.toLocaleString()} / {units.length.toLocaleString()} units
             </span>
           </>
         ) : (
           /* Selection mode bar */
           <>
-            <button onClick={exitSelection} className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200">
+            <button onClick={exitSelection} className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted">
               ✕ Cancel
             </button>
-            <span className="text-sm text-slate-600 font-medium">{selectedIds.size} selected</span>
-            <div className="h-5 w-px bg-slate-200 mx-1" />
+            <span className="text-sm text-muted-foreground font-medium">{selectedIds.size} selected</span>
+            <div className="h-5 w-px bg-neutral-200 mx-1" />
             {(["RELEASE", "BLOCK", "UNBLOCK", "PRICE_UPDATE"] as const).map((op) => {
               const styles: Record<string, string> = {
-                RELEASE:      bulkOp === op ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-                BLOCK:        bulkOp === op ? "bg-slate-700 text-white"   : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                UNBLOCK:      bulkOp === op ? "bg-blue-600 text-white"    : "bg-blue-50 text-blue-700 hover:bg-blue-100",
-                PRICE_UPDATE: bulkOp === op ? "bg-violet-600 text-white"  : "bg-violet-50 text-violet-700 hover:bg-violet-100",
+                RELEASE:      bulkOp === op ? "bg-success text-white" : "bg-success-soft text-success hover:bg-success-soft",
+                BLOCK:        bulkOp === op ? "bg-neutral-700 text-white"   : "bg-muted text-foreground hover:bg-muted",
+                UNBLOCK:      bulkOp === op ? "bg-primary text-white"    : "bg-info-soft text-primary hover:bg-info-soft",
+                PRICE_UPDATE: bulkOp === op ? "bg-accent-2 text-accent-2-foreground"  : "bg-stage-active text-stage-active-foreground hover:bg-stage-active",
               };
               const labels: Record<string, string> = { RELEASE: "↑ Release", BLOCK: "⊘ Block", UNBLOCK: "✓ Unblock", PRICE_UPDATE: "$ Price" };
               return (
@@ -487,20 +487,20 @@ export default function UnitsTable({ projectId }: Props) {
                 </button>
               );
             })}
-            <span className="ml-auto text-xs text-slate-400">{filtered.length} shown</span>
+            <span className="ml-auto text-xs text-muted-foreground">{filtered.length} shown</span>
           </>
         )}
       </div>
 
       {/* ── Advanced filters ── */}
       {showAdvanced && !selectionMode && (
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 flex-shrink-0">
+        <div className="px-6 py-3 bg-muted/50 border-b border-border flex flex-wrap gap-4 flex-shrink-0">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Agent</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Agent</label>
             <select
               value={filterAgent}
               onChange={(e) => setFilterAgent(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
             >
               <option value="ALL">All agents</option>
               <option value="">Unassigned</option>
@@ -508,23 +508,23 @@ export default function UnitsTable({ projectId }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Min Price (AED)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price (AED)</label>
             <input
               type="number"
               value={filterPriceMin}
               onChange={(e) => setFilterPriceMin(e.target.value)}
               placeholder="0"
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32 bg-white focus:outline-none focus:border-blue-400"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm w-32 bg-card focus:outline-none focus:border-ring"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Max Price (AED)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price (AED)</label>
             <input
               type="number"
               value={filterPriceMax}
               onChange={(e) => setFilterPriceMax(e.target.value)}
               placeholder="∞"
-              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32 bg-white focus:outline-none focus:border-blue-400"
+              className="border border-border rounded-lg px-2.5 py-1.5 text-sm w-32 bg-card focus:outline-none focus:border-ring"
             />
           </div>
         </div>
@@ -532,8 +532,8 @@ export default function UnitsTable({ projectId }: Props) {
 
       {/* ── Bulk op panel ── */}
       {selectionMode && bulkOp && (
-        <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-3 flex-wrap flex-shrink-0">
-          <span className="text-sm font-semibold text-blue-800">{bulkOp.replace(/_/g, " ")}</span>
+        <div className="px-6 py-3 bg-info-soft border-b border-primary/40 flex items-center gap-3 flex-wrap flex-shrink-0">
+          <span className="text-sm font-semibold text-primary">{bulkOp.replace(/_/g, " ")}</span>
           {bulkOp !== "PRICE_UPDATE" && (
             <input
               value={bulkReason}
@@ -544,7 +544,7 @@ export default function UnitsTable({ projectId }: Props) {
                 bulkOp === "UNBLOCK" ? "Reason — why unblocking now? (required)" :
                 "Reason"
               }
-              className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-72"
+              className="border border-primary/40 rounded-lg px-2.5 py-1.5 text-sm bg-card focus:outline-none focus:border-ring w-72"
             />
           )}
           {bulkOp === "PRICE_UPDATE" && (
@@ -552,7 +552,7 @@ export default function UnitsTable({ projectId }: Props) {
               <select
                 value={bulkPriceType}
                 onChange={(e) => setBulkPriceType(e.target.value as any)}
-                className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none"
+                className="border border-primary/40 rounded-lg px-2.5 py-1.5 text-sm bg-card focus:outline-none"
               >
                 <option value="PERCENT">% Change</option>
                 <option value="FIXED_DELTA">AED Delta</option>
@@ -563,13 +563,13 @@ export default function UnitsTable({ projectId }: Props) {
                 value={bulkPriceValue}
                 onChange={(e) => setBulkPriceValue(e.target.value)}
                 placeholder={bulkPriceType === "PERCENT" ? "e.g. 5 or -3" : "Amount"}
-                className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none w-32"
+                className="border border-primary/40 rounded-lg px-2.5 py-1.5 text-sm bg-card focus:outline-none w-32"
               />
               <input
                 value={bulkReason}
                 onChange={(e) => setBulkReason(e.target.value)}
                 placeholder="Reason (optional)"
-                className="border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none w-44"
+                className="border border-primary/40 rounded-lg px-2.5 py-1.5 text-sm bg-card focus:outline-none w-44"
               />
             </div>
           )}
@@ -585,12 +585,12 @@ export default function UnitsTable({ projectId }: Props) {
                 ? "Reason is required for this operation"
                 : undefined
             }
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {bulkSubmitting ? "Running…" : `Apply to ${selectedIds.size}`}
           </button>
           {bulkResult && (
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-muted-foreground">
               ✓ {bulkResult.succeeded} done{bulkResult.failed > 0 ? `, ${bulkResult.failed} skipped` : ""}
             </span>
           )}
@@ -599,21 +599,21 @@ export default function UnitsTable({ projectId }: Props) {
 
       {/* ── Status summary pills ── */}
       {!loading && units.length > 0 && (
-        <div className="flex items-center gap-2 px-6 py-2.5 bg-slate-50 border-b border-slate-100 flex-wrap flex-shrink-0">
+        <div className="flex items-center gap-2 px-6 py-2.5 bg-muted/50 border-b border-border flex-wrap flex-shrink-0">
           {Object.entries(byStatus).map(([status, count]) => {
             const c = getStatusColor(status);
             return (
               <button
                 key={status}
                 onClick={() => setFilterStatus(filterStatus === status ? "ALL" : status)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${c.bg} ${c.text} ${filterStatus === status ? "border-slate-700" : "border-transparent hover:border-slate-300"}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${c.bg} ${c.text} ${filterStatus === status ? "border-border" : "border-transparent hover:border-border"}`}
               >
                 {STATUS_LABELS[status] || status} <span className="font-bold">{count}</span>
               </button>
             );
           })}
           {filterStatus !== "ALL" && (
-            <button onClick={() => setFilterStatus("ALL")} className="text-xs text-slate-400 hover:text-slate-600 ml-1">
+            <button onClick={() => setFilterStatus("ALL")} className="text-xs text-muted-foreground hover:text-foreground ml-1">
               Clear ×
             </button>
           )}
@@ -624,15 +624,15 @@ export default function UnitsTable({ projectId }: Props) {
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
             <p>{units.length === 0 ? "No units yet — add your first unit above" : "No units match the current filters"}</p>
           </div>
         ) : (
           <table className="w-full text-sm" style={{ minWidth: "960px" }}>
-            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+            <thead className="sticky top-0 bg-muted/50 border-b border-border z-10">
               <tr>
                 {selectionMode && (
                   <th className="px-4 py-2.5 w-10">
@@ -644,7 +644,7 @@ export default function UnitsTable({ projectId }: Props) {
                     />
                   </th>
                 )}
-                {isVisible("plan")       && <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500" style={{ minWidth: 56, width: 56 }}>Plan</th>}
+                {isVisible("plan")       && <th className="px-3 py-2.5 text-center text-xs font-semibold text-muted-foreground" style={{ minWidth: 56, width: 56 }}>Plan</th>}
                 {isGlobal && isVisible("project")    && <Th label="Project"     sk="project" />}
                 {isVisible("unitNumber") && <Th label="Unit No."    sk="unitNumber" />}
                 {isVisible("floor")      && <Th label="Floor"       sk="floor" />}
@@ -653,11 +653,11 @@ export default function UnitsTable({ projectId }: Props) {
                 {isVisible("view")       && <Th label="View"        sk="view" />}
                 {isVisible("price")      && <Th label="Price (AED)" sk="price" align="right" />}
                 {isVisible("status")     && <Th label="Status"      sk="status" />}
-                {isVisible("agent")      && <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500" style={{ minWidth: 140 }}>Agent</th>}
+                {isVisible("agent")      && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground" style={{ minWidth: 140 }}>Agent</th>}
                 {!selectionMode && <th className="px-4 py-2.5 w-16" />}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {sorted.map((unit) => {
                 const c = getStatusColor(unit.status);
                 const isSelected = selectedIds.has(unit.id);
@@ -666,7 +666,7 @@ export default function UnitsTable({ projectId }: Props) {
                 return (
                   <tr
                     key={unit.id}
-                    className={`cursor-pointer group transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                    className={`cursor-pointer group transition-colors ${isSelected ? "bg-info-soft" : "hover:bg-muted/50"}`}
                     onClick={() => {
                       if (selectionMode) toggleSelect(unit.id);
                       else navigate(`/projects/${unit.projectId}/units/${unit.id}`);
@@ -686,7 +686,7 @@ export default function UnitsTable({ projectId }: Props) {
                             <button
                               type="button"
                               onClick={() => navigate(`/projects/${unit.projectId}/units/${unit.id}`)}
-                              className="w-10 h-10 rounded-md overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors bg-slate-50 align-middle"
+                              className="w-10 h-10 rounded-md overflow-hidden border border-border hover:border-primary/40 transition-colors bg-muted/50 align-middle"
                               title="Hover to enlarge · click to open unit"
                               aria-label="Open unit"
                             >
@@ -700,7 +700,7 @@ export default function UnitsTable({ projectId }: Props) {
                           </HoverPreview>
                         ) : (
                           <span
-                            className="inline-flex items-center justify-center w-10 h-10 rounded-md border border-dashed border-slate-300 text-slate-400 text-base"
+                            className="inline-flex items-center justify-center w-10 h-10 rounded-md border border-dashed border-border text-muted-foreground text-base"
                             title="No floor plan uploaded"
                           >
                             📐
@@ -714,7 +714,7 @@ export default function UnitsTable({ projectId }: Props) {
                       <td className="px-4 py-3" style={{ minWidth: 120 }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/projects/${unit.projectId}`); }}
-                          className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium"
+                          className="text-primary hover:text-primary hover:underline text-xs font-medium"
                         >
                           {projectMap[unit.projectId] || "—"}
                         </button>
@@ -728,16 +728,16 @@ export default function UnitsTable({ projectId }: Props) {
                             e.stopPropagation();
                             navigate(`/projects/${unit.projectId}/units/${unit.id}`);
                           }}
-                          className="font-mono font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
+                          className="font-mono font-semibold text-foreground hover:text-primary hover:underline text-xs"
                         >
                           {unit.unitNumber}
                         </button>
                       </td>
                     )}
-                    {isVisible("floor") && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 56 }}>F{unit.floor}</td>}
-                    {isVisible("type")  && <td className="px-4 py-3 text-slate-700 text-xs" style={{ minWidth: 96 }}>{unit.type.replace(/_/g, " ")}</td>}
-                    {isVisible("area")  && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 88 }}>{formatAreaShort(unit.area)}</td>}
-                    {isVisible("view")  && <td className="px-4 py-3 text-slate-500 text-xs" style={{ minWidth: 88 }}>{unit.view}</td>}
+                    {isVisible("floor") && <td className="px-4 py-3 text-muted-foreground text-xs" style={{ minWidth: 56 }}>F{unit.floor}</td>}
+                    {isVisible("type")  && <td className="px-4 py-3 text-foreground text-xs" style={{ minWidth: 96 }}>{unit.type.replace(/_/g, " ")}</td>}
+                    {isVisible("area")  && <td className="px-4 py-3 text-muted-foreground text-xs" style={{ minWidth: 88 }}>{formatAreaShort(unit.area)}</td>}
+                    {isVisible("view")  && <td className="px-4 py-3 text-muted-foreground text-xs" style={{ minWidth: 88 }}>{unit.view}</td>}
 
                     {/* Inline price edit (always visible) */}
                     {isVisible("price") && (
@@ -754,12 +754,12 @@ export default function UnitsTable({ projectId }: Props) {
                               if (e.key === "Escape") setEditingPriceId(null);
                             }}
                             disabled={savingPrice}
-                            className="w-28 px-2 py-1 border border-blue-400 rounded text-right text-xs font-semibold bg-blue-50"
+                            className="w-28 px-2 py-1 border border-primary/40 rounded text-right text-xs font-semibold bg-info-soft"
                           />
                         ) : (
                           <button
                             onClick={() => { setEditingPriceId(unit.id); setEditingPrice(unit.price.toString()); }}
-                            className="font-semibold text-slate-800 hover:text-blue-600 hover:underline text-xs"
+                            className="font-semibold text-foreground hover:text-primary hover:underline text-xs"
                             title="Click to edit price"
                           >
                             {unit.price.toLocaleString("en-AE")}
@@ -777,7 +777,7 @@ export default function UnitsTable({ projectId }: Props) {
                     )}
 
                     {isVisible("agent") && (
-                      <td className="px-4 py-3 text-xs text-slate-500" style={{ minWidth: 140 }}>
+                      <td className="px-4 py-3 text-xs text-muted-foreground" style={{ minWidth: 140 }}>
                         {unit.assignedAgentId ? agentMap[unit.assignedAgentId] || "—" : "—"}
                       </td>
                     )}
@@ -789,7 +789,7 @@ export default function UnitsTable({ projectId }: Props) {
                           {canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingUnit(unit); }}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              className="text-xs text-primary hover:text-primary font-medium"
                             >
                               Edit
                             </button>

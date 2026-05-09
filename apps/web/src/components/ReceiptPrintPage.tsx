@@ -32,9 +32,9 @@ const METHOD_LABEL: Record<string, string> = {
 };
 
 const Row = ({ label, value, bold }: { label: string; value: string; bold?: boolean }) => (
-  <div className="flex justify-between py-2.5 border-b border-slate-100 text-sm">
-    <span className="text-slate-500">{label}</span>
-    <span className={bold ? "font-bold text-slate-900" : "font-semibold text-slate-800"}>{value}</span>
+  <div className="flex justify-between py-2.5 border-b border-border text-sm">
+    <span className="text-muted-foreground">{label}</span>
+    <span className={bold ? "font-bold text-foreground" : "font-semibold text-foreground"}>{value}</span>
   </div>
 );
 
@@ -90,33 +90,33 @@ export default function ReceiptPrintPage() {
   }, [data, autoPrint]);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
-      <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex items-center justify-center min-h-screen bg-card">
+      <div className="w-8 h-8 border-2 border-success/30 border-t-transparent rounded-full animate-spin" />
     </div>
   );
   if (error || !data) return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
-      <p className="text-red-600">{error || "Receipt not found"}</p>
+    <div className="flex items-center justify-center min-h-screen bg-card">
+      <p className="text-destructive">{error || "Receipt not found"}</p>
     </div>
   );
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-card min-h-screen">
       {/* Toolbar */}
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
         <button onClick={() => window.print()}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 shadow-lg">
+          className="px-4 py-2 bg-success text-white text-sm font-semibold rounded-lg hover:bg-success/90 shadow-lg">
           Download / Print PDF
         </button>
         <button onClick={() => window.close()}
-          className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 shadow-lg">
+          className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted shadow-lg">
           Close
         </button>
       </div>
 
       {docVersion !== null && (
         <div className="print:hidden fixed top-4 left-4 z-50">
-          <span className="px-3 py-1.5 text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-300 rounded-lg shadow">
+          <span className="px-3 py-1.5 text-xs font-semibold bg-warning-soft text-warning border border-warning/30 rounded-lg shadow">
             Viewing v{docVersion} — frozen at generation time
           </span>
         </div>
@@ -124,33 +124,33 @@ export default function ReceiptPrintPage() {
 
       <div className="max-w-2xl mx-auto px-8 py-12 print:py-8 print:px-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-emerald-700">
+        <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-success/30">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">PAYMENT RECEIPT</h1>
-            <p className="text-sm text-slate-500 mt-1">{data.projectDetails.name} — {data.projectDetails.location}</p>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">PAYMENT RECEIPT</h1>
+            <p className="text-sm text-muted-foreground mt-1">{data.projectDetails.name} — {data.projectDetails.location}</p>
           </div>
-          <div className="text-right text-sm text-slate-500 space-y-1">
-            <p className="font-semibold text-slate-700">Date: {today()}</p>
-            <p className="font-mono text-xs text-slate-400">{data.dealNumber}</p>
+          <div className="text-right text-sm text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">Date: {today()}</p>
+            <p className="font-mono text-xs text-muted-foreground">{data.dealNumber}</p>
             {data.paidDate && (
-              <p className="text-xs font-medium text-emerald-700">Paid: {fmtDate(data.paidDate)}</p>
+              <p className="text-xs font-medium text-success">Paid: {fmtDate(data.paidDate)}</p>
             )}
           </div>
         </div>
 
         {/* Confirmation badge */}
-        <div className="mb-6 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-          <span className="text-emerald-600 text-xl">✓</span>
+        <div className="mb-6 flex items-center gap-3 bg-success-soft border border-success/30 rounded-xl px-4 py-3">
+          <span className="text-success text-xl">✓</span>
           <div>
-            <p className="text-sm font-bold text-emerald-800">Payment Confirmed</p>
-            <p className="text-xs text-emerald-600">This receipt confirms that the payment below has been received.</p>
+            <p className="text-sm font-bold text-success-soft-foreground">Payment Confirmed</p>
+            <p className="text-xs text-success">This receipt confirms that the payment below has been received.</p>
           </div>
         </div>
 
         {/* Buyer */}
         <div className="mb-6">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Received From</h2>
-          <div className="bg-slate-50 rounded-xl p-4">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Received From</h2>
+          <div className="bg-muted/50 rounded-xl p-4">
             <Row label="Buyer Name" value={data.buyerDetails.name} bold />
             <Row label="Phone"      value={data.buyerDetails.phone} />
             {data.buyerDetails.email && <Row label="Email" value={data.buyerDetails.email} />}
@@ -159,8 +159,8 @@ export default function ReceiptPrintPage() {
 
         {/* Unit */}
         <div className="mb-6">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Property Details</h2>
-          <div className="bg-slate-50 rounded-xl p-4">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Property Details</h2>
+          <div className="bg-muted/50 rounded-xl p-4">
             <Row label="Unit"    value={data.unitDetails.unitNumber} bold />
             <Row label="Type"    value={TYPE_LABEL[data.unitDetails.type] ?? data.unitDetails.type} />
             <Row label="Floor"   value={`Floor ${data.unitDetails.floor}`} />
@@ -170,34 +170,34 @@ export default function ReceiptPrintPage() {
 
         {/* Payment details */}
         <div className="mb-8">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Details</h2>
-          <div className="bg-slate-50 rounded-xl p-4">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Payment Details</h2>
+          <div className="bg-muted/50 rounded-xl p-4">
             <Row label="Description"     value={data.milestoneLabel} />
             <Row label="Payment Method"  value={METHOD_LABEL[data.paymentMethod] ?? data.paymentMethod} />
             {data.paidDate && <Row label="Payment Date" value={fmtDate(data.paidDate)} />}
             {data.receiptKey && <Row label="Reference" value={data.receiptKey} />}
-            <div className="flex justify-between pt-3 mt-1 border-t-2 border-emerald-200 text-sm">
-              <span className="font-bold text-slate-700 text-base">Amount Received</span>
-              <span className="font-bold text-emerald-700 text-base">{fmtAED(data.amount)}</span>
+            <div className="flex justify-between pt-3 mt-1 border-t-2 border-success/30 text-sm">
+              <span className="font-bold text-foreground text-base">Amount Received</span>
+              <span className="font-bold text-success text-base">{fmtAED(data.amount)}</span>
             </div>
           </div>
         </div>
 
         {/* Signature */}
-        <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 break-inside-avoid">
+        <div className="grid grid-cols-2 gap-8 pt-6 border-t border-border break-inside-avoid">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Authorized By</p>
-            <div className="border-b border-slate-400 h-10 mb-2" />
-            <p className="text-xs text-slate-400">Developer Representative</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Authorized By</p>
+            <div className="border-b border-border h-10 mb-2" />
+            <p className="text-xs text-muted-foreground">Developer Representative</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Received By</p>
-            <div className="border-b border-slate-400 h-10 mb-2" />
-            <p className="text-xs text-slate-400">{data.buyerDetails.name}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Received By</p>
+            <div className="border-b border-border h-10 mb-2" />
+            <p className="text-xs text-muted-foreground">{data.buyerDetails.name}</p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-300 mt-10 print:mt-6">
+        <p className="text-center text-xs text-foreground/80 mt-10 print:mt-6">
           Generated {today()} · {data.dealNumber}{docVersion !== null ? ` · v${docVersion}` : ""}
         </p>
       </div>

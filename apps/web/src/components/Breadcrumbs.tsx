@@ -17,16 +17,16 @@ interface Props {
 
 const STYLES = {
   dark: {
-    sep: "text-slate-500",
-    link: "text-blue-400 hover:text-blue-300",
-    current: "text-slate-200",
-    other: "text-slate-400",
+    sep: "text-muted-foreground",
+    link: "text-primary hover:text-primary",
+    current: "text-foreground",
+    other: "text-muted-foreground",
   },
   light: {
-    sep: "text-slate-300",
-    link: "text-blue-600 hover:text-blue-700",
-    current: "text-slate-800",
-    other: "text-slate-500",
+    sep: "text-foreground/80",
+    link: "text-primary hover:text-primary",
+    current: "text-foreground",
+    other: "text-muted-foreground",
   },
 };
 

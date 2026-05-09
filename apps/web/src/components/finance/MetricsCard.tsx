@@ -30,9 +30,9 @@ export default function MetricsCard({
   className = "",
 }: MetricsCardProps) {
   const trendClass = {
-    up: "text-emerald-600 bg-emerald-50",
-    down: "text-red-600 bg-red-50",
-    stable: "text-slate-600 bg-slate-50",
+    up: "text-success bg-success-soft",
+    down: "text-destructive bg-destructive-soft",
+    stable: "text-muted-foreground bg-muted/50",
   };
 
   const trendIcon = {
@@ -45,23 +45,23 @@ export default function MetricsCard({
     <div
       onClick={onClick}
       className={`
-        bg-white border border-slate-200 rounded-lg p-6 transition-all
-        ${onClick ? "cursor-pointer hover:shadow-md hover:border-slate-300" : ""}
+        bg-card border border-border rounded-lg p-6 transition-all
+        ${onClick ? "cursor-pointer hover:shadow-md hover:border-border" : ""}
         ${className}
       `}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{label}</h3>
-        {icon && <div className="text-xl text-slate-400">{icon}</div>}
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</h3>
+        {icon && <div className="text-xl text-muted-foreground">{icon}</div>}
       </div>
 
       {/* Main Value */}
-      <p className="text-2xl font-bold text-slate-900 mb-2">{value}</p>
+      <p className="text-2xl font-bold text-foreground mb-2">{value}</p>
 
       {/* Subtext + Trend */}
       <div className="flex items-center justify-between">
-        {subtext && <p className="text-xs text-slate-600">{subtext}</p>}
+        {subtext && <p className="text-xs text-muted-foreground">{subtext}</p>}
         {trend && (
           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${trendClass[trend]}`}>
             <span>{trendIcon[trend]}</span>

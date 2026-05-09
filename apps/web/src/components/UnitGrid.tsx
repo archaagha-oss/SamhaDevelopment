@@ -95,34 +95,34 @@ export default function UnitGrid({
 
       {/* ─── Status legend ─── */}
       <div className="flex items-center gap-2 flex-wrap text-xs">
-        <span className="text-slate-400 font-semibold uppercase tracking-wide mr-1">Legend</span>
+        <span className="text-muted-foreground font-semibold uppercase tracking-wide mr-1">Legend</span>
         {STATUS_ORDER.map((s) => (
           <span
             key={s}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-slate-200 bg-white"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border bg-card"
             title={statusLabels[s] || s}
           >
-            <span className={`w-2.5 h-2.5 rounded-sm ${statusColors[s] || "bg-slate-200"}`} />
-            <span className="font-medium text-slate-700">{statusLabels[s] || s}</span>
-            <span className="text-slate-400">{countsByStatus[s] ?? 0}</span>
+            <span className={`w-2.5 h-2.5 rounded-sm ${statusColors[s] || "bg-neutral-200"}`} />
+            <span className="font-medium text-foreground">{statusLabels[s] || s}</span>
+            <span className="text-muted-foreground">{countsByStatus[s] ?? 0}</span>
           </span>
         ))}
       </div>
 
       {/* ─── Floor tabs ─── */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-200 pb-1.5">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-border pb-1.5">
         <button
           type="button"
           onClick={() => setActiveFloor("ALL")}
           className={`px-3 py-1.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
             activeFloor === "ALL"
-              ? "bg-blue-600 text-white"
-              : "text-slate-600 hover:bg-slate-100"
+              ? "bg-primary text-white"
+              : "text-muted-foreground hover:bg-muted"
           }`}
         >
           All floors <span className="opacity-70 ml-1">{units.length}</span>
         </button>
-        <div className="h-4 w-px bg-slate-200 mx-1" />
+        <div className="h-4 w-px bg-neutral-200 mx-1" />
         {floors.map((f) => (
           <button
             key={f}
@@ -130,8 +130,8 @@ export default function UnitGrid({
             onClick={() => setActiveFloor(f)}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
               activeFloor === f
-                ? "bg-blue-600 text-white"
-                : "text-slate-600 hover:bg-slate-100"
+                ? "bg-primary text-white"
+                : "text-muted-foreground hover:bg-muted"
             }`}
           >
             Floor {f} <span className="opacity-70 ml-1">{countsByFloor[f] ?? 0}</span>
@@ -143,14 +143,14 @@ export default function UnitGrid({
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-900 w-20 sticky left-0 bg-gray-50">
+            <tr className="bg-muted/50">
+              <th className="border border-border px-4 py-2 text-left text-sm font-semibold text-foreground w-20 sticky left-0 bg-muted/50">
                 Floor
               </th>
               {Array.from({ length: maxUnitsPerFloor }).map((_, i) => (
                 <th
                   key={i}
-                  className="border border-gray-200 px-2 py-2 text-center text-xs font-semibold text-gray-500 w-14"
+                  className="border border-border px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-14"
                 >
                   {String(i + 1).padStart(2, "0")}
                 </th>
@@ -159,21 +159,21 @@ export default function UnitGrid({
           </thead>
           <tbody>
             {visibleFloors.map((floor) => (
-              <tr key={floor} className="hover:bg-gray-50/40">
-                <td className="border border-gray-200 px-4 py-2 font-semibold text-gray-900 bg-gray-50 sticky left-0">
+              <tr key={floor} className="hover:bg-muted/40">
+                <td className="border border-border px-4 py-2 font-semibold text-foreground bg-muted/50 sticky left-0">
                   F{floor}
                 </td>
                 {Array.from({ length: maxUnitsPerFloor }).map((_, i) => {
                   const expectedNumber = `${floor}-${String(i + 1).padStart(2, "0")}`;
                   const unit = units.find((u) => u.unitNumber === expectedNumber);
                   return (
-                    <td key={`${floor}-${i}`} className="border border-gray-200 p-1">
+                    <td key={`${floor}-${i}`} className="border border-border p-1">
                       {unit ? (
                         <button
                           type="button"
                           onClick={() => openUnit(unit)}
-                          className={`w-full h-12 rounded font-semibold text-white text-[11px] hover:shadow-md hover:ring-2 hover:ring-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all cursor-pointer ${
-                            statusColors[unit.status] || "bg-gray-200"
+                          className={`w-full h-12 rounded font-semibold text-white text-[11px] hover:shadow-md hover:ring-2 hover:ring-ring focus:outline-none focus:ring-2 focus:ring-ring transition-all cursor-pointer ${
+                            statusColors[unit.status] || "bg-neutral-200"
                           }`}
                           title={`${unit.unitNumber} · ${unit.type.replace(/_/g, " ")} · ${statusLabels[unit.status] ?? unit.status}`}
                           aria-label={`Open unit ${unit.unitNumber} (${statusLabels[unit.status] ?? unit.status})`}
@@ -181,7 +181,7 @@ export default function UnitGrid({
                           {unit.unitNumber}
                         </button>
                       ) : (
-                        <div className="w-full h-12 bg-gray-50 rounded border border-dashed border-gray-200" />
+                        <div className="w-full h-12 bg-muted/50 rounded border border-dashed border-border" />
                       )}
                     </td>
                   );

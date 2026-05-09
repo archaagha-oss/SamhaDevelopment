@@ -2,67 +2,65 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-type Tone =
-  | "neutral"
-  | "blue"
-  | "indigo"
-  | "violet"
-  | "purple"
-  | "cyan"
-  | "amber"
-  | "orange"
-  | "emerald"
-  | "green"
-  | "red";
+// Semantic tones — map directly to design tokens (--stage-*).
+// See: design-system/MASTER.md
+export type StageTone =
+  | "neutral"      // pre-action, idle (NEW, NOT_RELEASED)
+  | "progress"     // early forward motion (CONTACTED) — brand-tinted
+  | "active"       // mid-flow (QUALIFIED, SPA_SIGNED) — violet-tinted
+  | "info"         // viewing/booked/installments — info-tinted
+  | "attention"    // needs action (NEGOTIATING, OQOOD_PENDING) — warning
+  | "success"      // done well (CLOSED_WON, COMPLETED)
+  | "danger";      // failed (CLOSED_LOST, CANCELLED)
 
-const TONE_CLASS: Record<Tone, string> = {
-  neutral: "bg-muted text-muted-foreground",
-  blue: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  indigo: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
-  violet: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
-  purple: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
-  cyan: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
-  amber: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  orange: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
-  emerald: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  green: "bg-green-500/15 text-green-700 dark:text-green-400",
-  red: "bg-red-500/15 text-red-700 dark:text-red-400",
+const TONE_CLASS: Record<StageTone, string> = {
+  neutral:   "bg-stage-neutral text-stage-neutral-foreground",
+  progress:  "bg-stage-progress text-stage-progress-foreground",
+  active:    "bg-stage-active text-stage-active-foreground",
+  info:      "bg-stage-info text-stage-info-foreground",
+  attention: "bg-stage-attention text-stage-attention-foreground",
+  success:   "bg-stage-success text-stage-success-foreground",
+  danger:    "bg-stage-danger text-stage-danger-foreground",
 };
 
-export const LEAD_STAGE_TONE: Record<string, Tone> = {
-  NEW: "neutral",
-  CONTACTED: "blue",
-  QUALIFIED: "indigo",
-  OFFER_SENT: "violet",
-  SITE_VISIT: "cyan",
-  NEGOTIATING: "amber",
-  CLOSED_WON: "emerald",
-  CLOSED_LOST: "red",
+export const LEAD_STAGE_TONE: Record<string, StageTone> = {
+  NEW:           "neutral",
+  CONTACTED:     "progress",
+  QUALIFIED:     "active",
+  VIEWING:       "info",
+  PROPOSAL:      "active",
+  NEGOTIATING:   "attention",
+  CLOSED_WON:    "success",
+  CLOSED_LOST:   "danger",
 };
 
-export const DEAL_STAGE_TONE: Record<string, Tone> = {
-  RESERVATION_PENDING: "neutral",
-  RESERVATION_CONFIRMED: "blue",
-  SPA_PENDING: "violet",
-  SPA_SENT: "violet",
-  SPA_SIGNED: "purple",
-  OQOOD_PENDING: "amber",
-  OQOOD_REGISTERED: "emerald",
-  INSTALLMENTS_ACTIVE: "cyan",
-  HANDOVER_PENDING: "orange",
-  COMPLETED: "green",
-  CANCELLED: "red",
+export const DEAL_STAGE_TONE: Record<string, StageTone> = {
+  RESERVATION_PENDING:    "neutral",
+  RESERVATION_CONFIRMED:  "progress",
+  SPA_PENDING:            "attention",
+  SPA_SENT:               "attention",
+  SPA_SIGNED:             "active",
+  OQOOD_PENDING:          "attention",
+  OQOOD_REGISTERED:       "info",
+  INSTALLMENTS_ACTIVE:    "info",
+  HANDOVER_PENDING:       "success",
+  COMPLETED:              "success",
+  CANCELLED:              "danger",
 };
 
-export const LEAD_STAGE_HEX: Record<string, string> = {
-  NEW: "#64748b",
-  CONTACTED: "#3b82f6",
-  QUALIFIED: "#6366f1",
-  OFFER_SENT: "#8b5cf6",
-  SITE_VISIT: "#06b6d4",
-  NEGOTIATING: "#f59e0b",
-  CLOSED_WON: "#10b981",
-  CLOSED_LOST: "#ef4444",
+// Chart-series color CSS variables for recharts/chart libs.
+// Use as: `hsl(var(${LEAD_STAGE_CHART_VAR.NEW}))`
+// Note: QUALIFIED/PROPOSAL follow the secondary brand axis (--brand2-500) so
+// stage charts re-skin when the user picks a new secondary color.
+export const LEAD_STAGE_CHART_VAR: Record<string, string> = {
+  NEW:           "--neutral-400",
+  CONTACTED:     "--chart-1",
+  QUALIFIED:     "--brand2-500",
+  VIEWING:       "--chart-5",
+  PROPOSAL:      "--brand2-500",
+  NEGOTIATING:   "--chart-3",
+  CLOSED_WON:    "--success",
+  CLOSED_LOST:   "--chart-6",
 };
 
 export interface StageBadgeProps

@@ -108,28 +108,28 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-semibold text-slate-900 text-sm">{ACTION_TITLES[action]}</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-semibold text-foreground text-sm">{ACTION_TITLES[action]}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {payment.deal.dealNumber} · {payment.deal.lead.firstName} {payment.deal.lead.lastName} · {payment.deal.unit.unitNumber}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
         </div>
 
         {/* Payment info bar */}
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-500">{payment.milestoneLabel}</span>
-          <span className="text-sm font-bold text-slate-800">AED {payment.amount.toLocaleString()}</span>
+        <div className="px-6 py-3 bg-muted/50 border-b border-border flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">{payment.milestoneLabel}</span>
+          <span className="text-sm font-bold text-foreground">AED {payment.amount.toLocaleString()}</span>
         </div>
 
         {/* Form body */}
         <div className="px-6 py-5 space-y-4">
           {isConfirmOnly && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               {action === "PDC_CLEARED"
                 ? "Confirm that the post-dated cheque has been cleared by the bank."
                 : "Mark this PDC as bounced. The payment will return to an actionable state."}
@@ -139,26 +139,26 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "MARK_PAID" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Paid Date *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Paid Date *</label>
                 <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Payment Method *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Payment Method *</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                   {PAYMENT_METHODS.map((m) => <option key={m}>{m.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Paid By *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Paid By *</label>
                 <input type="text" value={paidBy} onChange={(e) => setPaidBy(e.target.value)} placeholder="Name or reference"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Notes</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Optional"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </>
           )}
@@ -166,19 +166,19 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "MARK_PDC" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Cheque Number</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Cheque Number</label>
                 <input type="text" value={pdcNumber} onChange={(e) => setPdcNumber(e.target.value)} placeholder="e.g. 001234"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Bank</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Bank</label>
                 <input type="text" value={pdcBank} onChange={(e) => setPdcBank(e.target.value)} placeholder="e.g. Emirates NBD"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Cheque Date</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Cheque Date</label>
                 <input type="date" value={pdcDate} onChange={(e) => setPdcDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </>
           )}
@@ -186,22 +186,22 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "PARTIAL" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Amount (AED) *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Amount (AED) *</label>
                 <input type="number" value={partialAmount} onChange={(e) => setPartialAmount(e.target.value)}
                   placeholder={`Max: ${payment.amount.toLocaleString()}`} min={1} max={payment.amount}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Payment Method</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Payment Method</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                   {PAYMENT_METHODS.map((m) => <option key={m}>{m.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Notes</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Optional"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </>
           )}
@@ -209,14 +209,14 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "ADJUST_DATE" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">New Due Date *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">New Due Date *</label>
                 <input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Reason *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Reason *</label>
                 <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Why is the date being adjusted?"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </>
           )}
@@ -224,35 +224,35 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "ADJUST_AMOUNT" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">New Amount (AED) *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">New Amount (AED) *</label>
                 <input type="number" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} min={1}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Reason *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Reason *</label>
                 <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Why is the amount being adjusted?"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </>
           )}
 
           {action === "WAIVE" && (
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Reason for waiving *</label>
+              <label className="block text-xs font-medium text-foreground mb-1">Reason for waiving *</label>
               <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
                 placeholder="Provide a clear reason for waiving this payment"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">{error}</div>
+            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">{error}</div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 transition-colors">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             Cancel
           </button>
           <button
@@ -260,8 +260,8 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
             disabled={loading}
             className={`px-5 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
               action === "WAIVE" || action === "PDC_BOUNCED"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
+                ? "bg-destructive hover:bg-destructive/90 text-white"
+                : "bg-primary hover:bg-primary/90 text-white"
             }`}
           >
             {loading ? "Processing..." : isConfirmOnly ? "Confirm" : "Submit"}

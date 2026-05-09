@@ -17,19 +17,19 @@ export default function CommissionUnlockStatus({
   const isApproved = status === "APPROVED";
 
   const statusColors = {
-    NOT_DUE: "bg-gray-100 text-gray-800",
-    PENDING_APPROVAL: "bg-yellow-100 text-yellow-800",
-    APPROVED: "bg-blue-100 text-blue-800",
-    PAID: "bg-green-100 text-green-800",
-    CANCELLED: "bg-red-100 text-red-800",
+    NOT_DUE: "bg-muted text-foreground",
+    PENDING_APPROVAL: "bg-warning-soft text-warning-soft-foreground",
+    APPROVED: "bg-info-soft text-primary",
+    PAID: "bg-success-soft text-success-soft-foreground",
+    CANCELLED: "bg-destructive-soft text-destructive-soft-foreground",
   };
 
   return (
-    <div className="p-4 rounded-lg border border-purple-200 bg-purple-50">
+    <div className="p-4 rounded-lg border border-chart-7/30 bg-chart-7/10">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <p className="text-sm font-semibold text-gray-700">Broker Commission</p>
-          <p className="text-2xl font-bold text-purple-700">
+          <p className="text-sm font-semibold text-foreground">Broker Commission</p>
+          <p className="text-2xl font-bold text-chart-7">
             {amount.toLocaleString()} AED
           </p>
         </div>
@@ -47,14 +47,14 @@ export default function CommissionUnlockStatus({
           <div
             className={`w-5 h-5 rounded border flex items-center justify-center ${
               spaSignedMet
-                ? "bg-green-500 border-green-600"
-                : "bg-gray-200 border-gray-300"
+                ? "bg-success border-success/30"
+                : "bg-neutral-200 border-border"
             }`}
           >
             {spaSignedMet && <span className="text-white text-xs">✓</span>}
           </div>
           <span className="text-sm">
-            SPA Signed <span className="text-gray-600">(Sales Purchase Agreement)</span>
+            SPA Signed <span className="text-muted-foreground">(Sales Purchase Agreement)</span>
           </span>
         </div>
 
@@ -62,24 +62,24 @@ export default function CommissionUnlockStatus({
           <div
             className={`w-5 h-5 rounded border flex items-center justify-center ${
               oqoodRegisteredMet
-                ? "bg-green-500 border-green-600"
-                : "bg-gray-200 border-gray-300"
+                ? "bg-success border-success/30"
+                : "bg-neutral-200 border-border"
             }`}
           >
             {oqoodRegisteredMet && <span className="text-white text-xs">✓</span>}
           </div>
           <span className="text-sm">
-            Oqood Registered <span className="text-gray-600">(UAE Property Registration)</span>
+            Oqood Registered <span className="text-muted-foreground">(UAE Property Registration)</span>
           </span>
         </div>
       </div>
 
       {!isUnlocked && (
-        <div className="bg-white rounded p-3 border border-gray-200">
-          <p className="text-xs font-semibold text-gray-700 mb-2">
+        <div className="bg-card rounded p-3 border border-border">
+          <p className="text-xs font-semibold text-foreground mb-2">
             Commission will unlock when both conditions are met:
           </p>
-          <ul className="text-xs text-gray-600 space-y-1">
+          <ul className="text-xs text-muted-foreground space-y-1">
             <li>
               {spaSignedMet ? "✅" : "⭕"} SPA (Sales Purchase Agreement) is signed
             </li>
@@ -91,17 +91,17 @@ export default function CommissionUnlockStatus({
       )}
 
       {isUnlocked && (
-        <div className="bg-green-50 border border-green-200 rounded p-3">
-          <p className="text-xs font-semibold text-green-800">
+        <div className="bg-success-soft border border-success/30 rounded p-3">
+          <p className="text-xs font-semibold text-success-soft-foreground">
             ✅ All conditions met! Commission is unlocked.
           </p>
           {isApproved && (
-            <p className="text-xs text-green-700 mt-1">
+            <p className="text-xs text-success mt-1">
               Approved and ready for payment.
             </p>
           )}
           {isPaid && (
-            <p className="text-xs text-green-700 mt-1">
+            <p className="text-xs text-success mt-1">
               Commission has been paid.
             </p>
           )}

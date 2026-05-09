@@ -50,8 +50,8 @@ const emptyAgentForm = (): AgentForm => ({
   eidNo: "", eidExpiry: "", acceptedConsent: false,
 });
 
-const INPUT_CLS = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400";
-const LABEL_CLS = "text-xs text-slate-600 mb-1 block font-medium";
+const INPUT_CLS = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring";
+const LABEL_CLS = "text-xs text-muted-foreground mb-1 block font-medium";
 
 function FileUploadField({
   label, value, onChange, accept = "image/jpeg,image/png,application/pdf",
@@ -92,7 +92,7 @@ function FileUploadField({
       <button
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
+        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card hover:bg-muted/50 transition-colors disabled:opacity-50"
       >
         {value ? "✓ Uploaded" : uploading ? "Uploading…" : "Choose File"}
       </button>
@@ -178,12 +178,12 @@ export default function BrokerOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
+    <div className="min-h-screen bg-muted/50 py-12">
       <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900">Broker Onboarding</h1>
-          <p className="text-slate-600 mt-2">Complete registration in 3 steps</p>
+          <h1 className="text-4xl font-bold text-foreground">Broker Onboarding</h1>
+          <p className="text-muted-foreground mt-2">Complete registration in 3 steps</p>
         </div>
 
         {/* Progress Bar */}
@@ -193,13 +193,13 @@ export default function BrokerOnboarding() {
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                   step >= s
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-200 text-slate-600"
+                    ? "bg-primary text-white"
+                    : "bg-neutral-200 text-muted-foreground"
                 }`}
               >
                 {step > s ? "✓" : s}
               </div>
-              <span className={`text-sm font-medium ${step >= s ? "text-slate-900" : "text-slate-500"}`}>
+              <span className={`text-sm font-medium ${step >= s ? "text-foreground" : "text-muted-foreground"}`}>
                 {s === 1 && "Company"}
                 {s === 2 && "Agents"}
                 {s === 3 && "Complete"}
@@ -210,8 +210,8 @@ export default function BrokerOnboarding() {
 
         {/* Step 1: Company Info */}
         {step === 1 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Company Details</h2>
+          <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Company Details</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
@@ -268,7 +268,7 @@ export default function BrokerOnboarding() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 mt-8">Compliance Documents</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Compliance Documents</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <label className={LABEL_CLS}>RERA License Number *</label>
@@ -331,7 +331,7 @@ export default function BrokerOnboarding() {
               />
             </div>
 
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 mt-8">Bank Details</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Bank Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={LABEL_CLS}>Bank Name</label>
@@ -379,7 +379,7 @@ export default function BrokerOnboarding() {
               <button
                 onClick={handleSubmitCompany}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
+                className="flex-1 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:bg-neutral-300 transition-colors"
               >
                 {saving ? "Saving…" : "Continue to Agents"}
               </button>
@@ -389,12 +389,12 @@ export default function BrokerOnboarding() {
 
         {/* Step 2: Agents */}
         {step === 2 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Register Agents</h2>
+          <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Register Agents</h2>
 
             {/* Add Agent Form */}
-            <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-900 mb-4">Add Agent</h3>
+            <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Add Agent</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className={LABEL_CLS}>First Name *</label>
@@ -482,11 +482,11 @@ export default function BrokerOnboarding() {
                   onChange={(e) => handleAgentChange("acceptedConsent", e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="text-xs text-slate-600">I accept the terms and conditions</span>
+                <span className="text-xs text-muted-foreground">I accept the terms and conditions</span>
               </label>
               <button
                 onClick={handleAddAgent}
-                className="w-full px-4 py-2 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                className="w-full px-4 py-2 bg-info-soft text-primary font-medium rounded-lg hover:bg-info/30 transition-colors"
               >
                 + Add Agent
               </button>
@@ -495,17 +495,17 @@ export default function BrokerOnboarding() {
             {/* Added Agents List */}
             {agents.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Registered Agents ({agents.length})</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Registered Agents ({agents.length})</h3>
                 <div className="space-y-2">
                   {agents.map((a, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-200">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded border border-border">
                       <div>
-                        <p className="font-medium text-slate-900">{a.firstName} {a.lastName}</p>
-                        <p className="text-xs text-slate-600">{a.email}</p>
+                        <p className="font-medium text-foreground">{a.firstName} {a.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{a.email}</p>
                       </div>
                       <button
                         onClick={() => handleRemoveAgent(idx)}
-                        className="px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors text-sm font-medium"
+                        className="px-3 py-1 text-destructive hover:bg-destructive-soft rounded transition-colors text-sm font-medium"
                       >
                         Remove
                       </button>
@@ -518,14 +518,14 @@ export default function BrokerOnboarding() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-border text-foreground font-medium rounded-lg hover:bg-muted/50 transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={handleSubmitAgents}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
+                className="flex-1 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:bg-neutral-300 transition-colors"
               >
                 {saving ? "Saving…" : "Continue"}
               </button>
@@ -535,16 +535,16 @@ export default function BrokerOnboarding() {
 
         {/* Step 3: Complete */}
         {step === 3 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm text-center">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+          <div className="bg-card rounded-xl border border-border p-8 shadow-sm text-center">
+            <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
               ✓
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Onboarding Complete!</h2>
-            <p className="text-slate-600 mb-8">Your broker company and agents have been successfully registered.</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding Complete!</h2>
+            <p className="text-muted-foreground mb-8">Your broker company and agents have been successfully registered.</p>
 
-            <div className="bg-slate-50 rounded-lg p-4 mb-8 text-left">
-              <h3 className="font-semibold text-slate-900 mb-2">What's Next?</h3>
-              <ul className="text-sm text-slate-700 space-y-1">
+            <div className="bg-muted/50 rounded-lg p-4 mb-8 text-left">
+              <h3 className="font-semibold text-foreground mb-2">What's Next?</h3>
+              <ul className="text-sm text-foreground space-y-1">
                 <li>✓ Company and {agents.length} agent(s) registered</li>
                 <li>✓ RERA and compliance documents stored</li>
                 <li>✓ Bank details configured for commission payouts</li>
@@ -555,7 +555,7 @@ export default function BrokerOnboarding() {
 
             <button
               onClick={handleComplete}
-              className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors"
             >
               Go to Broker Management
             </button>

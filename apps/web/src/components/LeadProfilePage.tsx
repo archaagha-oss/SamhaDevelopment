@@ -75,9 +75,9 @@ const ACTIVITY_ICON: Record<string, string> = {
 
 const SOURCE_OPTIONS = ["DIRECT", "BROKER", "WEBSITE", "REFERRAL"] as const;
 
-const inputCls  = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400";
-const primaryBtn = "px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50";
-const cancelBtn  = "px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm";
+const inputCls  = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring";
+const primaryBtn = "px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50";
+const cancelBtn  = "px-4 py-2 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm";
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
@@ -96,10 +96,10 @@ function timeAgo(dateStr: string): string {
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl my-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800 text-base">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl my-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="font-semibold text-foreground text-base">{title}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
@@ -664,7 +664,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
   if (loading || !lead) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
@@ -672,24 +672,24 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const inactiveDeals = lead.deals?.filter((d) => !d.isActive) ?? [];
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <Breadcrumbs crumbs={[
         { label: "Leads", path: "/leads" },
         { label: lead ? `${lead.firstName} ${lead.lastName}` : "Lead" },
       ]} />
 
       {/* Profile header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
+            <div className="w-14 h-14 bg-info-soft rounded-2xl flex items-center justify-center text-primary font-bold text-xl flex-shrink-0">
               {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{lead.firstName} {lead.lastName}</h1>
+              <h1 className="text-xl font-bold text-foreground">{lead.firstName} {lead.lastName}</h1>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className="text-sm text-slate-500">{lead.phone}</span>
-                {lead.email && <span className="text-sm text-slate-400">{lead.email}</span>}
+                <span className="text-sm text-muted-foreground">{lead.phone}</span>
+                {lead.email && <span className="text-sm text-muted-foreground">{lead.email}</span>}
               </div>
             </div>
           </div>
@@ -705,14 +705,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 {validTransitions.length > 0 && <span className="text-xs text-muted-foreground">▾</span>}
               </button>
               {showStagePopover && validTransitions.length > 0 && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 w-56 p-3 space-y-2">
-                  <p className="text-xs font-medium text-slate-500 mb-2">Move to:</p>
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-20 w-56 p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Move to:</p>
                   {validTransitions.map((s) => (
                     <button
                       key={s}
                       onClick={() => handleStageChange(s)}
                       disabled={changingStage}
-                      className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-slate-50 text-slate-700 disabled:opacity-50"
+                      className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50 text-foreground disabled:opacity-50"
                     >
                       {s.replace(/_/g, " ")}
                     </button>
@@ -721,11 +721,11 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                     placeholder="Reason (optional)"
                     value={stageReason}
                     onChange={(e) => setStageReason(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:outline-none focus:border-blue-400 mt-1"
+                    className="w-full border border-border rounded-lg px-2.5 py-1.5 text-xs bg-muted/50 focus:outline-none focus:border-ring mt-1"
                   />
                   <button
                     onClick={() => setShowStagePopover(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600 mt-1"
+                    className="text-xs text-muted-foreground hover:text-foreground mt-1"
                   >
                     Cancel
                   </button>
@@ -733,19 +733,19 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               )}
             </div>
 
-            <button onClick={() => setShowEditForm(true)} className="px-3 py-1.5 text-sm text-slate-600 font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
+            <button onClick={() => setShowEditForm(true)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
               Edit
             </button>
             <button
               onClick={openCreateDealModal}
-              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 flex items-center gap-1.5"
             >
               Create Deal
             </button>
-            <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 text-sm text-slate-500 font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
+            <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
               Advanced
             </button>
-            <button onClick={handleDelete} disabled={deleting} className="px-3 py-1.5 text-sm text-red-500 font-medium border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50">
+            <button onClick={handleDelete} disabled={deleting} className="px-3 py-1.5 text-sm text-destructive font-medium border border-destructive/30 rounded-lg hover:bg-destructive-soft disabled:opacity-50">
               {deleting ? "Deleting…" : "Delete"}
             </button>
           </div>
@@ -753,7 +753,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       </div>
 
       {/* Tabs: Offers / Deals / Activity */}
-      <div className="border-b border-slate-200 flex items-center gap-1">
+      <div className="border-b border-border flex items-center gap-1">
         {([
           { key: "offers",   label: "Offers",   count: offers.length },
           { key: "deals",    label: "Deals",    count: lead.deals?.length ?? 0 },
@@ -764,12 +764,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === t.key
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-primary/40 text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
-            <span className={`ml-1.5 text-[11px] ${activeTab === t.key ? "text-blue-500" : "text-slate-400"}`}>
+            <span className={`ml-1.5 text-[11px] ${activeTab === t.key ? "text-primary" : "text-muted-foreground"}`}>
               ({t.count})
             </span>
           </button>
@@ -780,8 +780,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         {/* Left column */}
         <div className="space-y-4">
           {/* Lead info */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Lead Info</h3>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead Info</h3>
             <div className="space-y-2.5">
               {[
                 ["Source",      lead.source],
@@ -790,33 +790,33 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 ["Agent",       lead.assignedAgent?.name || "Unassigned"],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
-                  <span className="text-slate-500">{label}</span>
-                  <span className="font-medium text-slate-800">{value}</span>
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium text-foreground">{value}</span>
                 </div>
               ))}
               {lead.brokerCompany && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Broker</span>
-                  <span className="font-medium text-slate-800">{lead.brokerCompany.name}</span>
+                  <span className="text-muted-foreground">Broker</span>
+                  <span className="font-medium text-foreground">{lead.brokerCompany.name}</span>
                 </div>
               )}
               {lead.notes && (
-                <div className="pt-2 border-t border-slate-100">
-                  <p className="text-xs text-slate-500 mb-1">Notes</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{lead.notes}</p>
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm text-foreground leading-relaxed">{lead.notes}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Communication Preference */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Comm. Preference</h3>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Comm. Preference</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Preferred Channel</label>
+                <label className="block text-xs text-muted-foreground mb-1">Preferred Channel</label>
                 <select
-                  className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-2.5 py-1.5 text-sm bg-muted/50 focus:outline-none focus:border-ring"
                   value={lead.communicationPreference?.preferredChannel ?? ""}
                   onChange={(e) =>
                     handlePreferenceChange({ preferredChannel: e.target.value === "" ? null : e.target.value })
@@ -828,7 +828,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                   <option value="SMS">SMS</option>
                 </select>
               </div>
-              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+              <div className="space-y-1.5 pt-1 border-t border-border">
                 {(["email", "whatsapp", "sms"] as const).map((ch) => {
                   const optKey  = `${ch}OptOut` as "emailOptOut" | "whatsappOptOut" | "smsOptOut";
                   const sentKey = `${ch}Sent`   as "emailSent" | "whatsappSent" | "smsSent";
@@ -845,11 +845,11 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                           onChange={(e) => handlePreferenceChange({ [optKey]: e.target.checked } as Partial<CommunicationPreference>)}
                           className="w-3.5 h-3.5 rounded"
                         />
-                        <span className={optedOut ? "text-slate-400 line-through" : "text-slate-700"}>
+                        <span className={optedOut ? "text-muted-foreground line-through" : "text-foreground"}>
                           {ch === "email" ? "Email" : ch === "whatsapp" ? "WhatsApp" : "SMS"} opt-out
                         </span>
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-muted-foreground">
                         {sent}{sent > 0 ? ` · ${replies} replies` : ""}
                       </span>
                     </label>
@@ -860,39 +860,39 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </div>
 
           {/* Interested units */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Interested Units</h3>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested Units</h3>
             {lead.interests.length === 0 ? (
-              <p className="text-sm text-slate-400">No units linked</p>
+              <p className="text-sm text-muted-foreground">No units linked</p>
             ) : (
               <div className="space-y-2">
                 {lead.interests.map((i) => {
                   const offer = offers.find((o) => o.unitId === i.unitId && o.status === "ACTIVE");
                   return (
-                    <div key={i.id} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+                    <div key={i.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-semibold text-slate-800">{i.unit.unitNumber}</p>
+                            <p className="text-sm font-semibold text-foreground">{i.unit.unitNumber}</p>
                             {i.isPrimary && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold">Primary</span>
+                              <span className="text-[10px] bg-success-soft text-success px-1.5 py-0.5 rounded font-semibold">Primary</span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400">{i.unit.type.replace(/_/g, " ")} · Floor {i.unit.floor}</p>
+                          <p className="text-xs text-muted-foreground">{i.unit.type.replace(/_/g, " ")} · Floor {i.unit.floor}</p>
                         </div>
-                        <p className="text-sm font-bold text-blue-600">AED {i.unit.price.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-primary">AED {i.unit.price.toLocaleString()}</p>
                       </div>
                       {offer ? (
                         <div className="flex gap-1.5">
                           <button
                             onClick={() => openReservationFromOffer(offer)}
-                            className="flex-1 text-center py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                            className="flex-1 text-center py-1.5 text-xs font-semibold text-white bg-success rounded-lg hover:bg-success/90 transition-colors"
                           >
                             Create Reservation
                           </button>
                           <button
                             onClick={() => openOfferModal(i.unitId, offer)}
-                            className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
                           >
                             Revise
                           </button>
@@ -900,7 +900,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                       ) : (
                         <button
                           onClick={() => openOfferModal(i.unitId)}
-                          className="w-full text-center py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                          className="w-full text-center py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
                         >
                           Generate Offer
                         </button>
@@ -914,28 +914,28 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
           {/* Deals */}
           {activeTab === "deals" && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-              Deals <span className="text-slate-400 font-normal">({lead.deals?.length ?? 0})</span>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Deals <span className="text-muted-foreground font-normal">({lead.deals?.length ?? 0})</span>
             </h3>
             {(!lead.deals || lead.deals.length === 0) ? (
-              <p className="text-sm text-slate-400">No deals yet</p>
+              <p className="text-sm text-muted-foreground">No deals yet</p>
             ) : (
               <div className="space-y-2">
                 {[...activeDeals, ...inactiveDeals].map((d) => (
                   <button
                     key={d.id}
                     onClick={() => navigate(`/deals/${d.id}`)}
-                    className="w-full text-left p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all group"
+                    className="w-full text-left p-3 bg-muted/50 rounded-lg border border-border hover:border-primary/40 hover:bg-info-soft/30 transition-all group"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{d.dealNumber}</span>
+                      <span className="text-sm font-semibold text-foreground group-hover:text-primary">{d.dealNumber}</span>
                       <StageBadge kind="deal" stage={d.stage} className="text-[10px]" />
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Unit {d.unit.unitNumber} · {d.unit.type}
                     </p>
-                    <p className="text-xs font-medium text-slate-700 mt-0.5">
+                    <p className="text-xs font-medium text-foreground mt-0.5">
                       AED {d.salePrice.toLocaleString()}
                     </p>
                   </button>
@@ -947,35 +947,35 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
           {/* Offers history */}
           {activeTab === "offers" && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-              Offers <span className="text-slate-400 font-normal">({offers.length})</span>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Offers <span className="text-muted-foreground font-normal">({offers.length})</span>
             </h3>
             {offers.length === 0 ? (
-              <p className="text-sm text-slate-400">No offers generated yet</p>
+              <p className="text-sm text-muted-foreground">No offers generated yet</p>
             ) : (
               <div className="space-y-2">
                 {offers.map((o, idx) => {
                   const version = offers.length - idx;
                   const statusColor: Record<string, string> = {
-                    ACTIVE:    "bg-blue-100 text-blue-700",
-                    ACCEPTED:  "bg-emerald-100 text-emerald-700",
-                    REJECTED:  "bg-red-100 text-red-700",
-                    EXPIRED:   "bg-slate-100 text-slate-500",
-                    WITHDRAWN: "bg-amber-100 text-amber-700",
+                    ACTIVE:    "bg-info-soft text-primary",
+                    ACCEPTED:  "bg-success-soft text-success",
+                    REJECTED:  "bg-destructive-soft text-destructive",
+                    EXPIRED:   "bg-muted text-muted-foreground",
+                    WITHDRAWN: "bg-warning-soft text-warning",
                   };
                   return (
-                    <div key={o.id} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5">
+                    <div key={o.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-1.5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-semibold text-slate-700">v{version} — AED {o.offeredPrice.toLocaleString()}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs font-semibold text-foreground">v{version} — AED {o.offeredPrice.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">
                             {(o as any).unit?.unitNumber}
                             {o.paymentPlan ? ` · ${o.paymentPlan.name}` : ""}
                             {" · "}{fmtDate(o.createdAt)}
                           </p>
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusColor[o.status] || "bg-slate-100 text-slate-500"}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusColor[o.status] || "bg-muted text-muted-foreground"}`}>
                           {o.status}
                         </span>
                       </div>
@@ -983,25 +983,25 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         <div className="flex gap-1.5 flex-wrap">
                           <button
                             onClick={() => handleOfferStatus(o.id, "ACCEPTED")}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+                            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-success rounded-md hover:bg-success/90"
                           >
                             Accept
                           </button>
                           <button
                             onClick={() => handleOfferStatus(o.id, "REJECTED")}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-red-500 rounded-md hover:bg-red-600"
+                            className="px-2.5 py-1 text-[11px] font-semibold text-destructive-foreground bg-destructive rounded-md hover:bg-destructive/90"
                           >
                             Reject
                           </button>
                           <button
                             onClick={() => openOfferModal(o.unitId, o)}
-                            className="px-2.5 py-1 text-[11px] font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-100"
+                            className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
                           >
                             Revise
                           </button>
                           <button
                             onClick={() => handleOfferStatus(o.id, "WITHDRAWN")}
-                            className="px-2.5 py-1 text-[11px] font-medium text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-100"
+                            className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
                           >
                             Withdraw
                           </button>
@@ -1018,14 +1018,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
         <div>
           {/* Tasks */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Tasks <span className="text-slate-400 font-normal">({tasks.length})</span>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Tasks <span className="text-muted-foreground font-normal">({tasks.length})</span>
               </h3>
               <button
                 onClick={() => setAddingTask((v) => !v)}
-                className="text-xs text-blue-600 hover:underline font-semibold"
+                className="text-xs text-primary hover:underline font-semibold"
               >
                 {addingTask ? "−" : "+ Add"}
               </button>
@@ -1041,38 +1041,38 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <select value={quickTask.type} onChange={(e) => setQuickTask((f) => ({ ...f, type: e.target.value }))}
-                    className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-slate-50 focus:outline-none">
+                    className="border border-border rounded-lg px-2 py-1.5 text-xs bg-muted/50 focus:outline-none">
                     {["CALL","MEETING","FOLLOW_UP","DOCUMENT","PAYMENT"].map((t) => <option key={t} value={t}>{t.replace(/_/g," ")}</option>)}
                   </select>
                   <input type="datetime-local" value={quickTask.dueDate}
                     onChange={(e) => setQuickTask((f) => ({ ...f, dueDate: e.target.value }))}
-                    className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-slate-50 focus:outline-none" />
+                    className="border border-border rounded-lg px-2 py-1.5 text-xs bg-muted/50 focus:outline-none" />
                 </div>
                 <button
                   onClick={submitQuickTask}
                   disabled={!quickTask.title.trim() || !quickTask.dueDate}
-                  className="w-full py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                 >
                   Create Task
                 </button>
               </div>
             )}
             {tasks.length === 0 ? (
-              <p className="text-sm text-slate-400">No open tasks</p>
+              <p className="text-sm text-muted-foreground">No open tasks</p>
             ) : (
               <div className="space-y-2">
                 {tasks.map((t) => {
                   const isOverdue = new Date(t.dueDate) < new Date();
                   return (
-                    <div key={t.id} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div key={t.id} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
                       <button
                         onClick={() => completeTask(t.id)}
                         disabled={completingTaskId === t.id}
-                        className="w-4 h-4 rounded-full border-2 border-slate-300 hover:border-blue-500 flex-shrink-0 mt-0.5 transition-colors"
+                        className="w-4 h-4 rounded-full border-2 border-border hover:border-primary/40 flex-shrink-0 mt-0.5 transition-colors"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-800 leading-snug">{t.title}</p>
-                        <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-500 font-semibold" : "text-slate-400"}`}>
+                        <p className="text-xs font-medium text-foreground leading-snug">{t.title}</p>
+                        <p className={`text-xs mt-0.5 ${isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                           {isOverdue ? "Overdue · " : ""}{fmtDate(t.dueDate)}
                         </p>
                       </div>
@@ -1087,28 +1087,28 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         {/* Activity timeline */}
         {activeTab === "activity" && (
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-800 text-sm">Activity Timeline</h3>
-                <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full font-medium">{activities.length}</span>
+                <h3 className="font-semibold text-foreground text-sm">Activity Timeline</h3>
+                <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full font-medium">{activities.length}</span>
               </div>
               <button
                 onClick={() => setShowActForm(!showActForm)}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
+                className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90"
               >
                 + Log Activity
               </button>
             </div>
 
             {showActForm && (
-              <form onSubmit={handleLogActivity} className="px-5 py-4 bg-blue-50 border-b border-blue-100 space-y-3">
+              <form onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
                 <div className="flex flex-wrap gap-2">
                   {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => (
                     <button
                       key={t} type="button" onClick={() => setActType(t)}
                       className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
-                        actType === t ? "bg-blue-600 text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300"
+                        actType === t ? "bg-primary text-white" : "bg-card text-muted-foreground border border-border hover:border-primary/40"
                       }`}
                     >
                       {ACTIVITY_ICON[t]} {t.replace("_", " ")}
@@ -1118,20 +1118,20 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 <textarea
                   required placeholder="Summary *" value={summary}
                   onChange={(e) => setSummary(e.target.value)} rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 resize-none"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     placeholder="Outcome (optional)" value={outcome}
                     onChange={(e) => setOutcome(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
+                    className="border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring"
                   />
                   <div>
-                    <label className="text-xs text-slate-500 block mb-1">Follow-up date</label>
+                    <label className="text-xs text-muted-foreground block mb-1">Follow-up date</label>
                     <input
                       type="datetime-local" value={followUpDate}
                       onChange={(e) => setFollowUpDate(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400"
+                      className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
                     />
                   </div>
                 </div>
@@ -1167,46 +1167,46 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
       {/* ── Edit Lead Modal ─────────────────────────────────────────────────────── */}
       {showEditForm && (
-        <Modal title="Edit Lead" onClose={() => setShowEditForm(false)}>
+        <Modal title="Edit lead" onClose={() => setShowEditForm(false)}>
           <form onSubmit={handleEditSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">First Name</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">First Name</label>
                 <input required value={editForm.firstName} onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Last Name</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Last Name</label>
                 <input required value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))} className={inputCls} />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Phone</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Phone</label>
               <input required value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} className={inputCls} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
                 <input type="email" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Nationality</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Nationality</label>
                 <input value={editForm.nationality} onChange={(e) => setEditForm((p) => ({ ...p, nationality: e.target.value }))} className={inputCls} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Source</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Source</label>
                 <select value={editForm.source} onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value }))} className={inputCls}>
                   {SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Budget (AED)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Budget (AED)</label>
                 <input type="number" min={0} value={editForm.budget} onChange={(e) => setEditForm((p) => ({ ...p, budget: e.target.value }))} placeholder="e.g. 1500000" className={inputCls} />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Assigned Agent</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Assigned Agent</label>
               <select value={editForm.assignedAgentId} onChange={(e) => setEditForm((p) => ({ ...p, assignedAgentId: e.target.value }))} className={inputCls}>
                 <option value="">— Unassigned —</option>
                 {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -1215,7 +1215,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             {editForm.source === "BROKER" && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Broker Company</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Company</label>
                   <select
                     value={editForm.brokerCompanyId}
                     onChange={(e) => {
@@ -1230,7 +1230,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 </div>
                 {brokerAgents.length > 0 && (
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Broker Agent</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Agent</label>
                     <select value={editForm.brokerAgentId} onChange={(e) => setEditForm((p) => ({ ...p, brokerAgentId: e.target.value }))} className={inputCls}>
                       <option value="">— None —</option>
                       {brokerAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -1240,18 +1240,18 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </>
             )}
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
               <textarea value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
             </div>
 
             {/* KYC / SPA particulars — required before SPA generation */}
-            <details className="border border-slate-200 rounded-lg">
-              <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+            <details className="border border-border rounded-lg">
+              <summary className="px-3 py-2 text-xs font-semibold text-foreground cursor-pointer select-none">
                 KYC & SPA particulars
               </summary>
-              <div className="px-3 pb-3 pt-2 space-y-3 border-t border-slate-100">
+              <div className="px-3 pb-3 pt-2 space-y-3 border-t border-border">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Residential Address</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Residential Address</label>
                   <input
                     value={editForm.address}
                     onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
@@ -1261,26 +1261,26 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Emirates ID</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Emirates ID</label>
                     <input value={editForm.emiratesId} onChange={(e) => setEditForm((p) => ({ ...p, emiratesId: e.target.value }))} placeholder="784-…" className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Passport No</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Passport No</label>
                     <input value={editForm.passportNumber} onChange={(e) => setEditForm((p) => ({ ...p, passportNumber: e.target.value }))} className={inputCls} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Company Registration No</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Company Registration No</label>
                     <input value={editForm.companyRegistrationNumber} onChange={(e) => setEditForm((p) => ({ ...p, companyRegistrationNumber: e.target.value }))} className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Authorized Signatory</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Authorized Signatory</label>
                     <input value={editForm.authorizedSignatory} onChange={(e) => setEditForm((p) => ({ ...p, authorizedSignatory: e.target.value }))} className={inputCls} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Source of Funds</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Source of Funds</label>
                   <input
                     value={editForm.sourceOfFunds}
                     onChange={(e) => setEditForm((p) => ({ ...p, sourceOfFunds: e.target.value }))}
@@ -1292,15 +1292,15 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </details>
 
             {/* Unit Interests */}
-            <div className="border border-emerald-100 bg-emerald-50/30 rounded-lg p-3 space-y-2">
+            <div className="border border-success/30 bg-success-soft/30 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-emerald-700">
+                <label className="block text-xs font-semibold text-success">
                   Interested Units ({editingUnitIds.size})
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowUnitPicker(true)}
-                  className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
+                  className="text-xs text-success font-semibold hover:text-success"
                 >
                   {editingUnitIds.size > 0 ? "Edit" : "+ Add Units"}
                 </button>
@@ -1314,8 +1314,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         key={i.unitId}
                         className={`text-xs px-2 py-1 rounded-full font-medium ${
                           i.unitId === editingPrimaryUnitId
-                            ? "bg-emerald-600 text-white"
-                            : "bg-white text-slate-700 border border-slate-200"
+                            ? "bg-success text-white"
+                            : "bg-card text-foreground border border-border"
                         }`}
                       >
                         {i.unitId === editingPrimaryUnitId && "★ "}
@@ -1327,7 +1327,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button type="submit" disabled={editSaving} className={primaryBtn}>{editSaving ? "Saving…" : "Save Changes"}</button>
+              <button type="submit" disabled={editSaving} className={primaryBtn}>{editSaving ? "Saving…" : "Save changes"}</button>
               <button type="button" onClick={() => setShowEditForm(false)} className={cancelBtn}>Cancel</button>
             </div>
           </form>
@@ -1353,15 +1353,15 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       {showCreateDealModal && (
         <Modal title="Create Deal" onClose={() => setShowCreateDealModal(false)}>
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               A deal will be created and linked to this lead. Agent and contact are carried forward automatically.
             </p>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Unit (optional)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Unit (optional)</label>
               {loadingDealUnits ? (
-                <div className="flex items-center gap-2 text-xs text-slate-400 py-2">
-                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                  <div className="w-4 h-4 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
                   Loading units…
                 </div>
               ) : (
@@ -1403,7 +1403,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Notes (optional)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (optional)</label>
               <textarea
                 rows={3}
                 value={createDealForm.notes}
@@ -1438,7 +1438,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         <Modal title="Create Reservation" onClose={() => setShowDealForm(false)}>
           <form onSubmit={handleDealSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Unit *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Unit *</label>
               <select required value={dealForm.unitId} onChange={(e) => handleDealUnitChange(e.target.value)} className={inputCls}>
                 <option value="">— Select a unit —</option>
                 {(() => {
@@ -1472,27 +1472,27 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Sale Price (AED) *</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Sale Price (AED) *</label>
                 <input required type="number" min={0} value={dealForm.salePrice} onChange={(e) => setDealForm((p) => ({ ...p, salePrice: e.target.value }))} placeholder="e.g. 1200000" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Discount (AED)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount (AED)</label>
                 <input type="number" min={0} value={dealForm.discount} onChange={(e) => setDealForm((p) => ({ ...p, discount: e.target.value }))} className={inputCls} />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Reservation Amount (AED) *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Reservation Amount (AED) *</label>
               <input required type="number" min={0} value={dealForm.reservationAmount} onChange={(e) => setDealForm((p) => ({ ...p, reservationAmount: e.target.value }))} placeholder="e.g. 50000" className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Payment Plan *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Payment Plan *</label>
               <select required value={dealForm.paymentPlanId} onChange={(e) => setDealForm((p) => ({ ...p, paymentPlanId: e.target.value }))} className={inputCls}>
                 <option value="">— Select a plan —</option>
                 {paymentPlans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Broker Company <span className="text-slate-400 font-normal">(optional)</span></label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Company <span className="text-muted-foreground font-normal">(optional)</span></label>
               <select
                 value={dealForm.brokerCompanyId}
                 onChange={(e) => {
@@ -1507,14 +1507,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             {brokerAgents.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Broker Agent</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Agent</label>
                 <select value={dealForm.brokerAgentId} onChange={(e) => setDealForm((p) => ({ ...p, brokerAgentId: e.target.value }))} className={inputCls}>
                   <option value="">— None —</option>
                   {brokerAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
             )}
-            <p className="text-xs text-slate-400 pt-1">Lead: <span className="font-medium text-slate-600">{lead.firstName} {lead.lastName}</span></p>
+            <p className="text-xs text-muted-foreground pt-1">Lead: <span className="font-medium text-muted-foreground">{lead.firstName} {lead.lastName}</span></p>
             <div className="flex gap-2 pt-2">
               <button type="submit" disabled={creatingDeal} className={primaryBtn}>{creatingDeal ? "Creating…" : "Create Reservation"}</button>
               <button type="button" onClick={() => setShowDealForm(false)} className={cancelBtn}>Cancel</button>
@@ -1531,14 +1531,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         >
           <form onSubmit={handleOfferSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Unit</label>
-              <p className="text-sm font-semibold text-slate-800">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Unit</label>
+              <p className="text-sm font-semibold text-foreground">
                 {lead.interests.find((i) => i.unitId === offerModalUnit)?.unit.unitNumber ?? offerModalUnit}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Offered Price (AED) *</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Offered Price (AED) *</label>
                 <input
                   required type="number" min={0} step="any"
                   value={offerForm.offeredPrice}
@@ -1548,7 +1548,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Discount (AED)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount (AED)</label>
                 <input
                   type="number" min={0} step="any"
                   value={offerForm.discountAmount}
@@ -1558,7 +1558,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Payment Plan</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Payment Plan</label>
               <select
                 value={offerForm.paymentPlanId}
                 onChange={(e) => setOfferForm((p) => ({ ...p, paymentPlanId: e.target.value }))}
@@ -1569,7 +1569,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Offer Expiry <span className="text-slate-400 font-normal">(default 7 days)</span></label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Offer Expiry <span className="text-muted-foreground font-normal">(default 7 days)</span></label>
               <input
                 type="date"
                 value={offerForm.expiresAt}
@@ -1577,13 +1577,13 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 className={inputCls}
               />
               {offerForm.expiresAt && (
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-muted-foreground mt-1">
                   Expires {new Date(offerForm.expiresAt).toLocaleDateString("en-AE", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
               <textarea
                 rows={2}
                 value={offerForm.notes}

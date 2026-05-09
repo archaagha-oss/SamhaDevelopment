@@ -56,14 +56,14 @@ export default function PendingApprovalsQueue({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-600">
+      <div className="text-center py-8 text-muted-foreground">
         <p>✓ No pending approvals</p>
       </div>
     );
@@ -76,15 +76,15 @@ export default function PendingApprovalsQueue({
         {data.map((item) => (
           <div
             key={item.id}
-            className="border border-orange-200 bg-orange-50 rounded-lg p-4 hover:shadow-md transition"
+            className="border border-warning/30 bg-warning-soft rounded-lg p-4 hover:shadow-md transition"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
-                <h4 className="font-semibold text-slate-900">{item.dealNumber}</h4>
-                <p className="text-sm text-slate-700">{item.brokerName} - {item.leadName}</p>
-                <p className="text-xs text-slate-600 mt-1">{item.reason}</p>
+                <h4 className="font-semibold text-foreground">{item.dealNumber}</h4>
+                <p className="text-sm text-foreground">{item.brokerName} - {item.leadName}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.reason}</p>
               </div>
-              <span className="font-bold text-slate-900 whitespace-nowrap ml-3">
+              <span className="font-bold text-foreground whitespace-nowrap ml-3">
                 AED {item.amount.toLocaleString()}
               </span>
             </div>
@@ -94,14 +94,14 @@ export default function PendingApprovalsQueue({
               <button
                 disabled={approvingId !== null}
                 onClick={() => handleApprove(item.id)}
-                className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded hover:bg-emerald-700 transition disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium bg-success text-white rounded hover:bg-success/90 transition disabled:opacity-50"
               >
                 {approvingId === item.id ? "Approving..." : "✓ Approve"}
               </button>
               <button
                 disabled={rejectingId !== null}
                 onClick={() => setRejectingId(item.id === rejectingId ? null : item.id)}
-                className="px-4 py-2 text-sm font-medium border border-red-300 text-red-700 rounded hover:bg-red-50 transition disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium border border-destructive/30 text-destructive rounded hover:bg-destructive-soft transition disabled:opacity-50"
               >
                 {rejectingId === item.id ? "Cancel" : "✗ Reject"}
               </button>
@@ -109,18 +109,18 @@ export default function PendingApprovalsQueue({
 
             {/* Reject Reason Input */}
             {rejectingId === item.id && (
-              <div className="mt-3 p-3 bg-white rounded border border-slate-200 space-y-2">
+              <div className="mt-3 p-3 bg-card rounded border border-border space-y-2">
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Reason for rejection..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-border rounded text-sm"
                   rows={2}
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleReject(item.id)}
-                    className="flex-1 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
+                    className="flex-1 px-3 py-1 text-sm bg-destructive text-white rounded hover:bg-destructive/90 transition"
                   >
                     Confirm Rejection
                   </button>
@@ -129,7 +129,7 @@ export default function PendingApprovalsQueue({
                       setRejectingId(null);
                       setRejectReason("");
                     }}
-                    className="flex-1 px-3 py-1 text-sm border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition"
+                    className="flex-1 px-3 py-1 text-sm border border-border text-foreground rounded hover:bg-muted/50 transition"
                   >
                     Cancel
                   </button>
@@ -142,21 +142,21 @@ export default function PendingApprovalsQueue({
 
       {/* Pagination */}
       {pageCount > 1 && onPageChange && (
-        <div className="flex items-center justify-center gap-2 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-center gap-2 pt-4 border-t border-border">
           <button
             disabled={currentPage === 0}
             onClick={() => onPageChange(currentPage - 1)}
-            className="px-3 py-1 text-sm border border-slate-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            className="px-3 py-1 text-sm border border-border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50"
           >
             ← Previous
           </button>
-          <span className="text-xs text-slate-600">
+          <span className="text-xs text-muted-foreground">
             Page {currentPage + 1} of {pageCount}
           </span>
           <button
             disabled={currentPage >= pageCount - 1}
             onClick={() => onPageChange(currentPage + 1)}
-            className="px-3 py-1 text-sm border border-slate-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            className="px-3 py-1 text-sm border border-border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50"
           >
             Next →
           </button>

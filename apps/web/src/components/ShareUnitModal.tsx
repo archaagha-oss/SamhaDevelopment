@@ -124,19 +124,19 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl my-auto">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800 text-sm">Share unit with a lead</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-auto">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+          <h3 className="font-semibold text-foreground text-sm">Share unit with a lead</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {/* Unit summary */}
-          <div className="bg-slate-50 rounded-lg border border-slate-100 px-3 py-2">
-            <p className="text-sm font-semibold text-slate-800">
+          <div className="bg-muted/50 rounded-lg border border-border px-3 py-2">
+            <p className="text-sm font-semibold text-foreground">
               Unit {unit.unitNumber} · {unit.type.replace(/_/g, " ")}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {unit.projectName ?? ""}{unit.projectName ? " · " : ""}{fmtAED(unit.price)}
             </p>
           </div>
@@ -144,43 +144,43 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
           {/* Lead picker */}
           {!picked ? (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Search leads</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Search leads</label>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Name, phone, email…"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring"
                 autoFocus
               />
-              <div className="mt-2 max-h-48 overflow-y-auto border border-slate-100 rounded-lg divide-y divide-slate-100">
-                {searching && <p className="px-3 py-3 text-xs text-slate-400">Searching…</p>}
+              <div className="mt-2 max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                {searching && <p className="px-3 py-3 text-xs text-muted-foreground">Searching…</p>}
                 {!searching && query.trim() === "" && (
-                  <p className="px-3 py-3 text-xs text-slate-400">Start typing to find a lead</p>
+                  <p className="px-3 py-3 text-xs text-muted-foreground">Start typing to find a lead</p>
                 )}
                 {!searching && query.trim() !== "" && results.length === 0 && (
-                  <p className="px-3 py-3 text-xs text-slate-400">No leads match</p>
+                  <p className="px-3 py-3 text-xs text-muted-foreground">No leads match</p>
                 )}
                 {!searching && results.map((l) => (
                   <button
                     key={l.id}
                     onClick={() => setPicked(l)}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50"
+                    className="w-full text-left px-3 py-2 hover:bg-muted/50"
                   >
-                    <p className="text-sm font-medium text-slate-800">{l.firstName} {l.lastName}</p>
-                    <p className="text-xs text-slate-400">{l.phone}{l.email ? ` · ${l.email}` : ""}</p>
+                    <p className="text-sm font-medium text-foreground">{l.firstName} {l.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{l.phone}{l.email ? ` · ${l.email}` : ""}</p>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between">
+            <div className="bg-info-soft border border-primary/40 rounded-lg px-3 py-2 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-800">{picked.firstName} {picked.lastName}</p>
-                <p className="text-xs text-slate-500">{picked.phone}{picked.email ? ` · ${picked.email}` : ""}</p>
+                <p className="text-sm font-semibold text-foreground">{picked.firstName} {picked.lastName}</p>
+                <p className="text-xs text-muted-foreground">{picked.phone}{picked.email ? ` · ${picked.email}` : ""}</p>
               </div>
               <button
                 onClick={() => { setPicked(null); setQuery(""); }}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-primary hover:underline"
               >
                 Change
               </button>
@@ -197,15 +197,15 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
                     onClick={() => setChannel(c)}
                     className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                       channel === c
-                        ? "bg-slate-800 text-white"
-                        : "bg-white text-slate-600 border border-slate-200 hover:border-slate-400"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-muted-foreground border border-border hover:border-border"
                     }`}
                   >
                     {CHANNEL_ICON[c]} {CHANNEL_LABEL[c]}
                   </button>
                 ))}
                 {availableChannels.length === 0 && (
-                  <p className="text-xs text-red-500">This lead has no email or phone on file.</p>
+                  <p className="text-xs text-destructive">This lead has no email or phone on file.</p>
                 )}
               </div>
               {channel === "EMAIL" && (
@@ -213,30 +213,30 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Subject"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400"
+                  className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
                 />
               )}
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={6}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 resize-y font-sans"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-y font-sans"
               />
             </>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-muted/50">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-slate-600 text-sm font-medium hover:bg-slate-100 rounded-lg"
+            className="px-3 py-1.5 text-muted-foreground text-sm font-medium hover:bg-muted rounded-lg"
           >
             Cancel
           </button>
           <button
             onClick={handleSend}
             disabled={!picked || !body.trim() || sending || availableChannels.length === 0}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
           >
             {sending ? "Sending…" : `Send via ${CHANNEL_LABEL[channel] ?? "?"}`}
           </button>

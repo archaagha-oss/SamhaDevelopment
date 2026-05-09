@@ -89,61 +89,61 @@ export default function UnitInterestPicker({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl flex flex-col">
+      <div className="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-card shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-          <h2 className="font-bold text-slate-900 text-lg">Add Units of Interest</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="font-bold text-foreground text-lg">Add Units of Interest</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
           >
             ×
           </button>
         </div>
 
         {/* Filters */}
-        <div className="px-6 py-4 border-b border-slate-100 space-y-3 flex-shrink-0">
+        <div className="px-6 py-4 border-b border-border space-y-3 flex-shrink-0">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Search</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Search</label>
             <input
               type="text"
               placeholder="Unit number or type…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Min Price (AED)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price (AED)</label>
               <input
                 type="number"
                 placeholder="e.g. 500000"
                 value={priceRange.min}
                 onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Max Price (AED)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price (AED)</label>
               <input
                 type="number"
                 placeholder="e.g. 5000000"
                 value={priceRange.max}
                 onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               />
             </div>
           </div>
 
           {projects.length > 0 && (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Project</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Project</label>
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               >
                 <option value="">All projects</option>
                 {projects.map((p) => (
@@ -159,9 +159,9 @@ export default function UnitInterestPicker({
         {/* Units List */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
-            <div className="text-center py-8 text-slate-400">Loading units…</div>
+            <div className="text-center py-8 text-muted-foreground">Loading units…</div>
           ) : filteredUnits.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">No units found</div>
+            <div className="text-center py-8 text-muted-foreground">No units found</div>
           ) : (
             <div className="space-y-2">
               {filteredUnits.map((u) => {
@@ -170,34 +170,34 @@ export default function UnitInterestPicker({
                 return (
                   <label
                     key={u.id}
-                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${isOnHold ? "border-orange-200 bg-orange-50 hover:bg-orange-100" : "border-slate-200 hover:bg-slate-50"}`}
+                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${isOnHold ? "border-warning/30 bg-warning-soft hover:bg-warning-soft" : "border-border hover:bg-muted/50"}`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleUnit(u.id)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border text-primary focus:ring-ring"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-800">{u.unitNumber}</span>
+                        <span className="text-sm font-semibold text-foreground">{u.unitNumber}</span>
                         {localPrimary === u.id && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                          <span className="text-xs bg-info-soft text-primary px-2 py-0.5 rounded-full font-medium">
                             Primary ★
                           </span>
                         )}
                         {isOnHold && (
-                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+                          <span className="text-xs bg-warning-soft text-warning px-2 py-0.5 rounded-full font-medium">
                             On Hold
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {u.type.replace(/_/g, " ")} · Floor {u.floor}
                         {u.project?.name && ` · ${u.project.name}`}
                       </p>
                     </div>
-                    <span className="text-sm font-bold text-blue-600 flex-shrink-0">
+                    <span className="text-sm font-bold text-primary flex-shrink-0">
                       AED {u.price.toLocaleString()}
                     </span>
                   </label>
@@ -209,25 +209,25 @@ export default function UnitInterestPicker({
 
         {/* Primary unit selector */}
         {localSelected.size > 0 && (
-          <div className="px-6 py-3 border-t border-slate-100 bg-blue-50 text-xs text-blue-700 flex-shrink-0">
+          <div className="px-6 py-3 border-t border-border bg-info-soft text-xs text-primary flex-shrink-0">
             <p className="font-medium mb-2">Selected: {localSelected.size} unit(s)</p>
             <p>Click a unit to mark it as primary interest (★)</p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-border flex gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors"
+            className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm transition-colors"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm transition-colors disabled:opacity-50"
           >
             Confirm ({localSelected.size})
           </button>

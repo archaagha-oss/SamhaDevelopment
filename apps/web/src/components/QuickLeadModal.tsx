@@ -7,8 +7,8 @@ interface Props {
   onCreated: () => void;
 }
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors";
-const lbl = "block text-xs font-semibold text-slate-600 mb-1";
+const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card transition-colors";
+const lbl = "block text-xs font-semibold text-muted-foreground mb-1";
 
 export default function QuickLeadModal({ onClose, onCreated }: Props) {
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -58,14 +58,14 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+      <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-bold text-slate-900 text-lg">Quick Add Lead</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Capture basic info in seconds</p>
+            <h2 className="font-bold text-foreground text-lg">Quick Add Lead</h2>
+            <p className="text-muted-foreground text-xs mt-0.5">Capture basic info in seconds</p>
           </div>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+          <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
         </div>
 
         <form id="quick-lead-form" onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
@@ -115,7 +115,7 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
                 className={inp + " pr-24"}
                 placeholder="+971 50 000 0000"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">UAE format</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">UAE format</span>
             </div>
           </div>
 
@@ -137,30 +137,30 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
           </div>
 
           {/* Consent */}
-          <label className="flex items-start gap-2.5 cursor-pointer border border-slate-200 rounded-xl p-3 bg-slate-50">
+          <label className="flex items-start gap-2.5 cursor-pointer border border-border rounded-xl p-3 bg-muted/50">
             <input
               type="checkbox"
               required
               checked={consent}
               onChange={(e) => { setConsent(e.target.checked); setDirty(true); }}
-              className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring"
             />
-            <span className="text-xs text-slate-600 leading-relaxed">
-              The lead has consented to being contacted about properties. <span className="text-red-500">*</span>
+            <span className="text-xs text-muted-foreground leading-relaxed">
+              The lead has consented to being contacted about properties. <span className="text-destructive">*</span>
             </span>
           </label>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
           )}
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+        <div className="px-6 py-4 border-t border-border flex gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors"
+            className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm transition-colors"
           >
             Cancel
           </button>
@@ -168,7 +168,7 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
             form="quick-lead-form"
             type="submit"
             disabled={submitting}
-            className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm transition-colors disabled:opacity-50"
           >
             {submitting ? "Creating…" : "Create Lead"}
           </button>

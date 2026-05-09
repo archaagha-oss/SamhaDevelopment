@@ -65,15 +65,15 @@ export default function ConstructionProgressPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Construction Progress</h1>
-      <p className="text-sm text-gray-500">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">Construction Progress</h1>
+      <p className="text-sm text-muted-foreground">
         When a milestone's percent crosses a payment-plan trigger threshold, matching{" "}
-        <code className="px-1 bg-gray-100 rounded">ON_CONSTRUCTION_PCT</code> payments fire automatically.
+        <code className="px-1 bg-muted rounded">ON_CONSTRUCTION_PCT</code> payments fire automatically.
       </p>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : (
         <div className="space-y-3">
           {STAGES.map((stage) => {
@@ -81,20 +81,20 @@ export default function ConstructionProgressPage() {
             if (items.length === 0) return null;
             return (
               <section key={stage} className="border rounded p-4">
-                <h3 className="font-semibold text-sm uppercase text-gray-700 mb-2">{stage}</h3>
+                <h3 className="font-semibold text-sm uppercase text-foreground mb-2">{stage}</h3>
                 <div className="space-y-2">
                   {items.map((m) => (
                     <div key={m.id} className="flex items-center gap-4">
                       <div className="flex-1">
                         <div className="text-sm font-medium">{m.label}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {m.description ?? ""}
                           {m.expectedDate && ` · expected ${new Date(m.expectedDate).toLocaleDateString()}`}
                           {m.achievedDate && ` · achieved ${new Date(m.achievedDate).toLocaleDateString()}`}
                         </div>
-                        <div className="w-full bg-gray-200 rounded h-2 mt-1">
+                        <div className="w-full bg-neutral-200 rounded h-2 mt-1">
                           <div
-                            className="bg-blue-600 h-2 rounded"
+                            className="bg-primary h-2 rounded"
                             style={{ width: `${m.percentComplete}%` }}
                           />
                         </div>
@@ -118,7 +118,7 @@ export default function ConstructionProgressPage() {
             );
           })}
           {milestones.length === 0 && (
-            <p className="text-gray-500">No construction milestones yet.</p>
+            <p className="text-muted-foreground">No construction milestones yet.</p>
           )}
         </div>
       )}

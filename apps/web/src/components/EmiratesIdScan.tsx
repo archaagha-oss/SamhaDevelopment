@@ -29,8 +29,8 @@ export default function EmiratesIdScan({ onExtracted, className }: Props) {
 
   return (
     <div className={className}>
-      <label className="flex items-center gap-2 cursor-pointer text-xs text-blue-700 font-semibold hover:text-blue-900">
-        <span className="px-2 py-1 rounded-md border border-blue-200 bg-blue-50">
+      <label className="flex items-center gap-2 cursor-pointer text-xs text-primary font-semibold hover:text-primary">
+        <span className="px-2 py-1 rounded-md border border-primary/40 bg-info-soft">
           {busy ? `Scanning… ${Math.round(progress * 100)}%` : "Scan Emirates ID"}
         </span>
         <input
@@ -46,9 +46,9 @@ export default function EmiratesIdScan({ onExtracted, className }: Props) {
         />
       </label>
       {error && (
-        <p className="text-xs text-red-600 mt-1">{error}</p>
+        <p className="text-xs text-destructive mt-1">{error}</p>
       )}
-      <p className="text-[10px] text-slate-400 mt-1">
+      <p className="text-[10px] text-muted-foreground mt-1">
         Runs locally in your browser — no upload. Confirm fields after scanning.
       </p>
     </div>

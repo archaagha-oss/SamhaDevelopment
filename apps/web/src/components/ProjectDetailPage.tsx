@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnitsTable from "./UnitsTable";
-import ProjectDocumentsTab from "./ProjectDocumentsTab";
 import ProjectUpdatesTab from "./ProjectUpdatesTab";
 import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
+import { StageBadge } from "./ui/stage-badge";
 
 interface Project {
   id: string;
@@ -14,6 +14,7 @@ interface Project {
   totalUnits: number;
   totalFloors?: number;
   projectStatus: "ACTIVE" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
+  completionStatus?: "OFF_PLAN" | "UNDER_CONSTRUCTION" | "READY";
   handoverDate: string;
   launchDate?: string;
   startDate?: string;
@@ -21,11 +22,19 @@ interface Project {
   _count?: { units: number };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  ACTIVE:    { label: "Active",    cls: "bg-emerald-100 text-emerald-700" },
-  ON_HOLD:   { label: "On Hold",   cls: "bg-amber-100 text-amber-700" },
-  COMPLETED: { label: "Completed", cls: "bg-blue-100 text-blue-700" },
-  CANCELLED: { label: "Cancelled", cls: "bg-red-100 text-red-700" },
+// Project lifecycle status → semantic stage tone tokens.
+// See: design-system/MASTER.md
+const PROJECT_STATUS: Record<string, { label: string; cls: string }> = {
+  ACTIVE:    { label: "Active",    cls: "bg-stage-success text-stage-success-foreground" },
+  ON_HOLD:   { label: "On Hold",   cls: "bg-stage-attention text-stage-attention-foreground" },
+  COMPLETED: { label: "Completed", cls: "bg-stage-info text-stage-info-foreground" },
+  CANCELLED: { label: "Cancelled", cls: "bg-stage-danger text-stage-danger-foreground" },
+};
+
+const COMPLETION_LABEL: Record<string, string> = {
+  OFF_PLAN: "Off-Plan",
+  UNDER_CONSTRUCTION: "Under Construction",
+  READY: "Ready",
 };
 
 interface Lead {
@@ -54,7 +63,7 @@ interface Broker {
   _count?: { deals: number };
 }
 
-type Tab = "overview" | "leads" | "deals" | "brokers" | "units" | "documents" | "updates";
+type Tab = "overview" | "units" | "leads" | "deals" | "brokers" | "updates" | "history";
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
@@ -71,10 +80,6 @@ export default function ProjectDetailPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState<Record<string, string>>({});
-  const [editSubmitting, setEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -117,291 +122,232 @@ export default function ProjectDetailPage() {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
 
   if (error || !project)
     return (
       <div className="p-6">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
+        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
           ← Back to Projects
         </button>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600 font-medium">{error || "Project not found"}</p>
+        <div className="bg-destructive-soft border border-destructive/20 rounded-lg p-6 text-center">
+          <p className="text-destructive-soft-foreground font-medium">{error || "Project not found"}</p>
         </div>
       </div>
     );
 
   const days = daysUntil(project.handoverDate);
-  const handoverColor = days < 0 ? "text-red-600" : days < 90 ? "text-amber-600" : "text-emerald-600";
-  const statusCfg = STATUS_CONFIG[project.projectStatus] || STATUS_CONFIG.ACTIVE;
+  const handoverTone =
+    days < 0 ? "text-destructive" : days < 90 ? "text-warning" : "text-success";
+  const statusCfg = PROJECT_STATUS[project.projectStatus] || PROJECT_STATUS.ACTIVE;
+  const completionLabel = project.completionStatus ? COMPLETION_LABEL[project.completionStatus] : null;
 
-  const openEditModal = () => {
-    setEditForm({
-      name: project.name,
-      location: project.location,
-      description: project.description || "",
-      totalUnits: String(project.totalUnits),
-      totalFloors: project.totalFloors ? String(project.totalFloors) : "",
-      projectStatus: project.projectStatus,
-      handoverDate: project.handoverDate ? project.handoverDate.slice(0, 10) : "",
-      launchDate: project.launchDate ? project.launchDate.slice(0, 10) : "",
-      startDate: project.startDate ? project.startDate.slice(0, 10) : "",
-    });
-    setEditError(null);
-    setShowEditModal(true);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditError(null);
-    setEditSubmitting(true);
-    try {
-      const res = await axios.patch(`/api/projects/${projectId}`, {
-        name: editForm.name,
-        location: editForm.location,
-        description: editForm.description || undefined,
-        totalUnits: parseInt(editForm.totalUnits),
-        totalFloors: editForm.totalFloors ? parseInt(editForm.totalFloors) : undefined,
-        projectStatus: editForm.projectStatus,
-        handoverDate: editForm.handoverDate,
-        launchDate: editForm.launchDate || undefined,
-        startDate: editForm.startDate || undefined,
-      });
-      setProject(res.data);
-      setShowEditModal(false);
-    } catch (err: any) {
-      setEditError(err.response?.data?.error || "Failed to save project");
-    } finally {
-      setEditSubmitting(false);
-    }
-  };
-
-  const dealCount = deals.length;
-  const leadCount = leads.length;
+  const dealCount   = deals.length;
+  const leadCount   = leads.length;
   const brokerCount = brokers.length;
+  const activeLeads = leads.filter((l) => !["CLOSED_WON", "CLOSED_LOST"].includes(l.stage)).length;
+  const openDeals   = deals.filter((d) => !["COMPLETED", "CANCELLED"].includes(d.stage)).length;
+  const handoverFmt = fmtDate(project.handoverDate);
+  const daysLabel   = days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-3">
-          ← Back to Projects
-        </button>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${statusCfg.cls}`}>{statusCfg.label}</span>
+    <div className="flex flex-col h-full bg-background">
+      {/* Sticky header — compact title row + meta line + KPI strip + tabs */}
+      <div className="bg-card border-b border-border flex-shrink-0">
+        <div className="px-4 sm:px-6 pt-4 pb-3">
+          <button
+            onClick={() => navigate("/projects")}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2"
+          >
+            ← Projects
+          </button>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">{project.name}</h1>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap ${statusCfg.cls}`}>
+                  {statusCfg.label}
+                </span>
+              </div>
+              {/* One-line meta — replaces 3 stacked rows of location/desc */}
+              <p className="text-sm text-muted-foreground mt-1">
+                <span>{project.location}</span>
+                {completionLabel && <> <span className="opacity-50">·</span> {completionLabel}</>}
+                <> <span className="opacity-50">·</span> Handover {handoverFmt} <span className={handoverTone}>({daysLabel})</span></>
+              </p>
             </div>
-            <p className="text-slate-400 text-sm mt-1">{project.location}</p>
-            {project.description && (
-              <p className="text-slate-500 text-sm mt-1.5 max-w-xl">{project.description}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openEditModal}
-              className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1.5"
-            >
-              ✎ Edit Project
-            </button>
             <button
               onClick={() => navigate(`/projects/${projectId}/settings`)}
-              className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm font-medium rounded-lg hover:bg-primary/15 transition-colors whitespace-nowrap"
             >
-              ⚙ Settings
+              ✎ Edit
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Quick Stats */}
-      <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-shrink-0">
-        <div className="bg-white rounded-lg p-3 border border-slate-100">
-          <p className="text-xs text-slate-500 mb-1">Total Units</p>
-          <p className="text-xl font-bold text-slate-800">{project.totalUnits}</p>
+        {/* KPI strip — 4 actionable metrics */}
+        <div className="px-4 sm:px-6 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Kpi label="Total Units" value={project.totalUnits} />
+          <Kpi
+            label="Handover"
+            value={handoverFmt}
+            sub={daysLabel}
+            valueClass={handoverTone}
+          />
+          <Kpi label="Active Leads" value={activeLeads} accent="text-chart-1" />
+          <Kpi label="Open Deals"   value={openDeals}   accent="text-accent-2" />
         </div>
-        {project.totalFloors && (
-          <div className="bg-white rounded-lg p-3 border border-slate-100">
-            <p className="text-xs text-slate-500 mb-1">Total Floors</p>
-            <p className="text-xl font-bold text-slate-800">{project.totalFloors}</p>
-          </div>
-        )}
-        <div className="bg-white rounded-lg p-3 border border-slate-100">
-          <p className="text-xs text-slate-500 mb-1">Handover</p>
-          <p className={`font-semibold text-sm ${handoverColor}`}>{fmtDate(project.handoverDate)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{days < 0 ? `${Math.abs(days)} overdue` : `${days} left`}</p>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-slate-100">
-          <p className="text-xs text-slate-500 mb-1">Active Leads</p>
-          <p className="text-xl font-bold text-blue-600">{leads.filter((l) => !["CLOSED_WON", "CLOSED_LOST"].includes(l.stage)).length}</p>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-slate-100">
-          <p className="text-xs text-slate-500 mb-1">Total Deals</p>
-          <p className="text-xl font-bold text-violet-600">{dealCount}</p>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-slate-100">
-          <p className="text-xs text-slate-500 mb-1">Broker Partners</p>
-          <p className="text-xl font-bold text-amber-600">{brokerCount}</p>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200 flex gap-1 flex-shrink-0 overflow-x-auto">
-        {(["overview", "leads", "deals", "brokers", "units", "documents", "updates"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-              tab === t
-                ? "bg-blue-600 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {t === "overview"
-              ? "Overview"
-              : t === "leads"
-                ? `Leads (${leadCount})`
-                : t === "deals"
-                  ? `Deals (${dealCount})`
-                  : t === "brokers"
-                    ? `Brokers (${brokerCount})`
-                    : t === "units"
-                      ? "Units"
-                      : t === "documents"
-                        ? "Documents"
-                        : "Updates"}
-          </button>
-        ))}
+        {/* Tab nav — underline style, matches Settings page */}
+        <div
+          className="px-4 sm:px-6 flex gap-1 overflow-x-auto border-t border-border"
+          role="tablist"
+          aria-label="Project sections"
+        >
+          {([
+            { key: "overview", label: "Overview" },
+            { key: "units",    label: "Units" },
+            { key: "leads",    label: `Leads (${leadCount})` },
+            { key: "deals",    label: `Deals (${dealCount})` },
+            { key: "brokers",  label: `Brokers (${brokerCount})` },
+            { key: "updates",  label: "Updates" },
+            { key: "history",  label: "History" },
+          ] as const).map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key as Tab)}
+                role="tab"
+                aria-selected={active}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {/* Overview Tab */}
+        {/* Overview Tab — slim: handover countdown + lead/deal snapshot */}
         {tab === "overview" && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-900 mb-4">Project Information</h3>
-                {project.description && (
-                  <p className="text-sm text-slate-600 mb-4 pb-4 border-b border-slate-100">{project.description}</p>
-                )}
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Status</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusCfg.cls}`}>{statusCfg.label}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Location</span>
-                    <span className="font-medium text-slate-800">{project.location}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Total Units</span>
-                    <span className="font-medium text-slate-800">{project.totalUnits}</span>
-                  </div>
-                  {project.totalFloors && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Total Floors</span>
-                      <span className="font-medium text-slate-800">{project.totalFloors}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Handover Date</span>
-                    <span className={`font-medium ${handoverColor}`}>{fmtDate(project.handoverDate)}</span>
-                  </div>
+          <div className="p-4 sm:p-6 space-y-6">
+            <section className="bg-card rounded-lg border border-border p-6">
+              <header className="mb-4">
+                <h2 className="text-sm font-semibold text-foreground">Handover Countdown</h2>
+                <p className="text-xs text-muted-foreground">Time remaining until {handoverFmt}.</p>
+              </header>
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Days to handover</span>
+                <span className={`text-lg font-semibold tabular-nums ${handoverTone}`}>
+                  {days < 0 ? `${Math.abs(days)} overdue` : `${days} days`}
+                </span>
+              </div>
+              <div
+                className="w-full h-2 bg-muted rounded-full overflow-hidden"
+                role="progressbar"
+                aria-valuenow={days}
+                aria-valuemin={0}
+                aria-valuemax={730}
+                aria-label="Handover progress"
+              >
+                <div
+                  className={`h-full ${
+                    days < 0 ? "bg-destructive" : days < 90 ? "bg-warning" : "bg-success"
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, 100 - (days / 730) * 100))}%` }}
+                />
+              </div>
+              {(project.launchDate || project.startDate) && (
+                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border text-sm">
                   {project.launchDate && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Launch Date</span>
-                      <span className="font-medium text-slate-800">{fmtDate(project.launchDate)}</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Launch</p>
+                      <p className="font-medium text-foreground">{fmtDate(project.launchDate)}</p>
                     </div>
                   )}
                   {project.startDate && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Start Date</span>
-                      <span className="font-medium text-slate-800">{fmtDate(project.startDate)}</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Start</p>
+                      <p className="font-medium text-foreground">{fmtDate(project.startDate)}</p>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Created</span>
-                    <span className="font-medium text-slate-800">{project.createdAt ? fmtDate(project.createdAt) : "—"}</span>
-                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="bg-card rounded-lg border border-border p-6">
+              <header className="mb-4">
+                <h2 className="text-sm font-semibold text-foreground">Pipeline snapshot</h2>
+                <p className="text-xs text-muted-foreground">Lead and deal activity tied to this project.</p>
+              </header>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Active leads</p>
+                  <p className="text-2xl font-semibold tabular-nums text-foreground">{activeLeads}</p>
+                  <p className="text-xs text-muted-foreground">{leadCount} total</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Open deals</p>
+                  <p className="text-2xl font-semibold tabular-nums text-foreground">{openDeals}</p>
+                  <p className="text-xs text-muted-foreground">{dealCount} total</p>
                 </div>
               </div>
+            </section>
+          </div>
+        )}
 
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-900 mb-4">Status Summary</h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm text-slate-600">Days to Handover</span>
-                      <span className={`font-semibold ${handoverColor}`}>{days} days</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          days < 0
-                            ? "bg-red-500"
-                            : days < 90
-                              ? "bg-amber-500"
-                              : "bg-emerald-500"
-                        }`}
-                        style={{ width: `${Math.min(100, Math.max(0, 100 - (days / 730) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="pt-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500 mb-2">Quick Stats</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-blue-50 rounded p-2">
-                        <p className="text-xs text-blue-600 font-semibold">{leads.length} Total Leads</p>
-                      </div>
-                      <div className="bg-violet-50 rounded p-2">
-                        <p className="text-xs text-violet-600 font-semibold">{dealCount} Total Deals</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {projectId && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <ProjectStatusHistoryPanel projectId={projectId} />
-              </div>
-            )}
+        {/* History Tab — promoted from buried section */}
+        {tab === "history" && projectId && (
+          <div className="p-4 sm:p-6">
+            <section className="bg-card rounded-lg border border-border p-6">
+              <ProjectStatusHistoryPanel projectId={projectId} />
+            </section>
           </div>
         )}
 
         {/* Leads Tab */}
         {tab === "leads" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {leads.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">No leads found for this project</p>
+              <p className="text-center text-muted-foreground py-8">No leads found for this project</p>
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Name</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Phone</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Budget</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Stage</th>
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Phone</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Budget</th>
+                      <th className="px-4 py-3">Stage</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {leads.map((lead) => (
-                      <tr key={lead.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/leads/${lead.id}`)}>
-                        <td className="px-4 py-3 font-medium text-slate-800">
+                      <tr
+                        key={lead.id}
+                        className="hover:bg-muted/40 cursor-pointer"
+                        onClick={() => navigate(`/leads/${lead.id}`)}
+                      >
+                        <td className="px-4 py-3 font-medium text-foreground">
                           {lead.firstName} {lead.lastName}
                         </td>
-                        <td className="px-4 py-3 text-slate-600">{lead.phone}</td>
-                        <td className="px-4 py-3 text-slate-600">{lead.email || "—"}</td>
-                        <td className="px-4 py-3 text-slate-600">{lead.budget ? `AED ${lead.budget.toLocaleString()}` : "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{lead.email || "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                          {lead.budget ? `AED ${lead.budget.toLocaleString()}` : "—"}
+                        </td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">{lead.stage.replace(/_/g, " ")}</span>
+                          <StageBadge kind="lead" stage={lead.stage} />
                         </td>
                       </tr>
                     ))}
@@ -414,34 +360,38 @@ export default function ProjectDetailPage() {
 
         {/* Deals Tab */}
         {tab === "deals" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {deals.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">No deals found for this project</p>
+              <p className="text-center text-muted-foreground py-8">No deals found for this project</p>
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Deal #</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Buyer</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Unit</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Sale Price</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Stage</th>
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-3">Deal #</th>
+                      <th className="px-4 py-3">Buyer</th>
+                      <th className="px-4 py-3">Unit</th>
+                      <th className="px-4 py-3">Sale Price</th>
+                      <th className="px-4 py-3">Stage</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {deals.map((deal) => (
-                      <tr key={deal.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/deals/${deal.id}`)}>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-600">{deal.dealNumber}</td>
-                        <td className="px-4 py-3 text-slate-800">
+                      <tr
+                        key={deal.id}
+                        className="hover:bg-muted/40 cursor-pointer"
+                        onClick={() => navigate(`/deals/${deal.id}`)}
+                      >
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{deal.dealNumber}</td>
+                        <td className="px-4 py-3 text-foreground">
                           {deal.lead.firstName} {deal.lead.lastName}
                         </td>
-                        <td className="px-4 py-3 text-slate-600">{deal.unit.unitNumber}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">AED {deal.salePrice.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{deal.unit.unitNumber}</td>
+                        <td className="px-4 py-3 font-medium text-foreground tabular-nums">
+                          AED {deal.salePrice.toLocaleString()}
+                        </td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded text-xs font-medium">
-                            {deal.stage.replace(/_/g, " ")}
-                          </span>
+                          <StageBadge kind="deal" stage={deal.stage} />
                         </td>
                       </tr>
                     ))}
@@ -454,20 +404,25 @@ export default function ProjectDetailPage() {
 
         {/* Brokers Tab */}
         {tab === "brokers" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {brokers.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">No brokers found</p>
+              <p className="text-center text-muted-foreground py-8">No brokers found</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {brokers.map((broker) => (
-                  <div key={broker.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-300 transition-colors">
+                  <div
+                    key={broker.id}
+                    className="bg-card rounded-lg border border-border p-4 hover:border-primary/40 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-3">
-                      <h4 className="font-semibold text-slate-900">{broker.name}</h4>
-                      <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">{broker.commissionRate}%</span>
+                      <h4 className="font-semibold text-foreground">{broker.name}</h4>
+                      <span className="px-2 py-1 bg-stage-attention text-stage-attention-foreground rounded text-xs font-medium tabular-nums">
+                        {broker.commissionRate}%
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Associated Deals</span>
-                      <span className="font-semibold text-slate-800">{broker._count?.deals || 0}</span>
+                      <span className="text-muted-foreground">Associated Deals</span>
+                      <span className="font-semibold text-foreground tabular-nums">{broker._count?.deals || 0}</span>
                     </div>
                   </div>
                 ))}
@@ -481,102 +436,36 @@ export default function ProjectDetailPage() {
           <UnitsTable projectId={projectId} />
         )}
 
-        {/* Documents Tab */}
-        {tab === "documents" && projectId && (
-          <ProjectDocumentsTab projectId={projectId} />
-        )}
-
         {/* Updates Tab */}
         {tab === "updates" && projectId && (
           <ProjectUpdatesTab projectId={projectId} />
         )}
       </div>
 
-      {/* Edit Project Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-              <h2 className="font-bold text-slate-900">Edit Project</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
-            </div>
-            <form id="project-edit-form" onSubmit={handleEditSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-              {[
-                { label: "Project Name *", key: "name", required: true, placeholder: "e.g. Samha Tower" },
-                { label: "Location *", key: "location", required: true, placeholder: "e.g. Dubai Marina" },
-              ].map(({ label, key, required, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
-                  <input
-                    required={required}
-                    value={editForm[key] ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
-                <textarea rows={2} value={editForm.description ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400 resize-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Total Units *</label>
-                  <input required type="number" min="1" value={editForm.totalUnits ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, totalUnits: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Total Floors</label>
-                  <input type="number" min="1" value={editForm.totalFloors ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, totalFloors: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
-                  <select value={editForm.projectStatus ?? "ACTIVE"}
-                    onChange={(e) => setEditForm((f) => ({ ...f, projectStatus: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="ON_HOLD">On Hold</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Handover Date *</label>
-                  <input required type="date" value={editForm.handoverDate ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, handoverDate: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-              </div>
-              {editError && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{editError}</p>
-              )}
-            </form>
-            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
-              <button type="button" onClick={() => setShowEditModal(false)}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm">
-                Cancel
-              </button>
-              <button form="project-edit-form" type="submit" disabled={editSubmitting}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
-                {editSubmitting ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    </div>
+  );
+}
+
+// ─── Subcomponents ──────────────────────────────────────────────────────
+
+function Kpi({
+  label,
+  value,
+  sub,
+  accent,
+  valueClass,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  accent?: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="bg-card rounded-lg border border-border p-3">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <p className={`text-xl font-semibold tabular-nums ${valueClass ?? accent ?? "text-foreground"}`}>{value}</p>
+      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }

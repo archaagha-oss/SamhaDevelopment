@@ -63,25 +63,25 @@ function mapDeals(data: any[]): SearchResult[] {
 }
 
 const statusColor: Record<string, string> = {
-  available:    "text-emerald-400",
-  reserved:     "text-amber-400",
-  booked:       "text-blue-300",
-  sold:         "text-blue-400",
-  handed_over:  "text-purple-400",
-  blocked:      "text-slate-400",
-  new:          "text-sky-400",
-  contacted:    "text-yellow-400",
-  qualified:    "text-amber-400",
-  negotiating:  "text-orange-400",
-  closed_won:   "text-emerald-400",
-  closed_lost:  "text-red-400",
-  spa_signed:   "text-blue-300",
-  oqood_registered: "text-purple-400",
-  cancelled:    "text-red-400",
+  available:    "text-success",
+  reserved:     "text-warning",
+  booked:       "text-primary",
+  sold:         "text-primary",
+  handed_over:  "text-chart-7",
+  blocked:      "text-muted-foreground",
+  new:          "text-chart-5",
+  contacted:    "text-warning",
+  qualified:    "text-warning",
+  negotiating:  "text-warning",
+  closed_won:   "text-success",
+  closed_lost:  "text-destructive",
+  spa_signed:   "text-primary",
+  oqood_registered: "text-chart-7",
+  cancelled:    "text-destructive",
 };
 
 function getStatusColor(status?: string) {
-  return statusColor[status?.toLowerCase() ?? ""] ?? "text-slate-400";
+  return statusColor[status?.toLowerCase() ?? ""] ?? "text-muted-foreground";
 }
 
 const typeIcon: Record<SearchResult["type"], string> = {
@@ -232,26 +232,26 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-700 overflow-hidden"
+        className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl border border-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search bar */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-700">
-          <span className="text-slate-400 text-lg flex-shrink-0">🔍</span>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+          <span className="text-muted-foreground text-lg flex-shrink-0">🔍</span>
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search leads, units, deals…"
-            className="flex-1 bg-transparent text-slate-100 text-base placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent text-foreground text-base placeholder-slate-500 focus:outline-none"
           />
           {loading && (
-            <span className="text-slate-500 text-sm flex-shrink-0">Searching…</span>
+            <span className="text-muted-foreground text-sm flex-shrink-0">Searching…</span>
           )}
           <button
             onClick={onClose}
-            className="flex-shrink-0 text-slate-500 hover:text-slate-300 text-xs px-2 py-1 rounded border border-slate-700 font-mono transition-colors"
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground text-xs px-2 py-1 rounded border border-border font-mono transition-colors"
           >
             Esc
           </button>
@@ -259,15 +259,15 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
 
         {/* Tab bar — shown only after a query */}
         {query && totalCount > 0 && (
-          <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-800 bg-slate-900/50">
+          <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-neutral-900/50">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
                   activeTab === tab
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                    ? "bg-primary text-white"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {tab}
@@ -285,14 +285,14 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
         {/* Results list */}
         <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-800/60">
           {!query && (
-            <div className="px-5 py-12 text-center text-slate-500 text-sm">
+            <div className="px-5 py-12 text-center text-muted-foreground text-sm">
               Start typing to search across leads, units, and deals
             </div>
           )}
 
           {query && !loading && visible.length === 0 && (
-            <div className="px-5 py-12 text-center text-slate-500 text-sm">
-              No results for <span className="text-slate-300">"{query}"</span>
+            <div className="px-5 py-12 text-center text-muted-foreground text-sm">
+              No results for <span className="text-foreground/80">"{query}"</span>
             </div>
           )}
 
@@ -303,19 +303,19 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
               onClick={() => handleSelect(r)}
               onMouseEnter={() => setHighlightedIndex(i)}
               className={`w-full flex items-center gap-4 px-5 py-3.5 transition-colors text-left group ${
-                i === highlightedIndex ? "bg-slate-800" : "hover:bg-slate-800"
+                i === highlightedIndex ? "bg-muted" : "hover:bg-muted"
               }`}
             >
               <span className={`text-lg w-5 text-center flex-shrink-0 transition-colors ${
-                i === highlightedIndex ? "text-slate-300" : "text-slate-500 group-hover:text-slate-300"
+                i === highlightedIndex ? "text-foreground/80" : "text-muted-foreground group-hover:text-foreground"
               }`}>
                 {typeIcon[r.type]}
               </span>
 
               <div className="flex-1 min-w-0">
-                <p className="text-slate-100 text-sm font-medium truncate">{r.title}</p>
+                <p className="text-foreground text-sm font-medium truncate">{r.title}</p>
                 {r.subtitle && (
-                  <p className="text-slate-500 text-xs truncate mt-0.5">{r.subtitle}</p>
+                  <p className="text-muted-foreground text-xs truncate mt-0.5">{r.subtitle}</p>
                 )}
               </div>
 
@@ -325,7 +325,7 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
                     {r.status.toLowerCase().replace(/_/g, " ")}
                   </span>
                 )}
-                <span className="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full capitalize border border-slate-700">
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full capitalize border border-border">
                   {r.type}
                 </span>
               </div>
@@ -334,15 +334,15 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
         </div>
 
         {/* Footer hints */}
-        <div className="px-5 py-2.5 border-t border-slate-800 flex items-center gap-5 text-[11px] text-slate-600">
+        <div className="px-5 py-2.5 border-t border-border flex items-center gap-5 text-[11px] text-muted-foreground">
           <span>
-            <kbd className="font-mono bg-slate-800 px-1 rounded">↑↓</kbd> navigate
+            <kbd className="font-mono bg-muted px-1 rounded">↑↓</kbd> navigate
           </span>
           <span>
-            <kbd className="font-mono bg-slate-800 px-1 rounded">↵</kbd> select
+            <kbd className="font-mono bg-muted px-1 rounded">↵</kbd> select
           </span>
           <span>
-            <kbd className="font-mono bg-slate-800 px-1 rounded">Esc</kbd> close
+            <kbd className="font-mono bg-muted px-1 rounded">Esc</kbd> close
           </span>
         </div>
       </div>

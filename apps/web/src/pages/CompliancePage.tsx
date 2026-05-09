@@ -21,11 +21,11 @@ interface ExpiryRow {
 }
 
 const SEVERITY_TINT: Record<Severity, { row: string; pill: string; label: string }> = {
-  EXPIRED:   { row: "border-red-200    bg-red-50/40",    pill: "bg-red-600 text-white",       label: "Expired" },
-  CRITICAL:  { row: "border-orange-200 bg-orange-50/40", pill: "bg-orange-500 text-white",    label: "≤ 14 days" },
-  WARNING:   { row: "border-amber-200  bg-amber-50/40",  pill: "bg-amber-500 text-white",     label: "≤ 30 days" },
-  ATTENTION: { row: "border-yellow-100 bg-yellow-50/30", pill: "bg-yellow-300 text-yellow-900", label: "≤ 90 days" },
-  OK:        { row: "border-slate-100  bg-white",        pill: "bg-slate-200 text-slate-600", label: "OK" },
+  EXPIRED:   { row: "border-destructive/30    bg-destructive-soft/40",    pill: "bg-destructive text-white",       label: "Expired" },
+  CRITICAL:  { row: "border-warning/30 bg-warning-soft/40", pill: "bg-warning text-white",    label: "≤ 14 days" },
+  WARNING:   { row: "border-warning/30  bg-warning-soft/40",  pill: "bg-warning text-white",     label: "≤ 30 days" },
+  ATTENTION: { row: "border-warning/30 bg-warning-soft/30", pill: "bg-warning/50 text-warning-soft-foreground", label: "≤ 90 days" },
+  OK:        { row: "border-border  bg-card",        pill: "bg-neutral-200 text-muted-foreground", label: "OK" },
 };
 
 const KIND_LABEL: Record<string, string> = {
@@ -89,22 +89,22 @@ export default function CompliancePage() {
   }, [rows]);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Compliance Radar</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Compliance Radar</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Every UAE credential expiring within the horizon, sorted by urgency. Stop OQOOD rejections before they happen.
           </p>
         </div>
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-muted rounded-lg p-1">
           {([30, 60, 90, 365] as const).map((d) => (
             <button
               key={d}
               onClick={() => setHorizon(d)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                horizon === d ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                horizon === d ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {d === 365 ? "1 year" : `${d}d`}
@@ -117,10 +117,10 @@ export default function CompliancePage() {
       <div className="grid grid-cols-5 gap-3 mb-5">
         {(["EXPIRED", "CRITICAL", "WARNING", "ATTENTION", "OK"] as Severity[]).map((sev) => (
           <div key={sev} className={`rounded-xl border ${SEVERITY_TINT[sev].row} px-4 py-3`}>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {SEVERITY_TINT[sev].label}
             </p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">
+            <p className="text-2xl font-bold text-foreground mt-1">
               {counts?.[sev] ?? "—"}
             </p>
           </div>
@@ -128,13 +128,13 @@ export default function CompliancePage() {
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-1 mb-4 border-b border-slate-200">
+      <div className="flex gap-1 mb-4 border-b border-border">
         {(["ALL", "BROKER", "AGENT", "BUYER"] as Category[]).map((c) => (
           <button
             key={c}
             onClick={() => setTab(c)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === c ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-700"
+              tab === c ? "border-primary/40 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {c === "ALL" ? "All" : c === "BROKER" ? "Broker companies" : c === "AGENT" ? "Broker agents" : "Buyers"}
@@ -144,10 +144,10 @@ export default function CompliancePage() {
 
       {/* Rows grouped by severity */}
       {loading ? (
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-10 text-center text-slate-400 text-sm">Loading…</div>
+        <div className="bg-card rounded-xl border border-border px-5 py-10 text-center text-muted-foreground text-sm">Loading…</div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-10 text-center">
-          <p className="text-emerald-600 text-sm font-medium">🎉 Nothing expiring within {horizon === 365 ? "a year" : `${horizon} days`}.</p>
+        <div className="bg-card rounded-xl border border-border px-5 py-10 text-center">
+          <p className="text-success text-sm font-medium">🎉 Nothing expiring within {horizon === 365 ? "a year" : `${horizon} days`}.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -158,8 +158,8 @@ export default function CompliancePage() {
                   <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${SEVERITY_TINT[sev].pill}`}>
                     {sev}
                   </span>
-                  <span className="text-xs text-slate-500">{SEVERITY_TINT[sev].label}</span>
-                  <span className="text-xs text-slate-400">· {grouped[sev].length}</span>
+                  <span className="text-xs text-muted-foreground">{SEVERITY_TINT[sev].label}</span>
+                  <span className="text-xs text-muted-foreground">· {grouped[sev].length}</span>
                 </div>
                 <div className="space-y-2">
                   {grouped[sev].map((row, i) => (
@@ -183,22 +183,22 @@ function ExpiryRowCard({ row }: { row: ExpiryRow }) {
     <div className={`rounded-xl border ${tint.row} px-4 py-3 flex items-start gap-3`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-slate-800">{row.ownerName}</span>
+          <span className="text-sm font-semibold text-foreground">{row.ownerName}</span>
           <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${tint.pill}`}>
             {row.severity}
           </span>
           {row.ownerSubLabel && (
-            <span className="text-xs text-slate-500">· {row.ownerSubLabel}</span>
+            <span className="text-xs text-muted-foreground">· {row.ownerSubLabel}</span>
           )}
         </div>
-        <p className="text-xs text-slate-500 mt-0.5">
-          {KIND_LABEL[row.kind] ?? row.kind} expires <span className="font-medium text-slate-700">{fmtDate(row.expiresAt)}</span> ({daysLabel(row.daysToExpiry)})
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {KIND_LABEL[row.kind] ?? row.kind} expires <span className="font-medium text-foreground">{fmtDate(row.expiresAt)}</span> ({daysLabel(row.daysToExpiry)})
         </p>
       </div>
       {link && (
         <Link
           to={link}
-          className="text-xs text-blue-600 hover:underline flex-shrink-0 mt-0.5"
+          className="text-xs text-primary hover:underline flex-shrink-0 mt-0.5"
         >
           Open →
         </Link>

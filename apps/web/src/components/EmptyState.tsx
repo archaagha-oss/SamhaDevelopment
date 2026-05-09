@@ -22,7 +22,7 @@ export default function EmptyState({
   if (variant === "compact") {
     return (
       <div className="text-center py-4">
-        <p className="text-slate-400 text-sm">{title}</p>
+        <p className="text-muted-foreground text-sm">{title}</p>
       </div>
     );
   }

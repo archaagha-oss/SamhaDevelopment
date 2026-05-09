@@ -39,7 +39,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
   return (
     <section style={{ padding: 16 }}>
       <h2 style={{ marginTop: 0 }}>Project updates</h2>
-      <p style={{ color: "#666", fontSize: 14, marginTop: -4 }}>
+      <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14, marginTop: -4 }}>
         Updates marked <strong>Public</strong> appear on every shared client link for units in this project.
       </p>
 
@@ -93,19 +93,19 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
 
       <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
         {updatesQuery.isLoading ? (
-          <p style={{ color: "#888" }}>Loading…</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
         ) : (updatesQuery.data ?? []).length === 0 ? (
-          <p style={{ color: "#888" }}>No updates yet.</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>No updates yet.</p>
         ) : (
           (updatesQuery.data ?? []).map((u) => (
             <article
               key={u.id}
-              style={{ padding: 16, border: "1px solid #ececef", borderRadius: 8 }}
+              style={{ padding: 16, border: "1px solid hsl(var(--border))", borderRadius: 8 }}
             >
               <header style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div>
                   <h3 style={{ margin: 0 }}>{u.title}</h3>
-                  <p style={{ margin: "4px 0 0 0", color: "#888", fontSize: 13 }}>
+                  <p style={{ margin: "4px 0 0 0", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
                     {new Date(u.publishedAt).toLocaleString()} · {u.isPublic ? "Public" : "Internal"}
                   </p>
                 </div>
@@ -122,7 +122,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
                     onClick={() => {
                       if (confirm("Delete this update permanently?")) remove.mutate(u.id);
                     }}
-                    style={{ ...btnSecondary, color: "#a40000", borderColor: "#f3c4c4" }}
+                    style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                   >
                     Delete
                   </button>
@@ -177,7 +177,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
                 <label
                   style={{
                     fontSize: 13,
-                    color: "#444",
+                    color: "hsl(var(--foreground))",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,

@@ -52,7 +52,7 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
   return (
     <section
       style={{
-        border: "1px solid #ececef",
+        border: "1px solid hsl(var(--border))",
         borderRadius: 8,
         padding: 16,
         marginTop: 16,
@@ -95,9 +95,9 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
       </div>
 
       {tokensQuery.isLoading ? (
-        <p style={{ color: "#888" }}>Loading…</p>
+        <p style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
       ) : (tokensQuery.data ?? []).length === 0 ? (
-        <p style={{ color: "#888", fontSize: 14 }}>
+        <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14 }}>
           No links yet. Create one to share this unit with a client.
         </p>
       ) : (
@@ -109,14 +109,14 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
                 key={t.id}
                 style={{
                   padding: 12,
-                  border: "1px solid #ececef",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: 6,
                   marginBottom: 8,
                   opacity: inactive ? 0.6 : 1,
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                  <code style={{ fontSize: 12, color: "#444", wordBreak: "break-all" }}>{buildAbsoluteUrl(t.url)}</code>
+                  <code style={{ fontSize: 12, color: "hsl(var(--foreground))", wordBreak: "break-all" }}>{buildAbsoluteUrl(t.url)}</code>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button type="button" onClick={() => handleCopy(t.id, t.url)} style={btnSecondary}>
                       {copiedId === t.id ? "Copied" : "Copy"}
@@ -137,13 +137,13 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
                         if (confirm("Delete this share link permanently?")) remove.mutate(t.id);
                       }}
                       disabled={remove.isPending}
-                      style={{ ...btnSecondary, color: "#a40000", borderColor: "#f3c4c4" }}
+                      style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                     >
                       Delete
                     </button>
                   </div>
                 </div>
-                <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "#666" }}>
+                <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
                   {t.showPrice ? "Price visible · " : "Price hidden · "}
                   {t.expiresAt ? `Expires ${new Date(t.expiresAt).toLocaleString()} · ` : "No expiry · "}
                   {t.viewCount} view{t.viewCount === 1 ? "" : "s"}

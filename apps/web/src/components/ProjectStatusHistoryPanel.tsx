@@ -26,9 +26,9 @@ export default function ProjectStatusHistoryPanel({ projectId, limit = 20 }: Pro
     <section style={{ marginTop: 24 }}>
       <h3 style={{ margin: 0, fontSize: 16 }}>Status history</h3>
       {query.isLoading ? (
-        <p style={{ color: "#888", marginTop: 8 }}>Loading…</p>
+        <p style={{ color: "hsl(var(--muted-foreground))", marginTop: 8 }}>Loading…</p>
       ) : (query.data ?? []).length === 0 ? (
-        <p style={{ color: "#888", marginTop: 8, fontSize: 14 }}>No status changes yet.</p>
+        <p style={{ color: "hsl(var(--muted-foreground))", marginTop: 8, fontSize: 14 }}>No status changes yet.</p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0 0" }}>
           {(query.data ?? []).map((entry) => (
@@ -36,14 +36,14 @@ export default function ProjectStatusHistoryPanel({ projectId, limit = 20 }: Pro
               key={entry.id}
               style={{
                 padding: 10,
-                border: "1px solid #ececef",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: 6,
                 marginBottom: 6,
                 fontSize: 14,
               }}
             >
               <p style={{ margin: 0 }}>{describe(entry.field, entry.oldValue, entry.newValue)}</p>
-              <p style={{ margin: "4px 0 0 0", color: "#888", fontSize: 12 }}>
+              <p style={{ margin: "4px 0 0 0", color: "hsl(var(--muted-foreground))", fontSize: 12 }}>
                 {new Date(entry.changedAt).toLocaleString()} · {entry.changedBy}
                 {entry.reason ? ` · ${entry.reason}` : ""}
               </p>

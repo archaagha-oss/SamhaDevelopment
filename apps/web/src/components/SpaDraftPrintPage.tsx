@@ -151,9 +151,9 @@ const SPEC_AREA_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <tr className="border-b border-slate-200">
-    <td className="py-2 px-3 text-sm text-slate-600 font-medium w-1/3 align-top">{label}</td>
-    <td className="py-2 px-3 text-sm text-slate-900 align-top">{value ?? "—"}</td>
+  <tr className="border-b border-border">
+    <td className="py-2 px-3 text-sm text-muted-foreground font-medium w-1/3 align-top">{label}</td>
+    <td className="py-2 px-3 text-sm text-foreground align-top">{value ?? "—"}</td>
   </tr>
 );
 
@@ -167,16 +167,16 @@ const Section = ({
   children: React.ReactNode;
 }) => (
   <section className="mb-6 break-inside-avoid">
-    <h2 className="text-base font-bold text-slate-900 uppercase tracking-wide mb-3 border-b border-slate-300 pb-1">
-      {number ? <span className="text-slate-500 mr-2">{number}.</span> : null}
+    <h2 className="text-base font-bold text-foreground uppercase tracking-wide mb-3 border-b border-border pb-1">
+      {number ? <span className="text-muted-foreground mr-2">{number}.</span> : null}
       {title}
     </h2>
-    <div className="text-sm text-slate-800 leading-relaxed space-y-3">{children}</div>
+    <div className="text-sm text-foreground leading-relaxed space-y-3">{children}</div>
   </section>
 );
 
 const Clause = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-slate-800 leading-relaxed">{children}</p>
+  <p className="text-sm text-foreground leading-relaxed">{children}</p>
 );
 
 // ---------------------------------------------------------------------------
@@ -200,15 +200,15 @@ export default function SpaDraftPrintPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-card">
+        <div className="w-8 h-8 border-2 border-accent-2/30 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
   if (error || !snap) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <p className="text-red-600">{error || "Deal not found"}</p>
+      <div className="flex items-center justify-center min-h-screen bg-card">
+        <p className="text-destructive">{error || "Deal not found"}</p>
       </div>
     );
   }
@@ -221,18 +221,18 @@ export default function SpaDraftPrintPage() {
   const dldInWords = numberToWordsCapitalized(deal.dldFee);
 
   return (
-    <div className="bg-white min-h-screen text-slate-900">
+    <div className="bg-card min-h-screen text-foreground">
       {/* Print toolbar */}
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700 shadow-lg"
+          className="px-4 py-2 bg-accent-2 text-accent-2-foreground text-sm font-semibold rounded-lg hover:bg-accent-2 shadow-lg"
         >
           Download / Print PDF
         </button>
         <button
           onClick={() => window.close()}
-          className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 shadow-lg"
+          className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted shadow-lg"
         >
           Close
         </button>
@@ -243,14 +243,14 @@ export default function SpaDraftPrintPage() {
         <div className="text-center py-16 mb-12 break-after-page">
           <h1 className="text-4xl font-bold tracking-tight mb-4">THE SALE AND PURCHASE AGREEMENT</h1>
           <div className="mt-12 text-lg">
-            <div className="text-slate-500 text-sm uppercase tracking-widest mb-1">Project Name</div>
+            <div className="text-muted-foreground text-sm uppercase tracking-widest mb-1">Project Name</div>
             <div className="font-bold">{project.name}</div>
           </div>
           <div className="mt-6 text-lg">
-            <div className="text-slate-500 text-sm uppercase tracking-widest mb-1">Unit No</div>
+            <div className="text-muted-foreground text-sm uppercase tracking-widest mb-1">Unit No</div>
             <div className="font-bold">{unit.unitNumber}</div>
           </div>
-          <div className="mt-12 text-xs text-slate-400">
+          <div className="mt-12 text-xs text-muted-foreground">
             Reference: {deal.dealNumber} · Generated {fmtDate(snap.generatedAt)}
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function SpaDraftPrintPage() {
 
         {/* PARTICULARS */}
         <Section number="I" title="The Seller">
-          <table className="w-full border border-slate-300 mt-2">
+          <table className="w-full border border-border mt-2">
             <tbody>
               <Row label="Name" value={project.name.toUpperCase()} />
               <Row label="Commercial License Number" value={project.commercialLicense} />
@@ -278,7 +278,7 @@ export default function SpaDraftPrintPage() {
         {/* Purchasers */}
         {purchasers.map((p, idx) => (
           <Section key={idx} title={`Purchaser ${idx + 1}`}>
-            <table className="w-full border border-slate-300">
+            <table className="w-full border border-border">
               <tbody>
                 <Row label="Name" value={p.name} />
                 <Row label="Ownership Percentage" value={`${p.ownershipPercentage}%`} />
@@ -299,7 +299,7 @@ export default function SpaDraftPrintPage() {
 
         <Section number="III" title="Property Details">
           <p className="text-sm">The Property subject to this agreement is identified as:</p>
-          <table className="w-full border border-slate-300">
+          <table className="w-full border border-border">
             <tbody>
               <Row label="Project / Building Name" value={project.name} />
               <Row label="Plot No" value={project.plotNumber} />
@@ -336,7 +336,7 @@ export default function SpaDraftPrintPage() {
         </Section>
 
         <Section number="VI" title="Purchase Price">
-          <table className="w-full border border-slate-300">
+          <table className="w-full border border-border">
             <tbody>
               <Row label="Dirhams" value={fmtNumber(deal.netSalePrice)} />
               <Row label="In Words" value={totalPurchaseInWords} />
@@ -345,9 +345,9 @@ export default function SpaDraftPrintPage() {
         </Section>
 
         <Section number="VII" title="Payment Schedule">
-          <table className="w-full border border-slate-300 text-sm">
+          <table className="w-full border border-border text-sm">
             <thead>
-              <tr className="bg-slate-50">
+              <tr className="bg-muted/50">
                 <th className="py-2 px-3 text-left font-semibold">Instalment</th>
                 <th className="py-2 px-3 text-right font-semibold">Instalment %</th>
                 <th className="py-2 px-3 text-right font-semibold">Payment Amount (AED)</th>
@@ -357,7 +357,7 @@ export default function SpaDraftPrintPage() {
             </thead>
             <tbody>
               {payments.map((p, i) => (
-                <tr key={i} className="border-t border-slate-200">
+                <tr key={i} className="border-t border-border">
                   <td className="py-2 px-3">{p.label}</td>
                   <td className="py-2 px-3 text-right">{p.percentage.toFixed(0)}%</td>
                   <td className="py-2 px-3 text-right font-semibold">{fmtNumber(p.amount)}</td>
@@ -385,7 +385,7 @@ export default function SpaDraftPrintPage() {
 
         <Section number="IX" title="Escrow Account Details">
           {bankAccounts.escrow ? (
-            <table className="w-full border border-slate-300">
+            <table className="w-full border border-border">
               <tbody>
                 <Row label="Account Name" value={bankAccounts.escrow.accountName} />
                 <Row label="Bank Name" value={bankAccounts.escrow.bankName} />
@@ -396,7 +396,7 @@ export default function SpaDraftPrintPage() {
               </tbody>
             </table>
           ) : (
-            <p className="text-xs text-amber-600 italic">
+            <p className="text-xs text-warning italic">
               Escrow account not configured for this project.
             </p>
           )}
@@ -404,7 +404,7 @@ export default function SpaDraftPrintPage() {
 
         <Section number="X" title="Current Account Details">
           {bankAccounts.current ? (
-            <table className="w-full border border-slate-300">
+            <table className="w-full border border-border">
               <tbody>
                 <Row label="Account Name" value={bankAccounts.current.accountName} />
                 <Row label="Bank Name" value={bankAccounts.current.bankName} />
@@ -414,7 +414,7 @@ export default function SpaDraftPrintPage() {
               </tbody>
             </table>
           ) : (
-            <p className="text-xs text-amber-600 italic">
+            <p className="text-xs text-warning italic">
               Current account not configured for this project.
             </p>
           )}
@@ -822,16 +822,16 @@ export default function SpaDraftPrintPage() {
             from any Sanctioned Person or Sanctioned Country.
           </Clause>
           {purchasers.some((p) => p.sourceOfFunds) && (
-            <table className="w-full border border-slate-300 text-sm mt-2">
+            <table className="w-full border border-border text-sm mt-2">
               <thead>
-                <tr className="bg-slate-50">
+                <tr className="bg-muted/50">
                   <th className="py-2 px-3 text-left font-semibold">Purchaser</th>
                   <th className="py-2 px-3 text-left font-semibold">Source of Funds</th>
                 </tr>
               </thead>
               <tbody>
                 {purchasers.map((p, i) => (
-                  <tr key={i} className="border-t border-slate-200">
+                  <tr key={i} className="border-t border-border">
                     <td className="py-2 px-3">{p.name}</td>
                     <td className="py-2 px-3">{p.sourceOfFunds || "—"}</td>
                   </tr>
@@ -851,7 +851,7 @@ export default function SpaDraftPrintPage() {
 
         {/* Signature block */}
         <section className="mt-16 break-inside-avoid">
-          <h2 className="text-base font-bold text-slate-900 uppercase tracking-wide mb-6 border-b border-slate-300 pb-1">
+          <h2 className="text-base font-bold text-foreground uppercase tracking-wide mb-6 border-b border-border pb-1">
             In Witness Whereof
           </h2>
           <p className="text-sm mb-12">
@@ -859,17 +859,17 @@ export default function SpaDraftPrintPage() {
           </p>
           <div className="grid grid-cols-2 gap-12">
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Purchaser</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Purchaser</p>
               <p className="text-sm font-semibold mb-12">{primary?.name ?? "—"}</p>
-              <div className="border-b border-slate-400 h-12 mb-2" />
-              <p className="text-xs text-slate-500">Signed by Mr./Ms./Mrs ____________________</p>
+              <div className="border-b border-border h-12 mb-2" />
+              <p className="text-xs text-muted-foreground">Signed by Mr./Ms./Mrs ____________________</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Seller</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Seller</p>
               <p className="text-sm font-semibold mb-12">{project.name.toUpperCase()}</p>
-              <div className="border-b border-slate-400 h-12 mb-2" />
-              <p className="text-xs text-slate-500">Signed by Mr./Ms./Mrs ____________________</p>
-              <p className="text-xs text-slate-400 mt-3">Company Stamp:</p>
+              <div className="border-b border-border h-12 mb-2" />
+              <p className="text-xs text-muted-foreground">Signed by Mr./Ms./Mrs ____________________</p>
+              <p className="text-xs text-muted-foreground mt-3">Company Stamp:</p>
             </div>
           </div>
         </section>
@@ -883,11 +883,11 @@ export default function SpaDraftPrintPage() {
               <img
                 src={schedules.dimensionedPlanUrl}
                 alt="Dimensioned plan"
-                className="w-full border border-slate-300"
+                className="w-full border border-border"
               />
             </div>
           ) : (
-            <p className="text-sm italic text-slate-500 my-8 text-center">
+            <p className="text-sm italic text-muted-foreground my-8 text-center">
               [ Dimensioned plan to be attached ]
             </p>
           )}
@@ -897,11 +897,11 @@ export default function SpaDraftPrintPage() {
               <img
                 src={schedules.furnishedPlanUrl}
                 alt="Furnished plan"
-                className="w-full border border-slate-300"
+                className="w-full border border-border"
               />
             </div>
           ) : (
-            <p className="text-sm italic text-slate-500 my-8 text-center">
+            <p className="text-sm italic text-muted-foreground my-8 text-center">
               [ Furnished plan to be attached ]
             </p>
           )}
@@ -910,21 +910,21 @@ export default function SpaDraftPrintPage() {
         <div className="break-before-page mt-16">
           <h1 className="text-2xl font-bold text-center mb-8">Schedule 2 — Draft Property Specification</h1>
           {specifications.length > 0 ? (
-            <table className="w-full border border-slate-300 text-xs">
-              <thead className="bg-slate-50">
+            <table className="w-full border border-border text-xs">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="py-2 px-3 text-left font-semibold border-b border-slate-300">Area</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b border-slate-300">Floor Finish</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b border-slate-300">Wall Finish</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b border-slate-300">Ceiling Finish</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b border-slate-300">
+                  <th className="py-2 px-3 text-left font-semibold border-b border-border">Area</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b border-border">Floor Finish</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b border-border">Wall Finish</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b border-border">Ceiling Finish</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b border-border">
                     Additional Finishes
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {specifications.map((s, i) => (
-                  <tr key={i} className="border-t border-slate-200 align-top">
+                  <tr key={i} className="border-t border-border align-top">
                     <td className="py-2 px-3 font-medium">{SPEC_AREA_LABELS[s.area] || s.area}</td>
                     <td className="py-2 px-3">{s.floorFinish || "—"}</td>
                     <td className="py-2 px-3">{s.wallFinish || "—"}</td>
@@ -935,7 +935,7 @@ export default function SpaDraftPrintPage() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm italic text-slate-500 my-8 text-center">
+            <p className="text-sm italic text-muted-foreground my-8 text-center">
               [ Specifications to be configured for this project ]
             </p>
           )}
@@ -944,9 +944,9 @@ export default function SpaDraftPrintPage() {
         <div className="break-before-page mt-16">
           <h1 className="text-2xl font-bold text-center mb-8">Schedule 3 — Draft Floor Plan</h1>
           {schedules.floorPlanUrl ? (
-            <img src={schedules.floorPlanUrl} alt="Floor plan" className="w-full border border-slate-300" />
+            <img src={schedules.floorPlanUrl} alt="Floor plan" className="w-full border border-border" />
           ) : (
-            <p className="text-sm italic text-slate-500 my-8 text-center">
+            <p className="text-sm italic text-muted-foreground my-8 text-center">
               [ Floor plan to be attached ]
             </p>
           )}
@@ -955,7 +955,7 @@ export default function SpaDraftPrintPage() {
         {/* Disclaimer */}
         <div className="break-before-page mt-16">
           <h2 className="text-lg font-bold text-center mb-4">Disclaimer</h2>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             All measurements, dimensions, coordinates and drawings given in the Property (site/floor) Plans
             are approximate and provided only for the purpose of illustration, information and general
             guidance — such drawings are not to scale. All floor/site plans, including concerned
@@ -969,7 +969,7 @@ export default function SpaDraftPrintPage() {
           </p>
         </div>
 
-        <p className="text-xs text-slate-400 mt-16 text-center border-t border-slate-100 pt-6 print:hidden">
+        <p className="text-xs text-muted-foreground mt-16 text-center border-t border-border pt-6 print:hidden">
           DRAFT for review · Generated {fmtDate(snap.generatedAt)} · Ref: {deal.dealNumber}
         </p>
       </div>

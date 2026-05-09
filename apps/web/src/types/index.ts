@@ -34,7 +34,9 @@ export interface UnitImage {
   createdAt: string;
 }
 
-export type UserRole = "ADMIN" | "SALES_AGENT" | "OPERATIONS" | "FINANCE" | "DEVELOPER";
+export type UserRole = "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
+export type UserStatus = "ACTIVE" | "ON_LEAVE" | "SUSPENDED" | "DEACTIVATED";
+export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
 
 export interface Project {
   id: string;
@@ -164,8 +166,9 @@ export type ActivityType = "CALL" | "EMAIL" | "WHATSAPP" | "MEETING" | "SITE_VIS
 export type LeadStage =
   | "NEW"
   | "CONTACTED"
-  | "OFFER_SENT"
-  | "SITE_VISIT"
+  | "QUALIFIED"
+  | "VIEWING"
+  | "PROPOSAL"
   | "NEGOTIATING"
   | "CLOSED_WON"
   | "CLOSED_LOST";

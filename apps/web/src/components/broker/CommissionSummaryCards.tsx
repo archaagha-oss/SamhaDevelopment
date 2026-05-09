@@ -27,7 +27,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
         value={`AED ${(data.approved / 1000000).toFixed(1)}M`}
         subtext={`${data.approvedDeals} deals`}
         trend="up"
-        className="bg-emerald-50 border-emerald-200"
+        className="bg-success-soft border-success/30"
       />
 
       {/* Pending Approval */}
@@ -36,7 +36,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
         value={`AED ${(data.pending / 1000000).toFixed(1)}M`}
         subtext={`${data.pendingDeals} deals`}
         trend="stable"
-        className="bg-amber-50 border-amber-200"
+        className="bg-warning-soft border-warning/30"
       />
 
       {/* Paid */}
@@ -45,7 +45,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
         value={`AED ${(data.paid / 1000000).toFixed(1)}M`}
         subtext={`${data.paidDeals} deals`}
         trend="up"
-        className="bg-blue-50 border-blue-200"
+        className="bg-info-soft border-primary/40"
       />
     </div>
   );

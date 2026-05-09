@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -8,9 +8,16 @@ import DealFormModal from "./DealFormModal";
 import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
-import Breadcrumbs from "./Breadcrumbs";
 import { SkeletonTableRows } from "./Skeleton";
-import { IconChevronUp, IconChevronDown, IconChevronsUpDown, IconChevronLeft, IconChevronRight } from "./Icons";
+import { IconChevronUp, IconChevronDown, IconChevronsUpDown } from "./Icons";
+import { PageContainer, PageHeader } from "./layout";
+import {
+  FilterBar,
+  ActiveFilterChips,
+  Pagination,
+  type ActiveFilterChip,
+} from "./data";
+import { Button } from "@/components/ui/button";
 
 interface Deal {
   id: string; dealNumber: string;
@@ -51,23 +58,23 @@ function paymentOverdue(deal: any): boolean {
 }
 
 const STAGE_BADGE: Record<string, string> = {
-  RESERVATION_PENDING:   "bg-slate-100 text-slate-600",
-  RESERVATION_CONFIRMED: "bg-blue-100 text-blue-700",
-  SPA_PENDING:           "bg-yellow-100 text-yellow-700",
-  SPA_SENT:              "bg-yellow-100 text-yellow-700",
-  SPA_SIGNED:            "bg-violet-100 text-violet-700",
-  OQOOD_PENDING:         "bg-orange-100 text-orange-700",
-  OQOOD_REGISTERED:      "bg-teal-100 text-teal-700",
-  INSTALLMENTS_ACTIVE:   "bg-indigo-100 text-indigo-700",
-  HANDOVER_PENDING:      "bg-emerald-100 text-emerald-700",
-  COMPLETED:             "bg-emerald-100 text-emerald-700",
-  CANCELLED:             "bg-red-100 text-red-700",
+  RESERVATION_PENDING:   "bg-muted text-muted-foreground",
+  RESERVATION_CONFIRMED: "bg-info-soft text-primary",
+  SPA_PENDING:           "bg-warning-soft text-warning",
+  SPA_SENT:              "bg-warning-soft text-warning",
+  SPA_SIGNED:            "bg-stage-active text-stage-active-foreground",
+  OQOOD_PENDING:         "bg-warning-soft text-warning",
+  OQOOD_REGISTERED:      "bg-chart-5/15 text-chart-5",
+  INSTALLMENTS_ACTIVE:   "bg-stage-active text-stage-active-foreground",
+  HANDOVER_PENDING:      "bg-success-soft text-success",
+  COMPLETED:             "bg-success-soft text-success",
+  CANCELLED:             "bg-destructive-soft text-destructive",
 };
 
 const COM_BADGE: Record<string, string> = {
-  NOT_DUE: "text-slate-400", PENDING_APPROVAL: "text-amber-600 font-semibold",
-  APPROVED: "text-blue-600 font-semibold", PAID: "text-emerald-600 font-semibold",
-  CANCELLED: "text-red-500",
+  NOT_DUE: "text-muted-foreground", PENDING_APPROVAL: "text-warning font-semibold",
+  APPROVED: "text-primary font-semibold", PAID: "text-success font-semibold",
+  CANCELLED: "text-destructive",
 };
 
 function paymentProgress(deal: Deal) {
@@ -117,7 +124,6 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
 
   const { data: dealsResponse, isLoading } = useDeals(currentPage, 50, selectedStage, debouncedSearch || undefined);
   const deals = (dealsResponse?.data || []) as Deal[];
-  const totalPages = dealsResponse?.pagination.pages || 1;
   const total = dealsResponse?.pagination.total || 0;
 
   useEffect(() => { setCurrentPage(1); }, [selectedStage]);
@@ -157,7 +163,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   });
 
   const SortIcon = ({ col }: { col: string }) => (
-    <span className={`ml-1 inline-flex items-center align-middle ${sortCol === col ? "text-slate-700" : "text-slate-300"}`} aria-hidden="true">
+    <span className={`ml-1 inline-flex items-center align-middle ${sortCol === col ? "text-foreground" : "text-foreground/80"}`} aria-hidden="true">
       {sortCol === col
         ? (sortDir === "asc" ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />)
         : <IconChevronsUpDown size={12} />}
@@ -207,83 +213,99 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
 
   const filtered = sorted;
 
+  const activeChips = useMemo<ActiveFilterChip[]>(() => {
+    const chips: ActiveFilterChip[] = [];
+    if (debouncedSearch) {
+      chips.push({
+        key: "search",
+        label: "Search",
+        value: debouncedSearch,
+        onRemove: () => { setSearch(""); setDebouncedSearch(""); setCurrentPage(1); },
+      });
+    }
+    return chips;
+  }, [debouncedSearch]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setSelectedStage(null);
+    setCurrentPage(1);
+  };
+
+  const stageTabs = (
+    <div
+      className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+      role="tablist"
+      aria-label="Filter by stage"
+    >
+      <button
+        onClick={() => setSelectedStage(null)}
+        role="tab"
+        aria-selected={!selectedStage}
+        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${!selectedStage ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"}`}
+      >All</button>
+      {STAGES.map((s) => (
+        <button
+          key={s}
+          onClick={() => setSelectedStage(s === selectedStage ? null : s)}
+          role="tab"
+          aria-selected={selectedStage === s}
+          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${selectedStage === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"}`}
+        >{s.replace(/_/g," ")}</button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 sm:px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <Breadcrumbs variant="light" className="mb-2" crumbs={[{ label: "Home", path: "/" }, { label: "Deals" }]} />
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-slate-900">Deals</h1>
-            <p className="text-slate-400 text-xs mt-0.5">{total} deals {selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}</p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial sm:justify-end min-w-0">
-            <input
-              type="text"
-              placeholder="Search deal, buyer, unit…"
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              aria-label="Search deals"
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 flex-1 sm:flex-initial sm:w-56 focus:outline-none focus:border-blue-400 bg-slate-50 min-w-0"
-            />
-            {/* View toggle */}
-            <div className="inline-flex border border-slate-200 rounded-lg overflow-hidden text-xs">
-              <button
-                onClick={() => setViewMode("kanban")}
-                className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "kanban" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-              >▦ Kanban</button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`px-2.5 py-1.5 font-medium transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-              >☰ List</button>
-            </div>
-            <button
-              onClick={() => setShowNewDeal(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            >
-              <span className="text-base leading-none" aria-hidden="true">+</span>
-              <span className="hidden sm:inline">New Deal</span>
-              <span className="sm:hidden">New</span>
-            </button>
-          </div>
-        </div>
-        {/* Stage filters + active-only toggle - horizontal scroll on mobile */}
-        <div className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin pb-1 items-center" role="tablist" aria-label="Filter by stage">
-          <button
-            onClick={() => setSelectedStage(null)}
-            role="tab"
-            aria-selected={!selectedStage}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${!selectedStage ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-          >All</button>
-          {STAGES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSelectedStage(s === selectedStage ? null : s)}
-              role="tab"
-              aria-selected={selectedStage === s}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${selectedStage === s ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-            >{s.replace(/_/g," ")}</button>
-          ))}
-          {viewMode === "kanban" && (
-            <label className="flex items-center gap-1.5 ml-2 text-xs text-slate-600 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={activeOnly}
-                onChange={(e) => setActiveOnly(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              Active stages only
-            </label>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Deals" }]}
+        title="Deals"
+        subtitle={`${total} deals ${selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}`}
+        actions={<Button onClick={() => setShowNewDeal(true)}>Create deal</Button>}
+        tabs={stageTabs}
+      />
+
+      <PageContainer padding="compact" className="flex-shrink-0 space-y-3">
+        <FilterBar
+          search={{
+            value: search,
+            onChange: handleSearch,
+            placeholder: "Search deal, buyer, unit…",
+            ariaLabel: "Search deals",
+          }}
+          extra={
+            viewMode === "kanban" ? (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={activeOnly}
+                  onChange={(e) => setActiveOnly(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Active stages only
+              </label>
+            ) : null
+          }
+          view={{
+            value: viewMode,
+            onChange: (v) => setViewMode(v as "kanban" | "list"),
+            views: [
+              { value: "kanban", label: "Kanban" },
+              { value: "list", label: "List" },
+            ],
+          }}
+        />
+        <ActiveFilterChips chips={activeChips} onClearAll={resetFilters} />
+      </PageContainer>
 
       {/* Board / Table */}
       <div className="flex-1 overflow-auto scrollbar-thin">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-64 bg-slate-100 rounded-xl animate-pulse" />
+              <div key={i} className="h-64 bg-muted rounded-xl animate-pulse" />
             ))}
           </div>
         ) : viewMode === "kanban" ? (
@@ -318,15 +340,15 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                         setDraggingId(null);
                         if (deal) moveDeal(deal, stage);
                       }}
-                      className={`w-72 flex-shrink-0 flex flex-col rounded-xl border ${isDropTarget ? "border-blue-400 bg-blue-50/50" : "border-slate-200 bg-slate-50"} overflow-hidden`}
+                      className={`w-72 flex-shrink-0 flex flex-col rounded-xl border ${isDropTarget ? "border-primary/40 bg-info-soft/50" : "border-border bg-muted/50"} overflow-hidden`}
                     >
-                      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-slate-200 ${STAGE_BADGE[stage] || "bg-slate-100 text-slate-600"}`}>
+                      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-border ${STAGE_BADGE[stage] || "bg-muted text-muted-foreground"}`}>
                         <span className="text-xs font-semibold">{stage.replace(/_/g, " ")}</span>
                         <span className="text-xs font-bold opacity-70">{cards.length}</span>
                       </div>
                       <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2 min-h-[200px]">
                         {cards.length === 0 ? (
-                          <p className="text-xs text-slate-400 text-center py-6">Drop a deal here</p>
+                          <p className="text-xs text-muted-foreground text-center py-6">Drop a deal here</p>
                         ) : cards.map((deal) => {
                           const days = daysBetween(deal.reservationDate);
                           const overdue = paymentOverdue(deal as any);
@@ -343,19 +365,19 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                               onDragEnd={() => { setDraggingId(null); setDragOverStage(null); }}
                               onClick={() => navigate(`/deals/${deal.id}`)}
                               onDoubleClick={() => navigate(`/deals/${deal.id}`)}
-                              className={`bg-white rounded-lg border border-slate-200 p-3 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all ${draggingId === deal.id ? "opacity-50" : ""} ${isMoving ? "opacity-50 pointer-events-none" : ""}`}
+                              className={`bg-card rounded-lg border border-border p-3 cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all ${draggingId === deal.id ? "opacity-50" : ""} ${isMoving ? "opacity-50 pointer-events-none" : ""}`}
                             >
                               <div className="flex items-start justify-between mb-1.5">
-                                <p className="text-sm font-semibold text-slate-800 leading-tight">
+                                <p className="text-sm font-semibold text-foreground leading-tight">
                                   {deal.lead.firstName} {deal.lead.lastName}
                                 </p>
                                 {overdue && (
-                                  <span title="Has overdue payment" className="text-rose-500 text-base leading-none flex-shrink-0">▲</span>
+                                  <span title="Has overdue payment" className="text-destructive text-base leading-none flex-shrink-0">▲</span>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500 mb-1">{deal.unit.unitNumber} · {deal.unit.type.replace(/_/g, " ")}</p>
-                              <p className="text-xs font-semibold text-slate-700 mb-2">AED {deal.salePrice.toLocaleString()}</p>
-                              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <p className="text-xs text-muted-foreground mb-1">{deal.unit.unitNumber} · {deal.unit.type.replace(/_/g, " ")}</p>
+                              <p className="text-xs font-semibold text-foreground mb-2">AED {deal.salePrice.toLocaleString()}</p>
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                                 <span>{days}d in pipeline</span>
                                 <span className="font-mono">{deal.dealNumber}</span>
                               </div>
@@ -371,7 +393,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
           })()
         ) : (
           <table className="w-full text-sm min-w-[800px]">
-            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+            <thead className="sticky top-0 bg-muted/50 border-b border-border z-10">
               <tr>
                 {[
                   { label: "Deal #", col: "dealNumber" },
@@ -386,7 +408,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                   <th
                     key={label || "actions"}
                     onClick={col ? () => handleSort(col) : undefined}
-                    className={`text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap ${col ? "cursor-pointer hover:text-slate-800 select-none" : ""}`}
+                    className={`text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${col ? "cursor-pointer hover:text-foreground select-none" : ""}`}
                     aria-sort={col && sortCol === col ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
                   >
                     {label}{col && <SortIcon col={col} />}
@@ -394,14 +416,14 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {filtered.length === 0 ? (
                 <tr><td colSpan={8}>
                   <EmptyState
                     icon="◈"
                     title={debouncedSearch || selectedStage ? "No deals match your filters" : "No deals yet"}
                     description={debouncedSearch || selectedStage ? "Try adjusting your search or stage filter." : "Create your first deal to get started."}
-                    action={!debouncedSearch && !selectedStage ? { label: "New Deal", onClick: () => setShowNewDeal(true) } : undefined}
+                    action={!debouncedSearch && !selectedStage ? { label: "Create deal", onClick: () => setShowNewDeal(true) } : undefined}
                   />
                 </td></tr>
               ) : (filtered.map((deal) => {
@@ -411,39 +433,39 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                   <tr
                     key={deal.id}
                     onClick={() => onViewDeal ? onViewDeal(deal.id) : navigate(`/deals/${deal.id}`)}
-                    className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                    className="hover:bg-info-soft/50 cursor-pointer transition-colors group"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{deal.dealNumber}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{deal.dealNumber}</td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
                         {deal.lead.firstName} {deal.lead.lastName}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-700">{deal.unit.unitNumber}</p>
-                      <p className="text-xs text-slate-400">{deal.unit.type}</p>
+                      <p className="font-medium text-foreground">{deal.unit.unitNumber}</p>
+                      <p className="text-xs text-muted-foreground">{deal.unit.type}</p>
                     </td>
                     <td className="px-4 py-3">
                       <StageBadge kind="deal" stage={deal.stage} />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800">AED {deal.salePrice.toLocaleString()}</p>
-                      {deal.discount > 0 && <p className="text-xs text-emerald-600">-{deal.discount.toLocaleString()}</p>}
+                      <p className="font-semibold text-foreground">AED {deal.salePrice.toLocaleString()}</p>
+                      {deal.discount > 0 && <p className="text-xs text-success">-{deal.discount.toLocaleString()}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="w-20 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs text-slate-500">{pct}%</span>
+                        <span className="text-xs text-muted-foreground">{pct}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       {deal.commission ? (
-                        <span className={`text-xs ${COM_BADGE[deal.commission.status] || "text-slate-500"}`}>
+                        <span className={`text-xs ${COM_BADGE[deal.commission.status] || "text-muted-foreground"}`}>
                           {deal.commission.status.replace(/_/g, " ")}
                         </span>
-                      ) : <span className="text-xs text-slate-300">—</span>}
+                      ) : <span className="text-xs text-foreground/80">—</span>}
                     </td>
                     {/* Kebab menu - always tappable on touch */}
                     <td className="px-2 py-3 relative" onClick={(e) => e.stopPropagation()}>
@@ -452,23 +474,23 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                         aria-label={`Actions for deal ${deal.dealNumber}`}
                         aria-haspopup="menu"
                         aria-expanded={isMenuOpen}
-                        className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         ⋮
                       </button>
                       {isMenuOpen && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1">
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-xl shadow-lg z-20 py-1">
                             <button
                               onClick={() => { setOpenMenuId(null); navigate(`/deals/${deal.id}`); }}
-                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                              className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted/50"
                             >
                               View Details
                             </button>
                             <button
                               onClick={() => { setOpenMenuId(null); setEditDeal(deal); }}
-                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                              className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted/50"
                             >
                               Edit Deal
                             </button>
@@ -476,7 +498,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                               <button
                                 onClick={() => { setOpenMenuId(null); setCancelDeal(deal); setCancelReason(""); }}
                                 disabled={cancelingId === deal.id}
-                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 disabled:opacity-50"
+                                className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive-soft disabled:opacity-50"
                               >
                                 Cancel Deal
                               </button>
@@ -495,46 +517,17 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
 
       {/* Pagination — hidden in kanban view (kanban shows current page's batch only) */}
       {viewMode === "list" && (
-        <nav className="flex items-center justify-between gap-3 flex-wrap px-4 sm:px-6 py-3 bg-white border-t border-slate-200 flex-shrink-0" aria-label="Deals pagination">
-          <p className="text-xs text-slate-500">
-            Page <span className="font-medium text-slate-700">{currentPage}</span> of <span className="font-medium text-slate-700">{totalPages}</span> · {total} deals
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              aria-label="Previous page"
-              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
-              <IconChevronLeft size={12} aria-hidden="true" />
-              <span>Prev</span>
-            </button>
-            <label className="text-xs text-slate-500 flex items-center gap-1.5">
-              <span className="hidden sm:inline">Go to</span>
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={currentPage}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (!Number.isNaN(v) && v >= 1 && v <= totalPages) setCurrentPage(v);
-                }}
-                className="w-14 px-2 py-1 text-xs border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-blue-400"
-                aria-label="Jump to page"
-              />
-            </label>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              aria-label="Next page"
-              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
-              <span>Next</span>
-              <IconChevronRight size={12} aria-hidden="true" />
-            </button>
-          </div>
-        </nav>
+        <PageContainer
+          padding="compact"
+          className="border-t border-border bg-card flex-shrink-0"
+        >
+          <Pagination
+            page={currentPage}
+            pageSize={50}
+            total={total}
+            onPageChange={setCurrentPage}
+          />
+        </PageContainer>
       )}
 
       {showNewDeal && (
@@ -564,12 +557,12 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-deal-title"
-            className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
+            className="bg-card rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-5">
-              <h3 id="cancel-deal-title" className="text-base font-semibold text-slate-900">Cancel deal {cancelDeal.dealNumber}?</h3>
-              <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">
+              <h3 id="cancel-deal-title" className="text-base font-semibold text-foreground">Cancel deal {cancelDeal.dealNumber}?</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
                 This will set the deal to CANCELLED. Provide a reason — it will be recorded on the deal's history.
               </p>
               <textarea
@@ -578,21 +571,21 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                 placeholder="e.g. Buyer changed mind, financing fell through, etc."
                 rows={3}
                 autoFocus
-                className="mt-3 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                className="mt-3 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring resize-none"
               />
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+            <div className="flex justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border">
               <button
                 onClick={() => { setCancelDeal(null); setCancelReason(""); }}
                 disabled={!!cancelingId}
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
               >
                 Keep deal
               </button>
               <button
                 onClick={performCancel}
                 disabled={!cancelReason.trim() || !!cancelingId}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-destructive hover:bg-destructive/90 text-white disabled:opacity-50"
               >
                 {cancelingId ? "Cancelling…" : "Cancel deal"}
               </button>
