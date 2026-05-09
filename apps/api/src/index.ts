@@ -9,6 +9,12 @@ import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
 import { setupClerkAuth } from "./middleware/auth";
+import { installDecimalJsonSerialization } from "./lib/decimalSerialization";
+
+// Install before any router runs so JSON responses emit Decimal as number.
+// Safe to call even before the schema flip — it has no effect until at least
+// one Decimal column exists.
+installDecimalJsonSerialization();
 
 // Import routes
 import projectRoutes from "./routes/projects";

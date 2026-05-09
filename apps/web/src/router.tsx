@@ -1,6 +1,7 @@
 import { lazy, Suspense, ReactElement } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./components/AppShell";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Route components are code-split via React.lazy so the initial dashboard
 // bundle doesn't drag in the deal edit, print pages, Phase 4 modules, etc.
@@ -63,6 +64,8 @@ const PublicUnitView                = lazy(() => import("./components/PublicUnit
 const HotInboxPage                  = lazy(() => import("./pages/HotInboxPage"));
 const CompliancePage                = lazy(() => import("./pages/CompliancePage"));
 const NotificationPreferencesPage   = lazy(() => import("./pages/NotificationPreferencesPage"));
+const SignInPage                    = lazy(() => import("./pages/SignInPage"));
+const SignUpPage                    = lazy(() => import("./pages/SignUpPage"));
 
 // FeatureFlagGate stays eager — it's tiny and used inline below.
 import FeatureFlagGate from "./components/FeatureFlagGate";
@@ -101,9 +104,17 @@ export const router = createBrowserRouter([
   { path: "/payments/:paymentId/print/receipt",          element: withSuspense(<ReceiptPrintPage />) },
   // Public, unauthenticated client share view (no app shell, no Clerk).
   { path: "/share/u/:token",                             element: withSuspense(<PublicUnitView />) },
+  // Sign-in / sign-up flows. Clerk's <SignIn>/<SignUp> render their own
+  // catch-all sub-routes (verification, MFA, etc.) so we use the splat path.
+  { path: "/sign-in/*",                                  element: withSuspense(<SignInPage />) },
+  { path: "/sign-up/*",                                  element: withSuspense(<SignUpPage />) },
   {
     path: "/",
-    element: <AppShell />,
+    element: (
+      <ProtectedRoute>
+        <AppShell />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true,                                      element: <ExecutiveDashboard /> },
       { path: "projects",                                 element: <ProjectsPage /> },

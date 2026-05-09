@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Moon, Sun } from "lucide-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
@@ -9,6 +11,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { isClerkEnabled } from "../lib/auth";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
@@ -70,14 +73,46 @@ export default function AppShell() {
   // below to keep its precedence over the shortcut layer.
   useKeyboardShortcuts();
 
-  // Mock user for dev (TODO: integrate real Clerk auth in future phase)
-  const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
+  // Real user from Clerk when wired; fall back to a dev-mock when running
+  // without a Clerk publishable key (the API mirrors this with a mock-auth
+  // middleware that pins requests to dev-user-1 in that mode).
+  const clerkOn = isClerkEnabled();
+  const clerk = useClerk();
+  const { user: clerkUser } = useUser();
+  const queryClient = useQueryClient();
+  const user = clerkOn
+    ? {
+        firstName: clerkUser?.firstName ?? clerkUser?.username ?? "User",
+        fullName:
+          clerkUser?.fullName ??
+          ([clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") ||
+            clerkUser?.username ||
+            "User"),
+        primaryEmailAddress: {
+          emailAddress: clerkUser?.primaryEmailAddress?.emailAddress ?? "",
+        },
+      }
+    : { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
+
   // Role drives sidebar visibility. Read from localStorage so QA can swap roles for testing.
   const role: Role = (typeof window !== "undefined" ? (localStorage.getItem("samha:role") as Role | null) : null) ?? "ADMIN";
-  const handleSignOut = () => {
-    localStorage.clear();
-    navigate("/sign-in");
-  };
+
+  const handleSignOut = useCallback(async () => {
+    queryClient.clear();
+    if (clerkOn) {
+      try {
+        await clerk.signOut({ redirectUrl: "/sign-in" });
+      } catch {
+        navigate("/sign-in");
+      }
+    } else {
+      // Dev mock — simulate sign-out by clearing local UI state and routing
+      // to /sign-in. The route renders Clerk's <SignIn> if a key is later
+      // provided, or a 404 if none is.
+      localStorage.clear();
+      navigate("/sign-in");
+    }
+  }, [clerkOn, clerk, queryClient, navigate]);
 
   const { theme, setTheme } = useTheme();
   const toggleTheme = useCallback(
