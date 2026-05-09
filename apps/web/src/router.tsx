@@ -144,7 +144,10 @@ export const router = createBrowserRouter([
       { path: "contacts/new",                              element: <ContactEditPage /> },
       { path: "contacts/:contactId",                       element: <ContactDetailPage /> },
       { path: "contacts/:contactId/edit",                  element: <ContactEditPage /> },
+      // Settings tabs are real sub-routes (Phase D). /settings redirects to
+      // /settings/company; each tab key is a deep-linkable URL.
       { path: "settings",                                  element: <SettingsPage /> },
+      { path: "settings/:tabKey",                          element: <SettingsPage /> },
       { path: "profile/notifications",                     element: <NotificationPreferencesPage /> },
       // Phase 4 expansion routes — gated by feature flags so they're hidden
       // until an admin enables the corresponding module under Settings → Feature Flags.

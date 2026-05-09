@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -246,17 +246,18 @@ function ReasonPrompt({ open, section, onCancel, onConfirm }: {
 
 export default function SettingsPage() {
   const { settings, isLoading, refresh } = useSettings();
-  // Tab state is mirrored to ?tab= so links and the browser back button work.
-  // Phase D will replace this with real sub-routes (`/settings/company`).
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = isTab(searchParams.get("tab")) ? (searchParams.get("tab") as Tab) : "company";
-  const [tab, setTabState] = useState<Tab>(initialTab);
-  const setTab = (next: Tab) => {
-    setTabState(next);
-    const p = new URLSearchParams(searchParams);
-    if (next === "company") p.delete("tab"); else p.set("tab", next);
-    setSearchParams(p, { replace: true });
-  };
+  // Each tab is a real sub-route (/settings/<tabKey>) — Phase D replaced the
+  // earlier ?tab= query-state with proper nested routes. Browser back, deep
+  // links, bookmarks and copy-paste-share all work.
+  const navigate = useNavigate();
+  const { tabKey } = useParams<{ tabKey?: string }>();
+  const tab: Tab = isTab(tabKey ?? null) ? (tabKey as Tab) : "company";
+
+  // Redirect /settings → /settings/company so every tab has a canonical URL.
+  useEffect(() => {
+    if (!tabKey) navigate("/settings/company", { replace: true });
+  }, [tabKey, navigate]);
+
   const [form, setForm] = useState<Form>(() => fromSettings(settings));
   const [saving, setSaving] = useState<string | null>(null);
   const [reasonReq, setReasonReq] = useState<ReasonRequest | null>(null);
@@ -317,20 +318,29 @@ export default function SettingsPage() {
         title="App Settings"
         subtitle="Organization-level configuration and operational tools. All changes are recorded in the audit log."
         tabs={
-          <div className="flex gap-1 overflow-x-auto scrollbar-thin">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  tab === t.key
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div
+            className="flex gap-1 overflow-x-auto scrollbar-thin"
+            role="tablist"
+            aria-label="Settings sections"
+          >
+            {tabs.map((t) => {
+              const active = tab === t.key;
+              return (
+                <Link
+                  key={t.key}
+                  to={`/settings/${t.key}`}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    active
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
           </div>
         }
       />
