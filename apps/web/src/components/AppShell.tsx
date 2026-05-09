@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Moon, Sun } from "lucide-react";
@@ -313,7 +313,20 @@ export default function AppShell() {
 
         <main className="flex-1 overflow-auto bg-background text-foreground">
           <ErrorBoundary key={location.pathname}>
-            <Outlet />
+            <Suspense
+              fallback={
+                <div
+                  role="status"
+                  aria-busy="true"
+                  aria-label="Loading page"
+                  className="flex h-full min-h-[40vh] items-center justify-center"
+                >
+                  <div className="h-7 w-7 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>
