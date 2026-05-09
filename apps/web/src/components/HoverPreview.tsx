@@ -68,7 +68,7 @@ export default function HoverPreview({ src, caption, children, size = 360, disab
 
       {pos && (
         <div
-          className="fixed z-50 rounded-lg overflow-hidden shadow-2xl ring-1 ring-slate-900/10 bg-card pointer-events-none"
+          className="fixed z-50 rounded-lg overflow-hidden shadow-2xl ring-1 ring-foreground/10 bg-card pointer-events-none"
           style={overlayStyle}
           role="tooltip"
         >

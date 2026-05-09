@@ -642,10 +642,13 @@ function CompanySection({ form, set, saving, onSave }: SectionProps) {
                   active ? "border-foreground bg-muted/40" : "border-border hover:border-foreground/30 hover:bg-muted/30"
                 }`}
               >
+                {/* eslint-disable-next-line — these swatches MUST be literal black/white
+                    so the preview actually shows what each theme looks like. Tokens
+                    would re-paint them with the active theme and defeat the point. */}
                 <div className={`h-12 rounded-md flex items-center justify-center ${
-                  value === "dark" ? "bg-slate-900 text-white" :
-                  value === "light" ? "bg-white border border-slate-200 text-slate-900" :
-                  "bg-gradient-to-r from-white to-slate-900 text-foreground"
+                  value === "dark"  ? "bg-neutral-900 text-neutral-50" :
+                  value === "light" ? "bg-neutral-50 border border-neutral-200 text-neutral-900" :
+                                      "bg-gradient-to-r from-neutral-50 to-neutral-900 text-foreground"
                 }`}>
                   <span className="text-[10px] font-bold tracking-wide">{label.toUpperCase()}</span>
                 </div>
@@ -1485,7 +1488,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
     >
-      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-card shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
     </button>
   );
 }

@@ -143,7 +143,7 @@ export default function ActivityModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Describe what happened…"
               rows={3}
-              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-ring resize-none transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ring resize-none transition-colors"
             />
           </div>
 
@@ -202,7 +202,7 @@ export default function ActivityModal({
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
               placeholder="e.g. Interested, Callback requested, Closed…"
-              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:border-ring transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ring transition-colors"
             />
           </div>
 

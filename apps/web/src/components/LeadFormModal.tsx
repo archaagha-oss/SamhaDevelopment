@@ -461,7 +461,7 @@ export default function LeadFormModal({ onClose, onCreated }: Props) {
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleUnit(u.id)}
-                            className="rounded border-border text-success focus:ring-emerald-500"
+                            className="rounded border-border text-success focus:ring-success"
                           />
                           <div className="flex-1 min-w-0">
                             <span className="text-xs font-semibold text-foreground">{u.unitNumber}</span>

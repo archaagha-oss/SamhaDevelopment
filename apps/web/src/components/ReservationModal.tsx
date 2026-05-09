@@ -175,7 +175,7 @@ export default function ReservationModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Reason for reservation, special requirements, client preferences…"
               rows={3}
-              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-ring resize-none transition-colors"
+              className="w-full bg-muted border border-border text-foreground rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ring resize-none transition-colors"
             />
           </div>
 

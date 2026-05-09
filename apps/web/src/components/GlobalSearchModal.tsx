@@ -244,7 +244,7 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search leads, units, deals…"
-            className="flex-1 bg-transparent text-foreground text-base placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none"
           />
           {loading && (
             <span className="text-muted-foreground text-sm flex-shrink-0">Searching…</span>
@@ -283,7 +283,7 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
         )}
 
         {/* Results list */}
-        <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-800/60">
+        <div className="max-h-[55vh] overflow-y-auto divide-y divide-border">
           {!query && (
             <div className="px-5 py-12 text-center text-muted-foreground text-sm">
               Start typing to search across leads, units, and deals
