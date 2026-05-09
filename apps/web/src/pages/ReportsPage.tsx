@@ -50,9 +50,16 @@ const STAGE_LABELS: Record<string, string> = {
   COMPLETED: "Completed", CANCELLED: "Cancelled",
 };
 
+// Chart series colors map to design-system semantic tokens so the report
+// re-themes correctly across light/dark mode and any tenant-brand rotation.
 const STATUS_COLORS: Record<string, string> = {
-  AVAILABLE: "#10b981", RESERVED: "#3b82f6", BOOKED: "#a855f7",
-  SOLD: "#f59e0b", HANDED_OVER: "#6b7280", BLOCKED: "#ef4444", NOT_RELEASED: "hsl(var(--neutral-400))",
+  AVAILABLE:    "hsl(var(--success))",
+  RESERVED:     "hsl(var(--info))",
+  BOOKED:       "hsl(var(--chart-7))",
+  SOLD:         "hsl(var(--warning))",
+  HANDED_OVER:  "hsl(var(--muted-foreground))",
+  BLOCKED:      "hsl(var(--destructive))",
+  NOT_RELEASED: "hsl(var(--neutral-400))",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -816,9 +823,9 @@ function presetRange(preset: "30d" | "90d" | "ytd" | "12m" | "all"): { startDate
 type Tab = "pipeline" | "revenue" | "agents" | "inventory" | "finance";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "pipeline",  label: "Sales Pipeline"    },
+  { id: "pipeline",  label: "Sales pipeline"    },
   { id: "revenue",   label: "Revenue"           },
-  { id: "agents",    label: "Agent Performance" },
+  { id: "agents",    label: "Agent performance" },
   { id: "inventory", label: "Inventory"         },
   { id: "finance",   label: "Finance"           },
 ];
@@ -875,13 +882,13 @@ export default function ReportsPage() {
     : "All time";
 
   return (
-    <div className="flex flex-col h-full print:block">
+    <div className="flex flex-col h-full bg-background print:block">
       {/* Print stylesheet — keeps tables/charts paper-friendly */}
       <style>{`
         @media print {
           @page { margin: 12mm; size: A4 landscape; }
           .print\\:hidden { display: none !important; }
-          body { background: #fff; }
+          body { background: hsl(var(--neutral-0)); }
           .recharts-wrapper, .recharts-surface { page-break-inside: avoid; }
           table { page-break-inside: auto; }
           tr { page-break-inside: avoid; page-break-after: auto; }
@@ -893,7 +900,7 @@ export default function ReportsPage() {
       <div className="print:hidden">
         <PageHeader
           crumbs={[{ label: "Home", path: "/" }, { label: "Reports" }]}
-          title="Reports & Analytics"
+          title="Reports"
           subtitle={
             <>
               {activeRangeLabel}
@@ -901,11 +908,38 @@ export default function ReportsPage() {
             </>
           }
           actions={<Button variant="outline" onClick={() => window.print()} title="Print or save as PDF">Print / PDF</Button>}
+          tabs={
+            <div
+              className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+              role="tablist"
+              aria-label="Report section"
+            >
+              {TABS.map((t) => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    role="tab"
+                    aria-selected={active}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
         />
       </div>
 
+      <div className="flex-1 overflow-auto print:overflow-visible">
       <PageContainer padding="default" className="space-y-5 print:p-2 print:space-y-3">
-      {/* Filter bar */}
+      {/* Date-range filter */}
       <div className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 flex-wrap print:hidden">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range</span>
         <div className="flex gap-1">
@@ -926,14 +960,14 @@ export default function ReportsPage() {
             type="date"
             value={range.startDate}
             onChange={(e) => setRange({ ...range, startDate: e.target.value })}
-            className="text-xs px-2 py-1 border border-border rounded-md text-foreground"
+            className="text-xs px-2 py-1 border border-border rounded-md text-foreground bg-card"
           />
           <span className="text-muted-foreground text-xs">to</span>
           <input
             type="date"
             value={range.endDate}
             onChange={(e) => setRange({ ...range, endDate: e.target.value })}
-            className="text-xs px-2 py-1 border border-border rounded-md text-foreground"
+            className="text-xs px-2 py-1 border border-border rounded-md text-foreground bg-card"
           />
         </div>
         {(range.startDate || range.endDate) && (
@@ -942,18 +976,6 @@ export default function ReportsPage() {
             className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
           >Clear</button>
         )}
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit print:hidden">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}>
-            {t.label}
-          </button>
-        ))}
       </div>
 
       {/* Section title for printed page only */}
@@ -979,6 +1001,7 @@ export default function ReportsPage() {
         </>
       )}
       </PageContainer>
+      </div>
     </div>
   );
 }

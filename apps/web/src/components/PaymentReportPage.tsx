@@ -145,8 +145,22 @@ export default function PaymentReportPage() {
   useEffect(() => { load(); }, [load]);
 
   if (loading || !report) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Payments" }]}
+        title="Payments"
+        subtitle="Loading…"
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div
+            className="bg-card rounded-xl border border-border flex items-center justify-center h-64"
+            role="status" aria-busy="true" aria-label="Loading"
+          >
+            <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 
@@ -158,10 +172,10 @@ export default function PaymentReportPage() {
   const availableActions = isUpcoming ? [] : getActions(activeStatus);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Payments" }]}
-        title="Payment Collections"
+        title="Payments"
         subtitle="Track and manage all payment milestones"
         actions={<Button variant="outline" onClick={load}>Refresh</Button>}
       />

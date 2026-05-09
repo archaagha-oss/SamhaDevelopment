@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
+import { Button } from "@/components/ui/button";
 
 interface Commission {
   id: string; amount: number; rate: number; status: string;
@@ -95,12 +96,50 @@ export default function CommissionDashboard() {
 
   const tableRows = tab === "PENDING_APPROVAL" ? pending : tab === "APPROVED" ? approved : paid;
 
+  const TAB_DEFS: Array<{ id: Tab; label: string; count: number }> = [
+    { id: "PENDING_APPROVAL", label: "Pending approval", count: pending.length },
+    { id: "APPROVED",         label: "Ready to pay",     count: approved.length },
+    { id: "PAID",             label: "Paid",             count: paid.length },
+  ];
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Commissions" }]}
         title="Commissions"
         subtitle="Review, approve and pay broker commissions"
+        actions={<Button variant="outline" onClick={fetchData}>Refresh</Button>}
+        tabs={
+          <div
+            className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+            role="tablist"
+            aria-label="Commission status"
+          >
+            {TAB_DEFS.map(({ id, label, count }) => {
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums ${
+                    active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-card text-muted-foreground"
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        }
       />
 
       <PageContainer padding="default" className="space-y-5">
@@ -111,53 +150,15 @@ export default function CommissionDashboard() {
           return (
             <div key={key} className={`${bg} rounded-xl p-4 border border-border`}>
               <p className="text-xs text-muted-foreground mb-1">{label}</p>
-              <p className={`text-2xl font-bold ${color}`}>{s?.count ?? 0}</p>
+              <p className={`text-2xl font-bold tabular-nums ${color}`}>{s?.count ?? 0}</p>
               <p className="text-xs text-muted-foreground mt-0.5">AED {fmtM(s?.total ?? 0)}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Tab header */}
+      {/* Tab content */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-            <button
-              onClick={() => setTab("PENDING_APPROVAL")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "PENDING_APPROVAL" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Pending Approval
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "PENDING_APPROVAL" ? "bg-warning-soft text-warning" : "bg-neutral-200 text-muted-foreground"
-              }`}>{pending.length}</span>
-            </button>
-            <button
-              onClick={() => setTab("APPROVED")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "APPROVED" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Ready to Pay
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "APPROVED" ? "bg-info-soft text-primary" : "bg-neutral-200 text-muted-foreground"
-              }`}>{approved.length}</span>
-            </button>
-            <button
-              onClick={() => setTab("PAID")}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                tab === "PAID" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Paid
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                tab === "PAID" ? "bg-success-soft text-success" : "bg-neutral-200 text-muted-foreground"
-              }`}>{paid.length}</span>
-            </button>
-          </div>
-        </div>
-
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />

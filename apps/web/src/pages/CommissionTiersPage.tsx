@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { commissionTiersApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface Tier {
   id?: string;
@@ -80,79 +81,153 @@ export default function CommissionTiersPage() {
     }
   };
 
+  const activeCount = rules.filter((r) => r.isActive).length;
+
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Tiered Commission Rules</h1>
-
-      {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
-      ) : rules.length === 0 ? (
-        <p className="text-muted-foreground">No tiered commission rules configured.</p>
-      ) : (
-        rules.map((rule) => (
-          <section key={rule.id} className="border rounded p-4 space-y-3">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="font-medium">{rule.name}</h2>
-                <p className="text-xs text-muted-foreground">
-                  {rule.projectId ? "Project-scoped" : "Global"} · priority {rule.priority} · {rule.isActive ? "active" : "inactive"}
-                </p>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Commission tiers" }]}
+        title="Commission tiers"
+        subtitle={
+          loading
+            ? "Loading…"
+            : `${rules.length} rule${rules.length === 1 ? "" : "s"} · ${activeCount} active · sale-price brackets that determine commission`
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
+            {loading ? (
+              <div className="flex items-center justify-center h-40" role="status" aria-busy="true" aria-label="Loading">
+                <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
               </div>
-              {editingId !== rule.id ? (
-                <button className="text-sm text-primary hover:underline" onClick={() => startEdit(rule)}>
-                  Edit Tiers
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button className="text-sm text-muted-foreground hover:underline" onClick={() => setEditingId(null)}>
-                    Cancel
-                  </button>
-                  <button className="bg-primary text-white text-sm px-3 py-1 rounded" onClick={save}>
-                    Save
-                  </button>
-                </div>
-              )}
-            </header>
-
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground border-b">
-                  <th className="py-1">Min Sale</th>
-                  <th>Max Sale</th>
-                  <th>Rate %</th>
-                  <th>Flat Bonus</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(editingId === rule.id ? draftTiers : rule.tiers).map((t, idx) => (
-                  <tr key={t.id ?? `new-${idx}`} className="border-b">
-                    {editingId === rule.id ? (
-                      <>
-                        <td><input className="border rounded px-1 py-0.5 w-28" type="number" value={t.minSalePrice ?? ""} onChange={(e) => updateTier(idx, "minSalePrice", e.target.value)} /></td>
-                        <td><input className="border rounded px-1 py-0.5 w-28" type="number" value={t.maxSalePrice ?? ""} onChange={(e) => updateTier(idx, "maxSalePrice", e.target.value)} placeholder="∞" /></td>
-                        <td><input className="border rounded px-1 py-0.5 w-20" type="number" step="0.1" value={t.ratePercent} onChange={(e) => updateTier(idx, "ratePercent", e.target.value)} /></td>
-                        <td><input className="border rounded px-1 py-0.5 w-24" type="number" value={t.flatBonus} onChange={(e) => updateTier(idx, "flatBonus", e.target.value)} /></td>
-                      </>
+            ) : rules.length === 0 ? (
+              <div className="bg-card rounded-xl border border-dashed border-border py-16 text-center">
+                <p className="text-sm text-muted-foreground">No tiered commission rules configured.</p>
+              </div>
+            ) : (
+              rules.map((rule) => (
+                <section key={rule.id} className="bg-card rounded-xl border border-border p-5 space-y-3">
+                  <header className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-foreground">{rule.name}</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {rule.projectId ? "Project-scoped" : "Global"} · priority {rule.priority} ·{" "}
+                        <span className={rule.isActive ? "text-success" : "text-muted-foreground"}>
+                          {rule.isActive ? "active" : "inactive"}
+                        </span>
+                      </p>
+                    </div>
+                    {editingId !== rule.id ? (
+                      <button
+                        className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+                        onClick={() => startEdit(rule)}
+                      >
+                        Edit tiers
+                      </button>
                     ) : (
-                      <>
-                        <td className="py-1">{t.minSalePrice?.toLocaleString() ?? "0"}</td>
-                        <td>{t.maxSalePrice?.toLocaleString() ?? "∞"}</td>
-                        <td>{t.ratePercent}%</td>
-                        <td>{t.flatBonus.toLocaleString()}</td>
-                      </>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+                          onClick={save}
+                        >
+                          Save changes
+                        </button>
+                      </div>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {editingId === rule.id && (
-              <button className="text-xs text-primary hover:underline" onClick={addTier}>
-                + Add tier
-              </button>
+                  </header>
+
+                  <div className="overflow-x-auto -mx-1 px-1">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 border-b border-border">
+                        <tr>
+                          {["Min Sale", "Max Sale", "Rate %", "Flat Bonus"].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(editingId === rule.id ? draftTiers : rule.tiers).map((t, idx) => (
+                          <tr key={t.id ?? `new-${idx}`}>
+                            {editingId === rule.id ? (
+                              <>
+                                <td className="px-3 py-2">
+                                  <input
+                                    className="border border-border rounded px-2 py-1 w-28 text-sm bg-card focus:outline-none focus:border-ring"
+                                    type="number"
+                                    value={t.minSalePrice ?? ""}
+                                    onChange={(e) => updateTier(idx, "minSalePrice", e.target.value)}
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    className="border border-border rounded px-2 py-1 w-28 text-sm bg-card focus:outline-none focus:border-ring"
+                                    type="number"
+                                    value={t.maxSalePrice ?? ""}
+                                    onChange={(e) => updateTier(idx, "maxSalePrice", e.target.value)}
+                                    placeholder="∞"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    className="border border-border rounded px-2 py-1 w-20 text-sm bg-card focus:outline-none focus:border-ring"
+                                    type="number"
+                                    step="0.1"
+                                    value={t.ratePercent}
+                                    onChange={(e) => updateTier(idx, "ratePercent", e.target.value)}
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    className="border border-border rounded px-2 py-1 w-24 text-sm bg-card focus:outline-none focus:border-ring"
+                                    type="number"
+                                    value={t.flatBonus}
+                                    onChange={(e) => updateTier(idx, "flatBonus", e.target.value)}
+                                  />
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="px-3 py-2 text-sm text-foreground tabular-nums">
+                                  {t.minSalePrice?.toLocaleString() ?? "0"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-foreground tabular-nums">
+                                  {t.maxSalePrice?.toLocaleString() ?? "∞"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-foreground tabular-nums">{t.ratePercent}%</td>
+                                <td className="px-3 py-2 text-sm text-foreground tabular-nums">
+                                  {t.flatBonus.toLocaleString()}
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {editingId === rule.id && (
+                    <button className="text-xs text-primary hover:underline" onClick={addTier}>
+                      + Add tier
+                    </button>
+                  )}
+                </section>
+              ))
             )}
-          </section>
-        ))
-      )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import PaymentPlanFormModal from "./PaymentPlanFormModal";
 import ConfirmDialog from "./ConfirmDialog";
 import { PageContainer, PageHeader } from "./layout";
+import { FilterBar } from "./data";
 import { Button } from "@/components/ui/button";
 import EmptyState from "./EmptyState";
 import { Skeleton } from "./Skeleton";
@@ -138,56 +139,58 @@ export default function PaymentPlansPage() {
     milestones.reduce((s, m) => s + m.percentage, 0);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
-        crumbs={[{ label: "Home", path: "/" }, { label: "Payment Plans" }]}
-        title="Payment Plans"
-        subtitle={`${plans.filter(p => p.isActive).length} active templates`}
-        actions={<Button onClick={() => { setEditPlan(null); setShowForm(true); }}>Create plan</Button>}
+        crumbs={[{ label: "Home", path: "/" }, { label: "Payment plans" }]}
+        title="Payment plans"
+        subtitle={`${plans.filter(p => p.isActive).length} active template${plans.filter(p => p.isActive).length === 1 ? "" : "s"}`}
+        actions={<Button onClick={() => { setEditPlan(null); setShowForm(true); }}>Create payment plan</Button>}
       />
 
-      <PageContainer padding="compact" className="flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search plans…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-ring bg-card"
-          />
-          <div className="flex gap-1">
-            {(["all", "active", "inactive"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilterActive(f)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${filterActive === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"}`}
-              >{f}</button>
-            ))}
-          </div>
-        </div>
-      </PageContainer>
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
+            <FilterBar
+              search={{
+                value: search,
+                onChange: setSearch,
+                placeholder: "Search plans…",
+                ariaLabel: "Search payment plans",
+              }}
+              filters={[
+                {
+                  key: "active",
+                  label: "Status",
+                  value: filterActive,
+                  onChange: (v) => setFilterActive(v as "all" | "active" | "inactive"),
+                  options: [
+                    { value: "all",      label: "All statuses" },
+                    { value: "active",   label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ],
+                },
+              ]}
+            />
 
-      {/* List */}
-      <div className="flex-1 overflow-auto p-6">
-        {loading ? (
-          <div className="space-y-3 max-w-4xl">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-card rounded-xl border border-border p-5 space-y-3">
-                <Skeleton className="h-5 w-1/3" />
-                <Skeleton className="h-3 w-2/3" />
-                <Skeleton className="h-3 w-1/2" />
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-card rounded-xl border border-border p-5 space-y-3">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-3 w-2/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon="◫"
-            title={plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}
-            description={plans.length === 0 ? "Define milestone schedules to attach to deals." : "Try adjusting your filters."}
-            action={plans.length === 0 ? { label: "Create first plan", onClick: () => { setEditPlan(null); setShowForm(true); } } : undefined}
-          />
-        ) : (
-          <div className="space-y-3 max-w-4xl">
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                icon="◫"
+                title={plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}
+                description={plans.length === 0 ? "Define milestone schedules to attach to deals." : "Try adjusting your filters."}
+                action={plans.length === 0 ? { label: "Create payment plan", onClick: () => { setEditPlan(null); setShowForm(true); } } : undefined}
+              />
+            ) : (
+              <div className="space-y-3">
             {filtered.map((plan) => {
               const isExpanded = expandedId === plan.id;
               const pct = totalPercent(plan.milestones);
@@ -313,8 +316,10 @@ export default function PaymentPlansPage() {
                 </div>
               );
             })}
+              </div>
+            )}
           </div>
-        )}
+        </PageContainer>
       </div>
 
       {showForm && (
@@ -327,7 +332,7 @@ export default function PaymentPlansPage() {
 
       <ConfirmDialog
         open={!!confirmTogglePlan}
-        title={confirmTogglePlan?.isActive ? "Deactivate Plan" : "Reactivate Plan"}
+        title={confirmTogglePlan?.isActive ? "Deactivate plan" : "Reactivate plan"}
         message={confirmTogglePlan?.isActive
           ? `Deactivate "${confirmTogglePlan?.name}"? It will no longer appear in new deal forms.`
           : `Reactivate "${confirmTogglePlan?.name}"?`}

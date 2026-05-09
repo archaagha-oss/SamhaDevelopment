@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { PageHeader } from "./layout";
+import { PageHeader, PageContainer } from "./layout";
 
 interface Deal {
   id: string;
@@ -18,14 +18,13 @@ interface Deal {
 interface TabType {
   label: string;
   id: "overview" | "overdue" | "upcoming" | "pipeline";
-  icon: string;
 }
 
 const TABS: TabType[] = [
-  { label: "Overview", id: "overview", icon: "📊" },
-  { label: "Overdue", id: "overdue", icon: "⚠️" },
-  { label: "Upcoming", id: "upcoming", icon: "📅" },
-  { label: "Collections Pipeline", id: "pipeline", icon: "🎯" },
+  { label: "Overview",             id: "overview" },
+  { label: "Overdue",              id: "overdue"  },
+  { label: "Upcoming",             id: "upcoming" },
+  { label: "Collections pipeline", id: "pipeline" },
 ];
 
 export default function FinanceDashboard() {
@@ -183,8 +182,22 @@ export default function FinanceDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col h-full bg-background">
+        <PageHeader
+          crumbs={[{ label: "Home", path: "/" }, { label: "Finance" }]}
+          title="Finance"
+          subtitle="Loading…"
+        />
+        <div className="flex-1 overflow-auto">
+          <PageContainer>
+            <div
+              className="bg-card rounded-xl border border-border flex items-center justify-center h-72"
+              role="status" aria-busy="true" aria-label="Loading"
+            >
+              <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </PageContainer>
+        </div>
       </div>
     );
   }
@@ -193,33 +206,42 @@ export default function FinanceDashboard() {
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Finance" }]}
-        title="Finance Dashboard"
+        title="Finance"
         subtitle="Receivables tracking, overdue alerts, collections pipeline"
         tabs={
-          <div className="flex gap-1 py-3 overflow-x-auto">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70"
-                }`}
-              >
-                <span className="mr-1" aria-hidden="true">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
+          <div
+            className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+            role="tablist"
+            aria-label="Finance view"
+          >
+            {TABS.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         }
       />
 
       {/* Content */}
-      <div className="flex-1 overflow-auto scrollbar-thin">
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="p-6 space-y-6">
+          <div className="space-y-5">
             {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-card border border-border rounded-lg p-4">
@@ -290,7 +312,7 @@ export default function FinanceDashboard() {
 
         {/* Overdue Tab */}
         {activeTab === "overdue" && (
-          <div className="p-6">
+          <div>
             {overduePayments.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-3xl mb-2">✅</p>
@@ -341,7 +363,7 @@ export default function FinanceDashboard() {
 
         {/* Upcoming Tab */}
         {activeTab === "upcoming" && (
-          <div className="p-6">
+          <div>
             {upcomingPayments.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-3xl mb-2">📅</p>
@@ -392,7 +414,7 @@ export default function FinanceDashboard() {
 
         {/* Pipeline Tab */}
         {activeTab === "pipeline" && (
-          <div className="p-6 space-y-4">
+          <div className="space-y-4">
             {pipeline.map((item) => (
               <div key={item.stage} className="bg-card border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -426,6 +448,7 @@ export default function FinanceDashboard() {
             ))}
           </div>
         )}
+        </PageContainer>
       </div>
     </div>
   );
