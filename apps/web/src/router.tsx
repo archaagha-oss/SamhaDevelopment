@@ -4,6 +4,7 @@ import ExecutiveDashboard from "./components/ExecutiveDashboard";
 import ProjectDetailPage from "./components/ProjectDetailPage";
 import UnitDetailPage from "./components/UnitDetailPage";
 import UnitsPage from "./components/UnitsPage";
+import UnitEditPage from "./pages/UnitEditPage";
 import LeadsPage from "./components/LeadsPage";
 import LeadProfilePage from "./components/LeadProfilePage";
 import LeadEditPage from "./pages/LeadEditPage";
@@ -73,7 +74,9 @@ export const router = createBrowserRouter([
       { path: "projects",                                 element: <ProjectsPage /> },
       { path: "projects/:projectId",                      element: <ProjectDetailPage /> },
       { path: "projects/:projectId/settings",             element: <ProjectSettingsPage /> },
+      { path: "projects/:projectId/units/new",            element: <UnitEditPage /> },
       { path: "projects/:projectId/units/:unitId",        element: <UnitDetailPage /> },
+      { path: "projects/:projectId/units/:unitId/edit",   element: <UnitEditPage /> },
       { path: "units",                                    element: <UnitsPage /> },
       { path: "leads",                                    element: <LeadsPage /> },
       { path: "leads/new",                                element: <LeadEditPage /> },

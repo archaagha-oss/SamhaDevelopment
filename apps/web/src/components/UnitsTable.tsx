@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { getStatusColor } from "../utils/statusColors";
 import { formatAreaShort } from "../utils/formatArea";
 import UnitModal from "./UnitModal";
-import UnitFormModal from "./UnitFormModal";
 import BulkUnitModal from "./BulkUnitModal";
 import HoverPreview from "./HoverPreview";
 
@@ -120,9 +119,9 @@ export default function UnitsTable({ projectId }: Props) {
 
   // Modals
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  // Edit/Create state removed in Phase C.3 — both flows are real routes now
+  // (/projects/:projectId/units/new and /projects/:projectId/units/:unitId/edit).
 
   // Column visibility (persisted in localStorage)
   const [hiddenColumns, setHiddenColumns] = useState<Set<ColumnKey>>(() => {
@@ -340,10 +339,10 @@ export default function UnitsTable({ projectId }: Props) {
             {!isGlobal && (
               <>
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => projectId && navigate(`/projects/${projectId}/units/new`)}
                   className="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1.5"
                 >
-                  + Add Unit
+                  + Create unit
                 </button>
                 <button
                   onClick={() => setShowBulkModal(true)}
@@ -788,7 +787,7 @@ export default function UnitsTable({ projectId }: Props) {
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {canEdit && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); setEditingUnit(unit); }}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/projects/${unit.projectId}/units/${unit.id}/edit`); }}
                               className="text-xs text-primary hover:text-primary font-medium"
                             >
                               Edit
@@ -806,19 +805,8 @@ export default function UnitsTable({ projectId }: Props) {
       </div>
 
       {/* ── Modals ── */}
-      {showCreateModal && projectId && (
-        <UnitFormModal projectId={projectId} onClose={() => setShowCreateModal(false)} onSaved={load} />
-      )}
       {showBulkModal && projectId && (
         <BulkUnitModal projectId={projectId} onClose={() => setShowBulkModal(false)} onCreated={load} />
-      )}
-      {editingUnit && projectId && (
-        <UnitFormModal
-          projectId={projectId}
-          unit={editingUnit}
-          onClose={() => setEditingUnit(null)}
-          onSaved={() => { setEditingUnit(null); load(); }}
-        />
       )}
       {selectedUnit && (
         <UnitModal
@@ -827,7 +815,11 @@ export default function UnitsTable({ projectId }: Props) {
           statusLabels={STATUS_LABELS}
           onClose={() => setSelectedUnit(null)}
           onRefresh={load}
-          onEditUnit={(u) => { setSelectedUnit(null); setEditingUnit(u as Unit); }}
+          onEditUnit={(u) => {
+            setSelectedUnit(null);
+            const unit = u as Unit;
+            navigate(`/projects/${unit.projectId}/units/${unit.id}/edit`);
+          }}
           onDeleted={() => { setSelectedUnit(null); load(); }}
         />
       )}
