@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
-import DealEditModal from "./DealEditModal";
 import DealPurchasersModal from "./DealPurchasersModal";
 import DealSpaCompliancePanel from "./DealSpaCompliancePanel";
 import ConfirmDialog from "./ConfirmDialog";
@@ -129,7 +128,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
   const [showReserveConfirm, setShowReserveConfirm] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   // Change Unit panel
   const [showChangeUnit, setShowChangeUnit]             = useState(false);
@@ -695,7 +693,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-foreground">{deal.lead.firstName} {deal.lead.lastName}</h1>
               <button
-                onClick={() => setShowEditModal(true)}
+                onClick={() => navigate(`/deals/${dealId}/edit`)}
                 className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors text-sm"
                 title="Edit deal"
               >
@@ -2195,13 +2193,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           </div>
         </div>
-      )}
-      {showEditModal && (
-        <DealEditModal
-          deal={deal}
-          onClose={() => setShowEditModal(false)}
-          onSaved={loadDeal}
-        />
       )}
       {showPurchasersModal && dealId && (
         <DealPurchasersModal

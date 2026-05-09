@@ -8,6 +8,7 @@ import LeadsPage from "./components/LeadsPage";
 import LeadProfilePage from "./components/LeadProfilePage";
 import DealsPage from "./components/DealsPage";
 import DealDetailPage from "./components/DealDetailPage";
+import DealEditPage from "./pages/DealEditPage";
 import BrokerPage from "./components/BrokerPage";
 import CommissionDashboard from "./components/CommissionDashboard";
 import FinanceDashboard from "./components/FinanceDashboard";
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
       { path: "leads/:leadId",                            element: <LeadProfilePage /> },
       { path: "deals",                                    element: <DealsPage /> },
       { path: "deals/:dealId",                            element: <DealDetailPage /> },
+      { path: "deals/:dealId/edit",                       element: <DealEditPage /> },
       { path: "brokers",                                  element: <BrokerPage /> },
       { path: "commissions",                              element: <CommissionDashboard /> },
       { path: "finance",                                  element: <FinanceDashboard /> },

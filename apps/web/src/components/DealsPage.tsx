@@ -5,7 +5,6 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useDeals } from "../hooks/useDeals";
 import DealFormModal from "./DealFormModal";
-import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
 import { SkeletonTableRows } from "./Skeleton";
@@ -99,7 +98,6 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [sortCol, setSortCol] = useState<string>(searchParams.get("sort") || "reservationDate");
   const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as "asc" | "desc") || "desc");
-  const [editDeal, setEditDeal] = useState<Deal | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [cancelDeal, setCancelDeal] = useState<Deal | null>(null);
@@ -489,10 +487,10 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                               View Details
                             </button>
                             <button
-                              onClick={() => { setOpenMenuId(null); setEditDeal(deal); }}
+                              onClick={() => { setOpenMenuId(null); navigate(`/deals/${deal.id}/edit`); }}
                               className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted/50"
                             >
-                              Edit Deal
+                              Edit deal
                             </button>
                             {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                               <button
@@ -539,14 +537,6 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
           }}
         />
       )}
-      {editDeal && (
-        <DealEditModal
-          deal={editDeal as any}
-          onClose={() => setEditDeal(null)}
-          onSaved={() => { setEditDeal(null); queryClient.invalidateQueries({ queryKey: ["deals"] }); }}
-        />
-      )}
-
       {cancelDeal && (
         <div
           className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4"
