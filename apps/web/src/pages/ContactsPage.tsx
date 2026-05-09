@@ -10,6 +10,7 @@ import {
   FilterBar,
   ActiveFilterChips,
   Pagination,
+  BulkActionBar,
   type ActiveFilterChip,
 } from "../components/data";
 import { Button } from "../components/ui/button";
@@ -59,6 +60,14 @@ export default function ContactsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Contact | null>(null);
 
+  // Phase F.2 — multi-select for bulk operations.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // Clear selection when filters/page change so the count stays meaningful.
+  useEffect(() => { setSelectedIds(new Set()); }, [page, search, filterSource]);
+
   const load = useCallback(() => {
     setLoading(true);
     const params: any = { page, limit: PAGE_SIZE };
@@ -91,6 +100,32 @@ export default function ContactsPage() {
       setConfirmDelete(null);
     }
   };
+
+  const performBulkDelete = async () => {
+    setConfirmBulkDelete(false);
+    setBulkDeleting(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => axios.delete(`/api/contacts/${id}`)),
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = ids.length - failed;
+    if (ok > 0)     toast.success(`${ok} contact${ok === 1 ? "" : "s"} deleted`);
+    if (failed > 0) toast.error(`${failed} delete${failed === 1 ? "" : "s"} failed`);
+    setSelectedIds(new Set());
+    setBulkDeleting(false);
+    load();
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAllVisible = () =>
+    setSelectedIds(new Set(contacts.map((c) => c.id)));
 
   const initials = (c: Contact) => {
     const first = c.firstName?.trim()?.[0] ?? "";
@@ -159,6 +194,21 @@ export default function ContactsPage() {
 
             <ActiveFilterChips chips={activeChips} onClearAll={resetFilters} />
 
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              totalCount={contacts.length}
+              onClear={() => setSelectedIds(new Set())}
+              onSelectAll={selectAllVisible}
+              actions={[
+                {
+                  label: bulkDeleting ? "Deleting…" : "Delete",
+                  onClick: () => setConfirmBulkDelete(true),
+                  variant: "destructive",
+                  disabled: bulkDeleting,
+                },
+              ]}
+            />
+
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               {loading ? (
                 <table className="w-full text-sm">
@@ -185,6 +235,17 @@ export default function ContactsPage() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-muted/50 border-b border-border z-10">
                     <tr>
+                      <th className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label="Select all visible contacts"
+                          checked={contacts.length > 0 && selectedIds.size === contacts.length}
+                          onChange={(e) => e.target.checked
+                            ? selectAllVisible()
+                            : setSelectedIds(new Set())}
+                          className="rounded border-border accent-primary"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Name</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Company</th>
@@ -199,8 +260,19 @@ export default function ContactsPage() {
                       <tr
                         key={c.id}
                         onClick={() => navigate(`/contacts/${c.id}`)}
-                        className="hover:bg-muted/50 group transition-colors cursor-pointer"
+                        className={`hover:bg-muted/50 group transition-colors cursor-pointer ${
+                          selectedIds.has(c.id) ? "bg-info-soft/40" : ""
+                        }`}
                       >
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${c.firstName ?? "contact"}`}
+                            checked={selectedIds.has(c.id)}
+                            onChange={() => toggleSelected(c.id)}
+                            className="rounded border-border accent-primary"
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-info-soft text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -278,6 +350,16 @@ export default function ContactsPage() {
         variant="danger"
         onConfirm={() => confirmDelete && performDelete(confirmDelete.id)}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selectedIds.size} contact${selectedIds.size === 1 ? "" : "s"}?`}
+        message={`This will permanently delete ${selectedIds.size} contact${selectedIds.size === 1 ? "" : "s"}. This cannot be undone.`}
+        confirmLabel="Delete all"
+        variant="danger"
+        onConfirm={performBulkDelete}
+        onCancel={() => setConfirmBulkDelete(false)}
       />
     </div>
   );
