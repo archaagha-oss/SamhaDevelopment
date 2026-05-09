@@ -49,7 +49,13 @@ export default function RefundsPage() {
       const data = await refundsApi.listOpen();
       setRefunds(data);
     } catch (e: any) {
-      toast.error(e.response?.data?.error ?? e.message);
+      // Phase 4 backend may not be mounted yet — render as empty list rather
+      // than a misleading "Route not found" toast.
+      if (e.response?.status === 404) {
+        setRefunds([]);
+      } else {
+        toast.error(e.response?.data?.error ?? e.message);
+      }
     } finally {
       setLoading(false);
     }
