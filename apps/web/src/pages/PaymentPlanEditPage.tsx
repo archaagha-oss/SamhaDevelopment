@@ -7,6 +7,7 @@ import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
 import { Button } from "../components/ui/button";
+import { formatAED } from "../lib/format";
 
 // PaymentPlanEditPage — handles /payment-plans/new (create) and
 // /payment-plans/:planId/edit (edit). Replaces PaymentPlanFormModal.
@@ -340,7 +341,7 @@ export default function PaymentPlanEditPage() {
                       />
                       {estimatedAmt !== null && (
                         <span className="text-xs text-muted-foreground font-medium whitespace-nowrap tabular-nums">
-                          ≈ AED {estimatedAmt.toLocaleString("en-AE", { maximumFractionDigits: 0 })}
+                          ≈ {formatAED(estimatedAmt)}
                         </span>
                       )}
                       {!isEdit && (

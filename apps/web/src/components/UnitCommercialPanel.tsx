@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Unit } from "../types";
+import { formatAED } from "../lib/format";
 
 interface Props {
   unit: Unit;
@@ -51,7 +52,7 @@ export default function UnitCommercialPanel({ unit }: Props) {
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Sale Price</span>
               <span className="text-xs font-bold text-foreground">
-                AED {activeDeal.salePrice.toLocaleString("en-AE")}
+                {formatAED(activeDeal.salePrice)}
               </span>
             </div>
           </div>

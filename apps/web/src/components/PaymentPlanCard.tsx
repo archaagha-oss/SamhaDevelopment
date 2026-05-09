@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useUpdateUnit } from "../hooks/useUpdateUnit";
+import { formatAED } from "../lib/format";
 
 interface Props {
   unitId: string;
@@ -145,7 +146,7 @@ export default function PaymentPlanCard({ unitId, paymentPlan, price }: Props) {
                 </div>
                 <div className="w-32 text-right">
                   <span className="text-xs font-semibold text-foreground">
-                    AED {t.amount.toLocaleString("en-AE")}
+                    {formatAED(t.amount)}
                   </span>
                 </div>
               </div>

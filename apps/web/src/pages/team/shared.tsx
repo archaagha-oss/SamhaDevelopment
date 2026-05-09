@@ -98,11 +98,31 @@ export function Section({ title, children }: { title: string; children: React.Re
   );
 }
 
-export function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+export function Field({
+  label,
+  required,
+  htmlFor,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label className="block text-xs font-medium text-foreground mb-1">{label}{required && " *"}</label>
+      <label htmlFor={htmlFor} className="block text-xs font-medium text-foreground mb-1">
+        {label}
+        {required && " *"}
+      </label>
       {children}
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

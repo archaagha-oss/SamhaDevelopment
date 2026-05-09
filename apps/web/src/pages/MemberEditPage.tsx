@@ -2,15 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
 import { Button } from "../components/ui/button";
+import { useZodValidation } from "../lib/validation";
 import {
   Member, Role, Status, EmpType,
   ROLE_CFG, STATUS_CFG, EMP_LABEL,
   Section, Field, inputCls,
 } from "./team/shared";
+
+function memberFormSchema(opts: { isEdit: boolean }) {
+  const emailRule = z
+    .string()
+    .trim()
+    .email("Enter a valid email like name@example.com");
+  return z.object({
+    name: z.string().trim().min(1, "Name is required"),
+    email: opts.isEdit
+      ? emailRule.optional().or(z.literal(""))
+      : emailRule,
+  });
+}
 
 // MemberEditPage — handles both `/team/new` (create) and `/team/:userId/edit` (edit).
 // Replaces the old MemberFormModal popup. Same fields, no modal — full detail page.
@@ -40,7 +55,9 @@ export default function MemberEditPage() {
   const [joinedAt,       setJoinedAt]       = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const validationSchema = useMemo(() => memberFormSchema({ isEdit }), [isEdit]);
+  const { errors, validate, clearError } = useZodValidation(validationSchema);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,11 +103,8 @@ export default function MemberEditPage() {
   const cancelTo = isEdit && userId ? `/team/${userId}` : "/team";
 
   async function submit() {
-    if (!name.trim() || (!isEdit && !email.trim())) {
-      setError("Name and email are required");
-      return;
-    }
-    setError("");
+    if (!validate({ name, email })) return;
+    setSubmitError("");
     setSubmitting(true);
 
     const payload: Record<string, unknown> = {
@@ -118,7 +132,7 @@ export default function MemberEditPage() {
         navigate(newId ? `/team/${newId}` : "/team");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save member");
+      setSubmitError(err.response?.data?.error || "Failed to save member");
     } finally {
       setSubmitting(false);
     }
@@ -188,17 +202,28 @@ export default function MemberEditPage() {
           <div className="bg-card rounded-xl border border-border p-5 space-y-5">
             <Section title="Identity">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Full Name" required>
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sara Al Mansoori" className={inputCls} />
-                </Field>
-                <Field label="Email" required={!isEdit}>
+                <Field label="Full Name" required htmlFor="name" error={errors.name}>
                   <input
+                    id="name"
+                    name="name"
+                    value={name}
+                    onChange={(e) => { clearError("name"); setName(e.target.value); }}
+                    placeholder="e.g. Sara Al Mansoori"
+                    className={`${inputCls}${errors.name ? " border-destructive focus:ring-destructive" : ""}`}
+                    aria-invalid={!!errors.name}
+                  />
+                </Field>
+                <Field label="Email" required={!isEdit} htmlFor="email" error={errors.email}>
+                  <input
+                    id="email"
+                    name="email"
                     type="email"
                     value={email}
                     disabled={isEdit}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { clearError("email"); setEmail(e.target.value); }}
                     placeholder="e.g. sara@samha.ae"
-                    className={`${inputCls} ${isEdit ? "bg-muted/50 text-muted-foreground" : ""}`}
+                    className={`${inputCls} ${isEdit ? "bg-muted/50 text-muted-foreground" : ""}${errors.email ? " border-destructive focus:ring-destructive" : ""}`}
+                    aria-invalid={!!errors.email}
                   />
                 </Field>
                 <Field label="Phone">
@@ -290,9 +315,9 @@ export default function MemberEditPage() {
             </div>
           )}
 
-          {error && (
-            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
-              {error}
+          {submitError && (
+            <div role="alert" className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
+              {submitError}
             </div>
           )}
         </>

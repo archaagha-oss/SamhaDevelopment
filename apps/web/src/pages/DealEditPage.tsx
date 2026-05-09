@@ -2,10 +2,35 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
 import { Button } from "../components/ui/button";
+import FieldError from "../components/ui/field-error";
+import { useZodValidation } from "../lib/validation";
+
+// Sale price + discount validation. The API enforces the same rules; client
+// adds them so the user gets feedback before the round-trip.
+const dealEditSchema = z
+  .object({
+    salePrice: z
+      .string()
+      .trim()
+      .min(1, "Sale price is required")
+      .refine((s) => Number.isFinite(Number(s)) && Number(s) > 0, "Enter a positive amount"),
+    discount: z
+      .string()
+      .trim()
+      .refine(
+        (s) => s === "" || (Number.isFinite(Number(s)) && Number(s) >= 0),
+        "Discount must be a non-negative amount",
+      ),
+  })
+  .refine(
+    (v) => Number(v.discount || 0) <= Number(v.salePrice || 0),
+    { message: "Discount cannot exceed the sale price", path: ["discount"] },
+  );
 
 interface Deal {
   id: string;
@@ -75,7 +100,8 @@ export default function DealEditPage() {
     assignedAgentId: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { errors, validate, clearError } = useZodValidation(dealEditSchema);
 
   useEffect(() => {
     if (!dealId) { setLoadError(true); setLoading(false); return; }
@@ -130,7 +156,8 @@ export default function DealEditPage() {
 
   async function submit() {
     if (!deal) return;
-    setError(null);
+    if (!validate({ salePrice: form.salePrice, discount: form.discount })) return;
+    setSubmitError(null);
     setSubmitting(true);
     try {
       await axios.patch(`/api/deals/${deal.id}`, {
@@ -151,7 +178,7 @@ export default function DealEditPage() {
       toast.success("Deal updated");
       navigate(`/deals/${deal.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to update deal");
+      setSubmitError(err.response?.data?.error || "Failed to update deal");
     } finally {
       setSubmitting(false);
     }
@@ -220,29 +247,36 @@ export default function DealEditPage() {
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Pricing</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>Sale Price (AED)</label>
+                <label htmlFor="salePrice" className={lbl}>Sale Price (AED)</label>
                 <input
-                  required
+                  id="salePrice"
+                  name="salePrice"
                   type="number"
                   min={1}
                   step={1}
                   disabled={isLocked}
                   value={form.salePrice}
-                  onChange={(e) => setForm((f) => ({ ...f, salePrice: e.target.value }))}
-                  className={inp}
+                  onChange={(e) => { clearError("salePrice"); setForm((f) => ({ ...f, salePrice: e.target.value })); }}
+                  className={errors.salePrice ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.salePrice}
                 />
+                <FieldError errors={errors} name="salePrice" />
               </div>
               <div>
-                <label className={lbl}>Discount (AED)</label>
+                <label htmlFor="discount" className={lbl}>Discount (AED)</label>
                 <input
+                  id="discount"
+                  name="discount"
                   type="number"
                   min={0}
                   step={1}
                   disabled={isLocked}
                   value={form.discount}
-                  onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value }))}
-                  className={inp}
+                  onChange={(e) => { clearError("discount"); setForm((f) => ({ ...f, discount: e.target.value })); }}
+                  className={errors.discount ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.discount}
                 />
+                <FieldError errors={errors} name="discount" />
               </div>
             </div>
             {!isLocked && form.salePrice && (
@@ -364,9 +398,9 @@ export default function DealEditPage() {
             )}
           </div>
 
-          {error && (
-            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
-              {error}
+          {submitError && (
+            <div role="alert" className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
+              {submitError}
             </div>
           )}
         </>

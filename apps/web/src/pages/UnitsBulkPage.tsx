@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
+import { formatAED } from "../lib/format";
 
 // UnitsBulkPage — 4-step wizard for bulk-creating a floor of units at
 // /projects/:projectId/units/bulk. Replaces BulkUnitModal.
@@ -511,7 +512,7 @@ export default function UnitsBulkPage() {
                 </div>
                 <div className="bg-success-soft rounded-xl p-4">
                   <p className="text-2xl font-bold text-success tabular-nums">
-                    AED {(previewSummary.totalPrice / 1_000_000).toLocaleString("en-AE", { maximumFractionDigits: 2 })}M
+                    {formatAED(previewSummary.totalPrice, { compact: true })}
                   </p>
                   <p className="text-xs text-success font-medium mt-1">Combined list price</p>
                 </div>

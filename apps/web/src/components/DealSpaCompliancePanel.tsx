@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { formatAED as fmtAED } from "../lib/format";
 
 interface Props {
   dealId: string;
@@ -53,9 +54,6 @@ interface SpaRules {
     note: string;
   };
 }
-
-const fmtAED = (n: number) =>
-  "AED " + n.toLocaleString("en-AE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });

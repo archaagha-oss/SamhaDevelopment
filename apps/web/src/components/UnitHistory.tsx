@@ -1,4 +1,5 @@
 import { useUnitHistory } from "../hooks/useUnit";
+import { formatAED } from "../lib/format";
 
 interface Props {
   unitId: string;
@@ -131,11 +132,11 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                     <div className="bg-success-soft rounded-lg px-3 py-2.5 border border-success/30">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold text-foreground">
-                          AED {event.oldPrice?.toLocaleString("en-AE")}
+                          {formatAED(event.oldPrice)}
                         </span>
                         <span className="text-muted-foreground text-xs">→</span>
                         <span className="text-xs font-bold text-success">
-                          AED {event.newPrice?.toLocaleString("en-AE")}
+                          {formatAED(event.newPrice)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mb-1">
@@ -156,7 +157,7 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
                             </span>
                             <span className="text-[10px] text-success">
                               {event.newPrice > event.oldPrice ? "+" : ""}
-                              AED {(event.newPrice - event.oldPrice).toLocaleString("en-AE")}
+                              {formatAED(event.newPrice - event.oldPrice)}
                             </span>
                           </>
                         )}

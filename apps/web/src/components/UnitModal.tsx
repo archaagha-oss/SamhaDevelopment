@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnitGallery from "./UnitGallery";
 import { formatArea } from "../utils/formatArea";
+import { formatAED } from "../lib/format";
 
 interface Unit {
   id: string;
@@ -247,12 +248,12 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Current Price</p>
-                <p className="text-xl font-bold text-foreground">AED {currentUnit.price.toLocaleString("en-AE")}</p>
+                <p className="text-xl font-bold text-foreground">{formatAED(currentUnit.price)}</p>
               </div>
               {currentUnit.basePrice && currentUnit.basePrice !== currentUnit.price && (
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Base price</p>
-                  <p className="text-sm text-muted-foreground line-through">AED {currentUnit.basePrice.toLocaleString("en-AE")}</p>
+                  <p className="text-sm text-muted-foreground line-through">{formatAED(currentUnit.basePrice)}</p>
                 </div>
               )}
             </div>

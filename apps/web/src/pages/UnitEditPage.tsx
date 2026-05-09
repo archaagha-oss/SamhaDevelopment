@@ -1,11 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
 import { Button } from "../components/ui/button";
+import FieldError from "../components/ui/field-error";
+import { useZodValidation } from "../lib/validation";
+
+// Format: e.g. "1-12" (floor 1, unit 12) or "12-345"
+const UNIT_NUMBER_RE = /^\d{1,3}-\d{1,3}$/;
+
+function unitFormSchema(opts: { isEdit: boolean }) {
+  const numberish = (label: string) =>
+    z
+      .string()
+      .trim()
+      .min(1, `${label} is required`)
+      .refine((s) => Number.isFinite(Number(s)) && Number(s) >= 0, `${label} must be a number`);
+  return z.object({
+    unitNumber: opts.isEdit
+      ? z.string().optional()
+      : z
+          .string()
+          .trim()
+          .min(1, "Unit number is required")
+          .regex(UNIT_NUMBER_RE, "Use the format floor-number, e.g. 12-04"),
+    floor: numberish("Floor"),
+    area: numberish("Area"),
+    price: z
+      .string()
+      .trim()
+      .min(1, "Price is required")
+      .refine((s) => Number.isFinite(Number(s)) && Number(s) > 0, "Price must be a positive amount"),
+  });
+}
 
 // UnitEditPage — handles both create and edit:
 //   /projects/:projectId/units/new                 → create
@@ -63,7 +94,9 @@ export default function UnitEditPage() {
 
   const [form, setForm] = useState(BLANK);
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const validationSchema = useMemo(() => unitFormSchema({ isEdit }), [isEdit]);
+  const { errors, validate, clearError } = useZodValidation(validationSchema);
 
   // Load project name (used in subtitle/crumbs) + the unit (edit mode only)
   useEffect(() => {
@@ -112,7 +145,10 @@ export default function UnitEditPage() {
     return () => { cancelled = true; };
   }, [projectId, isEdit, unitId]);
 
-  const set = (k: keyof typeof BLANK, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof BLANK, v: string) => {
+    clearError(k as string);
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   const isLocked = !!unit && LOCKED_STATUSES.includes(unit.status);
   const cancelTo = isEdit && projectId && unitId
@@ -123,10 +159,16 @@ export default function UnitEditPage() {
 
   async function submit() {
     if (!projectId) {
-      setError("Project context missing.");
+      setSubmitError("Project context missing.");
       return;
     }
-    setError(null);
+    if (!validate({
+      unitNumber: form.unitNumber,
+      floor: form.floor,
+      area: form.area,
+      price: form.price,
+    })) return;
+    setSubmitError(null);
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
@@ -158,7 +200,7 @@ export default function UnitEditPage() {
         navigate(newId ? `/projects/${projectId}/units/${newId}` : `/projects/${projectId}`);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save unit");
+      setSubmitError(err.response?.data?.error || "Failed to save unit");
     } finally {
       setSubmitting(false);
     }
@@ -240,27 +282,33 @@ export default function UnitEditPage() {
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Identity</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>Unit Number{!isEdit && " *"}</label>
+                <label htmlFor="unitNumber" className={lbl}>Unit Number{!isEdit && " *"}</label>
                 <input
-                  required={!isEdit}
+                  id="unitNumber"
+                  name="unitNumber"
                   value={form.unitNumber}
                   onChange={(e) => set("unitNumber", e.target.value)}
                   placeholder="e.g. 3-02"
                   disabled={isEdit}
-                  className={inp}
+                  className={errors.unitNumber ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.unitNumber}
                 />
+                <FieldError errors={errors} name="unitNumber" />
                 {isEdit && <p className="text-[10px] text-muted-foreground mt-1">Unit number is immutable after creation.</p>}
               </div>
               <div>
-                <label className={lbl}>Floor *</label>
+                <label htmlFor="floor" className={lbl}>Floor *</label>
                 <input
-                  required
+                  id="floor"
+                  name="floor"
                   type="number"
                   min={0}
                   value={form.floor}
                   onChange={(e) => set("floor", e.target.value)}
-                  className={inp}
+                  className={errors.floor ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.floor}
                 />
+                <FieldError errors={errors} name="floor" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -295,31 +343,42 @@ export default function UnitEditPage() {
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Pricing & area</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>Area (sqm) *</label>
+                <label htmlFor="area" className={lbl}>Area (sqm) *</label>
                 <input
-                  required type="number" min={1} step={0.1}
+                  id="area"
+                  name="area"
+                  type="number"
+                  min={1}
+                  step={0.1}
                   value={form.area}
                   onChange={(e) => set("area", e.target.value)}
                   placeholder="e.g. 85"
                   disabled={isLocked}
-                  className={inp}
+                  className={errors.area ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.area}
                 />
-                {form.area && (
+                <FieldError errors={errors} name="area" />
+                {form.area && !errors.area && (
                   <p className="text-xs text-primary font-medium mt-1 tabular-nums">
                     = {sqftFromSqm.toLocaleString()} sqft
                   </p>
                 )}
               </div>
               <div>
-                <label className={lbl}>Price (AED) *</label>
+                <label htmlFor="price" className={lbl}>Price (AED) *</label>
                 <input
-                  required type="number" min={1}
+                  id="price"
+                  name="price"
+                  type="number"
+                  min={1}
                   value={form.price}
                   onChange={(e) => set("price", e.target.value)}
                   placeholder="e.g. 1200000"
                   disabled={isLocked}
-                  className={inp}
+                  className={errors.price ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.price}
                 />
+                <FieldError errors={errors} name="price" />
               </div>
             </div>
           </div>
@@ -424,9 +483,9 @@ export default function UnitEditPage() {
             </div>
           </details>
 
-          {error && (
-            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
-              {error}
+          {submitError && (
+            <div role="alert" className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
+              {submitError}
             </div>
           )}
         </>
