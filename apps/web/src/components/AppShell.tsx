@@ -187,6 +187,14 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      {/* Skip link — visible on keyboard focus, lets screen-reader / keyboard
+          users jump past the sidebar and header straight into the page body. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Skip to main content
+      </a>
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -284,8 +292,11 @@ export default function AppShell() {
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu((v) => !v)}
-                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none hover:bg-primary/90 transition-colors"
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none hover:bg-primary/90 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
                 title="Profile"
+                aria-label={`User menu for ${user?.fullName ?? "user"}`}
+                aria-expanded={showProfileMenu}
+                aria-haspopup="menu"
               >
                 {user?.firstName?.[0]?.toUpperCase() ?? "U"}
               </button>
@@ -317,7 +328,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-background text-foreground">
+        <main id="main-content" className="flex-1 overflow-auto bg-background text-foreground">
           <ErrorBoundary key={location.pathname}>
             <Suspense
               fallback={

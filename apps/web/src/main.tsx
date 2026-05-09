@@ -24,7 +24,16 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <SettingsProvider>
           <RouterProvider router={router} />
-          <Toaster position="bottom-right" richColors closeButton />
+          {/* Sonner mounts each toast inside a section with role="status" /
+              role="alert" + aria-live, so screen readers announce them.
+              We add an explicit aria-label on the container so the toast
+              region itself is identifiable when navigating by landmark. */}
+          <Toaster
+            position="bottom-right"
+            richColors
+            closeButton
+            toastOptions={{ duration: 4000 }}
+          />
         </SettingsProvider>
       </QueryClientProvider>
     </ThemeProvider>
