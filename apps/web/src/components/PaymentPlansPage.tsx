@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import PaymentPlanFormModal from "./PaymentPlanFormModal";
 import ConfirmDialog from "./ConfirmDialog";
 import { PageContainer, PageHeader } from "./layout";
 import { FilterBar } from "./data";
@@ -60,8 +60,9 @@ export default function PaymentPlansPage() {
   const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editPlan, setEditPlan] = useState<PaymentPlan | null>(null);
+  // Form modal state removed in Phase C.5 — both flows are routes now
+  // (/payment-plans/new and /payment-plans/:planId/edit).
+  const navigate = useNavigate();
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [cloning, setCloning] = useState<string | null>(null);
   const [confirmTogglePlan, setConfirmTogglePlan] = useState<PaymentPlan | null>(null);
@@ -144,7 +145,7 @@ export default function PaymentPlansPage() {
         crumbs={[{ label: "Home", path: "/" }, { label: "Payment plans" }]}
         title="Payment plans"
         subtitle={`${plans.filter(p => p.isActive).length} active template${plans.filter(p => p.isActive).length === 1 ? "" : "s"}`}
-        actions={<Button onClick={() => { setEditPlan(null); setShowForm(true); }}>Create payment plan</Button>}
+        actions={<Button onClick={() => navigate("/payment-plans/new")}>Create payment plan</Button>}
       />
 
       <div className="flex-1 overflow-auto">
@@ -187,7 +188,7 @@ export default function PaymentPlansPage() {
                 icon="◫"
                 title={plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}
                 description={plans.length === 0 ? "Define milestone schedules to attach to deals." : "Try adjusting your filters."}
-                action={plans.length === 0 ? { label: "Create payment plan", onClick: () => { setEditPlan(null); setShowForm(true); } } : undefined}
+                action={plans.length === 0 ? { label: "Create payment plan", onClick: () => navigate("/payment-plans/new") } : undefined}
               />
             ) : (
               <div className="space-y-3">
@@ -231,7 +232,7 @@ export default function PaymentPlansPage() {
                       {/* Actions */}
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setEditPlan(plan); setShowForm(true); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/payment-plans/${plan.id}/edit`); }}
                           className="text-muted-foreground hover:text-primary text-sm px-2 py-1 rounded hover:bg-info-soft transition-colors"
                           title="Edit plan"
                         >
@@ -321,14 +322,6 @@ export default function PaymentPlansPage() {
           </div>
         </PageContainer>
       </div>
-
-      {showForm && (
-        <PaymentPlanFormModal
-          plan={editPlan}
-          onClose={() => { setShowForm(false); setEditPlan(null); }}
-          onSaved={() => { setShowForm(false); setEditPlan(null); load(); }}
-        />
-      )}
 
       <ConfirmDialog
         open={!!confirmTogglePlan}

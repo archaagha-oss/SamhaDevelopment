@@ -32,6 +32,7 @@ const TeamPage                      = lazy(() => import("./pages/TeamPage"));
 const MemberDetailPage              = lazy(() => import("./pages/MemberDetailPage"));
 const MemberEditPage                = lazy(() => import("./pages/MemberEditPage"));
 const PaymentPlansPage              = lazy(() => import("./components/PaymentPlansPage"));
+const PaymentPlanEditPage           = lazy(() => import("./pages/PaymentPlanEditPage"));
 const OfferPrintPage                = lazy(() => import("./components/OfferPrintPage"));
 const ReservationFormPrintPage      = lazy(() => import("./components/ReservationFormPrintPage"));
 const SpaDraftPrintPage             = lazy(() => import("./components/SpaDraftPrintPage"));
@@ -126,6 +127,8 @@ export const router = createBrowserRouter([
       { path: "payments",                                  element: <PaymentReportPage /> },
       { path: "contracts",                                 element: <ContractsPage /> },
       { path: "payment-plans",                            element: <PaymentPlansPage /> },
+      { path: "payment-plans/new",                        element: <PaymentPlanEditPage /> },
+      { path: "payment-plans/:planId/edit",               element: <PaymentPlanEditPage /> },
       { path: "reservations",                             element: <ReservationsPage /> },
       { path: "offers-list",                              element: <OffersPage /> },
       { path: "team",                                      element: <TeamPage /> },
