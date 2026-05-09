@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import ContactFormModal from "../components/ContactFormModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import { SkeletonTableRows } from "../components/Skeleton";
@@ -46,6 +46,7 @@ const SOURCE_OPTIONS = [
 const PAGE_SIZE = 50;
 
 export default function ContactsPage() {
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -53,8 +54,8 @@ export default function ContactsPage() {
   const [filterSource, setFilterSource] = useState("ALL");
   const [page, setPage] = useState(1);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  // Create/edit-modal state removed in Phase C.4 — both flows are routes now
+  // (/contacts/new, /contacts/:contactId/edit). Row click → /contacts/:contactId.
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Contact | null>(null);
 
@@ -132,7 +133,7 @@ export default function ContactsPage() {
         crumbs={[{ label: "Home", path: "/" }, { label: "Contacts" }]}
         title="Contacts"
         subtitle={`${total.toLocaleString()} contacts · address book for communication`}
-        actions={<Button onClick={() => setShowCreate(true)}>Create contact</Button>}
+        actions={<Button onClick={() => navigate("/contacts/new")}>Create contact</Button>}
       />
 
       <div className="flex-1 overflow-auto">
@@ -176,7 +177,7 @@ export default function ContactsPage() {
                   }
                   action={
                     !hasFilters
-                      ? { label: "Create contact", onClick: () => setShowCreate(true) }
+                      ? { label: "Create contact", onClick: () => navigate("/contacts/new") }
                       : undefined
                   }
                 />
@@ -195,7 +196,11 @@ export default function ContactsPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {contacts.map((c) => (
-                      <tr key={c.id} className="hover:bg-muted/50 group transition-colors">
+                      <tr
+                        key={c.id}
+                        onClick={() => navigate(`/contacts/${c.id}`)}
+                        className="hover:bg-muted/50 group transition-colors cursor-pointer"
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-info-soft text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -226,12 +231,12 @@ export default function ContactsPage() {
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {new Date(c.createdAt).toLocaleDateString("en-AE", { day: "numeric", month: "short", year: "numeric" })}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setEditingContact(c)}
+                              onClick={() => navigate(`/contacts/${c.id}/edit`)}
                               className="h-7 px-2 text-xs"
                             >
                               Edit
@@ -264,21 +269,6 @@ export default function ContactsPage() {
           </div>
         </PageContainer>
       </div>
-
-      {showCreate && (
-        <ContactFormModal
-          onClose={() => setShowCreate(false)}
-          onSaved={() => { setShowCreate(false); load(); }}
-        />
-      )}
-
-      {editingContact && (
-        <ContactFormModal
-          contact={editingContact}
-          onClose={() => setEditingContact(null)}
-          onSaved={() => { setEditingContact(null); load(); }}
-        />
-      )}
 
       <ConfirmDialog
         open={!!confirmDelete}

@@ -1,71 +1,103 @@
+import { lazy, Suspense, ReactElement } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./components/AppShell";
-import ExecutiveDashboard from "./components/ExecutiveDashboard";
-import ProjectDetailPage from "./components/ProjectDetailPage";
-import UnitDetailPage from "./components/UnitDetailPage";
-import UnitsPage from "./components/UnitsPage";
-import UnitEditPage from "./pages/UnitEditPage";
-import LeadsPage from "./components/LeadsPage";
-import LeadProfilePage from "./components/LeadProfilePage";
-import LeadEditPage from "./pages/LeadEditPage";
-import DealsPage from "./components/DealsPage";
-import DealDetailPage from "./components/DealDetailPage";
-import DealEditPage from "./pages/DealEditPage";
-import BrokerPage from "./components/BrokerPage";
-import CommissionDashboard from "./components/CommissionDashboard";
-import FinanceDashboard from "./components/FinanceDashboard";
-import PaymentReportPage from "./components/PaymentReportPage";
-import BrokerOnboarding from "./components/BrokerOnboarding";
-import ContractsPage from "./pages/ContractsPage";
-import NotFoundPage from "./components/NotFoundPage";
-import ProjectsPage from "./components/ProjectsPage";
-import ProjectSettingsPage from "./components/ProjectSettingsPage";
-import ActivitiesPage from "./pages/ActivitiesPage";
-import TeamPage from "./pages/TeamPage";
-import MemberDetailPage from "./pages/MemberDetailPage";
-import MemberEditPage from "./pages/MemberEditPage";
-import PaymentPlansPage from "./components/PaymentPlansPage";
-import OfferPrintPage from "./components/OfferPrintPage";
-import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
-import SpaDraftPrintPage from "./components/SpaDraftPrintPage";
-import SalesOfferPrintPage from "./components/SalesOfferPrintPage";
-import InvoicePrintPage from "./components/InvoicePrintPage";
-import ReceiptPrintPage from "./components/ReceiptPrintPage";
-import ReportsPage from "./pages/ReportsPage";
-import ReservationsPage from "./components/ReservationsPage";
-import OffersPage from "./components/OffersPage";
-import SettingsPage from "./pages/SettingsPage";
-import ContactsPage from "./pages/ContactsPage";
+
+// Route components are code-split via React.lazy so the initial dashboard
+// bundle doesn't drag in the deal edit, print pages, Phase 4 modules, etc.
+// AppShell wraps its <Outlet /> in <Suspense>, so only the standalone routes
+// below need their own Suspense wrapper (see withSuspense).
+
+const ExecutiveDashboard            = lazy(() => import("./components/ExecutiveDashboard"));
+const ProjectDetailPage             = lazy(() => import("./components/ProjectDetailPage"));
+const UnitDetailPage                = lazy(() => import("./components/UnitDetailPage"));
+const UnitsPage                     = lazy(() => import("./components/UnitsPage"));
+const UnitEditPage                  = lazy(() => import("./pages/UnitEditPage"));
+const LeadsPage                     = lazy(() => import("./components/LeadsPage"));
+const LeadProfilePage               = lazy(() => import("./components/LeadProfilePage"));
+const LeadEditPage                  = lazy(() => import("./pages/LeadEditPage"));
+const DealsPage                     = lazy(() => import("./components/DealsPage"));
+const DealDetailPage                = lazy(() => import("./components/DealDetailPage"));
+const DealEditPage                  = lazy(() => import("./pages/DealEditPage"));
+const BrokerPage                    = lazy(() => import("./components/BrokerPage"));
+const CommissionDashboard           = lazy(() => import("./components/CommissionDashboard"));
+const FinanceDashboard              = lazy(() => import("./components/FinanceDashboard"));
+const PaymentReportPage             = lazy(() => import("./components/PaymentReportPage"));
+const BrokerOnboarding              = lazy(() => import("./components/BrokerOnboarding"));
+const ContractsPage                 = lazy(() => import("./pages/ContractsPage"));
+const NotFoundPage                  = lazy(() => import("./components/NotFoundPage"));
+const ProjectsPage                  = lazy(() => import("./components/ProjectsPage"));
+const ProjectSettingsPage           = lazy(() => import("./components/ProjectSettingsPage"));
+const ActivitiesPage                = lazy(() => import("./pages/ActivitiesPage"));
+const TeamPage                      = lazy(() => import("./pages/TeamPage"));
+const MemberDetailPage              = lazy(() => import("./pages/MemberDetailPage"));
+const MemberEditPage                = lazy(() => import("./pages/MemberEditPage"));
+const PaymentPlansPage              = lazy(() => import("./components/PaymentPlansPage"));
+const OfferPrintPage                = lazy(() => import("./components/OfferPrintPage"));
+const ReservationFormPrintPage      = lazy(() => import("./components/ReservationFormPrintPage"));
+const SpaDraftPrintPage             = lazy(() => import("./components/SpaDraftPrintPage"));
+const SalesOfferPrintPage           = lazy(() => import("./components/SalesOfferPrintPage"));
+const InvoicePrintPage              = lazy(() => import("./components/InvoicePrintPage"));
+const ReceiptPrintPage              = lazy(() => import("./components/ReceiptPrintPage"));
+const ReportsPage                   = lazy(() => import("./pages/ReportsPage"));
+const ReservationsPage              = lazy(() => import("./components/ReservationsPage"));
+const OffersPage                    = lazy(() => import("./components/OffersPage"));
+const SettingsPage                  = lazy(() => import("./pages/SettingsPage"));
+const ContactsPage                  = lazy(() => import("./pages/ContactsPage"));
+const ContactDetailPage             = lazy(() => import("./pages/ContactDetailPage"));
+const ContactEditPage               = lazy(() => import("./pages/ContactEditPage"));
 // Phase 4 expansion pages
-import PhasesPage from "./pages/PhasesPage";
-import UnitTypePlansPage from "./pages/UnitTypePlansPage";
-import ConstructionProgressPage from "./pages/ConstructionProgressPage";
-import SnagListPage from "./pages/SnagListPage";
-import HandoverChecklistPage from "./pages/HandoverChecklistPage";
-import RefundsPage from "./pages/RefundsPage";
-import EscrowPage from "./pages/EscrowPage";
-import CommissionTiersPage from "./pages/CommissionTiersPage";
-import LeadKycPage from "./pages/LeadKycPage";
-import DealJointOwnersPage from "./pages/DealJointOwnersPage";
-import PublicUnitView from "./components/PublicUnitView";
-import HotInboxPage from "./pages/HotInboxPage";
-import CompliancePage from "./pages/CompliancePage";
+const PhasesPage                    = lazy(() => import("./pages/PhasesPage"));
+const UnitTypePlansPage             = lazy(() => import("./pages/UnitTypePlansPage"));
+const ConstructionProgressPage      = lazy(() => import("./pages/ConstructionProgressPage"));
+const SnagListPage                  = lazy(() => import("./pages/SnagListPage"));
+const HandoverChecklistPage         = lazy(() => import("./pages/HandoverChecklistPage"));
+const RefundsPage                   = lazy(() => import("./pages/RefundsPage"));
+const EscrowPage                    = lazy(() => import("./pages/EscrowPage"));
+const CommissionTiersPage           = lazy(() => import("./pages/CommissionTiersPage"));
+const LeadKycPage                   = lazy(() => import("./pages/LeadKycPage"));
+const DealJointOwnersPage           = lazy(() => import("./pages/DealJointOwnersPage"));
+const PublicUnitView                = lazy(() => import("./components/PublicUnitView"));
+const HotInboxPage                  = lazy(() => import("./pages/HotInboxPage"));
+const CompliancePage                = lazy(() => import("./pages/CompliancePage"));
+const NotificationPreferencesPage   = lazy(() => import("./pages/NotificationPreferencesPage"));
+
+// FeatureFlagGate stays eager — it's tiny and used inline below.
 import FeatureFlagGate from "./components/FeatureFlagGate";
-import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
+
+// Suspense wrapper for routes that don't render inside AppShell (print pages,
+// public share, broker onboarding). AppShell already wraps its <Outlet />.
+function withSuspense(node: ReactElement): ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label="Loading"
+          className="flex min-h-screen items-center justify-center bg-background"
+        >
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+        </div>
+      }
+    >
+      {node}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   // Standalone pages (no app shell — full-page layout)
-  { path: "/broker-onboarding",                          element: <BrokerOnboarding /> },
+  { path: "/broker-onboarding",                          element: withSuspense(<BrokerOnboarding />) },
 
   // Standalone print pages (no app shell — full-page printable layout)
-  { path: "/offers/:offerId",                            element: <OfferPrintPage /> },
-  { path: "/deals/:dealId/print/reservation-form",       element: <ReservationFormPrintPage /> },
-  { path: "/deals/:dealId/print/spa-draft",              element: <SpaDraftPrintPage /> },
-  { path: "/deals/:dealId/print/sales-offer",            element: <SalesOfferPrintPage /> },
-  { path: "/payments/:paymentId/print/invoice",          element: <InvoicePrintPage /> },
-  { path: "/payments/:paymentId/print/receipt",          element: <ReceiptPrintPage /> },
+  { path: "/offers/:offerId",                            element: withSuspense(<OfferPrintPage />) },
+  { path: "/deals/:dealId/print/reservation-form",       element: withSuspense(<ReservationFormPrintPage />) },
+  { path: "/deals/:dealId/print/spa-draft",              element: withSuspense(<SpaDraftPrintPage />) },
+  { path: "/deals/:dealId/print/sales-offer",            element: withSuspense(<SalesOfferPrintPage />) },
+  { path: "/payments/:paymentId/print/invoice",          element: withSuspense(<InvoicePrintPage />) },
+  { path: "/payments/:paymentId/print/receipt",          element: withSuspense(<ReceiptPrintPage />) },
   // Public, unauthenticated client share view (no app shell, no Clerk).
-  { path: "/share/u/:token",                             element: <PublicUnitView /> },
+  { path: "/share/u/:token",                             element: withSuspense(<PublicUnitView />) },
   {
     path: "/",
     element: <AppShell />,
@@ -102,6 +134,9 @@ export const router = createBrowserRouter([
       { path: "team/:userId/edit",                         element: <MemberEditPage /> },
       { path: "reports",                                   element: <ReportsPage /> },
       { path: "contacts",                                  element: <ContactsPage /> },
+      { path: "contacts/new",                              element: <ContactEditPage /> },
+      { path: "contacts/:contactId",                       element: <ContactDetailPage /> },
+      { path: "contacts/:contactId/edit",                  element: <ContactEditPage /> },
       { path: "settings",                                  element: <SettingsPage /> },
       { path: "profile/notifications",                     element: <NotificationPreferencesPage /> },
       // Phase 4 expansion routes — gated by feature flags so they're hidden
