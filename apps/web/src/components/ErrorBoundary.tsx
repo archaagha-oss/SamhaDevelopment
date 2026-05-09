@@ -1,4 +1,6 @@
 import React from "react";
+import { Button } from "./ui/Button";
+import { AlertTriangle, RotateCw } from "lucide-react";
 
 type State = { error: Error | null };
 
@@ -21,30 +23,24 @@ export class ErrorBoundary extends React.Component<
     if (this.state.error) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-          <div className="max-w-md w-full bg-white border border-red-200 rounded-2xl p-6 shadow-sm">
-            <h1 className="text-lg font-semibold text-red-700 mb-2">
-              Something went wrong
-            </h1>
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-card p-6 shadow-card">
+            <div className="flex items-center gap-2 mb-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              <h1 className="text-base font-semibold">Something went wrong</h1>
+            </div>
             <p className="text-sm text-slate-600 mb-4">
-              The page hit an unexpected error. You can try reloading; if the
-              problem persists, contact support.
+              The page hit an unexpected error. You can try reloading; if the problem persists, contact support.
             </p>
-            <pre className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-40 overflow-auto text-slate-700 mb-4">
+            <pre className="text-xs bg-slate-50 border border-slate-200 rounded-ctrl p-3 max-h-40 overflow-auto text-slate-700 mb-4 whitespace-pre-wrap">
               {this.state.error.message}
             </pre>
-            <div className="flex gap-2">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
-              >
-                Reload
-              </button>
-              <button
-                onClick={() => this.setState({ error: null })}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200"
-              >
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" onClick={() => this.setState({ error: null })}>
                 Dismiss
-              </button>
+              </Button>
+              <Button onClick={() => window.location.reload()} leadingIcon={<RotateCw className="h-4 w-4" />}>
+                Reload
+              </Button>
             </div>
           </div>
         </div>

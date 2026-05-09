@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Pencil, Settings as SettingsIcon } from "lucide-react";
 import UnitsTable from "./UnitsTable";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
+import { StatusPill } from "./ui/StatusPill";
 
 interface Project {
   id: string;
@@ -121,10 +125,10 @@ export default function ProjectDetailPage() {
   if (error || !project)
     return (
       <div className="p-6">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
+        <Button variant="subtle" size="sm" onClick={() => navigate("/projects")} className="mb-4">
           ← Back to Projects
-        </button>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        </Button>
+        <div className="bg-red-50 border border-red-200 rounded-card p-6 text-center">
           <p className="text-red-600 font-medium">{error || "Project not found"}</p>
         </div>
       </div>
@@ -181,38 +185,22 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-3">
-          ← Back to Projects
-        </button>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${statusCfg.cls}`}>{statusCfg.label}</span>
-            </div>
-            <p className="text-slate-400 text-sm mt-1">{project.location}</p>
-            {project.description && (
-              <p className="text-slate-500 text-sm mt-1.5 max-w-xl">{project.description}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openEditModal}
-              className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1.5"
-            >
-              ✎ Edit Project
-            </button>
-            <button
-              onClick={() => navigate(`/projects/${projectId}/settings`)}
-              className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1.5"
-            >
-              ⚙ Settings
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        crumbs={[{ label: "Projects", to: "/projects" }, { label: project.name }]}
+        title={project.name}
+        description={project.location + (project.description ? ` · ${project.description}` : "")}
+        status={<StatusPill status={project.projectStatus}>{statusCfg.label}</StatusPill>}
+        actions={
+          <>
+            <Button variant="ghost" onClick={openEditModal} leadingIcon={<Pencil className="h-4 w-4" />}>
+              Edit
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(`/projects/${projectId}/settings`)} leadingIcon={<SettingsIcon className="h-4 w-4" />}>
+              Settings
+            </Button>
+          </>
+        }
+      />
 
       {/* Quick Stats */}
       <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 grid grid-cols-6 gap-3 flex-shrink-0">

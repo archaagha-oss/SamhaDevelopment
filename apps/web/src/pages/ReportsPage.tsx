@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { PageHeader } from "../components/ui/PageHeader";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -568,11 +569,12 @@ export default function ReportsPage() {
   }, []);
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Reports & Analytics</h1>
-        <p className="text-slate-400 text-xs mt-0.5">Live data across pipeline, revenue, agents, and inventory</p>
-      </div>
+    <>
+      <PageHeader
+        title="Reports & Analytics"
+        description="Live data across pipeline, revenue, agents, and inventory"
+      />
+      <div className="p-6 space-y-5">
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
@@ -601,6 +603,7 @@ export default function ReportsPage() {
           {tab === "finance"   && <FinanceTab   overview={overview} collections={collections} />}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

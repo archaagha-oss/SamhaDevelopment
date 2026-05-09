@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { PageHeader } from "../components/ui/PageHeader";
 
 interface EmailTemplates {
   beforeDue?: string;
@@ -103,18 +104,16 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <h1 className="text-xl font-bold text-slate-900">App Settings</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Organization-level configuration and communication setup</p>
-        </div>
-        <div className="max-w-3xl mx-auto px-6 flex gap-1">
+      <PageHeader
+        title="App Settings"
+        description="Organization-level configuration and communication setup"
+        subnav={
+          <div className="flex gap-1">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => { setTab(t.key); setSaved(null); setError(null); }}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.key
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
@@ -123,8 +122,9 @@ export default function SettingsPage() {
               {t.label}
             </button>
           ))}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
         {error && (

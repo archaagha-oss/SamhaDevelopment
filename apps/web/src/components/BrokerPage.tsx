@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
 
 const EMIRATES = ["Abu Dhabi", "Dubai", "Sharjah", "Ajman", "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"];
 
@@ -438,24 +441,24 @@ export default function BrokerPage() {
   );
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Brokers</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{companies.length} registered companies</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text" placeholder="Search company…" value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-44 focus:outline-none focus:border-blue-400 bg-slate-50"
-          />
-          <button onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
-            <span className="text-base leading-none">+</span> Add Company
-          </button>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="Brokers"
+        description={`${companies.length} registered compan${companies.length !== 1 ? "ies" : "y"}`}
+        actions={
+          <>
+            <input
+              type="search" placeholder="Search company…" value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="text-sm border border-slate-200 rounded-ctrl px-3 py-1.5 w-44 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+            />
+            <Button onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-4 w-4" />}>
+              Add Company
+            </Button>
+          </>
+        }
+      />
+      <div className="p-6 space-y-5">
 
       {loading ? (
         <div className="flex items-center justify-center h-48">
@@ -782,6 +785,7 @@ export default function BrokerPage() {
         onConfirm={doDeleteAgent}
         onCancel={() => setConfirmDeleteAgentId(null)}
       />
-    </div>
+      </div>
+    </>
   );
 }

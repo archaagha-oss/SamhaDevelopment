@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { useDeals } from "../hooks/useDeals";
 import DealFormModal from "./DealFormModal";
 import DealEditModal from "./DealEditModal";
 import EmptyState from "./EmptyState";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
 
 interface Deal {
   id: string; dealNumber: string;
@@ -140,29 +143,25 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Deals</h1>
-            <p className="text-slate-400 text-xs mt-0.5">{total} deals {selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}</p>
-          </div>
-          <div className="flex items-center gap-3">
+      <PageHeader
+        title="Deals"
+        description={`${total} deal${total !== 1 ? "s" : ""} ${selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}`}
+        actions={
+          <>
             <input
-              type="text"
+              type="search"
               placeholder="Search deal, buyer, unit…"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-56 focus:outline-none focus:border-blue-400 bg-slate-50"
+              className="text-sm border border-slate-200 rounded-ctrl px-3 py-1.5 w-56 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
             />
-            <button
-              onClick={() => setShowNewDeal(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-            >
-              <span className="text-base leading-none">+</span> New Deal
-            </button>
-          </div>
-        </div>
+            <Button onClick={() => setShowNewDeal(true)} leadingIcon={<Plus className="h-4 w-4" />}>
+              New Deal
+            </Button>
+          </>
+        }
+      />
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
         {/* Stage filters */}
         <div className="flex gap-1.5 flex-wrap">
           <button

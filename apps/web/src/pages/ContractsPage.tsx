@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { RotateCw } from "lucide-react";
 import ContractStatusModal, { ContractDoc, ContractStatus } from "../components/ContractStatusModal";
 import DocumentUploadModal from "../components/DocumentUploadModal";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Button } from "../components/ui/Button";
 
 interface Document extends ContractDoc {
   dealId: string;
@@ -75,16 +78,17 @@ export default function ContractsPage() {
   }, {});
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Contracts & Documents</h1>
-          <p className="text-slate-400 text-xs mt-0.5">Manage contract lifecycle across all deals</p>
-        </div>
-        <button onClick={load} className="text-xs text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors">
-          Refresh
-        </button>
-      </div>
+    <>
+      <PageHeader
+        title="Contracts & Documents"
+        description="Manage contract lifecycle across all deals"
+        actions={
+          <Button variant="ghost" size="sm" onClick={load} leadingIcon={<RotateCw className="h-4 w-4" />}>
+            Refresh
+          </Button>
+        }
+      />
+      <div className="p-6 space-y-5">
 
       {/* Status KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -250,6 +254,7 @@ export default function ContractsPage() {
           onSaved={() => { setUploadDealId(null); load(); }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

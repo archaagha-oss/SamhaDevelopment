@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import PaymentPlanFormModal from "./PaymentPlanFormModal";
 import ConfirmDialog from "./ConfirmDialog";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
 
 interface Milestone {
   id: string;
@@ -135,20 +138,16 @@ export default function PaymentPlansPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Payment Plans</h1>
-            <p className="text-slate-400 text-xs mt-0.5">{plans.filter(p => p.isActive).length} active templates</p>
-          </div>
-          <button
-            onClick={() => { setEditPlan(null); setShowForm(true); }}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">+</span> New Plan
-          </button>
-        </div>
+      <PageHeader
+        title="Payment Plans"
+        description={`${plans.filter(p => p.isActive).length} active template${plans.filter(p => p.isActive).length !== 1 ? "s" : ""}`}
+        actions={
+          <Button onClick={() => { setEditPlan(null); setShowForm(true); }} leadingIcon={<Plus className="h-4 w-4" />}>
+            New Plan
+          </Button>
+        }
+      />
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
         {/* Filters */}
         <div className="flex items-center gap-3">
           <input

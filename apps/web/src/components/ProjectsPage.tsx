@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
 
 interface Project {
   id: string;
@@ -156,20 +159,16 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Projects</h1>
-            <p className="text-slate-400 text-xs mt-0.5">{projects.length} project{projects.length !== 1 ? "s" : ""}</p>
-          </div>
-          <button
-            onClick={openCreate}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">+</span> New Project
-          </button>
-        </div>
+      <PageHeader
+        title="Projects"
+        description={`${projects.length} project${projects.length !== 1 ? "s" : ""}`}
+        actions={
+          <Button onClick={openCreate} leadingIcon={<Plus className="h-4 w-4" />}>
+            New Project
+          </Button>
+        }
+      />
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
         <div className="flex items-center gap-3">
           <input
             type="text"

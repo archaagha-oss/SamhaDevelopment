@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { PageHeader } from "./ui/PageHeader";
 
 interface Lead {
   id: string;
@@ -91,16 +92,11 @@ export default function ReservationsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Reservations</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {reservations.filter((r) => r.status === "ACTIVE").length} active
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        title="Reservations"
+        description={`${reservations.filter((r) => r.status === "ACTIVE").length} active`}
+      />
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <input
             type="text"

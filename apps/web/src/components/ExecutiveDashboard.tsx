@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { PageHeader } from "./ui/PageHeader";
 
 interface Overview {
   unitsSold: number; totalUnits: number; soldPercentage: number | string;
@@ -73,13 +74,12 @@ export default function ExecutiveDashboard(): React.ReactNode {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Command Center</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Real-time sales pipeline overview</p>
-      </div>
-
+    <>
+      <PageHeader
+        title="Command Center"
+        description="Real-time sales pipeline overview"
+      />
+      <div className="p-6 space-y-5">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => (
@@ -161,6 +161,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
           <div><p className="text-slate-400 text-xs">Overdue</p><p className="font-bold text-lg text-red-400">AED {fmtK(overview.overduePayments)}</p></div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

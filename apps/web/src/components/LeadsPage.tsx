@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { Plus, Filter } from "lucide-react";
 import { useAgents } from "../hooks/useAgents";
 import QuickLeadModal from "./QuickLeadModal";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import { PageHeader } from "./ui/PageHeader";
+import { Button } from "./ui/Button";
 
 interface Lead {
   id: string;
@@ -161,34 +164,31 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Leads Pipeline</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{total} leads total</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search name or phone…"
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-blue-400 bg-slate-50"
-          />
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors flex items-center gap-1.5 ${showFilters || activeFilterCount > 0 ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-          >
-            ⊟ Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">+</span> New Lead
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Leads Pipeline"
+        description={`${total} lead${total !== 1 ? "s" : ""} total`}
+        actions={
+          <>
+            <input
+              type="search"
+              placeholder="Search name or phone…"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="text-sm border border-slate-200 rounded-ctrl px-3 py-1.5 w-52 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+            />
+            <Button
+              variant={showFilters || activeFilterCount > 0 ? "primary" : "ghost"}
+              onClick={() => setShowFilters((v) => !v)}
+              leadingIcon={<Filter className="h-4 w-4" />}
+            >
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </Button>
+            <Button onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-4 w-4" />}>
+              New Lead
+            </Button>
+          </>
+        }
+      />
 
       {/* Advanced filters bar */}
       {showFilters && (

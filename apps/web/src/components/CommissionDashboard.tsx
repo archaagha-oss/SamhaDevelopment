@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import EmptyState from "./EmptyState";
+import { PageHeader } from "./ui/PageHeader";
 
 interface Commission {
   id: string; amount: number; rate: number; status: string;
@@ -95,11 +96,12 @@ export default function CommissionDashboard() {
   const tableRows = tab === "PENDING_APPROVAL" ? pending : tab === "APPROVED" ? approved : paid;
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Commissions</h1>
-        <p className="text-slate-400 text-xs mt-0.5">Review, approve and pay broker commissions</p>
-      </div>
+    <>
+      <PageHeader
+        title="Commissions"
+        description="Review, approve and pay broker commissions"
+      />
+      <div className="p-6 space-y-5">
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -301,6 +303,7 @@ export default function CommissionDashboard() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
