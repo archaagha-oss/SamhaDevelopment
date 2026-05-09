@@ -30,11 +30,21 @@ export const FEATURE_FLAGS: { key: string; label: string; description: string; d
  * Resolve the active organization for settings operations.
  *
  * Today the platform is single-tenant — all routes operate against the first
- * Organization row. When multi-tenancy ships, switch this to derive from the
- * authenticated user's session.
+ * Organization row, auto-created on first access so a fresh DB doesn't 404
+ * every settings call. When multi-tenancy ships, switch this to derive from
+ * the authenticated user's session.
  */
 async function getActiveOrg() {
-  return prisma.organization.findFirst();
+  const existing = await prisma.organization.findFirst();
+  if (existing) return existing;
+  // Race-safe bootstrap on a fresh DB: upsert by name so two concurrent
+  // requests don't trip the unique constraint on Organization.name.
+  const name = process.env.DEFAULT_ORG_NAME ?? "Samha";
+  return prisma.organization.upsert({
+    where: { name },
+    update: {},
+    create: { name },
+  });
 }
 
 /**
