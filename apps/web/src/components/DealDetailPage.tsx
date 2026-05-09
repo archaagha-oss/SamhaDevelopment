@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatArea } from "../utils/formatArea";
@@ -96,6 +97,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const navigate = useNavigate();
   const dealId = dealIdProp ?? params.dealId ?? "";
   const handleBack = onBack ?? (() => navigate("/deals"));
+  const handoverEnabled = useFeatureFlag("handoverChecklist");
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -682,6 +684,26 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
       ]} />
+
+      {dealId && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">More sections</span>
+          <Link
+            to={`/deals/${dealId}/parties`}
+            className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            Joint owners →
+          </Link>
+          {handoverEnabled && (
+            <Link
+              to={`/deals/${dealId}/handover`}
+              className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              Handover →
+            </Link>
+          )}
+        </div>
+      )}
 
       {blockers.length > 0 && (
         <ComplianceBanner blockers={blockers} />

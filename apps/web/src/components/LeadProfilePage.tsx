@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
@@ -115,6 +116,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const params   = useParams<{ leadId: string }>();
   const navigate = useNavigate();
   const leadId   = leadIdProp ?? params.leadId ?? "";
+  const kycEnabled = useFeatureFlag("kycVerification", true);
   const handleBack = onBack ?? (() => navigate("/leads"));
 
   // Core data
@@ -640,7 +642,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         </div>
       </div>
 
-      {/* Tabs: Offers / Deals / Activity */}
+      {/* Tabs: Offers / Deals / Activity (+ KYC sub-route when flag enabled) */}
       <div className="border-b border-border flex items-center gap-1">
         {([
           { key: "offers",   label: "Offers",   count: offers.length },
@@ -662,6 +664,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </span>
           </button>
         ))}
+        {kycEnabled && (
+          <Link
+            to={`/leads/${leadId}/kyc`}
+            className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+          >
+            KYC <span className="ml-1.5 text-[11px] text-muted-foreground">→</span>
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
