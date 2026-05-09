@@ -293,6 +293,53 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       />
 
       <PageContainer padding="compact" className="flex-shrink-0 space-y-3">
+        {/* Phase J — Saved views (curated URL-preset shortcuts).
+            Each button is a one-click filter combination that writes through
+            to the URL (so it can be bookmarked/shared) via the existing
+            stageFilter / sourceFilter / budgetMin state. */}
+        <div className="flex items-center gap-1.5 flex-wrap" role="toolbar" aria-label="Saved views">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mr-1">
+            Views
+          </span>
+          {[
+            { key: "all",       label: "All",         apply: () => { setStageFilter(""); setSourceFilter(""); setAgentFilter(""); setBudgetMin(""); setBudgetMax(""); } },
+            { key: "qualified", label: "Qualified+",  apply: () => { setStageFilter("QUALIFIED"); setSourceFilter(""); setAgentFilter(""); setBudgetMin(""); setBudgetMax(""); } },
+            { key: "negotiating", label: "Negotiating", apply: () => { setStageFilter("NEGOTIATING"); setSourceFilter(""); setAgentFilter(""); setBudgetMin(""); setBudgetMax(""); } },
+            { key: "highvalue", label: "High budget", apply: () => { setStageFilter(""); setSourceFilter(""); setAgentFilter(""); setBudgetMin("1000000"); setBudgetMax(""); } },
+            { key: "broker",    label: "From broker", apply: () => { setStageFilter(""); setSourceFilter("BROKER"); setAgentFilter(""); setBudgetMin(""); setBudgetMax(""); } },
+            { key: "won",       label: "Closed won",  apply: () => { setStageFilter("CLOSED_WON"); setSourceFilter(""); setAgentFilter(""); setBudgetMin(""); setBudgetMax(""); } },
+          ].map((view) => {
+            // Active when the URL state currently matches this view's effect.
+            const matchesAll       = !stageFilter && !sourceFilter && !agentFilter && !budgetMin && !budgetMax;
+            const matchesQualified = stageFilter === "QUALIFIED" && !sourceFilter && !agentFilter && !budgetMin && !budgetMax;
+            const matchesNeg       = stageFilter === "NEGOTIATING" && !sourceFilter && !agentFilter && !budgetMin && !budgetMax;
+            const matchesHigh      = !stageFilter && !sourceFilter && !agentFilter && budgetMin === "1000000" && !budgetMax;
+            const matchesBroker    = !stageFilter && sourceFilter === "BROKER" && !agentFilter && !budgetMin && !budgetMax;
+            const matchesWon       = stageFilter === "CLOSED_WON" && !sourceFilter && !agentFilter && !budgetMin && !budgetMax;
+            const isActive =
+              (view.key === "all"         && matchesAll) ||
+              (view.key === "qualified"   && matchesQualified) ||
+              (view.key === "negotiating" && matchesNeg) ||
+              (view.key === "highvalue"   && matchesHigh) ||
+              (view.key === "broker"      && matchesBroker) ||
+              (view.key === "won"         && matchesWon);
+            return (
+              <button
+                key={view.key}
+                type="button"
+                onClick={view.apply}
+                aria-pressed={isActive}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+                }`}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
         <FilterBar
           search={{
             value: search,
