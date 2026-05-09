@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
 import { useAgents } from "../hooks/useAgents";
 import EmiratesIdScan from "../components/EmiratesIdScan";
 import UnitInterestPicker from "../components/UnitInterestPicker";
@@ -354,22 +355,23 @@ export default function LeadEditPage() {
         subtitle={subtitle}
         actions={
           <>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => navigate(cancelTo)}
               disabled={submitting}
-              className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              size="sm"
               onClick={submit}
               disabled={submitting}
-              className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
             >
               {submitting ? "Saving…" : isEdit ? "Save changes" : "Create lead"}
-            </button>
+            </Button>
           </>
         }
         main={
@@ -600,13 +602,15 @@ export default function LeadEditPage() {
                     <span className="ml-1 text-foreground">({selectedUnitIds.size})</span>
                   )}
                 </h3>
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={() => setShowUnitPicker(true)}
-                  className="text-xs text-success font-semibold hover:underline"
+                  className="h-auto p-0 text-xs text-success font-semibold"
                 >
                   {selectedUnitIds.size > 0 ? "Manage" : "+ Add units"}
-                </button>
+                </Button>
               </div>
               {selectedUnitIds.size > 0 ? (
                 <div className="flex flex-wrap gap-1.5">

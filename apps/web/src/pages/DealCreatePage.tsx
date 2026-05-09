@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { DetailPageLayout } from "../components/layout";
 import { Button } from "@/components/ui/button";
 
@@ -182,7 +183,7 @@ export default function DealCreatePage() {
                       current ? "bg-background border-primary text-primary" :
                                 "bg-muted border-border text-muted-foreground"
                     }`}>
-                      {done ? "✓" : i + 1}
+                      {done ? <Check className="size-4" aria-hidden="true" /> : i + 1}
                     </div>
                     <span className={`text-[10px] font-semibold whitespace-nowrap ${
                       current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"
@@ -241,7 +242,7 @@ export default function DealCreatePage() {
                       <p className="text-sm font-semibold text-foreground">{l.firstName} {l.lastName}</p>
                       <p className="text-xs text-muted-foreground">{l.phone}</p>
                     </div>
-                    {leadId === l.id && <span className="ml-auto text-primary text-sm">✓</span>}
+                    {leadId === l.id && <Check className="ml-auto size-4 text-primary" aria-hidden="true" />}
                   </button>
                 ))}
               </div>

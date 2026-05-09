@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { FileText } from "lucide-react";
 import ContractStatusModal, { ContractDoc, ContractStatus } from "../components/ContractStatusModal";
 import DocumentUploadModal from "../components/DocumentUploadModal";
 import { PageContainer, PageHeader } from "../components/layout";
@@ -167,7 +168,7 @@ export default function ContractsPage() {
         </>
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon="◫"
+          icon={<FileText className="size-10 text-muted-foreground" aria-hidden="true" />}
           title={search || filterStatus !== "ALL" || filterType !== "ALL" ? "No documents match your filters" : "No documents yet"}
           description={search || filterStatus !== "ALL" || filterType !== "ALL" ? "Try clearing your filters or search." : "Upload SPA, Oqood, or other contract documents from a deal."}
         />

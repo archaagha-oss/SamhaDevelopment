@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
 
 // ContactEditPage — handles /contacts/new (create) and /contacts/:id/edit (edit).
 // Replaces ContactFormModal.
@@ -133,22 +134,23 @@ export default function ContactEditPage() {
       subtitle={isEdit ? "Update contact details, communication channels, and metadata." : "Add a new contact to the address book."}
       actions={
         <>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => navigate(cancelTo)}
             disabled={submitting}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
             onClick={submit}
             disabled={submitting}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
           >
             {submitting ? "Saving…" : isEdit ? "Save changes" : "Create contact"}
-          </button>
+          </Button>
         </>
       }
       main={

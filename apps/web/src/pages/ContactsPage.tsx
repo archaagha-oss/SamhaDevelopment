@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { UserRound } from "lucide-react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import { SkeletonTableRows } from "../components/Skeleton";
@@ -218,7 +219,7 @@ export default function ContactsPage() {
                 </table>
               ) : contacts.length === 0 ? (
                 <EmptyState
-                  icon="◉"
+                  icon={<UserRound className="size-10 text-muted-foreground" aria-hidden="true" />}
                   title="No contacts found"
                   description={
                     hasFilters

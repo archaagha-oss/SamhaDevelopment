@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { Inbox, MoreVertical } from "lucide-react";
 import { useAgents } from "../hooks/useAgents";
 import QuickLeadModal from "./QuickLeadModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -406,7 +407,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
           </div>
         ) : allLeads.length === 0 ? (
           <EmptyState
-            icon="◎"
+            icon={<Inbox className="size-10 text-muted-foreground" aria-hidden="true" />}
             title={search ? "No leads match your search" : "No leads yet"}
             description={search ? "Try different keywords." : "Add your first lead to start filling the pipeline."}
             action={!search ? { label: "Create lead", onClick: () => setShowForm(true) } : undefined}
@@ -459,10 +460,12 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                                 {/* Card action menu */}
                                 <div onClick={(e) => e.stopPropagation()} className="relative">
                                   <button
+                                    type="button"
+                                    aria-label="Lead actions"
                                     onClick={() => setOpenCardMenuId(openCardMenuId === lead.id ? null : lead.id)}
-                                    className="p-0.5 text-muted-foreground/60 hover:text-foreground rounded opacity-0 group-hover:opacity-100 transition-all text-xs leading-none"
+                                    className="p-1 text-muted-foreground/60 hover:text-foreground rounded opacity-0 group-hover:opacity-100 transition-all focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   >
-                                    ⋮
+                                    <MoreVertical className="size-3.5" aria-hidden="true" />
                                   </button>
                                   {openCardMenuId === lead.id && (
                                     <>

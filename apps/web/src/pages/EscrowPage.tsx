@@ -3,6 +3,11 @@ import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { escrowApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+
+const SELECT_CLASS =
+  "h-9 text-sm border border-input rounded-md px-2.5 bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface EscrowAccount {
   id: string;
@@ -105,15 +110,17 @@ export default function EscrowPage() {
         <p className="text-muted-foreground">No escrow accounts configured for this project.</p>
       ) : (
         <>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {accounts.map((a) => (
-              <button
+              <Button
                 key={a.id}
-                className={`text-sm px-3 py-1 rounded border ${active === a.id ? "bg-primary text-white" : "bg-card"}`}
+                type="button"
+                size="sm"
+                variant={active === a.id ? "default" : "outline"}
                 onClick={() => setActive(a.id)}
               >
                 {a.bankName} · {a.accountNo}
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -134,19 +141,21 @@ export default function EscrowPage() {
             </div>
           )}
 
-          <form className="border rounded p-4 grid grid-cols-6 gap-2 bg-muted/50" onSubmit={post}>
+          <form className="border border-border rounded-lg p-4 grid grid-cols-1 sm:grid-cols-6 gap-2 bg-muted/50" onSubmit={post}>
             <select
-              className="border rounded px-2 py-1 text-sm"
+              className={SELECT_CLASS}
               value={entry.direction}
               onChange={(e) => setEntry({ ...entry, direction: e.target.value })}
+              aria-label="Direction"
             >
               <option value="CREDIT">CREDIT</option>
               <option value="DEBIT">DEBIT</option>
             </select>
             <select
-              className="border rounded px-2 py-1 text-sm"
+              className={SELECT_CLASS}
               value={entry.reason}
               onChange={(e) => setEntry({ ...entry, reason: e.target.value })}
+              aria-label="Reason"
             >
               {[
                 "CUSTOMER_PAYMENT",
@@ -160,28 +169,28 @@ export default function EscrowPage() {
                 <option key={r}>{r}</option>
               ))}
             </select>
-            <input
-              className="border rounded px-2 py-1 text-sm"
+            <Input
+              className="h-9 text-sm"
               type="number"
               placeholder="Amount"
               value={entry.amount ?? ""}
               onChange={(e) => setEntry({ ...entry, amount: e.target.value })}
             />
-            <input
-              className="border rounded px-2 py-1 text-sm"
+            <Input
+              className="h-9 text-sm"
               placeholder="Bank ref"
               value={entry.externalRef ?? ""}
               onChange={(e) => setEntry({ ...entry, externalRef: e.target.value })}
             />
-            <input
-              className="border rounded px-2 py-1 text-sm col-span-1"
+            <Input
+              className="h-9 text-sm col-span-1"
               placeholder="Notes"
               value={entry.notes ?? ""}
               onChange={(e) => setEntry({ ...entry, notes: e.target.value })}
             />
-            <button className="bg-primary text-white text-sm rounded px-3 py-1" type="submit">
+            <Button type="submit" size="sm">
               Post
-            </button>
+            </Button>
           </form>
 
           <h2 className="font-medium mt-4">Ledger</h2>

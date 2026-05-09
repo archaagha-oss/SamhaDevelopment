@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { refundsApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { FilterBar } from "../components/data";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Spinner } from "../components/ui/spinner";
 
 interface Refund {
   id: string;
@@ -37,11 +48,36 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
+type ReasonAction = "REJECTED" | "PROCESSED";
+
+interface PromptState {
+  refundId: string;
+  action: ReasonAction;
+  value: string;
+}
+
+const PROMPT_COPY: Record<ReasonAction, { title: string; description: string; placeholder: string; confirmLabel: string }> = {
+  REJECTED: {
+    title: "Reject this refund?",
+    description: "Provide a reason — this is recorded on the refund and visible to finance.",
+    placeholder: "e.g. Out of policy window",
+    confirmLabel: "Reject",
+  },
+  PROCESSED: {
+    title: "Mark refund as processed",
+    description: "Add the bank or payment reference so finance can reconcile.",
+    placeholder: "e.g. Bank ref TXN-12345",
+    confirmLabel: "Mark processed",
+  },
+};
+
 export default function RefundsPage() {
   const [refunds, setRefunds] = useState<Refund[]>([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
   const [status,  setStatus]  = useState("");
+  const [prompt, setPrompt] = useState<PromptState | null>(null);
+  const [submittingPrompt, setSubmittingPrompt] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -63,28 +99,48 @@ export default function RefundsPage() {
 
   useEffect(() => { void load(); }, []);
 
-  const action = async (
+  const performTransition = async (
     id: string,
     newStatus: "APPROVED" | "REJECTED" | "PROCESSED" | "CANCELLED",
+    extras: Record<string, string> = {},
   ) => {
     try {
-      const extras: Record<string, string> = {};
-      if (newStatus === "REJECTED") {
-        // TODO(Phase C): replace prompt() with an inline form / detail page.
-        const reason = window.prompt("Rejection reason:");
-        if (!reason) return;
-        extras.rejectedReason = reason;
-      }
-      if (newStatus === "PROCESSED") {
-        const ref = window.prompt("Bank / payment reference:");
-        if (!ref) return;
-        extras.processedReference = ref;
-      }
       await refundsApi.transition(id, { newStatus, ...extras });
       toast.success(`Refund ${newStatus.toLowerCase()}`);
       await load();
     } catch (e: any) {
       toast.error(e.response?.data?.error ?? e.message);
+    }
+  };
+
+  const action = async (
+    id: string,
+    newStatus: "APPROVED" | "REJECTED" | "PROCESSED" | "CANCELLED",
+  ) => {
+    if (newStatus === "REJECTED" || newStatus === "PROCESSED") {
+      setPrompt({ refundId: id, action: newStatus, value: "" });
+      return;
+    }
+    await performTransition(id, newStatus);
+  };
+
+  const submitPrompt = async () => {
+    if (!prompt) return;
+    const trimmed = prompt.value.trim();
+    if (!trimmed) {
+      toast.error("Please enter a value before continuing.");
+      return;
+    }
+    setSubmittingPrompt(true);
+    const extras: Record<string, string> =
+      prompt.action === "REJECTED"
+        ? { rejectedReason: trimmed }
+        : { processedReference: trimmed };
+    try {
+      await performTransition(prompt.refundId, prompt.action, extras);
+      setPrompt(null);
+    } finally {
+      setSubmittingPrompt(false);
     }
   };
 
@@ -102,6 +158,8 @@ export default function RefundsPage() {
       return true;
     });
   }, [refunds, search, status]);
+
+  const promptCopy = prompt ? PROMPT_COPY[prompt.action] : null;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -127,8 +185,8 @@ export default function RefundsPage() {
 
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               {loading ? (
-                <div className="flex items-center justify-center h-40" role="status" aria-busy="true" aria-label="Loading">
-                  <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center justify-center h-40">
+                  <Spinner size="md" />
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground text-sm">
@@ -178,27 +236,36 @@ export default function RefundsPage() {
                               <div className="flex items-center gap-2 justify-end">
                                 {r.status === "REQUESTED" && (
                                   <>
-                                    <button
-                                      className="text-xs text-primary hover:underline"
+                                    <Button
+                                      type="button"
+                                      variant="link"
+                                      size="sm"
+                                      className="h-auto p-0 text-xs"
                                       onClick={() => action(r.id, "APPROVED")}
                                     >
                                       Approve
-                                    </button>
-                                    <button
-                                      className="text-xs text-destructive hover:underline"
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="link"
+                                      size="sm"
+                                      className="h-auto p-0 text-xs text-destructive"
                                       onClick={() => action(r.id, "REJECTED")}
                                     >
                                       Reject
-                                    </button>
+                                    </Button>
                                   </>
                                 )}
                                 {r.status === "APPROVED" && (
-                                  <button
-                                    className="text-xs text-success hover:underline"
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    className="h-auto p-0 text-xs text-success"
                                     onClick={() => action(r.id, "PROCESSED")}
                                   >
                                     Mark processed
-                                  </button>
+                                  </Button>
                                 )}
                               </div>
                             </td>
@@ -213,6 +280,58 @@ export default function RefundsPage() {
           </div>
         </PageContainer>
       </div>
+
+      <Dialog
+        open={!!prompt}
+        onOpenChange={(open) => {
+          if (!open && !submittingPrompt) setPrompt(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          {promptCopy && prompt && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{promptCopy.title}</DialogTitle>
+                <DialogDescription>{promptCopy.description}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Input
+                  autoFocus
+                  value={prompt.value}
+                  placeholder={promptCopy.placeholder}
+                  onChange={(e) =>
+                    setPrompt((cur) => (cur ? { ...cur, value: e.target.value } : cur))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void submitPrompt();
+                    }
+                  }}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPrompt(null)}
+                  disabled={submittingPrompt}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant={prompt.action === "REJECTED" ? "destructive" : "default"}
+                  onClick={submitPrompt}
+                  disabled={submittingPrompt}
+                >
+                  {submittingPrompt ? "Saving…" : promptCopy.confirmLabel}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

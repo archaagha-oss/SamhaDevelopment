@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
 import {
   Member, Role, Status, EmpType,
   ROLE_CFG, STATUS_CFG, EMP_LABEL,
@@ -163,22 +164,23 @@ export default function MemberEditPage() {
       subtitle={isEdit ? "Update the member's profile, role, and employment details." : "Add a new member to the team."}
       actions={
         <>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => navigate(cancelTo)}
             disabled={submitting}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
             onClick={submit}
             disabled={submitting}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
           >
             {submitting ? "Saving…" : isEdit ? "Save changes" : "Create member"}
-          </button>
+          </Button>
         </>
       }
       main={

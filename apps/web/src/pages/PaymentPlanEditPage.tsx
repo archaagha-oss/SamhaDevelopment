@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { ChevronUp, ChevronDown, X, Plus } from "lucide-react";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
 
 // PaymentPlanEditPage — handles /payment-plans/new (create) and
 // /payment-plans/:planId/edit (edit). Replaces PaymentPlanFormModal.
@@ -215,22 +217,23 @@ export default function PaymentPlanEditPage() {
       }
       actions={
         <>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => navigate(cancelTo)}
             disabled={submitting}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
             onClick={submit}
             disabled={submitting}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
           >
             {submitting ? "Saving…" : isEdit ? "Save changes" : "Create payment plan"}
-          </button>
+          </Button>
         </>
       }
       main={
@@ -312,15 +315,19 @@ export default function PaymentPlanEditPage() {
                           onClick={() => moveMilestone(i, -1)}
                           disabled={i === 0 || isEdit}
                           aria-label="Move up"
-                          className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none"
-                        >▲</button>
+                          className="text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        >
+                          <ChevronUp className="size-3" aria-hidden="true" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => moveMilestone(i, 1)}
                           disabled={i === milestones.length - 1 || isEdit}
                           aria-label="Move down"
-                          className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none"
-                        >▼</button>
+                          className="text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        >
+                          <ChevronDown className="size-3" aria-hidden="true" />
+                        </button>
                       </div>
                       <span className="text-xs font-bold text-muted-foreground w-4 tabular-nums">{i + 1}</span>
                       <input
@@ -341,8 +348,10 @@ export default function PaymentPlanEditPage() {
                           type="button"
                           onClick={() => removeMilestone(i)}
                           aria-label="Remove milestone"
-                          className="text-destructive hover:text-destructive text-sm px-1 transition-colors"
-                        >×</button>
+                          className="text-destructive hover:opacity-80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        >
+                          <X className="size-4" aria-hidden="true" />
+                        </button>
                       )}
                     </div>
                     <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
@@ -453,9 +462,10 @@ export default function PaymentPlanEditPage() {
               <button
                 type="button"
                 onClick={addMilestone}
-                className="mt-2 w-full py-2.5 border-2 border-dashed border-border text-sm text-muted-foreground hover:text-primary hover:border-primary/40 rounded-lg transition-colors"
+                className="mt-2 w-full py-2.5 border-2 border-dashed border-border text-sm text-muted-foreground hover:text-primary hover:border-primary/40 rounded-lg transition-colors flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                + Add milestone
+                <Plus className="size-4" aria-hidden="true" />
+                Add milestone
               </button>
             )}
           </div>

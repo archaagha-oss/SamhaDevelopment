@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Building2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
 import { getBrokerStatusColor } from "../utils/statusColors";
@@ -569,7 +570,7 @@ export default function BrokerPage() {
           <div className="lg:col-span-2">
             {!selected ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
-                <p className="text-3xl mb-2 opacity-30">◉</p>
+                <Building2 className="size-10 mx-auto mb-2 opacity-30" aria-hidden="true" />
                 <p className="text-sm">Select a company to view details</p>
               </div>
             ) : (

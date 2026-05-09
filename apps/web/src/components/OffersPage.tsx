@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { FileText } from "lucide-react";
 import Modal from "./Modal";
 import { PageContainer, PageHeader } from "./layout";
 import { BulkActionBar } from "./data";
@@ -191,7 +192,7 @@ export default function OffersPage() {
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon="◉"
+            icon={<FileText className="size-10 text-muted-foreground" aria-hidden="true" />}
             title={search || filter !== "ALL" ? "No offers match your filters" : "No offers yet"}
             description={search || filter !== "ALL" ? "Try clearing your search or switching the status filter." : "Create offers from a lead's profile to get started."}
           />

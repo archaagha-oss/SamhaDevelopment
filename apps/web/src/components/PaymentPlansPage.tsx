@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { CreditCard } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import { PageContainer, PageHeader } from "./layout";
 import { FilterBar } from "./data";
@@ -185,7 +186,7 @@ export default function PaymentPlansPage() {
               </div>
             ) : filtered.length === 0 ? (
               <EmptyState
-                icon="◫"
+                icon={<CreditCard className="size-10 text-muted-foreground" aria-hidden="true" />}
                 title={plans.length === 0 ? "No payment plans yet" : "No plans match your filter"}
                 description={plans.length === 0 ? "Define milestone schedules to attach to deals." : "Try adjusting your filters."}
                 action={plans.length === 0 ? { label: "Create payment plan", onClick: () => navigate("/payment-plans/new") } : undefined}

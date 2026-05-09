@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
+import ConfirmDialog from "../components/ConfirmDialog";
 import {
   Avatar, Member, Role, Status, EmpType,
   ROLE_CFG, STATUS_CFG, EMP_LABEL,
@@ -30,6 +32,7 @@ export default function MemberDetailPage() {
   const [member,  setMember]  = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting,  setActing]  = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -48,7 +51,7 @@ export default function MemberDetailPage() {
 
   async function deactivate() {
     if (!member) return;
-    if (!confirm(`Deactivate ${member.name}? They will lose access but their data is preserved.`)) return;
+    setConfirmDeactivate(false);
     setActing(true);
     try {
       await axios.delete(`/api/users/${member.id}`);
@@ -99,34 +102,40 @@ export default function MemberDetailPage() {
   ];
 
   return (
+    <>
     <DetailPageLayout
       crumbs={crumbs}
       title={member.name}
       subtitle={member.jobTitle || "—"}
       actions={
         <>
-          <button
+          <Button
+            type="button"
+            size="sm"
             onClick={() => navigate(`/team/${member.id}/edit`)}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
           >
             Edit
-          </button>
+          </Button>
           {member.status === "DEACTIVATED" ? (
-            <button
+            <Button
+              type="button"
+              size="sm"
+              variant="success"
               onClick={reactivate}
               disabled={acting}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-success/30 bg-success-soft text-success hover:opacity-90 disabled:opacity-50 transition-colors"
             >
-              Reactivate
-            </button>
+              {acting ? "Reactivating…" : "Reactivate"}
+            </Button>
           ) : (
-            <button
-              onClick={deactivate}
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => setConfirmDeactivate(true)}
               disabled={acting}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-destructive/30 bg-destructive-soft text-destructive hover:opacity-90 disabled:opacity-50 transition-colors"
             >
-              Deactivate
-            </button>
+              {acting ? "Deactivating…" : "Deactivate"}
+            </Button>
           )}
         </>
       }
@@ -241,5 +250,16 @@ export default function MemberDetailPage() {
         </div>
       }
     />
+    <ConfirmDialog
+      open={confirmDeactivate}
+      title="Deactivate member?"
+      message={`${member.name} will lose access to the CRM. Their assignments and history are preserved and they can be reactivated later.`}
+      confirmLabel="Deactivate"
+      cancelLabel="Keep active"
+      variant="danger"
+      onConfirm={deactivate}
+      onCancel={() => setConfirmDeactivate(false)}
+    />
+    </>
   );
 }

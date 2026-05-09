@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { commissionTiersApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Spinner } from "../components/ui/spinner";
 
 interface Tier {
   id?: string;
@@ -98,8 +102,8 @@ export default function CommissionTiersPage() {
         <PageContainer>
           <div className="space-y-5">
             {loading ? (
-              <div className="flex items-center justify-center h-40" role="status" aria-busy="true" aria-label="Loading">
-                <div className="w-7 h-7 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+              <div className="flex items-center justify-center h-40">
+                <Spinner size="md" />
               </div>
             ) : rules.length === 0 ? (
               <div className="bg-card rounded-xl border border-dashed border-border py-16 text-center">
@@ -119,26 +123,30 @@ export default function CommissionTiersPage() {
                       </p>
                     </div>
                     {editingId !== rule.id ? (
-                      <button
-                        className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+                      <Button
+                        type="button"
+                        size="sm"
                         onClick={() => startEdit(rule)}
                       >
                         Edit tiers
-                      </button>
+                      </Button>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <button
-                          className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => setEditingId(null)}
                         >
                           Cancel
-                        </button>
-                        <button
-                          className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
                           onClick={save}
                         >
                           Save changes
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </header>
@@ -163,16 +171,16 @@ export default function CommissionTiersPage() {
                             {editingId === rule.id ? (
                               <>
                                 <td className="px-3 py-2">
-                                  <input
-                                    className="border border-border rounded px-2 py-1 w-28 text-sm bg-card focus:outline-none focus:border-ring"
+                                  <Input
+                                    className="h-9 w-28 text-sm"
                                     type="number"
                                     value={t.minSalePrice ?? ""}
                                     onChange={(e) => updateTier(idx, "minSalePrice", e.target.value)}
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input
-                                    className="border border-border rounded px-2 py-1 w-28 text-sm bg-card focus:outline-none focus:border-ring"
+                                  <Input
+                                    className="h-9 w-28 text-sm"
                                     type="number"
                                     value={t.maxSalePrice ?? ""}
                                     onChange={(e) => updateTier(idx, "maxSalePrice", e.target.value)}
@@ -180,8 +188,8 @@ export default function CommissionTiersPage() {
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input
-                                    className="border border-border rounded px-2 py-1 w-20 text-sm bg-card focus:outline-none focus:border-ring"
+                                  <Input
+                                    className="h-9 w-20 text-sm"
                                     type="number"
                                     step="0.1"
                                     value={t.ratePercent}
@@ -189,8 +197,8 @@ export default function CommissionTiersPage() {
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input
-                                    className="border border-border rounded px-2 py-1 w-24 text-sm bg-card focus:outline-none focus:border-ring"
+                                  <Input
+                                    className="h-9 w-24 text-sm"
                                     type="number"
                                     value={t.flatBonus}
                                     onChange={(e) => updateTier(idx, "flatBonus", e.target.value)}
@@ -218,9 +226,16 @@ export default function CommissionTiersPage() {
                   </div>
 
                   {editingId === rule.id && (
-                    <button className="text-xs text-primary hover:underline" onClick={addTier}>
-                      + Add tier
-                    </button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={addTier}
+                      className="h-auto p-0 text-xs"
+                    >
+                      <Plus className="size-3.5" aria-hidden="true" />
+                      Add tier
+                    </Button>
                   )}
                 </section>
               ))

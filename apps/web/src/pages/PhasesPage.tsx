@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { phasesApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "../components/ui/button";
+import { Spinner } from "../components/ui/spinner";
 
 interface Phase {
   id: string;
@@ -82,7 +85,7 @@ export default function PhasesPage() {
         <PageContainer>
           <div className="space-y-5">
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground flex items-center gap-2"><Spinner size="sm" /> Loading…</p>
       ) : phases.length === 0 ? (
         <p className="text-muted-foreground">No phases configured for this project.</p>
       ) : (
@@ -113,12 +116,16 @@ export default function PhasesPage() {
                 <td>{p.publicLaunchDate ? new Date(p.publicLaunchDate).toLocaleDateString() : "—"}</td>
                 <td>
                   {p.releaseStage !== "PUBLIC" && (
-                    <button
-                      className="text-primary hover:underline text-sm"
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
                       onClick={() => advance(p)}
+                      className="h-auto p-0 text-sm"
                     >
-                      Advance Stage →
-                    </button>
+                      Advance stage
+                      <ArrowRight className="size-3.5" aria-hidden="true" />
+                    </Button>
                   )}
                 </td>
               </tr>

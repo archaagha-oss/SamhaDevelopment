@@ -5,6 +5,10 @@ import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
+import {
+  UserPlus, Handshake, BookmarkPlus, FileText, CreditCard,
+  CircleDollarSign, ClipboardCheck, LayoutGrid,
+} from "lucide-react";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
 
@@ -672,22 +676,23 @@ export default function ExecutiveDashboard(): React.ReactNode {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
           {[
-            { label: "Create lead",  desc: "Capture inquiry",     icon: "◉", to: "/leads",        tone: QUICK_ACTION_TONE.brand },
-            { label: "Create deal",  desc: "Start sales process", icon: "◈", to: "/deals",        tone: QUICK_ACTION_TONE.emerald },
-            { label: "Reservation",  desc: "Hold a unit",         icon: "⊗", to: "/reservations", tone: QUICK_ACTION_TONE.secondary },
-            { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: QUICK_ACTION_TONE.cyan },
-            { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: QUICK_ACTION_TONE.amber },
-            { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: QUICK_ACTION_TONE.pink },
-            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: QUICK_ACTION_TONE.secondary },
-            { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: QUICK_ACTION_TONE.neutral },
+            { label: "Create lead",  desc: "Capture inquiry",     Icon: UserPlus,         to: "/leads",        tone: QUICK_ACTION_TONE.brand },
+            { label: "Create deal",  desc: "Start sales process", Icon: Handshake,        to: "/deals",        tone: QUICK_ACTION_TONE.emerald },
+            { label: "Reservation",  desc: "Hold a unit",         Icon: BookmarkPlus,     to: "/reservations", tone: QUICK_ACTION_TONE.secondary },
+            { label: "Send Offer",   desc: "Generate offer PDF",  Icon: FileText,         to: "/offers-list",  tone: QUICK_ACTION_TONE.cyan },
+            { label: "Record Pay.",  desc: "Log a payment",       Icon: CreditCard,       to: "/payments",     tone: QUICK_ACTION_TONE.amber },
+            { label: "Commissions",  desc: "Approve & pay",       Icon: CircleDollarSign, to: "/commissions",  tone: QUICK_ACTION_TONE.pink },
+            { label: "Add Activity", desc: "Log a touchpoint",    Icon: ClipboardCheck,   to: "/tasks",        tone: QUICK_ACTION_TONE.secondary },
+            { label: "Browse Units", desc: "Inventory grid",      Icon: LayoutGrid,       to: "/units",        tone: QUICK_ACTION_TONE.neutral },
           ].map((a) => (
             <button
               key={a.label}
+              type="button"
               onClick={() => navigate(a.to)}
-              className="flex items-center gap-3 px-3 py-3 bg-muted/60 hover:bg-muted border border-border hover:border-foreground/20 rounded-lg transition-colors text-left"
+              className="flex items-center gap-3 px-3 py-3 bg-muted/60 hover:bg-muted border border-border hover:border-foreground/20 rounded-lg transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 ${a.tone}`}>
-                {a.icon}
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${a.tone}`}>
+                <a.Icon className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-foreground truncate">{a.label}</p>

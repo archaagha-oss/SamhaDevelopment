@@ -1,7 +1,12 @@
+import * as React from "react";
+import { Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
-  icon?: string;
+  /** Decorative icon. Defaults to a lucide Inbox. Pass a lucide icon
+   * (`<Inbox className="size-10" aria-hidden="true" />`) — string emojis are
+   * accepted for backwards compatibility but should be migrated. */
+  icon?: React.ReactNode;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -11,7 +16,7 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({
-  icon = "📭",
+  icon,
   title,
   description,
   actionLabel,
@@ -30,9 +35,18 @@ export default function EmptyState({
   const label = actionLabel ?? action?.label;
   const handler = onAction ?? action?.onClick;
 
+  const renderedIcon =
+    typeof icon === "string" || typeof icon === "number" ? (
+      <span className="text-4xl" aria-hidden="true">
+        {icon}
+      </span>
+    ) : (
+      icon ?? <Inbox className="size-10 text-muted-foreground" aria-hidden="true" />
+    );
+
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="text-4xl mb-3 opacity-50">{icon}</div>
+      <div className="mb-3 opacity-60 flex items-center justify-center">{renderedIcon}</div>
       <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
       {description && (
         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">{description}</p>

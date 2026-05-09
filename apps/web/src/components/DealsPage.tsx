@@ -3,11 +3,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical } from "lucide-react";
 import { useDeals } from "../hooks/useDeals";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
 import { SkeletonTableRows } from "./Skeleton";
-import { IconChevronUp, IconChevronDown, IconChevronsUpDown } from "./Icons";
 import { PageContainer, PageHeader } from "./layout";
 import {
   FilterBar,
@@ -162,8 +162,10 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const SortIcon = ({ col }: { col: string }) => (
     <span className={`ml-1 inline-flex items-center align-middle ${sortCol === col ? "text-foreground" : "text-foreground/80"}`} aria-hidden="true">
       {sortCol === col
-        ? (sortDir === "asc" ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />)
-        : <IconChevronsUpDown size={12} />}
+        ? (sortDir === "asc"
+            ? <ChevronUp className="size-3" aria-hidden="true" />
+            : <ChevronDown className="size-3" aria-hidden="true" />)
+        : <ChevronsUpDown className="size-3" aria-hidden="true" />}
     </span>
   );
 
@@ -467,13 +469,14 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                     {/* Kebab menu - always tappable on touch */}
                     <td className="px-2 py-3 relative" onClick={(e) => e.stopPropagation()}>
                       <button
+                        type="button"
                         onClick={() => setOpenMenuId(isMenuOpen ? null : deal.id)}
                         aria-label={`Actions for deal ${deal.dealNumber}`}
                         aria-haspopup="menu"
                         aria-expanded={isMenuOpen}
                         className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        ⋮
+                        <MoreVertical className="size-3.5" aria-hidden="true" />
                       </button>
                       {isMenuOpen && (
                         <>

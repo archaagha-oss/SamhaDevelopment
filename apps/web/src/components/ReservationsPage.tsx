@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { CalendarCheck } from "lucide-react";
 import Modal from "./Modal";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
@@ -136,7 +137,7 @@ export default function ReservationsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon="◫"
+            icon={<CalendarCheck className="size-10 text-muted-foreground" aria-hidden="true" />}
             title={search ? "No reservations match your search" : `No ${filter === "ALL" ? "" : filter.toLowerCase() + " "}reservations`}
             description={search ? "Try clearing your search or switching the status filter." : "Reservations created from leads will appear here."}
           />

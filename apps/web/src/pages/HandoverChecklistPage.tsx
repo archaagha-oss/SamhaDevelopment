@@ -5,6 +5,8 @@ import { handoverApi } from "../services/phase2ApiService";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 
 interface ChecklistItem {
   id: string;
@@ -151,23 +153,23 @@ export default function HandoverChecklistPage() {
             </div>
             <div className="flex gap-2">
               {it.status !== "COMPLETED" && (
-                <button className="text-success text-xs hover:underline" onClick={() => toggle(it, "COMPLETED")}>
-                  Mark Done
-                </button>
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs text-success" onClick={() => toggle(it, "COMPLETED")}>
+                  Mark done
+                </Button>
               )}
               {it.status === "COMPLETED" && (
-                <button className="text-muted-foreground text-xs hover:underline" onClick={() => toggle(it, "PENDING")}>
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={() => toggle(it, "PENDING")}>
                   Reopen
-                </button>
+                </Button>
               )}
               {!it.required && it.status === "PENDING" && (
                 <>
-                  <button className="text-foreground text-xs hover:underline" onClick={() => toggle(it, "WAIVED")}>
+                  <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => toggle(it, "WAIVED")}>
                     Waive
-                  </button>
-                  <button className="text-foreground text-xs hover:underline" onClick={() => toggle(it, "NOT_APPLICABLE")}>
+                  </Button>
+                  <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => toggle(it, "NOT_APPLICABLE")}>
                     N/A
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -182,19 +184,21 @@ export default function HandoverChecklistPage() {
             All required items {ready ? "have been completed" : "must be completed"} before customer sign-off.
           </p>
           <div className="flex gap-2 items-center">
-            <input
-              className="border rounded px-2 py-1 text-sm flex-1"
+            <Input
+              className="h-9 flex-1"
               placeholder="Customer name (printed)"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
             />
-            <button
+            <Button
+              type="button"
+              variant="success"
+              size="sm"
               disabled={!ready}
-              className="bg-success disabled:bg-neutral-300 text-white px-4 py-1 rounded text-sm"
               onClick={finish}
             >
               Sign off &amp; complete
-            </button>
+            </Button>
           </div>
         </div>
       )}

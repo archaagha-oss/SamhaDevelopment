@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { Button } from "../components/ui/button";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 interface Contact {
@@ -122,19 +123,22 @@ export default function ContactDetailPage() {
         subtitle={contact.jobTitle || (contact.company ? contact.company : "Contact details")}
         actions={
           <>
-            <button
+            <Button
+              type="button"
+              size="sm"
               onClick={() => navigate(`/contacts/${contact.id}/edit`)}
-              className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
             >
               Edit
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
               onClick={() => setConfirmDelete(true)}
               disabled={deleting}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-destructive/30 bg-destructive-soft text-destructive hover:opacity-90 disabled:opacity-50 transition-colors"
             >
-              Delete
-            </button>
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
           </>
         }
         hero={

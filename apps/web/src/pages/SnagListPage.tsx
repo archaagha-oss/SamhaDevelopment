@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { snagsApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Spinner } from "../components/ui/spinner";
 
 interface SnagItem {
   id: string;
@@ -114,12 +118,9 @@ export default function SnagListPage() {
         title="Snag list"
         subtitle="Walk-through items, severity, contractor, and resolution status."
         actions={
-          <button
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
-            onClick={ensureList}
-          >
+          <Button type="button" size="sm" onClick={ensureList}>
             Create list
-          </button>
+          </Button>
         }
       />
       <div className="flex-1 overflow-auto">
@@ -127,7 +128,7 @@ export default function SnagListPage() {
           <div className="space-y-5">
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground flex items-center gap-2"><Spinner size="sm" /> Loading…</p>
       ) : lists.length === 0 ? (
         <p className="text-muted-foreground">No snag lists for this unit yet.</p>
       ) : (
@@ -186,20 +187,25 @@ export default function SnagListPage() {
                   </tr>
                 ))}
                 <tr>
-                  <td className="py-2"><input className="border rounded px-1 py-0.5 text-xs w-full" placeholder="Room" value={newItem.room ?? ""} onChange={(e) => setNewItem({ ...newItem, room: e.target.value })} /></td>
-                  <td><input className="border rounded px-1 py-0.5 text-xs w-full" placeholder="Category" value={newItem.category ?? ""} onChange={(e) => setNewItem({ ...newItem, category: e.target.value })} /></td>
-                  <td><input className="border rounded px-1 py-0.5 text-xs w-full" placeholder="Description" value={newItem.description ?? ""} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} /></td>
+                  <td className="py-2"><Input className="h-8 text-xs" placeholder="Room" value={newItem.room ?? ""} onChange={(e) => setNewItem({ ...newItem, room: e.target.value })} /></td>
+                  <td><Input className="h-8 text-xs" placeholder="Category" value={newItem.category ?? ""} onChange={(e) => setNewItem({ ...newItem, category: e.target.value })} /></td>
+                  <td><Input className="h-8 text-xs" placeholder="Description" value={newItem.description ?? ""} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} /></td>
                   <td>
-                    <select className="border rounded px-1 py-0.5 text-xs" value={newItem.severity ?? "MINOR"} onChange={(e) => setNewItem({ ...newItem, severity: e.target.value })}>
+                    <select
+                      className="h-8 text-xs border border-input rounded-md px-2 bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={newItem.severity ?? "MINOR"}
+                      onChange={(e) => setNewItem({ ...newItem, severity: e.target.value })}
+                    >
                       {Object.keys(SEVERITY_COLORS).map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td><input className="border rounded px-1 py-0.5 text-xs w-full" placeholder="Contractor" value={newItem.contractorName ?? ""} onChange={(e) => setNewItem({ ...newItem, contractorName: e.target.value })} /></td>
-                  <td><input className="border rounded px-1 py-0.5 text-xs w-full" type="date" value={newItem.dueDate ?? ""} onChange={(e) => setNewItem({ ...newItem, dueDate: e.target.value })} /></td>
+                  <td><Input className="h-8 text-xs" placeholder="Contractor" value={newItem.contractorName ?? ""} onChange={(e) => setNewItem({ ...newItem, contractorName: e.target.value })} /></td>
+                  <td><Input className="h-8 text-xs" type="date" value={newItem.dueDate ?? ""} onChange={(e) => setNewItem({ ...newItem, dueDate: e.target.value })} /></td>
                   <td>
-                    <button className="bg-primary text-white text-xs px-2 py-1 rounded" onClick={() => addItem(list.id)}>
-                      + Add
-                    </button>
+                    <Button type="button" size="sm" onClick={() => addItem(list.id)}>
+                      <Plus className="size-3.5" aria-hidden="true" />
+                      Add
+                    </Button>
                   </td>
                 </tr>
               </tbody>
