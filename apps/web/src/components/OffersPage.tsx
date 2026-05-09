@@ -105,7 +105,7 @@ export default function OffersPage() {
   });
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Offers" }]}
         title="Offers"

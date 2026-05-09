@@ -83,11 +83,11 @@ export default function ContractsPage() {
   }, {});
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Contracts" }]}
-        title="Contracts & Documents"
-        subtitle="Manage contract lifecycle across all deals"
+        title="Contracts"
+        subtitle="Manage contract lifecycle and supporting documents across all deals"
         actions={<Button variant="outline" onClick={load}>Refresh</Button>}
       />
 

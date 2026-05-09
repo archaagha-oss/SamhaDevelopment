@@ -480,7 +480,7 @@ export default function BrokerPage() {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Brokers" }]}
         title="Brokers"
@@ -869,7 +869,7 @@ export default function BrokerPage() {
 
       <ConfirmDialog
         open={confirmDeleteCompany}
-        title="Delete Broker Company"
+        title="Delete broker"
         message="Delete this company? This cannot be undone."
         confirmLabel="Delete"
         variant="danger"
@@ -878,7 +878,7 @@ export default function BrokerPage() {
       />
       <ConfirmDialog
         open={!!confirmDeleteAgentId}
-        title="Remove Agent"
+        title="Remove agent"
         message="Remove this agent from the company?"
         confirmLabel="Remove"
         variant="danger"
