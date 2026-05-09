@@ -8,6 +8,7 @@ import GlobalSearchModal from "./GlobalSearchModal";
 import ErrorBoundary from "./ErrorBoundary";
 import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
@@ -63,6 +64,11 @@ function timeAgo(dateStr: string) {
 export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Phase F.1 — global keyboard shortcuts (g+x for navigation, c for create
+  // on the current list page, / to focus search). Cmd+K is handled separately
+  // below to keep its precedence over the shortcut layer.
+  useKeyboardShortcuts();
 
   // Mock user for dev (TODO: integrate real Clerk auth in future phase)
   const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
