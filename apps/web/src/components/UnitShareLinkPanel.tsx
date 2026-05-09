@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   useCreateUnitShareToken,
   useDeleteUnitShareToken,
   useRevokeUnitShareToken,
   useUnitShareTokens,
 } from "../hooks/useUnitShareTokens";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   unitId: string;
@@ -28,6 +30,7 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
   const [showPrice, setShowPrice] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const handleCreate = async () => {
     await create.mutateAsync({
@@ -45,7 +48,13 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
       setCopiedId(id);
       setTimeout(() => setCopiedId((v) => (v === id ? null : v)), 1500);
     } catch {
-      window.prompt("Copy this link:", absolute);
+      // Clipboard API can fail in iframes, on insecure origins, or when the
+      // browser prompts for permission. Show a toast with the link so the
+      // user can long-press / right-click to copy it themselves.
+      toast.message("Copy the link manually", {
+        description: absolute,
+        duration: 10_000,
+      });
     }
   };
 
@@ -133,9 +142,7 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm("Delete this share link permanently?")) remove.mutate(t.id);
-                      }}
+                      onClick={() => setPendingDelete(t.id)}
                       disabled={remove.isPending}
                       style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                     >
@@ -154,6 +161,22 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete this share link?"
+        message="The link will stop working immediately for anyone who has it. This cannot be undone — issue a new link to restore access."
+        confirmLabel="Delete link"
+        cancelLabel="Keep link"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDelete) {
+            remove.mutate(pendingDelete);
+            setPendingDelete(null);
+          }
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </section>
   );
 }

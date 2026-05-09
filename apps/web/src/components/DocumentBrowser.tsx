@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Document } from "../types";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   dealId: string;
@@ -53,6 +54,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<{ url: string; name: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Document | null>(null);
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -81,13 +83,16 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
     }
   };
 
-  const handleDelete = async (docId: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
+  const handleDelete = (doc: Document) => setPendingDelete(doc);
 
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const docId = pendingDelete.id;
     setDeleting(docId);
     try {
       await axios.delete(`/api/documents/${docId}`);
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
+      setPendingDelete(null);
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to delete document");
     } finally {
@@ -185,7 +190,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
                     ⬇️
                   </button>
                   <button
-                    onClick={() => handleDelete(doc.id)}
+                    onClick={() => handleDelete(doc)}
                     disabled={deleting === doc.id}
                     className="p-2 text-destructive hover:text-destructive hover:bg-card rounded-lg disabled:opacity-50"
                     title="Delete"
@@ -221,6 +226,21 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete this document?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel={deleting ? "Deleting…" : "Delete"}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => { if (!deleting) setPendingDelete(null); }}
+      />
     </>
   );
 }

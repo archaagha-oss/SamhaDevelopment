@@ -6,6 +6,7 @@ import {
   useUploadProjectDocument,
   type DocumentVisibility,
 } from "../hooks/useProjectDocuments";
+import ConfirmDialog from "./ConfirmDialog";
 
 const DOC_TYPES = [
   "OTHER",
@@ -28,6 +29,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [pendingType, setPendingType] = useState<string>("OTHER");
   const [pendingVisibility, setPendingVisibility] = useState<DocumentVisibility>("PUBLIC");
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [pendingName, setPendingName] = useState("");
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,9 +129,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
                   <td style={td}>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm("Delete this document permanently?")) remove.mutate(d.id);
-                      }}
+                      onClick={() => setPendingDelete({ id: d.id, name: d.name })}
                       style={{
                         padding: "4px 10px",
                         border: "1px solid #f3c4c4",
@@ -148,6 +148,26 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete this document?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.name}" will be permanently removed from this project. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDelete) {
+            remove.mutate(pendingDelete.id);
+            setPendingDelete(null);
+          }
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </section>
   );
 }

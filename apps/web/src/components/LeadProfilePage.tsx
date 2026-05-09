@@ -193,6 +193,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     brokerCompanyId: "", brokerAgentId: "",
   });
   const [creatingDeal, setCreatingDeal] = useState(false);
+  const [pendingAcceptedOffer, setPendingAcceptedOffer] = useState<any | null>(null);
 
   // ── Live updates: refresh activities when an inbound message lands on this lead
   useEventStream("activity.inbound", async (data: { leadId?: string | null }) => {
@@ -438,9 +439,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       // Prompt to create a deal immediately after acceptance
       if (status === "ACCEPTED") {
         const accepted = updatedOffers.find((o: any) => o.id === offerId);
-        if (accepted && window.confirm("Offer accepted. Create a reservation deal now?")) {
-          openReservationFromOffer(accepted);
-        }
+        if (accepted) setPendingAcceptedOffer(accepted);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to update offer");
@@ -1417,6 +1416,21 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         variant="danger"
         onConfirm={doDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingAcceptedOffer}
+        title="Offer accepted — create a deal?"
+        message="Want to start the reservation deal now? You can also do this later from the lead's offer list."
+        confirmLabel="Create deal"
+        cancelLabel="Not now"
+        variant="info"
+        onConfirm={() => {
+          const offer = pendingAcceptedOffer;
+          setPendingAcceptedOffer(null);
+          if (offer) openReservationFromOffer(offer);
+        }}
+        onCancel={() => setPendingAcceptedOffer(null)}
       />
     </div>
   );

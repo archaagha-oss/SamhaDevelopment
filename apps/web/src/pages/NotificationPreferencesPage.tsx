@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useSettings, type NotificationPrefs } from "../contexts/SettingsContext";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 /**
  * Per-user notification preferences. Layered on top of the org-wide defaults
@@ -46,6 +47,7 @@ export default function NotificationPreferencesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [prefs, setPrefs] = useState<NotificationPrefs>({});
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -76,8 +78,7 @@ export default function NotificationPreferencesPage() {
   }
 
   function reset() {
-    if (!confirm("Clear all overrides and follow the organization defaults?")) return;
-    setPrefs({});
+    setConfirmReset(true);
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -230,6 +231,20 @@ export default function NotificationPreferencesPage() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmReset}
+        title="Clear all overrides?"
+        message="Your personal notification overrides will be removed and you'll follow the organization defaults from now on. You can override individual events again at any time."
+        confirmLabel="Clear overrides"
+        cancelLabel="Keep my overrides"
+        variant="warning"
+        onConfirm={() => {
+          setPrefs({});
+          setConfirmReset(false);
+        }}
+        onCancel={() => setConfirmReset(false)}
+      />
     </div>
   );
 }

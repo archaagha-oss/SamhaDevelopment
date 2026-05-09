@@ -7,6 +7,7 @@ import {
   useUpdateProjectUpdate,
   useUploadProjectUpdateMedia,
 } from "../hooks/useProjectUpdates";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   projectId: string;
@@ -23,6 +24,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [draftPublic, setDraftPublic] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
 
   const handleCreate = async () => {
     if (!draftTitle.trim() || !draftBody.trim()) return;
@@ -119,9 +121,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm("Delete this update permanently?")) remove.mutate(u.id);
-                    }}
+                    onClick={() => setPendingDelete({ id: u.id, title: u.title || "Untitled update" })}
                     style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                   >
                     Delete
@@ -199,6 +199,26 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete this update?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.title}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDelete) {
+            remove.mutate(pendingDelete.id);
+            setPendingDelete(null);
+          }
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useAgents } from "../hooks/useAgents";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   onClose: () => void;
@@ -22,11 +23,15 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => { firstNameRef.current?.focus(); }, []);
 
   const handleClose = () => {
-    if (dirty && !window.confirm("Discard this new lead?")) return;
+    if (dirty) {
+      setConfirmDiscard(true);
+      return;
+    }
     onClose();
   };
 
@@ -174,6 +179,17 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        title="Discard this new lead?"
+        message="Anything you've typed will be lost. Continue creating the lead to save it."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        variant="danger"
+        onConfirm={() => { setConfirmDiscard(false); onClose(); }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
     </div>
   );
 }
