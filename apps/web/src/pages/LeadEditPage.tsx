@@ -2,14 +2,45 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
 import { Button } from "../components/ui/button";
+import FieldError from "../components/ui/field-error";
+import { useZodValidation } from "../lib/validation";
 import { useAgents } from "../hooks/useAgents";
 import EmiratesIdScan from "../components/EmiratesIdScan";
 import UnitInterestPicker from "../components/UnitInterestPicker";
 import type { EmiratesIdFields } from "../utils/emiratesIdOcr";
+
+// Permissive phone regex; the API normalises strictly. Client just rejects
+// obvious junk so the user gets fast feedback.
+const PHONE_RE = /^[+\d][\d\s().-]{5,}$/;
+
+function leadFormSchema(opts: { isEdit: boolean }) {
+  return z.object({
+    firstName: z.string().trim().min(1, "First name is required"),
+    lastName: z.string().trim().min(1, "Last name is required"),
+    phone: z
+      .string()
+      .trim()
+      .min(1, "Phone is required")
+      .regex(PHONE_RE, "Enter a valid phone number, e.g. +971501234567"),
+    email: z
+      .string()
+      .trim()
+      .email("Enter a valid email like name@example.com")
+      .optional()
+      .or(z.literal("")),
+    assignedAgentId: z.string().min(1, "Pick an assigned agent"),
+    consent: opts.isEdit
+      ? z.boolean().optional()
+      : z.literal(true, {
+          errorMap: () => ({ message: "Consent is required before creating a lead" }),
+        }),
+  });
+}
 
 // LeadEditPage — handles both /leads/new (create) and /leads/:leadId/edit (edit).
 // Replaces the inline <Modal title="Edit lead"> in LeadProfilePage and the dead
@@ -89,7 +120,9 @@ export default function LeadEditPage() {
   const [interestedUnitMeta, setInterestedUnitMeta] = useState<Record<string, { unitNumber: string }>>({});
 
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const validationSchema = useMemo(() => leadFormSchema({ isEdit }), [isEdit]);
+  const { errors, validate, clearError } = useZodValidation(validationSchema);
 
   // Focus first field on mount (create mode only — edit mode loads async)
   useEffect(() => {
@@ -159,7 +192,10 @@ export default function LeadEditPage() {
     return () => { cancelled = true; };
   }, [isEdit, leadId]);
 
-  const set = (patch: Partial<typeof BLANK>) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<typeof BLANK>) => {
+    Object.keys(patch).forEach((k) => clearError(k));
+    setForm((f) => ({ ...f, ...patch }));
+  };
 
   const applyEmiratesId = (fields: EmiratesIdFields) => {
     const patch: Partial<typeof BLANK> = {};
@@ -207,22 +243,8 @@ export default function LeadEditPage() {
   }
 
   async function submit() {
-    setError(null);
-
-    // Required-field guard
-    if (!form.firstName.trim() || !form.lastName.trim() || !form.phone.trim()) {
-      setError("First name, last name and phone are required.");
-      return;
-    }
-    if (!form.assignedAgentId) {
-      setError("Pick an assigned agent.");
-      return;
-    }
-    if (!isEdit && !consent) {
-      setError("Consent is required before creating a lead.");
-      return;
-    }
-
+    setSubmitError(null);
+    if (!validate({ ...form, consent })) return;
     setSubmitting(true);
     try {
       if (isEdit && lead) {
@@ -271,7 +293,7 @@ export default function LeadEditPage() {
         navigate(newId ? `/leads/${newId}` : "/leads");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save lead");
+      setSubmitError(err.response?.data?.error || "Failed to save lead");
     } finally {
       setSubmitting(false);
     }
@@ -385,51 +407,68 @@ export default function LeadEditPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={lbl}>First Name *</label>
+                  <label htmlFor="firstName" className={lbl}>First Name *</label>
                   <input
+                    id="firstName"
+                    name="firstName"
                     ref={firstNameRef}
-                    required
                     value={form.firstName}
                     onChange={(e) => set({ firstName: e.target.value })}
-                    className={inp}
+                    className={errors.firstName ? `${inp} border-destructive focus:border-destructive` : inp}
                     placeholder="Ahmed"
+                    aria-invalid={!!errors.firstName}
                   />
+                  <FieldError errors={errors} name="firstName" />
                 </div>
                 <div>
-                  <label className={lbl}>Last Name *</label>
+                  <label htmlFor="lastName" className={lbl}>Last Name *</label>
                   <input
-                    required
+                    id="lastName"
+                    name="lastName"
                     value={form.lastName}
                     onChange={(e) => set({ lastName: e.target.value })}
-                    className={inp}
+                    className={errors.lastName ? `${inp} border-destructive focus:border-destructive` : inp}
                     placeholder="Al Mansouri"
+                    aria-invalid={!!errors.lastName}
                   />
+                  <FieldError errors={errors} name="lastName" />
                 </div>
               </div>
               <div>
-                <label className={lbl}>Phone *</label>
+                <label htmlFor="phone" className={lbl}>Phone *</label>
                 <input
-                  required type="tel"
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
                   value={form.phone}
                   onChange={(e) => set({ phone: e.target.value })}
-                  className={inp}
+                  className={errors.phone ? `${inp} border-destructive focus:border-destructive` : inp}
                   placeholder="+971 50 000 0000"
+                  aria-invalid={!!errors.phone}
                 />
+                <FieldError errors={errors} name="phone" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={lbl}>Email</label>
+                  <label htmlFor="email" className={lbl}>Email</label>
                   <input
+                    id="email"
+                    name="email"
                     type="email"
                     value={form.email}
                     onChange={(e) => set({ email: e.target.value })}
-                    className={inp}
+                    className={errors.email ? `${inp} border-destructive focus:border-destructive` : inp}
                     placeholder="optional"
+                    aria-invalid={!!errors.email}
                   />
+                  <FieldError errors={errors} name="email" />
                 </div>
                 <div>
-                  <label className={lbl}>Nationality</label>
+                  <label htmlFor="nationality" className={lbl}>Nationality</label>
                   <input
+                    id="nationality"
+                    name="nationality"
                     value={form.nationality}
                     onChange={(e) => set({ nationality: e.target.value })}
                     className={inp}
@@ -468,18 +507,21 @@ export default function LeadEditPage() {
                 </div>
               </div>
               <div>
-                <label className={lbl}>Assigned Sales Agent *</label>
+                <label htmlFor="assignedAgentId" className={lbl}>Assigned Sales Agent *</label>
                 <select
-                  required
+                  id="assignedAgentId"
+                  name="assignedAgentId"
                   value={form.assignedAgentId}
                   onChange={(e) => set({ assignedAgentId: e.target.value })}
-                  className={inp}
+                  className={errors.assignedAgentId ? `${inp} border-destructive focus:border-destructive` : inp}
+                  aria-invalid={!!errors.assignedAgentId}
                 >
                   <option value="">Select agent…</option>
                   {agents.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
                 </select>
+                <FieldError errors={errors} name="assignedAgentId" />
               </div>
 
               {isBroker && (
@@ -639,26 +681,29 @@ export default function LeadEditPage() {
 
             {/* Consent — create mode only */}
             {!isEdit && (
-              <div className="bg-card rounded-xl border border-border p-4">
+              <div className={`bg-card rounded-xl border p-4 ${errors.consent ? "border-destructive" : "border-border"}`}>
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
+                    id="consent"
+                    name="consent"
                     type="checkbox"
-                    required
                     checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
+                    onChange={(e) => { clearError("consent"); setConsent(e.target.checked); }}
                     className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring"
+                    aria-invalid={!!errors.consent}
                   />
                   <span className="text-xs text-muted-foreground leading-relaxed">
                     The lead has consented to being contacted about properties and to data
                     processing under our privacy policy. <span className="text-destructive">*</span>
                   </span>
                 </label>
+                <FieldError errors={errors} name="consent" className="ml-6" />
               </div>
             )}
 
-            {error && (
-              <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
-                {error}
+            {submitError && (
+              <div role="alert" className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
+                {submitError}
               </div>
             )}
           </>

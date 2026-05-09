@@ -12,6 +12,7 @@ import OfflineBanner from "./OfflineBanner";
 import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import { isClerkEnabled } from "../lib/auth";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
@@ -95,8 +96,12 @@ export default function AppShell() {
       }
     : { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
 
-  // Role drives sidebar visibility. Read from localStorage so QA can swap roles for testing.
-  const role: Role = (typeof window !== "undefined" ? (localStorage.getItem("samha:role") as Role | null) : null) ?? "ADMIN";
+  // Role drives sidebar visibility. Server is the source of truth — never
+  // read from localStorage (a user could set it in DevTools to surface
+  // navigation they don't actually have access to). The API still enforces.
+  const { data: currentUser } = useCurrentUser();
+  const role: Role = (currentUser?.role as Role | undefined) ?? "VIEWER";
+  const internalUserId = currentUser?.id;
 
   const handleSignOut = useCallback(async () => {
     queryClient.clear();
@@ -131,30 +136,33 @@ export default function AppShell() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(() => {
+    if (!internalUserId) return;
     axios
-      .get("/api/users/dev-user-1/notifications", { params: { limit: 20 } })
+      .get(`/api/users/${internalUserId}/notifications`, { params: { limit: 20 } })
       .then((res) => {
         const items: any[] = res.data.data || res.data || [];
         setNotifications(Array.isArray(items) ? items : []);
         setUnreadCount(Array.isArray(items) ? items.filter((n: any) => !n.read).length : 0);
       })
       .catch(() => {});
-  }, []);
+  }, [internalUserId]);
 
   const markAllRead = useCallback(() => {
+    if (!internalUserId) return;
     notifications.filter((n) => !n.read).forEach((n) => {
-      axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
+      axios.patch(`/api/users/${internalUserId}/notifications/${n.id}`, { read: true }).catch(() => {});
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
-  }, [notifications]);
+  }, [notifications, internalUserId]);
 
   useEffect(() => {
+    if (!internalUserId) return;
     fetchNotifications();
     // Slower safety-net poll. Live updates arrive via SSE below.
     notificationTimer.current = setInterval(fetchNotifications, 5 * 60_000);
     return () => { if (notificationTimer.current) clearInterval(notificationTimer.current); };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, internalUserId]);
 
   // Live: incoming notifications bump the unread badge and prepend to the list
   useEventStream("notification.created", (n: any) => {
