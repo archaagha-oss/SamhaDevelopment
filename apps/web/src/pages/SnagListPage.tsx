@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { snagsApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface SnagItem {
   id: string;
@@ -103,16 +104,27 @@ export default function SnagListPage() {
   if (!unitId) return <div className="p-6">Unit ID required.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Snag Lists</h1>
-        <button
-          className="bg-primary text-white px-3 py-1 rounded text-sm"
-          onClick={ensureList}
-        >
-          + New List
-        </button>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[
+          { label: "Home", path: "/" },
+          { label: "Units", path: "/units" },
+          { label: "Snag list" },
+        ]}
+        title="Snag list"
+        subtitle="Walk-through items, severity, contractor, and resolution status."
+        actions={
+          <button
+            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+            onClick={ensureList}
+          >
+            Create list
+          </button>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
@@ -195,6 +207,9 @@ export default function SnagListPage() {
           </section>
         ))
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

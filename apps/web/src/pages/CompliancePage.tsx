@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { PageHeader, PageContainer } from "../components/layout";
 
 type Severity = "EXPIRED" | "CRITICAL" | "WARNING" | "ATTENTION" | "OK";
 type Category = "ALL" | "BROKER" | "AGENT" | "BUYER";
@@ -89,29 +90,41 @@ export default function CompliancePage() {
   }, [rows]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Compliance Radar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Every UAE credential expiring within the horizon, sorted by urgency. Stop OQOOD rejections before they happen.
-          </p>
-        </div>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {([30, 60, 90, 365] as const).map((d) => (
-            <button
-              key={d}
-              onClick={() => setHorizon(d)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                horizon === d ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {d === 365 ? "1 year" : `${d}d`}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Compliance" }]}
+        title="Compliance"
+        subtitle="Every UAE credential expiring within the horizon, sorted by urgency. Stop OQOOD rejections before they happen."
+        tabs={
+          <div
+            className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+            role="tablist"
+            aria-label="Time horizon"
+          >
+            {([30, 60, 90, 365] as const).map((d) => {
+              const active = horizon === d;
+              return (
+                <button
+                  key={d}
+                  onClick={() => setHorizon(d)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {d === 365 ? "1 year" : `${d}d`}
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {/* Severity summary cards */}
       <div className="grid grid-cols-5 gap-3 mb-5">
@@ -171,6 +184,9 @@ export default function CompliancePage() {
           )}
         </div>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

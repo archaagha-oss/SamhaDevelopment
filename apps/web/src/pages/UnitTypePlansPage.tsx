@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { typePlansApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface Plan {
   id: string;
@@ -85,16 +86,27 @@ export default function UnitTypePlansPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Unit Type Plans</h1>
-        <button
-          className="bg-primary text-white px-4 py-2 rounded text-sm"
-          onClick={() => setShowForm((s) => !s)}
-        >
-          {showForm ? "Cancel" : "+ New Plan"}
-        </button>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[
+          { label: "Home", path: "/" },
+          { label: "Projects", path: "/projects" },
+          { label: "Type plans" },
+        ]}
+        title="Unit type plans"
+        subtitle="Standardized layouts (1BR, 2BR, etc.) — area, bathrooms, parking — that units of the same type share."
+        actions={
+          <button
+            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
+            onClick={() => setShowForm((s) => !s)}
+          >
+            {showForm ? "Cancel" : "Create type plan"}
+          </button>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {showForm && (
         <form className="grid grid-cols-3 gap-3 bg-muted/50 p-4 rounded" onSubmit={submit}>
@@ -178,6 +190,9 @@ export default function UnitTypePlansPage() {
           </tbody>
         </table>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

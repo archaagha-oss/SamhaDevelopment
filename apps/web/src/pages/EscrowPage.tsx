@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { escrowApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface EscrowAccount {
   id: string;
@@ -86,8 +87,19 @@ export default function EscrowPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Escrow Ledger</h1>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[
+          { label: "Home", path: "/" },
+          { label: "Projects", path: "/projects" },
+          { label: "Escrow" },
+        ]}
+        title="Escrow ledger"
+        subtitle="Customer-payment ledger entries per escrow account."
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {accounts.length === 0 ? (
         <p className="text-muted-foreground">No escrow accounts configured for this project.</p>
@@ -203,6 +215,9 @@ export default function EscrowPage() {
           </table>
         </>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

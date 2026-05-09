@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { constructionApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface Milestone {
   id: string;
@@ -65,12 +66,24 @@ export default function ConstructionProgressPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Construction Progress</h1>
-      <p className="text-sm text-muted-foreground">
-        When a milestone's percent crosses a payment-plan trigger threshold, matching{" "}
-        <code className="px-1 bg-muted rounded">ON_CONSTRUCTION_PCT</code> payments fire automatically.
-      </p>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[
+          { label: "Home", path: "/" },
+          { label: "Projects", path: "/projects" },
+          { label: "Construction" },
+        ]}
+        title="Construction progress"
+        subtitle={
+          <>
+            When a milestone's percent crosses a payment-plan trigger threshold, matching{" "}
+            <code className="px-1 bg-muted rounded">ON_CONSTRUCTION_PCT</code> payments fire automatically.
+          </>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
@@ -122,6 +135,9 @@ export default function ConstructionProgressPage() {
           )}
         </div>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

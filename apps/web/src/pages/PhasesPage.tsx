@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { phasesApi } from "../services/phase2ApiService";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface Phase {
   id: string;
@@ -67,10 +68,19 @@ export default function PhasesPage() {
   if (!projectId) return <div className="p-6">Project ID required.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Project Phases</h1>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[
+          { label: "Home", path: "/" },
+          { label: "Projects", path: "/projects" },
+          { label: "Phases" },
+        ]}
+        title="Phases"
+        subtitle={`${phases.length} phase${phases.length === 1 ? "" : "s"} · floor ranges, release stages, public launch dates`}
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : phases.length === 0 ? (
@@ -116,6 +126,9 @@ export default function PhasesPage() {
           </tbody>
         </table>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

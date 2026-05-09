@@ -1,16 +1,34 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import LeadKycTab from "../components/LeadKycTab";
+import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
 
 export default function LeadKycPage() {
   const { leadId } = useParams<{ leadId: string }>();
-  if (!leadId) return <div className="p-6">Lead ID required.</div>;
+  const navigate = useNavigate();
+
+  if (!leadId) {
+    return (
+      <DetailPageNotFound
+        crumbs={[{ label: "Home", path: "/" }, { label: "Leads", path: "/leads" }]}
+        title="Lead required"
+        message="A lead ID is required to view KYC."
+        backLabel="Back to leads"
+        onBack={() => navigate("/leads")}
+      />
+    );
+  }
+
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <Link to={`/leads/${leadId}`} className="text-sm text-primary hover:underline">
-        ← Back to lead
-      </Link>
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Lead KYC</h1>
-      <LeadKycTab leadId={leadId} />
-    </div>
+    <DetailPageLayout
+      crumbs={[
+        { label: "Home", path: "/" },
+        { label: "Leads", path: "/leads" },
+        { label: "Lead", path: `/leads/${leadId}` },
+        { label: "KYC" },
+      ]}
+      title="Lead KYC"
+      subtitle="Verify identity, source of funds, and supporting documents before SPA generation."
+      main={<LeadKycTab leadId={leadId} />}
+    />
   );
 }

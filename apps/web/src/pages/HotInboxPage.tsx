@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { PageHeader, PageContainer } from "../components/layout";
 
 interface TriageRow {
   id: string;
@@ -63,28 +64,41 @@ export default function HotInboxPage() {
   useEffect(() => { reload(); }, [reload]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Hot Inbox</h1>
-          <p className="text-sm text-muted-foreground">
-            Inbound messages we couldn't auto-attach. Match each to a lead so it lands on their conversation.
-          </p>
-        </div>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {(["UNCLAIMED", "CLAIMED", "ALL"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Hot inbox" }]}
+        title="Hot inbox"
+        subtitle="Inbound messages we couldn't auto-attach. Match each to a lead so it lands on their conversation."
+        tabs={
+          <div
+            className="flex gap-1.5 overflow-x-auto sm:flex-wrap -mx-1 px-1 scrollbar-thin py-2 items-center"
+            role="tablist"
+            aria-label="Inbox filter"
+          >
+            {(["UNCLAIMED", "CLAIMED", "ALL"] as const).map((f) => {
+              const active = filter === f;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <PageContainer>
+          <div className="space-y-5">
 
       {loading ? (
         <div className="bg-card rounded-xl border border-border px-5 py-12 text-center text-muted-foreground text-sm">Loading…</div>
@@ -101,6 +115,9 @@ export default function HotInboxPage() {
           ))}
         </div>
       )}
+          </div>
+        </PageContainer>
+      </div>
     </div>
   );
 }

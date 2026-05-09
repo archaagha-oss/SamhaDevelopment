@@ -1,16 +1,34 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import JointOwnerEditor from "../components/JointOwnerEditor";
+import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
 
 export default function DealJointOwnersPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  if (!dealId) return <div className="p-6">Deal ID required.</div>;
+  const navigate = useNavigate();
+
+  if (!dealId) {
+    return (
+      <DetailPageNotFound
+        crumbs={[{ label: "Home", path: "/" }, { label: "Deals", path: "/deals" }]}
+        title="Deal required"
+        message="A deal ID is required to manage joint owners."
+        backLabel="Back to deals"
+        onBack={() => navigate("/deals")}
+      />
+    );
+  }
+
   return (
-    <div className="p-6 space-y-4">
-      <Link to={`/deals/${dealId}`} className="text-sm text-primary hover:underline">
-        ← Back to deal
-      </Link>
-      <h1 className="text-2xl font-semibold">Joint Owners</h1>
-      <JointOwnerEditor dealId={dealId} />
-    </div>
+    <DetailPageLayout
+      crumbs={[
+        { label: "Home", path: "/" },
+        { label: "Deals", path: "/deals" },
+        { label: "Deal", path: `/deals/${dealId}` },
+        { label: "Joint owners" },
+      ]}
+      title="Joint owners"
+      subtitle="Co-owners on this deal — names, ownership splits, signatory authority."
+      main={<JointOwnerEditor dealId={dealId} />}
+    />
   );
 }

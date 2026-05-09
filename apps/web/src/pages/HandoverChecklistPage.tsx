@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { handoverApi } from "../services/phase2ApiService";
+import {
+  DetailPageLayout, DetailPageLoading, DetailPageNotFound,
+} from "../components/layout";
 
 interface ChecklistItem {
   id: string;
@@ -96,29 +99,40 @@ export default function HandoverChecklistPage() {
 
   if (!dealId) return <div className="p-6">Deal ID required.</div>;
 
-  if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
+  const dealCrumbs = [
+    { label: "Home", path: "/" },
+    { label: "Deals", path: "/deals" },
+    ...(dealId ? [{ label: "Deal", path: `/deals/${dealId}` }] : []),
+    { label: "Handover" },
+  ];
+
+  if (loading) return <DetailPageLoading crumbs={dealCrumbs} title="Loading checklist…" />;
 
   if (!checklist) {
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Handover Checklist</h1>
-        <p className="text-muted-foreground">No checklist exists for this deal.</p>
-        <button className="bg-primary text-white px-4 py-2 rounded text-sm" onClick={ensure}>
-          + Create Checklist
-        </button>
-      </div>
+      <DetailPageNotFound
+        crumbs={dealCrumbs}
+        title="No handover checklist yet"
+        message="Create a handover checklist to start tracking the items required before sign-off."
+        backLabel="Create checklist"
+        onBack={ensure}
+      />
     );
   }
 
   const ready = checklist.items.filter((i) => i.required).every((i) => i.status !== "PENDING");
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Handover Checklist</h1>
-      <p className="text-sm text-muted-foreground">
-        Started {new Date(checklist.startedAt).toLocaleDateString()}.
-        {checklist.completedAt && ` Completed ${new Date(checklist.completedAt).toLocaleDateString()}.`}
-      </p>
+    <DetailPageLayout
+      crumbs={dealCrumbs}
+      title="Handover checklist"
+      subtitle={
+        <>
+          Started {new Date(checklist.startedAt).toLocaleDateString()}.
+          {checklist.completedAt && ` Completed ${new Date(checklist.completedAt).toLocaleDateString()}.`}
+        </>
+      }
+      main={<>
 
       <div className="border rounded divide-y">
         {checklist.items.map((it) => (
@@ -179,11 +193,12 @@ export default function HandoverChecklistPage() {
               className="bg-success disabled:bg-neutral-300 text-white px-4 py-1 rounded text-sm"
               onClick={finish}
             >
-              Sign Off & Complete
+              Sign off &amp; complete
             </button>
           </div>
         </div>
       )}
-    </div>
+        </>}
+    />
   );
 }
