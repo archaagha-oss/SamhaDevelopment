@@ -74,19 +74,31 @@ app.use((_req, res, next) => {
 app.use("/api/webhooks", webhookRoutes);
 
 // ── Rate limiting (100 req / min per IP) ──────────────────────────────────
+// In-memory limiter — fine for a single instance. Replace with a Redis-backed
+// `express-rate-limit` store before scaling horizontally.
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 100;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+// Periodic sweep — without this, every unique IP that hits once accumulates
+// a Map entry forever (slow memory leak).
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(key);
+  }
+}, RATE_WINDOW_MS).unref?.();
+
 app.use((req, res, next) => {
   const ip = req.ip ?? "unknown";
   const now = Date.now();
-  const window = 60_000;
-  const limit = 100;
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + window });
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
     return next();
   }
   entry.count++;
-  if (entry.count > limit) {
+  if (entry.count > RATE_LIMIT) {
     res.setHeader("Retry-After", "60");
     return res.status(429).json({ error: "Too many requests", code: "RATE_LIMITED", statusCode: 429 });
   }

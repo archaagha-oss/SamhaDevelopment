@@ -17,6 +17,15 @@ const PUBLIC_RATE_WINDOW_MS = 60_000;
 const PUBLIC_RATE_LIMIT = 30;
 const publicRateMap = new Map<string, { count: number; resetAt: number }>();
 
+// Periodic sweep — drops expired entries so unique IP+token pairs don't
+// accumulate forever in the Map.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of publicRateMap) {
+    if (now > entry.resetAt) publicRateMap.delete(key);
+  }
+}, PUBLIC_RATE_WINDOW_MS).unref?.();
+
 router.use((req, res, next) => {
   const ip = req.ip ?? "unknown";
   const token = (req.params.token as string | undefined) ?? extractTokenFromPath(req.path);
