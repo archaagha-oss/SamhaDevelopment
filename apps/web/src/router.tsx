@@ -20,6 +20,7 @@ import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ActivitiesPage from "./pages/ActivitiesPage";
 import TeamPage from "./pages/TeamPage";
 import MemberDetailPage from "./pages/MemberDetailPage";
+import MemberEditPage from "./pages/MemberEditPage";
 import PaymentPlansPage from "./components/PaymentPlansPage";
 import OfferPrintPage from "./components/OfferPrintPage";
 import ReservationFormPrintPage from "./components/ReservationFormPrintPage";
@@ -88,7 +89,9 @@ export const router = createBrowserRouter([
       { path: "reservations",                             element: <ReservationsPage /> },
       { path: "offers-list",                              element: <OffersPage /> },
       { path: "team",                                      element: <TeamPage /> },
+      { path: "team/new",                                  element: <MemberEditPage /> },
       { path: "team/:userId",                              element: <MemberDetailPage /> },
+      { path: "team/:userId/edit",                         element: <MemberEditPage /> },
       { path: "reports",                                   element: <ReportsPage /> },
       { path: "contacts",                                  element: <ContactsPage /> },
       { path: "settings",                                  element: <SettingsPage /> },

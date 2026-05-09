@@ -12,7 +12,7 @@ export interface PageHeaderProps {
   /** Slot rendered below title row, above the bottom border. Use for sub-tabs (e.g. PENDING/APPROVED/PAID). */
   tabs?: React.ReactNode;
   sticky?: boolean;
-  width?: "narrow" | "default" | "wide" | "full";
+  width?: "narrow" | "detail" | "default" | "wide" | "full";
   className?: string;
 }
 

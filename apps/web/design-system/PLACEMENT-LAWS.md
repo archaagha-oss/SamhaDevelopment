@@ -81,7 +81,11 @@ export default function ContactsPage() {
 
 ## Detail pages
 
-Detail pages (Lead profile, Deal detail, Unit detail) follow the same `PageHeader` rule — title + breadcrumbs + actions slot. The body uses a 2-column layout: main content on the left, sticky summary on the right. A `DetailPageLayout` primitive will be added in Phase 2 to formalize this; until then, compose manually.
+Detail pages (Lead profile, Deal detail, Unit detail, Member detail) compose with `<DetailPageLayout>` from [`components/layout`](../src/components/layout/DetailPageLayout.tsx). It is the canonical shape for any single-record page. The reference implementation is [`pages/MemberDetailPage.tsx`](../src/pages/MemberDetailPage.tsx).
+
+Slots: `crumbs`, `title`, `subtitle`, `actions`, `tabs` (forwarded to `PageHeader`); `hero` (e.g. avatar block), `kpis`, `main` (left, 2/3, required), `aside` (right, 1/3, sticky on desktop, optional). Width is `max-w-5xl` (per [MASTER.md §4](MASTER.md)).
+
+**Edit flows are also full pages, never modals.** A record at `/entity/:id` is read-only; clicking "Edit" navigates to `/entity/:id/edit` which renders the same `<DetailPageLayout>` with fields-as-inputs. Saving navigates back. New-record creation lives at `/entity/new` and uses the same edit page (the `:id` param is absent).
 
 ---
 

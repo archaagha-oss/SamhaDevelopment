@@ -1,11 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type Width = "narrow" | "default" | "wide" | "full";
+type Width = "narrow" | "detail" | "default" | "wide" | "full";
 type Padding = "default" | "compact" | "flush";
 
 const WIDTHS: Record<Width, string> = {
   narrow: "max-w-3xl",
+  // Detail pages — `max-w-5xl` per design-system/MASTER.md §4. Narrower than
+  // a list page so single-record content reads as a focused form/profile.
+  detail: "max-w-5xl",
   default: "max-w-7xl",
   wide: "max-w-screen-2xl",
   full: "max-w-none",
