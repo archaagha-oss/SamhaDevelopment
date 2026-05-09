@@ -251,7 +251,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     Promise.all([
       axios.get(`/api/leads/${leadId}`),
       axios.get(`/api/leads/${leadId}/activities`),
-      axios.get("/api/agents"),
+      axios.get("/api/users"),
       axios.get("/api/payment-plans"),
       axios.get("/api/brokers/companies"),
       axios.get("/api/tasks", { params: { leadId, status: "PENDING" } }),
@@ -261,7 +261,10 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       setActivities(aRes.data);
       setTasks(tRes.data || []);
       setOffers(oRes.data ?? []);
-      setAgents(agRes.data?.data ?? agRes.data ?? []);
+      // /api/users returns a bare array of all users; filter to active
+      // non-viewers — matches the useAgents hook used elsewhere.
+      const users = Array.isArray(agRes.data) ? agRes.data : (agRes.data?.data ?? []);
+      setAgents(users.filter((u: any) => u.status === "ACTIVE" && u.role !== "VIEWER"));
       const plans = ppRes.data?.data ?? ppRes.data ?? [];
       setPaymentPlans(Array.isArray(plans) ? plans.filter((p: PaymentPlan) => p.isActive) : []);
       setBrokerCompanies(bcRes.data?.data ?? bcRes.data ?? []);
