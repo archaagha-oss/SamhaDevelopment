@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Modal from "./Modal";
 import { PageContainer, PageHeader } from "./layout";
+import { BulkActionBar } from "./data";
 import EmptyState from "./EmptyState";
 import { SkeletonTableRows } from "./Skeleton";
 
@@ -62,6 +63,33 @@ export default function OffersPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [confirmReject, setConfirmReject] = useState<Offer | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Phase H — multi-select for bulk withdraw on ACTIVE offers.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy,    setBulkBusy]    = useState(false);
+  useEffect(() => { setSelectedIds(new Set()); }, [filter, search]);
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const bulkWithdraw = async () => {
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => axios.patch(`/api/offers/${id}/status`, { status: "WITHDRAWN" })),
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = ids.length - failed;
+    if (ok > 0)     toast.success(`${ok} offer${ok === 1 ? "" : "s"} withdrawn`);
+    if (failed > 0) toast.error(`${failed} withdraw${failed === 1 ? "" : "s"} failed`);
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+    load();
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -136,7 +164,23 @@ export default function OffersPage() {
       </PageContainer>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 space-y-3">
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          totalCount={filtered.filter((o) => o.status === "ACTIVE").length}
+          onClear={() => setSelectedIds(new Set())}
+          onSelectAll={() =>
+            setSelectedIds(new Set(filtered.filter((o) => o.status === "ACTIVE").map((o) => o.id)))
+          }
+          actions={[
+            {
+              label: bulkBusy ? "Withdrawing…" : "Withdraw",
+              onClick: bulkWithdraw,
+              variant: "destructive",
+              disabled: bulkBusy,
+            },
+          ]}
+        />
         {loading ? (
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
@@ -156,6 +200,23 @@ export default function OffersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 text-left border-b border-border">
+                  <th className="px-4 py-3 w-10">
+                    {/* Header checkbox toggles all visible ACTIVE offers (only those are bulk-withdrawable). */}
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible active offers"
+                      checked={
+                        filtered.filter((o) => o.status === "ACTIVE").length > 0 &&
+                        selectedIds.size === filtered.filter((o) => o.status === "ACTIVE").length
+                      }
+                      onChange={(e) =>
+                        e.target.checked
+                          ? setSelectedIds(new Set(filtered.filter((o) => o.status === "ACTIVE").map((o) => o.id)))
+                          : setSelectedIds(new Set())
+                      }
+                      className="rounded border-border accent-primary"
+                    />
+                  </th>
                   <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lead</th>
                   <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</th>
                   <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Price</th>
@@ -167,7 +228,23 @@ export default function OffersPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-muted/60">
+                  <tr
+                    key={o.id}
+                    className={`hover:bg-muted/60 ${selectedIds.has(o.id) ? "bg-info-soft/40" : ""}`}
+                  >
+                    <td className="px-4 py-3">
+                      {o.status === "ACTIVE" ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select offer for ${o.lead.firstName} ${o.lead.lastName}`}
+                          checked={selectedIds.has(o.id)}
+                          onChange={() => toggleSelected(o.id)}
+                          className="rounded border-border accent-primary"
+                        />
+                      ) : (
+                        <span aria-hidden="true" className="block w-4 h-4" />
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => navigate(`/leads/${o.lead.id}`)}
