@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { generateCommissionStatement, generateDealReport } from "../services/excelService";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // ===== NEW UI ENDPOINTS =====
 

@@ -13,8 +13,10 @@ import {
   severityCounts,
   type Severity,
 } from "../services/complianceService.js";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 router.get("/expiring", async (req, res) => {
   try {

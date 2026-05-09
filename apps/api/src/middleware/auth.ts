@@ -26,9 +26,10 @@ export const requireAuthentication = (
  *
  * Role resolution order:
  *  1. Look up User row by clerkId = req.auth.userId
- *  2. In dev mode (NODE_ENV !== "production"), unknown users default to ADMIN
- *     so the mock "dev-user-1" account can reach all routes.
- *  3. In production, unknown users get 403.
+ *  2. If no row exists, return 403 — the Clerk token is valid but no
+ *     application user is provisioned for it. The previous dev-mode shortcut
+ *     that elevated unknown users to ADMIN was removed because a stale or
+ *     locally-set NODE_ENV could expose production data with no role checks.
  *
  * Roles: ADMIN, MANAGER, MEMBER, VIEWER. Finance-sensitive operations gate
  * to ["ADMIN", "MANAGER"] — promote a user to MANAGER to give them sign-off
@@ -48,8 +49,6 @@ export const requireRole = (allowedRoles: string[]) => {
       });
     }
 
-    const isDev = process.env.NODE_ENV !== "production";
-
     try {
       const user = await prisma.user.findFirst({
         where: { clerkId: req.auth.userId },
@@ -57,12 +56,8 @@ export const requireRole = (allowedRoles: string[]) => {
       });
 
       if (!user) {
-        if (isDev) {
-          // Dev mode: mock user gets full access — safe because auth is mocked
-          return next();
-        }
         return res.status(403).json({
-          error: "User account not found",
+          error: "User account not found. Ask an administrator to provision your account.",
           code: "USER_NOT_FOUND",
           statusCode: 403,
         });

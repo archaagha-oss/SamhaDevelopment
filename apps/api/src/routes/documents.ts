@@ -2,8 +2,10 @@ import { Router } from "express";
 import multer from "multer";
 import { documentService } from "../services/documentService";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 const ALLOWED_TYPES = [
   "application/pdf",

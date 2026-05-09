@@ -6,8 +6,10 @@ import {
   convertReservationToDeal,
   getActiveReservation,
 } from "../services/reservationService";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 const DEFAULT_RESERVATION_DAYS = 7;
 

@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // GET /api/tasks — list tasks (filters: status, type, assignedToId, leadId, dealId, dueBefore, dueAfter)
 router.get("/", async (req, res) => {

@@ -74,6 +74,11 @@ export async function updateUnitStatus(
     throw new Error("A reason is required when blocking a unit.");
   }
 
+  // All mutations — status update, history insert, and downstream cleanup of
+  // block/hold metadata — happen in a single transaction. Previously the
+  // cleanup updates ran AFTER the transaction committed, so a process crash
+  // between them could leave the unit AVAILABLE while still flagged with a
+  // stale blockReason or holdExpiresAt.
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.unit.update({
       where: { id: unitId },
@@ -90,24 +95,23 @@ export async function updateUnitStatus(
       },
     });
 
+    // Clear blockReason/blockExpiresAt/holdExpiresAt when transitioning to AVAILABLE
+    if (newStatus === "AVAILABLE") {
+      await tx.unit.update({
+        where: { id: unitId },
+        data: { blockReason: null, blockExpiresAt: null, holdExpiresAt: null },
+      });
+    } else if (unit.status === "ON_HOLD" && newStatus !== "ON_HOLD") {
+      // Clear holdExpiresAt when leaving ON_HOLD for any non-AVAILABLE status
+      // (the AVAILABLE branch above already covers it).
+      await tx.unit.update({
+        where: { id: unitId },
+        data: { holdExpiresAt: null },
+      });
+    }
+
     return result;
   });
-
-  // Clear blockReason/blockExpiresAt when transitioning to AVAILABLE
-  if (newStatus === "AVAILABLE") {
-    await prisma.unit.update({
-      where: { id: unitId },
-      data: { blockReason: null, blockExpiresAt: null, holdExpiresAt: null },
-    });
-  }
-
-  // Clear holdExpiresAt when leaving ON_HOLD for any status
-  if (unit.status === "ON_HOLD" && newStatus !== "ON_HOLD") {
-    await prisma.unit.update({
-      where: { id: unitId },
-      data: { holdExpiresAt: null },
-    });
-  }
 
   // Emit domain event — fire-and-forget (eventBus catches handler errors internally)
   eventBus.emit({

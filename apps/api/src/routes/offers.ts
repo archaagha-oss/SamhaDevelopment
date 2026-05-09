@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { createGeneratedDocument } from "../services/documentService";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 const OFFER_INCLUDE = {
   lead: { select: { id: true, firstName: true, lastName: true, phone: true, email: true, nationality: true, budget: true, stage: true } },

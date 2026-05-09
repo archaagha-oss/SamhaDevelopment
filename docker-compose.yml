@@ -1,19 +1,23 @@
 version: '3.8'
 
+# Local development database. Credentials come from the .env file (or shell
+# env). Defaults are intentionally weak — only suitable for an unexposed dev
+# database. NEVER reuse these values in staging or production.
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: samha-crm-db
     environment:
-      POSTGRES_USER: samha_user
-      POSTGRES_PASSWORD: samha_password
-      POSTGRES_DB: samha_crm
+      POSTGRES_USER: ${POSTGRES_USER:-samha_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-samha_crm}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U samha_user"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-samha_user}"]
       interval: 10s
       timeout: 5s
       retries: 5

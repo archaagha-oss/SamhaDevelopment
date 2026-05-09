@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireFinanceAccess } from "../middleware/auth";
+import { requireFinanceAccess, requireAuthentication } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { markPaymentPaidSchema } from "../schemas/validation";
 import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
@@ -7,6 +7,7 @@ import { createGeneratedDocument } from "../services/documentService";
 import { prisma } from "../lib/prisma";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // Get payments for deal
 router.get("/deal/:dealId", async (req, res) => {

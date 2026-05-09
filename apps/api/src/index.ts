@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
+import { setupClerkAuth } from "./middleware/auth";
 
 // Import routes
 import projectRoutes from "./routes/projects";
@@ -127,11 +128,39 @@ app.use("/uploads", express.static("uploads"));
 //    middleware so anonymous clients can hit them.
 app.use("/public/share", publicShareRoutes);
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
+// ── Authentication ────────────────────────────────────────────────────────
+//
+// Production / staging: Clerk middleware verifies the session JWT on every
+// request and populates `req.auth` with the real Clerk user id. Routes then
+// gate via `requireAuthentication` and `requireRole`.
+//
+// Local dev (no CLERK_SECRET_KEY set): we fall back to a mock middleware that
+// pins every request to `dev-user-1`. This is INTENTIONAL — it lets engineers
+// run the API offline — but it must NEVER ship to production. The guard below
+// hard-fails boot if the mock would otherwise activate in production.
+const isProduction = process.env.NODE_ENV === "production";
+const hasClerkSecret = !!process.env.CLERK_SECRET_KEY;
+
+if (isProduction && !hasClerkSecret) {
+  logger.error(
+    "FATAL: NODE_ENV=production but CLERK_SECRET_KEY is not set. Refusing to boot — " +
+      "the mock-auth fallback would expose every endpoint as 'dev-user-1'."
+  );
+  process.exit(1);
+}
+
+if (hasClerkSecret) {
+  app.use(setupClerkAuth());
+} else {
+  logger.warn(
+    "[auth] CLERK_SECRET_KEY not set — using mock 'dev-user-1' middleware. " +
+      "This must only happen in local development."
+  );
+  app.use((req, _res, next) => {
+    req.auth = { userId: "dev-user-1" };
+    next();
+  });
+}
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [

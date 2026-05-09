@@ -15,9 +15,10 @@ import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
-import { requireFinanceAccess } from "../middleware/auth";
+import { requireFinanceAccess, requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // Get all deals with pagination
 router.get("/", async (req, res) => {

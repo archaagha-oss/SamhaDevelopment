@@ -10,6 +10,7 @@ import {
 } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { documentService } from "../services/documentService";
+import { requireAuthentication } from "../middleware/auth";
 
 // Whitelist of SPA-particulars columns that pass through create/update.
 const SPA_PROJECT_FIELDS = [
@@ -38,6 +39,7 @@ function pickSpaFields(body: any): Record<string, string | null> {
 }
 
 const router = Router();
+router.use(requireAuthentication);
 
 // ── Project document uploads (S3, mirrors deal-doc upload pattern) ──────────
 const projectDocUpload = multer({

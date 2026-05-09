@@ -13,8 +13,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { dispatchAdHocMessage, type AdHocResult } from "../services/communicationDispatcher.js";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 router.post("/send", async (req, res) => {
   try {

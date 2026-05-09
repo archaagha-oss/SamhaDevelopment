@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { requireFinanceAccess } from "../middleware/auth";
+import { requireFinanceAccess, requireAuthentication } from "../middleware/auth";
 import { commissionLogger } from "../lib/logger";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // Get commission for deal
 router.get("/deal/:dealId", async (req, res) => {
@@ -157,12 +158,44 @@ router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
       return res.status(400).json({ error: "Commission is already paid", code: "ALREADY_PAID", statusCode: 400 });
     }
     const { paidAmount, paidVia, receiptKey } = req.body;
+
+    // Resolve and validate the amount we're about to record. The amount is
+    // money — we refuse anything that isn't a finite, non-negative number, and
+    // we reject overpayments since approving > commission.amount can hide an
+    // off-by-one or stale UI state.
+    let resolvedPaidAmount = Number(commission.amount);
+    if (paidAmount !== undefined && paidAmount !== null && paidAmount !== "") {
+      const parsed = typeof paidAmount === "number" ? paidAmount : Number(paidAmount);
+      if (!Number.isFinite(parsed)) {
+        return res.status(400).json({
+          error: "paidAmount must be a finite number",
+          code: "INVALID_PAID_AMOUNT",
+          statusCode: 400,
+        });
+      }
+      if (parsed < 0) {
+        return res.status(400).json({
+          error: "paidAmount must be non-negative",
+          code: "INVALID_PAID_AMOUNT",
+          statusCode: 400,
+        });
+      }
+      if (parsed > Number(commission.amount) + 0.005) {
+        return res.status(400).json({
+          error: `paidAmount (${parsed}) exceeds approved commission amount (${commission.amount})`,
+          code: "PAID_AMOUNT_EXCEEDS_APPROVED",
+          statusCode: 400,
+        });
+      }
+      resolvedPaidAmount = parsed;
+    }
+
     const updated = await prisma.commission.update({
       where: { id: req.params.id },
       data: {
         status: "PAID",
         paidDate: new Date(),
-        paidAmount: paidAmount ? parseFloat(paidAmount) : commission.amount,
+        paidAmount: resolvedPaidAmount,
         paidVia: paidVia || null,
         receiptKey: receiptKey || null,
       },

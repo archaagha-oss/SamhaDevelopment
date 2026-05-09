@@ -8,6 +8,7 @@ import {
   createBrokerAgentSchema,
 } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,6 +31,7 @@ const s3 = new S3Client({
 });
 
 const router = Router();
+router.use(requireAuthentication);
 
 // Upload broker file (certificates, EID, etc.)
 router.post("/upload", upload.single("file"), async (req, res) => {

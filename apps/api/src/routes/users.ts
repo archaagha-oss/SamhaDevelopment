@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requireRole, requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 const VALID_ROLES = ["ADMIN", "MANAGER", "MEMBER", "VIEWER"] as const;
 const VALID_STATUSES = ["ACTIVE", "ON_LEAVE", "SUSPENDED", "DEACTIVATED"] as const;

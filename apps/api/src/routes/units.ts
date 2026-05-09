@@ -13,8 +13,10 @@ import {
 import { updateUnitStatus, isDealOwnedStatus } from "../services/unitService";
 import { prisma } from "../lib/prisma";
 import { generateToken, buildPublicShareUrl } from "../services/shareTokenService";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 const UNIT_NUMBER_PATTERN = /^\d{1,3}-\d{2}$/;
 

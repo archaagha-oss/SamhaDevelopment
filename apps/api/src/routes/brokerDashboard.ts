@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication } from "../middleware/auth";
 
 /**
  * Broker Dashboard API Endpoints
@@ -10,6 +11,7 @@ import { prisma } from "../lib/prisma";
  */
 
 const router = Router();
+router.use(requireAuthentication);
 
 // ===== COMMISSION SUMMARY FOR DASHBOARD =====
 

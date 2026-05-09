@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma";
 import { requireRole, requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // ─── Feature flag catalog ───────────────────────────────────────────────────
 //

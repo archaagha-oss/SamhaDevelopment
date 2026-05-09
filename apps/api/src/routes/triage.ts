@@ -13,8 +13,10 @@ import { prisma } from "../lib/prisma.js";
 import { recordReply } from "../services/communicationPreferenceService.js";
 import { publishTriageCounts } from "../services/inboundProcessor.js";
 import { sseHub } from "../services/sseHub.js";
+import { requireAuthentication } from "../middleware/auth.js";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function triageModel(): any {

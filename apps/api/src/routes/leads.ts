@@ -10,8 +10,10 @@ import {
   getPreference,
   type Channel,
 } from "../services/communicationPreferenceService";
+import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuthentication);
 
 // ─── List leads ──────────────────────────────────────────────────────────────
 
