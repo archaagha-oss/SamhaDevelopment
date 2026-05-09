@@ -18,6 +18,7 @@ const LeadEditPage                  = lazy(() => import("./pages/LeadEditPage"))
 const DealsPage                     = lazy(() => import("./components/DealsPage"));
 const DealDetailPage                = lazy(() => import("./components/DealDetailPage"));
 const DealEditPage                  = lazy(() => import("./pages/DealEditPage"));
+const DealCreatePage                = lazy(() => import("./pages/DealCreatePage"));
 const BrokerPage                    = lazy(() => import("./components/BrokerPage"));
 const CommissionDashboard           = lazy(() => import("./components/CommissionDashboard"));
 const FinanceDashboard              = lazy(() => import("./components/FinanceDashboard"));
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
       { path: "leads/:leadId",                            element: <LeadProfilePage /> },
       { path: "leads/:leadId/edit",                       element: <LeadEditPage /> },
       { path: "deals",                                    element: <DealsPage /> },
+      { path: "deals/new",                                element: <DealCreatePage /> },
       { path: "deals/:dealId",                            element: <DealDetailPage /> },
       { path: "deals/:dealId/edit",                       element: <DealEditPage /> },
       { path: "brokers",                                  element: <BrokerPage /> },

@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
 import { useDeals } from "../hooks/useDeals";
-import DealFormModal from "./DealFormModal";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
 import { SkeletonTableRows } from "./Skeleton";
@@ -90,7 +89,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [showNewDeal, setShowNewDeal] = useState(false);
+  // showNewDeal state removed in Phase C.6 — create flow lives at /deals/new now.
   const [selectedStage, setSelectedStage] = useState<string | null>(searchParams.get("stage"));
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1);
   const [search, setSearch] = useState(searchParams.get("q") || "");
@@ -261,7 +260,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
         crumbs={[{ label: "Home", path: "/" }, { label: "Deals" }]}
         title="Deals"
         subtitle={`${total} deals ${selectedStage ? `· ${selectedStage.replace(/_/g," ")}` : "· all stages"}`}
-        actions={<Button onClick={() => setShowNewDeal(true)}>Create deal</Button>}
+        actions={<Button onClick={() => navigate("/deals/new")}>Create deal</Button>}
         tabs={stageTabs}
       />
 
@@ -421,7 +420,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                     icon="◈"
                     title={debouncedSearch || selectedStage ? "No deals match your filters" : "No deals yet"}
                     description={debouncedSearch || selectedStage ? "Try adjusting your search or stage filter." : "Create your first deal to get started."}
-                    action={!debouncedSearch && !selectedStage ? { label: "Create deal", onClick: () => setShowNewDeal(true) } : undefined}
+                    action={!debouncedSearch && !selectedStage ? { label: "Create deal", onClick: () => navigate("/deals/new") } : undefined}
                   />
                 </td></tr>
               ) : (filtered.map((deal) => {
@@ -528,15 +527,6 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
         </PageContainer>
       )}
 
-      {showNewDeal && (
-        <DealFormModal
-          onClose={() => setShowNewDeal(false)}
-          onCreated={() => {
-            queryClient.invalidateQueries({ queryKey: ["deals"] });
-            setShowNewDeal(false);
-          }}
-        />
-      )}
       {cancelDeal && (
         <div
           className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4"

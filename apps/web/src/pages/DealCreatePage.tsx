@@ -1,57 +1,62 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { DetailPageLayout } from "../components/layout";
 import { Button } from "@/components/ui/button";
 
-interface Props {
-  onClose: () => void;
-  onCreated: () => void;
-  defaultLeadId?: string;
-}
+// DealCreatePage — 4-step wizard for creating a deal at /deals/new.
+// Replaces DealFormModal. Same logic, same step gating, just on a real route.
+//
+// Pre-select a lead via ?leadId=... — preserves the defaultLeadId behavior the
+// modal had via its prop, but works as a deep link from anywhere in the app.
 
-interface Lead    { id: string; firstName: string; lastName: string; phone: string; }
-interface Project { id: string; name: string; }
-interface Unit    { id: string; unitNumber: string; type: string; floor: number; area: number; price: number; view: string; }
-interface Milestone { label: string; percentage: number; isDLDFee: boolean; isAdminFee: boolean; triggerType: string; }
-interface PaymentPlan { id: string; name: string; description?: string; milestones?: Milestone[]; }
-interface BrokerCompany { id: string; name: string; agents: { id: string; name: string }[]; }
+interface Lead    { id: string; firstName: string; lastName: string; phone: string }
+interface Project { id: string; name: string }
+interface Unit    { id: string; unitNumber: string; type: string; floor: number; area: number; price: number; view: string }
+interface Milestone   { label: string; percentage: number; isDLDFee: boolean; isAdminFee: boolean; triggerType: string }
+interface PaymentPlan { id: string; name: string; description?: string; isActive?: boolean; milestones?: Milestone[] }
+interface BrokerCompany { id: string; name: string; agents: { id: string; name: string }[] }
+
+const STEPS = ["Lead", "Unit & Price", "Payment Plan", "Broker & Incentives"] as const;
 
 const inp = "w-full border border-input rounded-xl px-4 py-2.5 text-sm bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const lbl = "block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide";
 
-const STEPS = ["Lead", "Unit & Price", "Payment Plan", "Broker & Incentives"] as const;
+const fmtArea = (a: number) => `${a.toLocaleString()} sqft`;
 
-function fmtArea(a: number) { return `${a.toLocaleString()} sqft`; }
+const dealsCrumbs = [{ label: "Home", path: "/" }, { label: "Deals", path: "/deals" }];
 
-export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Props) {
+export default function DealCreatePage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultLeadId = searchParams.get("leadId") ?? "";
+
   const [step, setStep] = useState(0);
-  const [dirty, setDirty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
-  const [leadId,       setLeadId]       = useState(defaultLeadId ?? "");
-  const [leadSearch,   setLeadSearch]   = useState("");
-  const [projectId,    setProjectId]    = useState("");
-  const [unitId,       setUnitId]       = useState("");
-  const [salePrice,    setSalePrice]    = useState("");
-  const [discount,     setDiscount]     = useState("");
-  const [paymentPlanId, setPaymentPlanId] = useState("");
-  const [brokerCompanyId, setBrokerCompanyId] = useState("");
-  const [brokerAgentId,   setBrokerAgentId]   = useState("");
+  const [leadId,                 setLeadId]                 = useState(defaultLeadId);
+  const [leadSearch,             setLeadSearch]             = useState("");
+  const [projectId,              setProjectId]              = useState("");
+  const [unitId,                 setUnitId]                 = useState("");
+  const [salePrice,              setSalePrice]              = useState("");
+  const [discount,               setDiscount]               = useState("");
+  const [paymentPlanId,          setPaymentPlanId]          = useState("");
+  const [brokerCompanyId,        setBrokerCompanyId]        = useState("");
+  const [brokerAgentId,          setBrokerAgentId]          = useState("");
   const [commissionRateOverride, setCommissionRateOverride] = useState("");
-  const [adminFeeWaived, setAdminFeeWaived] = useState(false);
-  const [adminFeeWaivedReason, setAdminFeeWaivedReason] = useState("");
-  const [dldPaidBy,    setDldPaidBy]    = useState<"BUYER" | "DEVELOPER">("BUYER");
-  const [dldWaivedReason, setDldWaivedReason] = useState("");
+  const [adminFeeWaived,         setAdminFeeWaived]         = useState(false);
+  const [adminFeeWaivedReason,   setAdminFeeWaivedReason]   = useState("");
+  const [dldPaidBy,              setDldPaidBy]              = useState<"BUYER" | "DEVELOPER">("BUYER");
+  const [dldWaivedReason,        setDldWaivedReason]        = useState("");
 
-  // Data
-  const [leads,          setLeads]          = useState<Lead[]>([]);
-  const [projects,       setProjects]       = useState<Project[]>([]);
-  const [units,          setUnits]          = useState<Unit[]>([]);
-  const [paymentPlans,   setPaymentPlans]   = useState<PaymentPlan[]>([]);
+  const [leads,           setLeads]           = useState<Lead[]>([]);
+  const [projects,        setProjects]        = useState<Project[]>([]);
+  const [units,           setUnits]           = useState<Unit[]>([]);
+  const [paymentPlans,    setPaymentPlans]    = useState<PaymentPlan[]>([]);
   const [brokerCompanies, setBrokerCompanies] = useState<BrokerCompany[]>([]);
-  const [loadingUnits,   setLoadingUnits]   = useState(false);
+  const [loadingUnits,    setLoadingUnits]    = useState(false);
 
   const firstFieldRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
@@ -71,12 +76,12 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
       .finally(() => setLoadingUnits(false));
   }, [projectId]);
 
-  // Auto-fill price from selected unit
   const selectedUnit = units.find((u) => u.id === unitId);
   useEffect(() => {
     if (selectedUnit && !salePrice) setSalePrice(String(selectedUnit.price));
   }, [selectedUnit]);
 
+  const selectedLead    = leads.find((l) => l.id === leadId);
   const selectedPlan    = paymentPlans.find((p) => p.id === paymentPlanId);
   const selectedCompany = brokerCompanies.find((c) => c.id === brokerCompanyId);
   const brokerAgents    = selectedCompany?.agents ?? [];
@@ -92,19 +97,14 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
     leadId.length > 0,
     unitId.length > 0 && parseFloat(salePrice) > 0,
     paymentPlanId.length > 0,
-    true, // broker step is optional
+    true,
   ];
 
-  const handleClose = () => {
-    if (dirty && !window.confirm("Discard unsaved deal?")) return;
-    onClose();
-  };
-
-  const handleSubmit = async () => {
+  async function submit() {
     setError(null);
     setSubmitting(true);
     try {
-      await axios.post("/api/deals", {
+      const r = await axios.post("/api/deals", {
         leadId,
         unitId,
         salePrice:              parseFloat(salePrice),
@@ -118,28 +118,53 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
         dldPaidBy:              dldPaidBy !== "BUYER" ? dldPaidBy : undefined,
         dldWaivedReason:        dldPaidBy === "DEVELOPER" ? dldWaivedReason || undefined : undefined,
       });
-      onCreated();
-      onClose();
+      const newId = r.data?.id;
+      toast.success("Deal created");
+      navigate(newId ? `/deals/${newId}` : "/deals");
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to create deal");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const selectedLead = leads.find((l) => l.id === leadId);
+  }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0">
-
-        {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b flex-shrink-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-foreground text-lg">Create deal</h2>
-          </div>
-
-          {/* Step progress */}
+    <DetailPageLayout
+      crumbs={[...dealsCrumbs, { label: "New deal" }]}
+      title="Create deal"
+      subtitle="4-step wizard: lead → unit → payment plan → broker & incentives"
+      actions={
+        <>
+          <Button type="button" variant="secondary" onClick={() => navigate("/deals")} disabled={submitting}>
+            Cancel
+          </Button>
+          {step > 0 && (
+            <Button type="button" variant="secondary" onClick={() => setStep((s) => s - 1)} disabled={submitting}>
+              ← Back
+            </Button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button
+              type="button"
+              onClick={() => setStep((s) => s + 1)}
+              disabled={!canAdvance[step]}
+            >
+              Next →
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="success"
+              onClick={submit}
+              disabled={submitting || !canAdvance.slice(0, 3).every(Boolean)}
+            >
+              {submitting ? "Creating…" : "Create deal"}
+            </Button>
+          )}
+        </>
+      }
+      hero={
+        <div className="bg-card rounded-xl border border-border p-5">
           <div className="flex items-center gap-0">
             {STEPS.map((label, i) => {
               const done    = i < step;
@@ -147,6 +172,7 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
               return (
                 <div key={i} className="flex items-center flex-1 last:flex-none">
                   <button
+                    type="button"
                     onClick={() => done && setStep(i)}
                     disabled={!done}
                     className="flex flex-col items-center gap-1 group disabled:cursor-default"
@@ -158,7 +184,9 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                     }`}>
                       {done ? "✓" : i + 1}
                     </div>
-                    <span className={`text-[10px] font-semibold whitespace-nowrap ${current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"}`}>
+                    <span className={`text-[10px] font-semibold whitespace-nowrap ${
+                      current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"
+                    }`}>
                       {label}
                     </span>
                   </button>
@@ -170,16 +198,15 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
             })}
           </div>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-
+      }
+      main={
+        <>
           {/* Step 0 — Lead */}
           {step === 0 && (
-            <div className="space-y-4">
+            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">Who is this deal for?</p>
-                <p className="text-xs text-muted-foreground mb-4">Select the lead that will become the buyer.</p>
+                <p className="text-xs text-muted-foreground">Select the lead that will become the buyer.</p>
               </div>
               <div>
                 <label className={lbl}>Search leads</label>
@@ -189,7 +216,7 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                   type="text"
                   placeholder="Name or phone number…"
                   value={leadSearch}
-                  onChange={(e) => { setLeadSearch(e.target.value); setDirty(true); }}
+                  onChange={(e) => setLeadSearch(e.target.value)}
                   className={inp}
                 />
               </div>
@@ -200,12 +227,14 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                   <button
                     key={l.id}
                     type="button"
-                    onClick={() => { setLeadId(l.id); setDirty(true); }}
+                    onClick={() => setLeadId(l.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border last:border-0 ${
-                      leadId === l.id ? "bg-info-soft border-l-4 border-l-blue-500" : "hover:bg-muted/50"
+                      leadId === l.id ? "bg-info-soft border-l-4 border-l-primary" : "hover:bg-muted/50"
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${leadId === l.id ? "bg-primary text-white" : "bg-neutral-200 text-muted-foreground"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      leadId === l.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    }`}>
                       {l.firstName[0]}{l.lastName[0]}
                     </div>
                     <div>
@@ -216,16 +245,16 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                   </button>
                 ))}
               </div>
-              {leadId && !leadSearch && (
+              {leadId && !leadSearch && selectedLead && (
                 <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {selectedLead?.firstName[0]}{selectedLead?.lastName[0]}
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {selectedLead.firstName[0]}{selectedLead.lastName[0]}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-info-soft-foreground">{selectedLead?.firstName} {selectedLead?.lastName}</p>
-                    <p className="text-xs text-primary">{selectedLead?.phone}</p>
+                    <p className="text-sm font-semibold text-info-soft-foreground">{selectedLead.firstName} {selectedLead.lastName}</p>
+                    <p className="text-xs text-primary">{selectedLead.phone}</p>
                   </div>
-                  <button onClick={() => { setLeadId(""); setLeadSearch(""); }} className="ml-auto text-primary hover:text-primary text-lg leading-none">×</button>
+                  <button type="button" onClick={() => { setLeadId(""); setLeadSearch(""); }} className="ml-auto text-primary hover:text-primary/80 text-lg leading-none">×</button>
                 </div>
               )}
             </div>
@@ -233,18 +262,17 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
 
           {/* Step 1 — Unit & Price */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">Which unit?</p>
-                <p className="text-xs text-muted-foreground mb-4">Select a project, then pick an available unit.</p>
+                <p className="text-xs text-muted-foreground">Select a project, then pick an available unit.</p>
               </div>
-
               <div>
                 <label className={lbl}>Project</label>
                 <select
                   autoFocus
                   value={projectId}
-                  onChange={(e) => { setProjectId(e.target.value); setUnitId(""); setSalePrice(""); setDirty(true); }}
+                  onChange={(e) => { setProjectId(e.target.value); setUnitId(""); setSalePrice(""); }}
                   className={inp}
                 >
                   <option value="">Select project…</option>
@@ -271,12 +299,14 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                         <button
                           key={u.id}
                           type="button"
-                          onClick={() => { setUnitId(u.id); setSalePrice(String(u.price)); setDirty(true); }}
+                          onClick={() => { setUnitId(u.id); setSalePrice(String(u.price)); }}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border last:border-0 ${
-                            unitId === u.id ? "bg-info-soft border-l-4 border-l-blue-500" : "hover:bg-muted/50"
+                            unitId === u.id ? "bg-info-soft border-l-4 border-l-primary" : "hover:bg-muted/50"
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${unitId === u.id ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                            unitId === u.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          }`}>
                             {u.unitNumber}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -284,7 +314,7 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                             <p className="text-xs text-muted-foreground">{fmtArea(u.area)} · {u.view}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-bold text-foreground">AED {u.price.toLocaleString()}</p>
+                            <p className="text-sm font-bold text-foreground tabular-nums">AED {u.price.toLocaleString()}</p>
                           </div>
                           {unitId === u.id && <span className="text-primary text-sm ml-1">✓</span>}
                         </button>
@@ -295,13 +325,13 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
               )}
 
               {unitId && (
-                <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
                     <label className={lbl}>Sale Price (AED)</label>
                     <input
-                      required type="number" min="1" step="1"
+                      required type="number" min={1} step={1}
                       value={salePrice}
-                      onChange={(e) => { setSalePrice(e.target.value); setDirty(true); }}
+                      onChange={(e) => setSalePrice(e.target.value)}
                       className={inp}
                     />
                     {selectedUnit && parseFloat(salePrice) !== selectedUnit.price && (
@@ -311,9 +341,9 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                   <div>
                     <label className={lbl}>Discount (AED)</label>
                     <input
-                      type="number" min="0" step="1" placeholder="0"
+                      type="number" min={0} step={1} placeholder="0"
                       value={discount}
-                      onChange={(e) => { setDiscount(e.target.value); setDirty(true); }}
+                      onChange={(e) => setDiscount(e.target.value)}
                       className={inp}
                     />
                   </div>
@@ -324,17 +354,17 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                 <div className="bg-muted/50 border border-border rounded-xl px-4 py-3 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Sale Price</p>
-                    <p className="font-bold text-foreground">AED {(parseFloat(salePrice) || 0).toLocaleString()}</p>
+                    <p className="font-bold text-foreground tabular-nums">AED {(parseFloat(salePrice) || 0).toLocaleString()}</p>
                   </div>
                   {parseFloat(discount) > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Discount</p>
-                      <p className="font-bold text-success">− AED {(parseFloat(discount) || 0).toLocaleString()}</p>
+                      <p className="font-bold text-success tabular-nums">− AED {(parseFloat(discount) || 0).toLocaleString()}</p>
                     </div>
                   )}
                   <div className={parseFloat(discount) > 0 ? "" : "col-span-2"}>
                     <p className="text-xs text-muted-foreground mb-0.5">Net Price</p>
-                    <p className="font-bold text-primary text-base">AED {netPrice.toLocaleString()}</p>
+                    <p className="font-bold text-primary text-base tabular-nums">AED {netPrice.toLocaleString()}</p>
                   </div>
                 </div>
               )}
@@ -343,24 +373,27 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
 
           {/* Step 2 — Payment Plan */}
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">Choose a payment plan</p>
-                <p className="text-xs text-muted-foreground mb-4">This defines when and how the buyer pays. Milestone amounts are calculated from the net price.</p>
+                <p className="text-xs text-muted-foreground">
+                  This defines when and how the buyer pays. Milestone amounts are calculated from the net price.
+                </p>
               </div>
-
               <div className="space-y-2">
-                {paymentPlans.filter((p: any) => p.isActive !== false).map((plan) => {
+                {paymentPlans.filter((p) => p.isActive !== false).map((plan) => {
                   const isSelected = paymentPlanId === plan.id;
                   return (
                     <div key={plan.id} className={`border-2 rounded-xl overflow-hidden transition-all ${isSelected ? "border-primary/40 shadow-sm" : "border-border hover:border-border"}`}>
                       <button
                         type="button"
-                        onClick={() => { setPaymentPlanId(plan.id); setDirty(true); }}
+                        onClick={() => setPaymentPlanId(plan.id)}
                         className="w-full flex items-center gap-4 px-4 py-3 text-left"
                       >
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected ? "border-primary/40 bg-primary" : "border-border"}`}>
-                          {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                          isSelected ? "border-primary/40 bg-primary" : "border-border"
+                        }`}>
+                          {isSelected && <span className="text-primary-foreground text-[10px] font-bold">✓</span>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground">{plan.name}</p>
@@ -371,7 +404,6 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                         </span>
                       </button>
 
-                      {/* Milestone preview — always visible when selected */}
                       {isSelected && plan.milestones && plan.milestones.length > 0 && (
                         <div className="border-t border-border bg-muted/50">
                           <table className="w-full text-xs">
@@ -393,9 +425,9 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                                       {m.isDLDFee  && <span className="ml-1 px-1 py-0.5 rounded bg-warning-soft text-warning text-[10px]">DLD</span>}
                                       {m.isAdminFee && <span className="ml-1 px-1 py-0.5 rounded bg-info-soft text-primary text-[10px]">Admin</span>}
                                     </td>
-                                    <td className="px-4 py-2 text-right font-bold text-foreground">{m.percentage}%</td>
+                                    <td className="px-4 py-2 text-right font-bold text-foreground tabular-nums">{m.percentage}%</td>
                                     {netPrice > 0 && (
-                                      <td className="px-4 py-2 text-right font-bold text-primary">
+                                      <td className="px-4 py-2 text-right font-bold text-primary tabular-nums">
                                         {amt !== null ? `AED ${amt.toLocaleString()}` : "—"}
                                       </td>
                                     )}
@@ -421,62 +453,64 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
 
           {/* Step 3 — Broker & Incentives */}
           {step === 3 && (
-            <div className="space-y-5">
-              <div>
-                <p className="text-sm font-semibold text-foreground mb-1">Broker & deal incentives</p>
-                <p className="text-xs text-muted-foreground mb-4">All fields on this step are optional. Skip if this is a direct sale.</p>
+            <>
+              <div className="bg-card rounded-xl border border-border p-5 space-y-5">
+                <div>
+                  <p className="text-sm font-semibold text-foreground mb-1">Broker & deal incentives</p>
+                  <p className="text-xs text-muted-foreground">All fields on this step are optional. Skip if this is a direct sale.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>Broker Company</label>
+                    <select
+                      value={brokerCompanyId}
+                      onChange={(e) => { setBrokerCompanyId(e.target.value); setBrokerAgentId(""); }}
+                      className={inp}
+                    >
+                      <option value="">None — direct sale</option>
+                      {brokerCompanies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Broker Agent</label>
+                    <select
+                      value={brokerAgentId}
+                      onChange={(e) => setBrokerAgentId(e.target.value)}
+                      disabled={!brokerCompanyId}
+                      className={inp}
+                    >
+                      <option value="">Select agent…</option>
+                      {brokerAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {brokerCompanyId && (
+                  <div>
+                    <label className={lbl}>Commission Rate Override (%)</label>
+                    <input
+                      type="number" step={0.1} min={0} max={20}
+                      placeholder="Leave blank to use company's default rate"
+                      value={commissionRateOverride}
+                      onChange={(e) => setCommissionRateOverride(e.target.value)}
+                      className={inp}
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>Broker Company</label>
-                  <select
-                    value={brokerCompanyId}
-                    onChange={(e) => { setBrokerCompanyId(e.target.value); setBrokerAgentId(""); setDirty(true); }}
-                    className={inp}
-                  >
-                    <option value="">None — direct sale</option>
-                    {brokerCompanies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={lbl}>Broker Agent</label>
-                  <select
-                    value={brokerAgentId}
-                    onChange={(e) => { setBrokerAgentId(e.target.value); setDirty(true); }}
-                    disabled={!brokerCompanyId}
-                    className={inp}
-                  >
-                    <option value="">Select agent…</option>
-                    {brokerAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {brokerCompanyId && (
-                <div>
-                  <label className={lbl}>Commission Rate Override (%)</label>
-                  <input
-                    type="number" step="0.1" min="0" max="20"
-                    placeholder="Leave blank to use company's default rate"
-                    value={commissionRateOverride}
-                    onChange={(e) => setCommissionRateOverride(e.target.value)}
-                    className={inp}
-                  />
-                </div>
-              )}
-
-              <div className="border border-border rounded-xl p-4 space-y-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fee Overrides</p>
+              <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Fee overrides</p>
 
                 <label className="flex items-center gap-3 cursor-pointer">
                   <div
                     onClick={() => setAdminFeeWaived((v) => !v)}
-                    className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${adminFeeWaived ? "bg-primary" : "bg-neutral-200"}`}
+                    className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${adminFeeWaived ? "bg-primary" : "bg-muted"}`}
                   >
                     <span className={`absolute top-0.5 w-5 h-5 bg-card rounded-full shadow transition-all ${adminFeeWaived ? "left-4" : "left-0.5"}`} />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">Waive Admin Fee</p>
                     {adminFeeWaived && (
                       <input
@@ -492,7 +526,7 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
 
                 <div>
                   <label className={lbl}>DLD Fee Paid By</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     {(["BUYER", "DEVELOPER"] as const).map((opt) => (
                       <button
                         key={opt}
@@ -518,15 +552,19 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
               </div>
 
               {/* Summary card */}
-              <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-4 space-y-2 text-sm">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-3">Deal Summary</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+              <div className="bg-info-soft border border-primary/40 rounded-xl px-5 py-4 space-y-2 text-sm">
+                <p className="text-[10px] font-semibold text-primary uppercase tracking-widest mb-3">Deal summary</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
                   <div><span className="text-muted-foreground">Buyer</span></div>
-                  <div className="font-semibold text-foreground">{selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}` : "—"}</div>
+                  <div className="font-semibold text-foreground">
+                    {selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}` : "—"}
+                  </div>
                   <div><span className="text-muted-foreground">Unit</span></div>
-                  <div className="font-semibold text-foreground">{selectedUnit ? `${selectedUnit.unitNumber} · Fl.${selectedUnit.floor}` : "—"}</div>
+                  <div className="font-semibold text-foreground">
+                    {selectedUnit ? `${selectedUnit.unitNumber} · Fl. ${selectedUnit.floor}` : "—"}
+                  </div>
                   <div><span className="text-muted-foreground">Net Price</span></div>
-                  <div className="font-bold text-primary">AED {netPrice.toLocaleString()}</div>
+                  <div className="font-bold text-primary tabular-nums">AED {netPrice.toLocaleString()}</div>
                   <div><span className="text-muted-foreground">Payment Plan</span></div>
                   <div className="font-semibold text-foreground">{selectedPlan?.name || "—"}</div>
                   {brokerCompanyId && (
@@ -537,42 +575,16 @@ export default function DealFormModal({ onClose, onCreated, defaultLeadId }: Pro
                   )}
                 </div>
               </div>
+            </>
+          )}
 
-              {error && (
-                <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-4 py-3 rounded-xl">{error}</p>
-              )}
+          {error && (
+            <div className="bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-2.5 text-sm text-destructive">
+              {error}
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t flex items-center gap-3 flex-shrink-0">
-          <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
-          <div className="flex-1 flex justify-end gap-2">
-            {step > 0 && (
-              <Button type="button" variant="secondary" onClick={() => setStep((s) => s - 1)}>← Back</Button>
-            )}
-            {step < STEPS.length - 1 ? (
-              <Button
-                type="button"
-                onClick={() => setStep((s) => s + 1)}
-                disabled={!canAdvance[step]}
-              >
-                Next →
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="success"
-                onClick={handleSubmit}
-                disabled={submitting || !canAdvance.slice(0, 3).every(Boolean)}
-              >
-                {submitting ? "Creating…" : "Create Deal ✓"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    />
   );
 }
