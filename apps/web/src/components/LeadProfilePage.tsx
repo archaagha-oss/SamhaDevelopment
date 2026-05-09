@@ -149,20 +149,11 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const [submitting,  setSubmitting]  = useState(false);
 
   // Edit lead
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editForm, setEditForm] = useState({
-    firstName: "", lastName: "", phone: "", email: "",
-    nationality: "", source: "DIRECT", budget: "", notes: "",
-    assignedAgentId: "", brokerCompanyId: "", brokerAgentId: "",
-    address: "", emiratesId: "", passportNumber: "",
-    companyRegistrationNumber: "", authorizedSignatory: "", sourceOfFunds: "",
-  });
-  const [editSaving, setEditSaving] = useState(false);
+  // Edit-modal state removed in Phase C.2 — edit lives at /leads/:id/edit now.
 
   // Unit picker (for editing interests)
-  const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [editingUnitIds, setEditingUnitIds] = useState(new Set<string>());
-  const [editingPrimaryUnitId, setEditingPrimaryUnitId] = useState("");
+  // Unit-picker state removed in Phase C.2 — unit interests are managed from
+  // /leads/:id/edit (LeadEditPage), which renders its own UnitInterestPicker.
 
   // Offers
   const [offers, setOffers] = useState<{
@@ -290,35 +281,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       .catch(() => setBrokerAgents([]));
   };
 
-  useEffect(() => {
-    if (showEditForm && lead) {
-      setEditForm({
-        firstName:       lead.firstName,
-        lastName:        lead.lastName,
-        phone:           lead.phone,
-        email:           lead.email ?? "",
-        nationality:     lead.nationality ?? "",
-        source:          lead.source,
-        budget:          lead.budget != null ? String(lead.budget) : "",
-        notes:           lead.notes ?? "",
-        assignedAgentId: lead.assignedAgent?.id ?? lead.assignedAgentId ?? "",
-        brokerCompanyId: lead.brokerCompanyId ?? "",
-        brokerAgentId:   lead.brokerAgentId   ?? "",
-        address:                   lead.address ?? "",
-        emiratesId:                lead.emiratesId ?? "",
-        passportNumber:            lead.passportNumber ?? "",
-        companyRegistrationNumber: lead.companyRegistrationNumber ?? "",
-        authorizedSignatory:       lead.authorizedSignatory ?? "",
-        sourceOfFunds:             lead.sourceOfFunds ?? "",
-      });
-      // Initialize unit picker with current interests
-      const unitIds = new Set(lead.interests.map((i) => i.unitId));
-      setEditingUnitIds(unitIds);
-      const primaryInterest = lead.interests.find((i) => i.isPrimary);
-      setEditingPrimaryUnitId(primaryInterest?.unitId ?? "");
-      if (lead.brokerCompanyId) loadBrokerAgents(lead.brokerCompanyId);
-    }
-  }, [showEditForm]);
+  // Pre-fill edit-form effect removed in Phase C.2 — LeadEditPage owns this now.
 
   useEffect(() => {
     if (showDealForm && availableUnits.length === 0) {
@@ -387,45 +350,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     }
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!lead) return;
-    setEditSaving(true);
-    try {
-      const payload: Record<string, unknown> = {};
-      const get = (k: keyof typeof editForm) => editForm[k];
-      if (get("firstName")       !== lead.firstName)                      payload.firstName       = get("firstName");
-      if (get("lastName")        !== lead.lastName)                       payload.lastName        = get("lastName");
-      if (get("phone")           !== lead.phone)                          payload.phone           = get("phone");
-      if (get("email")           !== (lead.email ?? ""))                  payload.email           = get("email") || null;
-      if (get("nationality")     !== (lead.nationality ?? ""))            payload.nationality     = get("nationality") || null;
-      if (get("source")          !== lead.source)                         payload.source          = get("source");
-      if (get("notes")           !== (lead.notes ?? ""))                  payload.notes           = get("notes") || null;
-      const bv = get("budget") !== "" ? parseFloat(get("budget")) : null;
-      if (bv !== (lead.budget ?? null))                                   payload.budget          = bv;
-      const agentId = lead.assignedAgent?.id ?? lead.assignedAgentId ?? "";
-      if (get("assignedAgentId") !== agentId)                             payload.assignedAgentId = get("assignedAgentId") || null;
-      if (get("brokerCompanyId") !== (lead.brokerCompanyId ?? ""))        payload.brokerCompanyId = get("brokerCompanyId") || null;
-      if (get("brokerAgentId")   !== (lead.brokerAgentId ?? ""))          payload.brokerAgentId   = get("brokerAgentId")   || null;
-      if (get("address")                   !== (lead.address ?? ""))                   payload.address                   = get("address") || null;
-      if (get("emiratesId")                !== (lead.emiratesId ?? ""))                payload.emiratesId                = get("emiratesId") || null;
-      if (get("passportNumber")            !== (lead.passportNumber ?? ""))            payload.passportNumber            = get("passportNumber") || null;
-      if (get("companyRegistrationNumber") !== (lead.companyRegistrationNumber ?? "")) payload.companyRegistrationNumber = get("companyRegistrationNumber") || null;
-      if (get("authorizedSignatory")       !== (lead.authorizedSignatory ?? ""))       payload.authorizedSignatory       = get("authorizedSignatory") || null;
-      if (get("sourceOfFunds")             !== (lead.sourceOfFunds ?? ""))             payload.sourceOfFunds             = get("sourceOfFunds") || null;
-
-      if (Object.keys(payload).length > 0) {
-        await axios.patch(`/api/leads/${lead.id}`, payload);
-      }
-      toast.success("Lead updated");
-      await reloadLead();
-      setShowEditForm(false);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to update lead");
-    } finally {
-      setEditSaving(false);
-    }
-  };
+  // handleEditSubmit removed in Phase C.2 — LeadEditPage owns the lead-edit
+  // PATCH flow now (with the same diff-based payload).
 
   const handleDelete = async () => {
     if (!lead) return;
@@ -445,46 +371,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
     }
   };
 
-  const handleUnitsChange = async (selected: Set<string>, primary: string) => {
-    if (!lead) return;
-    try {
-      // Get current interests
-      const currentInterestIds = new Set(lead.interests.map((i) => i.unitId));
-
-      // Remove units that are no longer selected
-      const toRemove = [...currentInterestIds].filter((id) => !selected.has(id));
-      for (const unitId of toRemove) {
-        const interest = lead.interests.find((i) => i.unitId === unitId);
-        if (interest) {
-          await axios.delete(`/api/leads/${lead.id}/interests/${interest.id}`);
-        }
-      }
-
-      // Add new units and update primary status
-      const toAdd = [...selected].filter((id) => !currentInterestIds.has(id));
-      for (const unitId of toAdd) {
-        await axios.post(`/api/leads/${lead.id}/interests`, {
-          unitId,
-          isPrimary: unitId === primary,
-        });
-      }
-
-      // Update primary status for existing units if changed
-      for (const unitId of [...selected].filter((id) => currentInterestIds.has(id))) {
-        const interest = lead.interests.find((i) => i.unitId === unitId);
-        if (interest && interest.isPrimary !== (unitId === primary)) {
-          await axios.patch(`/api/leads/${lead.id}/interests/${interest.id}`, {
-            isPrimary: unitId === primary,
-          });
-        }
-      }
-
-      toast.success("Unit interests updated");
-      await reloadLead();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to update unit interests");
-    }
-  };
+  // handleUnitsChange removed in Phase C.2 — unit-interest editing lives at
+  // /leads/:id/edit (LeadEditPage), which renders UnitInterestPicker inline.
 
   const openOfferModal = (unitId: string, existing?: typeof offers[0]) => {
     setOfferModalUnit(unitId);
@@ -733,7 +621,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               )}
             </div>
 
-            <button onClick={() => setShowEditForm(true)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
+            <button onClick={() => navigate(`/leads/${lead.id}/edit`)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
               Edit
             </button>
             <button
@@ -1165,189 +1053,9 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         )}
       </div>
 
-      {/* ── Edit Lead Modal ─────────────────────────────────────────────────────── */}
-      {showEditForm && (
-        <Modal title="Edit lead" onClose={() => setShowEditForm(false)}>
-          <form onSubmit={handleEditSubmit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">First Name</label>
-                <input required value={editForm.firstName} onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Last Name</label>
-                <input required value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))} className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Phone</label>
-              <input required value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
-                <input type="email" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Nationality</label>
-                <input value={editForm.nationality} onChange={(e) => setEditForm((p) => ({ ...p, nationality: e.target.value }))} className={inputCls} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Source</label>
-                <select value={editForm.source} onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value }))} className={inputCls}>
-                  {SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Budget (AED)</label>
-                <input type="number" min={0} value={editForm.budget} onChange={(e) => setEditForm((p) => ({ ...p, budget: e.target.value }))} placeholder="e.g. 1500000" className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Assigned Agent</label>
-              <select value={editForm.assignedAgentId} onChange={(e) => setEditForm((p) => ({ ...p, assignedAgentId: e.target.value }))} className={inputCls}>
-                <option value="">— Unassigned —</option>
-                {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-            {editForm.source === "BROKER" && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Company</label>
-                  <select
-                    value={editForm.brokerCompanyId}
-                    onChange={(e) => {
-                      setEditForm((p) => ({ ...p, brokerCompanyId: e.target.value, brokerAgentId: "" }));
-                      loadBrokerAgents(e.target.value);
-                    }}
-                    className={inputCls}
-                  >
-                    <option value="">— None —</option>
-                    {brokerCompanies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                {brokerAgents.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Broker Agent</label>
-                    <select value={editForm.brokerAgentId} onChange={(e) => setEditForm((p) => ({ ...p, brokerAgentId: e.target.value }))} className={inputCls}>
-                      <option value="">— None —</option>
-                      {brokerAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
-                )}
-              </>
-            )}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
-              <textarea value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
-            </div>
-
-            {/* KYC / SPA particulars — required before SPA generation */}
-            <details className="border border-border rounded-lg">
-              <summary className="px-3 py-2 text-xs font-semibold text-foreground cursor-pointer select-none">
-                KYC & SPA particulars
-              </summary>
-              <div className="px-3 pb-3 pt-2 space-y-3 border-t border-border">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Residential Address</label>
-                  <input
-                    value={editForm.address}
-                    onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
-                    placeholder="Country, city, neighbourhood, building, flat #"
-                    className={inputCls}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Emirates ID</label>
-                    <input value={editForm.emiratesId} onChange={(e) => setEditForm((p) => ({ ...p, emiratesId: e.target.value }))} placeholder="784-…" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Passport No</label>
-                    <input value={editForm.passportNumber} onChange={(e) => setEditForm((p) => ({ ...p, passportNumber: e.target.value }))} className={inputCls} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Company Registration No</label>
-                    <input value={editForm.companyRegistrationNumber} onChange={(e) => setEditForm((p) => ({ ...p, companyRegistrationNumber: e.target.value }))} className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Authorized Signatory</label>
-                    <input value={editForm.authorizedSignatory} onChange={(e) => setEditForm((p) => ({ ...p, authorizedSignatory: e.target.value }))} className={inputCls} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Source of Funds</label>
-                  <input
-                    value={editForm.sourceOfFunds}
-                    onChange={(e) => setEditForm((p) => ({ ...p, sourceOfFunds: e.target.value }))}
-                    placeholder="e.g. Salary, Husband Savings, Inheritance"
-                    className={inputCls}
-                  />
-                </div>
-              </div>
-            </details>
-
-            {/* Unit Interests */}
-            <div className="border border-success/30 bg-success-soft/30 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-success">
-                  Interested Units ({editingUnitIds.size})
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowUnitPicker(true)}
-                  className="text-xs text-success font-semibold hover:text-success"
-                >
-                  {editingUnitIds.size > 0 ? "Edit" : "+ Add Units"}
-                </button>
-              </div>
-              {editingUnitIds.size > 0 && lead?.interests && (
-                <div className="flex flex-wrap gap-1">
-                  {lead.interests
-                    .filter((i) => editingUnitIds.has(i.unitId))
-                    .map((i) => (
-                      <span
-                        key={i.unitId}
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          i.unitId === editingPrimaryUnitId
-                            ? "bg-success text-white"
-                            : "bg-card text-foreground border border-border"
-                        }`}
-                      >
-                        {i.unitId === editingPrimaryUnitId && "★ "}
-                        {i.unit.unitNumber}
-                      </span>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button type="submit" disabled={editSaving} className={primaryBtn}>{editSaving ? "Saving…" : "Save changes"}</button>
-              <button type="button" onClick={() => setShowEditForm(false)} className={cancelBtn}>Cancel</button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* ── Unit Interest Picker ────────────────────────────────────────────────── */}
-      {showEditForm && (
-        <UnitInterestPicker
-          isOpen={showUnitPicker}
-          onClose={() => setShowUnitPicker(false)}
-          selectedUnitIds={editingUnitIds}
-          primaryUnitId={editingPrimaryUnitId}
-          onUnitsChange={async (selected, primary) => {
-            setEditingUnitIds(selected);
-            setEditingPrimaryUnitId(primary);
-            await handleUnitsChange(selected, primary);
-          }}
-        />
-      )}
+      {/* The inline Edit Lead modal was removed in Phase C.2.
+          Edit flow now lives at /leads/:leadId/edit (LeadEditPage). The Edit
+          button at the top of this page navigates there. */}
 
       {/* ── Create Deal Modal ───────────────────────────────────────────────────── */}
       {showCreateDealModal && (

@@ -6,6 +6,7 @@ import UnitDetailPage from "./components/UnitDetailPage";
 import UnitsPage from "./components/UnitsPage";
 import LeadsPage from "./components/LeadsPage";
 import LeadProfilePage from "./components/LeadProfilePage";
+import LeadEditPage from "./pages/LeadEditPage";
 import DealsPage from "./components/DealsPage";
 import DealDetailPage from "./components/DealDetailPage";
 import DealEditPage from "./pages/DealEditPage";
@@ -75,7 +76,9 @@ export const router = createBrowserRouter([
       { path: "projects/:projectId/units/:unitId",        element: <UnitDetailPage /> },
       { path: "units",                                    element: <UnitsPage /> },
       { path: "leads",                                    element: <LeadsPage /> },
+      { path: "leads/new",                                element: <LeadEditPage /> },
       { path: "leads/:leadId",                            element: <LeadProfilePage /> },
+      { path: "leads/:leadId/edit",                       element: <LeadEditPage /> },
       { path: "deals",                                    element: <DealsPage /> },
       { path: "deals/:dealId",                            element: <DealDetailPage /> },
       { path: "deals/:dealId/edit",                       element: <DealEditPage /> },
