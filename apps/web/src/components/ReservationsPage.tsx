@@ -16,7 +16,7 @@ interface Lead {
 interface Unit {
   unitNumber: string;
   status: string;
-  askingPrice: number;
+  price: number;
 }
 
 interface Reservation {
@@ -166,7 +166,7 @@ export default function ReservationsPage() {
                       <td className="px-5 py-3">
                         <p className="font-semibold text-foreground">{r.unit.unitNumber}</p>
                         <p className="text-xs text-muted-foreground">
-                          AED {r.unit.askingPrice?.toLocaleString("en-AE") ?? "—"}
+                          AED {r.unit.price?.toLocaleString("en-AE") ?? "—"}
                         </p>
                       </td>
                       <td className="px-5 py-3">

@@ -6,7 +6,7 @@ interface AvailableUnit {
   unitNumber: string;
   type: string;
   floor: number;
-  askingPrice: number;
+  price: number;
   status: string;
   project?: { name: string };
 }
@@ -126,7 +126,7 @@ export default function ReservationModal({
                     {u.floor != null ? ` — Floor ${u.floor}` : ""}
                     {u.type ? ` — ${u.type}` : ""}
                     {" — "}
-                    {fmtAED(u.askingPrice)}
+                    {fmtAED(u.price)}
                   </option>
                 ))}
               </select>
@@ -158,7 +158,7 @@ export default function ReservationModal({
                 <div>
                   <p className="text-muted-foreground mb-0.5">Asking Price</p>
                   <p className="text-success font-semibold">
-                    {fmtAED(selectedUnit.askingPrice)}
+                    {fmtAED(selectedUnit.price)}
                   </p>
                 </div>
               </div>

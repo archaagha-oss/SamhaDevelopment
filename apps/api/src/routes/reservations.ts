@@ -61,7 +61,7 @@ router.get("/", async (req, res) => {
       db.reservation.findMany({
         where,
         include: {
-          unit: { select: { unitNumber: true, status: true, askingPrice: true } },
+          unit: { select: { unitNumber: true, status: true, price: true } },
           lead: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
         orderBy: { createdAt: "desc" },
