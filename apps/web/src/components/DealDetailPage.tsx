@@ -8,6 +8,8 @@ import DocumentBrowser from "./DocumentBrowser";
 import DealEditModal from "./DealEditModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
+import { StageStepper } from "./ui/StageStepper";
+import { QuickActions } from "./ui/QuickActions";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -657,12 +659,46 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const spaOk         = commission?.conditions?.spaSignedMet ?? commission?.spaSignedMet ?? false;
   const oqoodOk       = commission?.conditions?.oqoodRegisteredMet ?? (commission as any)?.oqoodMet ?? false;
 
+  // Deal lifecycle stages used by the StageStepper. CANCELLED is a terminal
+  // state that lives outside the happy path — handled via the `failed` flag.
+  const DEAL_PIPELINE = [
+    { key: "RESERVATION_PENDING",   label: "Reserved" },
+    { key: "RESERVATION_CONFIRMED", label: "Confirmed" },
+    { key: "SPA_PENDING",           label: "SPA Pending" },
+    { key: "SPA_SENT",              label: "SPA Sent" },
+    { key: "SPA_SIGNED",            label: "SPA Signed" },
+    { key: "OQOOD_PENDING",         label: "Oqood Pending" },
+    { key: "OQOOD_REGISTERED",      label: "Oqood ✓" },
+    { key: "INSTALLMENTS_ACTIVE",   label: "Installments" },
+    { key: "HANDOVER_PENDING",      label: "Handover" },
+    { key: "COMPLETED",             label: "Completed" },
+  ];
+  const isCancelled = deal.stage === "CANCELLED";
+  // When the deal is cancelled, point the stepper at the stage we *were* in
+  // before cancellation so the user sees how far it had progressed.
+  const lastNonCancelledStage = isCancelled
+    ? (deal.stageHistory?.filter((h) => h.newStage !== "CANCELLED").pop()?.newStage
+       ?? deal.stageHistory?.filter((h) => h.oldStage !== "CANCELLED").pop()?.oldStage
+       ?? deal.stage)
+    : deal.stage;
+  const stepperCurrent = lastNonCancelledStage;
+
   return (
     <div className="p-6 space-y-5 max-w-5xl">
       <Breadcrumbs crumbs={[
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
       ]} />
+
+      {/* Pipeline stepper */}
+      <div className="bg-white rounded-card border border-slate-200 p-4 shadow-card overflow-x-auto">
+        <StageStepper
+          stages={DEAL_PIPELINE}
+          current={stepperCurrent}
+          failed={isCancelled}
+        />
+      </div>
+
       {/* Header */}
       <div>
         <div className="flex items-start justify-between gap-4">
@@ -691,6 +727,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <span className="text-slate-300">·</span>
               <span className="text-sm text-slate-500">{deal.lead.phone}</span>
               {deal.lead.email && <span className="text-sm text-slate-400">{deal.lead.email}</span>}
+              <QuickActions phone={deal.lead.phone} email={deal.lead.email} className="ml-1" />
               {deal.brokerCompany && (
                 <>
                   <span className="text-slate-300">·</span>

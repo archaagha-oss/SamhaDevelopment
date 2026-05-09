@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
+import { Avatar } from "./ui/Avatar";
+import { QuickActions } from "./ui/QuickActions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -628,17 +630,18 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       ]} />
 
       {/* Profile header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="bg-white rounded-card border border-slate-200 p-5 shadow-card">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
-              {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">{lead.firstName} {lead.lastName}</h1>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
+          <div className="flex items-center gap-4 min-w-0">
+            <Avatar name={`${lead.firstName} ${lead.lastName}`} size="lg" />
+            <div className="min-w-0">
+              <h1 className="text-title-lg text-slate-900 truncate">{lead.firstName} {lead.lastName}</h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-sm text-slate-500">{lead.phone}</span>
-                {lead.email && <span className="text-sm text-slate-400">{lead.email}</span>}
+                {lead.email && <span className="text-sm text-slate-400">·  {lead.email}</span>}
+              </div>
+              <div className="mt-2">
+                <QuickActions phone={lead.phone} email={lead.email} />
               </div>
             </div>
           </div>
