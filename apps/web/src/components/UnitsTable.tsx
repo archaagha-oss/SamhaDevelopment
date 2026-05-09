@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { getStatusColor } from "../utils/statusColors";
 import { formatAreaShort } from "../utils/formatArea";
 import UnitModal from "./UnitModal";
-import BulkUnitModal from "./BulkUnitModal";
 import HoverPreview from "./HoverPreview";
 
 interface UnitImageLite {
@@ -119,9 +118,11 @@ export default function UnitsTable({ projectId }: Props) {
 
   // Modals
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
-  const [showBulkModal, setShowBulkModal] = useState(false);
-  // Edit/Create state removed in Phase C.3 — both flows are real routes now
-  // (/projects/:projectId/units/new and /projects/:projectId/units/:unitId/edit).
+  // Edit/Create + bulk state removed in Phase C.3/C.7 — all three flows are
+  // routes now:
+  //   /projects/:projectId/units/new           (single create)
+  //   /projects/:projectId/units/:unitId/edit  (single edit)
+  //   /projects/:projectId/units/bulk          (bulk floor wizard)
 
   // Column visibility (persisted in localStorage)
   const [hiddenColumns, setHiddenColumns] = useState<Set<ColumnKey>>(() => {
@@ -345,7 +346,7 @@ export default function UnitsTable({ projectId }: Props) {
                   + Create unit
                 </button>
                 <button
-                  onClick={() => setShowBulkModal(true)}
+                  onClick={() => projectId && navigate(`/projects/${projectId}/units/bulk`)}
                   className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
                 >
                   ⊞ Add Floor
@@ -805,9 +806,6 @@ export default function UnitsTable({ projectId }: Props) {
       </div>
 
       {/* ── Modals ── */}
-      {showBulkModal && projectId && (
-        <BulkUnitModal projectId={projectId} onClose={() => setShowBulkModal(false)} onCreated={load} />
-      )}
       {selectedUnit && (
         <UnitModal
           unit={selectedUnit}

@@ -12,6 +12,7 @@ const ProjectDetailPage             = lazy(() => import("./components/ProjectDet
 const UnitDetailPage                = lazy(() => import("./components/UnitDetailPage"));
 const UnitsPage                     = lazy(() => import("./components/UnitsPage"));
 const UnitEditPage                  = lazy(() => import("./pages/UnitEditPage"));
+const UnitsBulkPage                 = lazy(() => import("./pages/UnitsBulkPage"));
 const LeadsPage                     = lazy(() => import("./components/LeadsPage"));
 const LeadProfilePage               = lazy(() => import("./components/LeadProfilePage"));
 const LeadEditPage                  = lazy(() => import("./pages/LeadEditPage"));
@@ -109,6 +110,7 @@ export const router = createBrowserRouter([
       { path: "projects/:projectId",                      element: <ProjectDetailPage /> },
       { path: "projects/:projectId/settings",             element: <ProjectSettingsPage /> },
       { path: "projects/:projectId/units/new",            element: <UnitEditPage /> },
+      { path: "projects/:projectId/units/bulk",           element: <UnitsBulkPage /> },
       { path: "projects/:projectId/units/:unitId",        element: <UnitDetailPage /> },
       { path: "projects/:projectId/units/:unitId/edit",   element: <UnitEditPage /> },
       { path: "units",                                    element: <UnitsPage /> },
