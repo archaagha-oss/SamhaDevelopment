@@ -719,7 +719,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 type="button"
                 onClick={() => navigate(`/deals/${dealId}/edit`)}
                 aria-label="Edit deal"
-                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex items-center justify-center min-w-9 min-h-9 text-muted-foreground hover:text-primary hover:bg-info-soft rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="Edit deal"
               >
                 <Pencil className="size-4" aria-hidden="true" />

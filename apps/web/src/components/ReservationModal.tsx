@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { formatAED as fmtAED } from "../lib/format";
 
 interface AvailableUnit {
   id: string;
@@ -17,14 +18,6 @@ interface ReservationModalProps {
   leadId: string;
   leadName?: string;
   onSuccess?: () => void;
-}
-
-function fmtAED(amount: number) {
-  return new Intl.NumberFormat("en-AE", {
-    style: "currency",
-    currency: "AED",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export default function ReservationModal({

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Unit } from "../types";
+import { formatAED } from "../lib/format";
 
 interface Props {
   unit: Unit;
@@ -52,7 +53,7 @@ export default function ActiveDealSummaryCard({ unit }: Props) {
         </span>
         <div className="ml-auto flex items-center gap-3">
           <span className="text-sm font-bold text-foreground">
-            AED {activeDeal.salePrice.toLocaleString("en-AE")}
+            {formatAED(activeDeal.salePrice)}
           </span>
           <button
             type="button"

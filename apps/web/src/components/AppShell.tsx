@@ -8,6 +8,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
 import ErrorBoundary from "./ErrorBoundary";
+import OfflineBanner from "./OfflineBanner";
 import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -233,6 +234,7 @@ export default function AppShell() {
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <OfflineBanner />
         <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-card border-b border-border flex-shrink-0 gap-3">
           <button
             onClick={() => setShowSearch(true)}

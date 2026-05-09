@@ -463,9 +463,9 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                                     type="button"
                                     aria-label="Lead actions"
                                     onClick={() => setOpenCardMenuId(openCardMenuId === lead.id ? null : lead.id)}
-                                    className="p-1 text-muted-foreground/60 hover:text-foreground rounded opacity-0 group-hover:opacity-100 transition-all focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    className="inline-flex items-center justify-center min-w-9 min-h-9 text-muted-foreground/60 hover:text-foreground rounded-md opacity-0 group-hover:opacity-100 transition-all focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   >
-                                    <MoreVertical className="size-3.5" aria-hidden="true" />
+                                    <MoreVertical className="size-4" aria-hidden="true" />
                                   </button>
                                   {openCardMenuId === lead.id && (
                                     <>

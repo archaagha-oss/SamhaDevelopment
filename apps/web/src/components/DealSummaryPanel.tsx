@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { formatAED } from "../lib/format";
 
 interface DealSummaryPanelProps {
   deal: {
@@ -134,7 +135,7 @@ export default function DealSummaryPanel({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                AED {paymentProgress.paid.toLocaleString()} of AED {paymentProgress.total.toLocaleString()}
+                {formatAED(paymentProgress.paid)} of {formatAED(paymentProgress.total)}
               </span>
               <span className="font-medium text-foreground">{paymentProgress.percentage}%</span>
             </div>

@@ -483,9 +483,9 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                         aria-label={`Actions for deal ${deal.dealNumber}`}
                         aria-haspopup="menu"
                         aria-expanded={isMenuOpen}
-                        className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="inline-flex items-center justify-center min-w-9 min-h-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:opacity-60 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        <MoreVertical className="size-3.5" aria-hidden="true" />
+                        <MoreVertical className="size-4" aria-hidden="true" />
                       </button>
                       {isMenuOpen && (
                         <>

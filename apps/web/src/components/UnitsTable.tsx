@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { getStatusColor } from "../utils/statusColors";
 import { formatAreaShort } from "../utils/formatArea";
+import { formatAED } from "../lib/format";
 import UnitModal from "./UnitModal";
 import HoverPreview from "./HoverPreview";
 
@@ -762,7 +763,7 @@ export default function UnitsTable({ projectId }: Props) {
                             className="font-semibold text-foreground hover:text-primary hover:underline text-xs"
                             title="Click to edit price"
                           >
-                            {unit.price.toLocaleString("en-AE")}
+                            {formatAED(unit.price, { bare: true })}
                           </button>
                         )}
                       </td>

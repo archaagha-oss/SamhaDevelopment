@@ -8,6 +8,7 @@ import { PageContainer, PageHeader } from "./layout";
 import { BulkActionBar } from "./data";
 import EmptyState from "./EmptyState";
 import { SkeletonTableRows } from "./Skeleton";
+import { formatAED as fmtAED } from "../lib/format";
 
 interface Lead {
   id: string;
@@ -50,10 +51,6 @@ const STATUS_COLORS: Record<string, string> = {
   EXPIRED:   "bg-muted text-muted-foreground",
   WITHDRAWN: "bg-warning-soft text-warning",
 };
-
-function fmtAED(n: number) {
-  return `AED ${n.toLocaleString("en-AE", { maximumFractionDigits: 0 })}`;
-}
 
 export default function OffersPage() {
   const navigate = useNavigate();

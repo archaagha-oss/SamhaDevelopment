@@ -1,3 +1,5 @@
+import { formatAED } from "../lib/format";
+
 interface CommissionUnlockStatusProps {
   amount: number;
   status: string;
@@ -30,7 +32,7 @@ export default function CommissionUnlockStatus({
         <div>
           <p className="text-sm font-semibold text-foreground">Broker Commission</p>
           <p className="text-2xl font-bold text-chart-7">
-            {amount.toLocaleString()} AED
+            {formatAED(amount)}
           </p>
         </div>
         <span

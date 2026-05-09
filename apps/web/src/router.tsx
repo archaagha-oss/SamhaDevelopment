@@ -66,6 +66,7 @@ const CompliancePage                = lazy(() => import("./pages/CompliancePage"
 const NotificationPreferencesPage   = lazy(() => import("./pages/NotificationPreferencesPage"));
 const SignInPage                    = lazy(() => import("./pages/SignInPage"));
 const SignUpPage                    = lazy(() => import("./pages/SignUpPage"));
+const ForbiddenPage                 = lazy(() => import("./pages/ForbiddenPage"));
 
 // FeatureFlagGate stays eager — it's tiny and used inline below.
 import FeatureFlagGate from "./components/FeatureFlagGate";
@@ -108,6 +109,9 @@ export const router = createBrowserRouter([
   // catch-all sub-routes (verification, MFA, etc.) so we use the splat path.
   { path: "/sign-in/*",                                  element: withSuspense(<SignInPage />) },
   { path: "/sign-up/*",                                  element: withSuspense(<SignUpPage />) },
+  // 403 landing page. Reached when the axios interceptor catches a 403,
+  // or a user opens a deep link their role can't access.
+  { path: "/forbidden",                                  element: withSuspense(<ForbiddenPage />) },
   {
     path: "/",
     element: (

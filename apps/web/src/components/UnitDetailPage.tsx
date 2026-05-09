@@ -6,6 +6,7 @@ import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
 import { formatArea } from "../utils/formatArea";
+import { formatAED } from "../lib/format";
 import { useAgents } from "../hooks/useAgents";
 import UnitHeader from "./UnitHeader";
 import UnitStatusActions from "./UnitStatusActions";
@@ -349,7 +350,7 @@ export default function UnitDetailPage() {
               ) : (
                 <div className="flex items-end gap-3">
                   <p className="text-2xl font-bold text-foreground">
-                    AED {unit.price.toLocaleString("en-AE")}
+                    {formatAED(unit.price)}
                   </p>
                   {priceTrend && (
                     <span className={`text-sm font-semibold mb-0.5 ${parseFloat(priceTrend) >= 0 ? "text-success" : "text-destructive"}`}>
@@ -361,7 +362,7 @@ export default function UnitDetailPage() {
 
               {unit.basePrice && unit.basePrice !== unit.price && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Base: <span className="line-through">AED {unit.basePrice.toLocaleString("en-AE")}</span>
+                  Base: <span className="line-through">{formatAED(unit.basePrice)}</span>
                 </p>
               )}
             </div>

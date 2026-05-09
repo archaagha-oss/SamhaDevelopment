@@ -446,7 +446,7 @@ function ProjectCard({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 rounded-md transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center min-w-9 min-h-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             title="Edit project"
             aria-label={`Edit ${p.name}`}
           >
@@ -551,7 +551,7 @@ function ProjectTable({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onEdit(p); }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="inline-flex items-center justify-center min-w-9 min-h-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       title="Edit project"
                       aria-label={`Edit ${p.name}`}
                     >

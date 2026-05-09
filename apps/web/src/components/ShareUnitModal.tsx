@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatAED as fmtAED } from "../lib/format";
 
 interface UnitInfo {
   unitNumber: string;
@@ -27,10 +28,6 @@ interface Props {
 
 const CHANNEL_LABEL: Record<string, string> = { EMAIL: "Email", WHATSAPP: "WhatsApp", SMS: "SMS" };
 const CHANNEL_ICON: Record<string, string>  = { EMAIL: "✉️", WHATSAPP: "💬", SMS: "📱" };
-
-function fmtAED(n: number) {
-  return `AED ${n.toLocaleString("en-AE")}`;
-}
 
 function defaultBody(unit: UnitInfo, recipientName: string): string {
   const lines = [
