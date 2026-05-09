@@ -584,6 +584,41 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 <span className="text-sm text-muted-foreground">{lead.phone}</span>
                 {lead.email && <span className="text-sm text-muted-foreground">{lead.email}</span>}
               </div>
+              {/* Quick actions — Call / Email / WhatsApp / Log Activity */}
+              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                  >
+                    📞 Call
+                  </a>
+                )}
+                {lead.email && (
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                  >
+                    ✉ Email
+                  </a>
+                )}
+                {lead.phone && (
+                  <a
+                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                  >
+                    💬 WhatsApp
+                  </a>
+                )}
+                <button
+                  onClick={() => { setActiveTab("activity"); setShowActForm(true); }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90"
+                >
+                  + Log Activity
+                </button>
+              </div>
             </div>
           </div>
 
@@ -677,8 +712,289 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         )}
       </div>
 
+      {/* KPI strip — engagement, recency, budget */}
+      {(() => {
+        const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const touchpoints30d = activities.filter((a) => {
+          const t = new Date(a.activityDate ?? a.createdAt).getTime();
+          return t >= thirtyDaysAgoMs;
+        }).length;
+        const latest = activities.length > 0
+          ? activities.reduce((acc, a) => {
+              const aT = new Date(a.activityDate ?? a.createdAt).getTime();
+              const accT = new Date(acc.activityDate ?? acc.createdAt).getTime();
+              return aT > accT ? a : acc;
+            })
+          : null;
+        const budgetLabel = lead.budget
+          ? lead.budget >= 1_000_000
+            ? `AED ${(lead.budget / 1_000_000).toFixed(1)}M`
+            : `AED ${lead.budget.toLocaleString()}`
+          : "—";
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-card rounded-xl border border-border p-4">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Engagement</div>
+              <div className="text-2xl font-bold text-foreground">{touchpoints30d}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Touchpoints (30d)</div>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Last Contact</div>
+              <div className="text-2xl font-bold text-foreground">
+                {latest ? timeAgo(latest.activityDate ?? latest.createdAt) : "Never"}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {latest?.type ? `via ${latest.type.replace(/_/g, " ").toLowerCase()}` : "No activity yet"}
+              </div>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Budget</div>
+              <div className="text-2xl font-bold text-foreground">{budgetLabel}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{lead.source.replace(/_/g, " ")}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left column */}
+        {/* Main column (left, span 2) — tab content + interested units */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Tab content: Activity timeline */}
+          {activeTab === "activity" && (
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground text-sm">Activity Timeline</h3>
+                  <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full font-medium">{activities.length}</span>
+                </div>
+                <button
+                  onClick={() => setShowActForm(!showActForm)}
+                  className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90"
+                >
+                  + Log Activity
+                </button>
+              </div>
+
+              {showActForm && (
+                <form onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => (
+                      <button
+                        key={t} type="button" onClick={() => setActType(t)}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                          actType === t ? "bg-primary text-white" : "bg-card text-muted-foreground border border-border hover:border-primary/40"
+                        }`}
+                      >
+                        {ACTIVITY_ICON[t]} {t.replace("_", " ")}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    required placeholder="Summary *" value={summary}
+                    onChange={(e) => setSummary(e.target.value)} rows={2}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-none"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="Outcome (optional)" value={outcome}
+                      onChange={(e) => setOutcome(e.target.value)}
+                      className="border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring"
+                    />
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Follow-up date</label>
+                      <input
+                        type="datetime-local" value={followUpDate}
+                        onChange={(e) => setFollowUpDate(e.target.value)}
+                        className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={submitting} className={primaryBtn}>
+                      {submitting ? "Saving…" : "Save"}
+                    </button>
+                    <button type="button" onClick={() => setShowActForm(false)} className={cancelBtn}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              <ConversationThread activities={activities} />
+              <ConversationReplyBox
+                leadId={lead.id}
+                availableChannels={(() => {
+                  const out: ("EMAIL" | "WHATSAPP" | "SMS")[] = [];
+                  const pref = lead.communicationPreference;
+                  if (lead.email && !pref?.emailOptOut) out.push("EMAIL");
+                  if (lead.phone && !pref?.whatsappOptOut) out.push("WHATSAPP");
+                  if (lead.phone && !pref?.smsOptOut) out.push("SMS");
+                  return out;
+                })()}
+                onSent={async () => {
+                  const aRes = await axios.get(`/api/leads/${leadId}/activities`);
+                  setActivities(aRes.data);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Tab content: Offers history */}
+          {activeTab === "offers" && (
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Offers <span className="text-muted-foreground font-normal">({offers.length})</span>
+              </h3>
+              {offers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No offers generated yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {offers.map((o, idx) => {
+                    const version = offers.length - idx;
+                    const statusColor: Record<string, string> = {
+                      ACTIVE:    "bg-info-soft text-primary",
+                      ACCEPTED:  "bg-success-soft text-success",
+                      REJECTED:  "bg-destructive-soft text-destructive",
+                      EXPIRED:   "bg-muted text-muted-foreground",
+                      WITHDRAWN: "bg-warning-soft text-warning",
+                    };
+                    return (
+                      <div key={o.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">v{version} — AED {o.offeredPrice.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(o as any).unit?.unitNumber}
+                              {o.paymentPlan ? ` · ${o.paymentPlan.name}` : ""}
+                              {" · "}{fmtDate(o.createdAt)}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusColor[o.status] || "bg-muted text-muted-foreground"}`}>
+                            {o.status}
+                          </span>
+                        </div>
+                        {o.status === "ACTIVE" && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button
+                              onClick={() => handleOfferStatus(o.id, "ACCEPTED")}
+                              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-success rounded-md hover:bg-success/90"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleOfferStatus(o.id, "REJECTED")}
+                              className="px-2.5 py-1 text-[11px] font-semibold text-destructive-foreground bg-destructive rounded-md hover:bg-destructive/90"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => openOfferModal(o.unitId, o)}
+                              className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
+                            >
+                              Revise
+                            </button>
+                            <button
+                              onClick={() => handleOfferStatus(o.id, "WITHDRAWN")}
+                              className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
+                            >
+                              Withdraw
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab content: Deals */}
+          {activeTab === "deals" && (
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Deals <span className="text-muted-foreground font-normal">({lead.deals?.length ?? 0})</span>
+              </h3>
+              {(!lead.deals || lead.deals.length === 0) ? (
+                <p className="text-sm text-muted-foreground">No deals yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...activeDeals, ...inactiveDeals].map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => navigate(`/deals/${d.id}`)}
+                      className="w-full text-left p-3 bg-muted/50 rounded-lg border border-border hover:border-primary/40 hover:bg-info-soft/30 transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-foreground group-hover:text-primary">{d.dealNumber}</span>
+                        <StageBadge kind="deal" stage={d.stage} className="text-[10px]" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Unit {d.unit.unitNumber} · {d.unit.type}
+                      </p>
+                      <p className="text-xs font-medium text-foreground mt-0.5">
+                        AED {d.salePrice.toLocaleString()}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Interested units (always visible) */}
+          <div className="bg-card rounded-xl border border-border p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested Units</h3>
+            {lead.interests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No units linked</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {lead.interests.map((i) => {
+                  const offer = offers.find((o) => o.unitId === i.unitId && o.status === "ACTIVE");
+                  return (
+                    <div key={i.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-foreground">{i.unit.unitNumber}</p>
+                            {i.isPrimary && (
+                              <span className="text-[10px] bg-success-soft text-success px-1.5 py-0.5 rounded font-semibold">Primary</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{i.unit.type.replace(/_/g, " ")} · Floor {i.unit.floor}</p>
+                        </div>
+                        <p className="text-sm font-bold text-primary">AED {i.unit.price.toLocaleString()}</p>
+                      </div>
+                      {offer ? (
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => openReservationFromOffer(offer)}
+                            className="flex-1 text-center py-1.5 text-xs font-semibold text-white bg-success rounded-lg hover:bg-success/90 transition-colors"
+                          >
+                            Create Reservation
+                          </button>
+                          <button
+                            onClick={() => openOfferModal(i.unitId, offer)}
+                            className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
+                          >
+                            Revise
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => openOfferModal(i.unitId)}
+                          className="w-full text-center py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
+                        >
+                          Generate Offer
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right sidebar — metadata */}
         <div className="space-y-4">
           {/* Lead info */}
           <div className="bg-card rounded-xl border border-border p-4">
@@ -760,164 +1076,6 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
           </div>
 
-          {/* Interested units */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested Units</h3>
-            {lead.interests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No units linked</p>
-            ) : (
-              <div className="space-y-2">
-                {lead.interests.map((i) => {
-                  const offer = offers.find((o) => o.unitId === i.unitId && o.status === "ACTIVE");
-                  return (
-                    <div key={i.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-semibold text-foreground">{i.unit.unitNumber}</p>
-                            {i.isPrimary && (
-                              <span className="text-[10px] bg-success-soft text-success px-1.5 py-0.5 rounded font-semibold">Primary</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">{i.unit.type.replace(/_/g, " ")} · Floor {i.unit.floor}</p>
-                        </div>
-                        <p className="text-sm font-bold text-primary">AED {i.unit.price.toLocaleString()}</p>
-                      </div>
-                      {offer ? (
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => openReservationFromOffer(offer)}
-                            className="flex-1 text-center py-1.5 text-xs font-semibold text-white bg-success rounded-lg hover:bg-success/90 transition-colors"
-                          >
-                            Create Reservation
-                          </button>
-                          <button
-                            onClick={() => openOfferModal(i.unitId, offer)}
-                            className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
-                          >
-                            Revise
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => openOfferModal(i.unitId)}
-                          className="w-full text-center py-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
-                        >
-                          Generate Offer
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Deals */}
-          {activeTab === "deals" && (
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Deals <span className="text-muted-foreground font-normal">({lead.deals?.length ?? 0})</span>
-            </h3>
-            {(!lead.deals || lead.deals.length === 0) ? (
-              <p className="text-sm text-muted-foreground">No deals yet</p>
-            ) : (
-              <div className="space-y-2">
-                {[...activeDeals, ...inactiveDeals].map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => navigate(`/deals/${d.id}`)}
-                    className="w-full text-left p-3 bg-muted/50 rounded-lg border border-border hover:border-primary/40 hover:bg-info-soft/30 transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-foreground group-hover:text-primary">{d.dealNumber}</span>
-                      <StageBadge kind="deal" stage={d.stage} className="text-[10px]" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Unit {d.unit.unitNumber} · {d.unit.type}
-                    </p>
-                    <p className="text-xs font-medium text-foreground mt-0.5">
-                      AED {d.salePrice.toLocaleString()}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* Offers history */}
-          {activeTab === "offers" && (
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Offers <span className="text-muted-foreground font-normal">({offers.length})</span>
-            </h3>
-            {offers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No offers generated yet</p>
-            ) : (
-              <div className="space-y-2">
-                {offers.map((o, idx) => {
-                  const version = offers.length - idx;
-                  const statusColor: Record<string, string> = {
-                    ACTIVE:    "bg-info-soft text-primary",
-                    ACCEPTED:  "bg-success-soft text-success",
-                    REJECTED:  "bg-destructive-soft text-destructive",
-                    EXPIRED:   "bg-muted text-muted-foreground",
-                    WITHDRAWN: "bg-warning-soft text-warning",
-                  };
-                  return (
-                    <div key={o.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">v{version} — AED {o.offeredPrice.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(o as any).unit?.unitNumber}
-                            {o.paymentPlan ? ` · ${o.paymentPlan.name}` : ""}
-                            {" · "}{fmtDate(o.createdAt)}
-                          </p>
-                        </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusColor[o.status] || "bg-muted text-muted-foreground"}`}>
-                          {o.status}
-                        </span>
-                      </div>
-                      {o.status === "ACTIVE" && (
-                        <div className="flex gap-1.5 flex-wrap">
-                          <button
-                            onClick={() => handleOfferStatus(o.id, "ACCEPTED")}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-success rounded-md hover:bg-success/90"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleOfferStatus(o.id, "REJECTED")}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-destructive-foreground bg-destructive rounded-md hover:bg-destructive/90"
-                          >
-                            Reject
-                          </button>
-                          <button
-                            onClick={() => openOfferModal(o.unitId, o)}
-                            className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
-                          >
-                            Revise
-                          </button>
-                          <button
-                            onClick={() => handleOfferStatus(o.id, "WITHDRAWN")}
-                            className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-muted"
-                          >
-                            Withdraw
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          )}
-        </div>
-
-        <div>
           {/* Tasks */}
           <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-3">
@@ -984,86 +1142,6 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             )}
           </div>
         </div>
-
-        {/* Activity timeline */}
-        {activeTab === "activity" && (
-        <div className="lg:col-span-2">
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground text-sm">Activity Timeline</h3>
-                <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full font-medium">{activities.length}</span>
-              </div>
-              <button
-                onClick={() => setShowActForm(!showActForm)}
-                className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90"
-              >
-                + Log Activity
-              </button>
-            </div>
-
-            {showActForm && (
-              <form onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => (
-                    <button
-                      key={t} type="button" onClick={() => setActType(t)}
-                      className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
-                        actType === t ? "bg-primary text-white" : "bg-card text-muted-foreground border border-border hover:border-primary/40"
-                      }`}
-                    >
-                      {ACTIVITY_ICON[t]} {t.replace("_", " ")}
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  required placeholder="Summary *" value={summary}
-                  onChange={(e) => setSummary(e.target.value)} rows={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring resize-none"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    placeholder="Outcome (optional)" value={outcome}
-                    onChange={(e) => setOutcome(e.target.value)}
-                    className="border border-border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:border-ring"
-                  />
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Follow-up date</label>
-                    <input
-                      type="datetime-local" value={followUpDate}
-                      onChange={(e) => setFollowUpDate(e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card focus:outline-none focus:border-ring"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button type="submit" disabled={submitting} className={primaryBtn}>
-                    {submitting ? "Saving…" : "Save"}
-                  </button>
-                  <button type="button" onClick={() => setShowActForm(false)} className={cancelBtn}>Cancel</button>
-                </div>
-              </form>
-            )}
-
-            <ConversationThread activities={activities} />
-            <ConversationReplyBox
-              leadId={lead.id}
-              availableChannels={(() => {
-                const out: ("EMAIL" | "WHATSAPP" | "SMS")[] = [];
-                const pref = lead.communicationPreference;
-                if (lead.email && !pref?.emailOptOut) out.push("EMAIL");
-                if (lead.phone && !pref?.whatsappOptOut) out.push("WHATSAPP");
-                if (lead.phone && !pref?.smsOptOut) out.push("SMS");
-                return out;
-              })()}
-              onSent={async () => {
-                const aRes = await axios.get(`/api/leads/${leadId}/activities`);
-                setActivities(aRes.data);
-              }}
-            />
-          </div>
-        </div>
-        )}
       </div>
 
       {/* The inline Edit Lead modal was removed in Phase C.2.
