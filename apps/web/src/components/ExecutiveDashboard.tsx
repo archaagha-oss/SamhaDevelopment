@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
+import OnboardingChecklist from "./OnboardingChecklist";
 
 // ===== Types =====
 interface Overview {
@@ -339,6 +340,9 @@ export default function ExecutiveDashboard(): React.ReactNode {
       />
 
       <PageContainer padding="default" className="space-y-5">
+      {/* ===== Onboarding checklist (renders nothing once done / dismissed) ===== */}
+      <OnboardingChecklist />
+
       {/* ===== KPI Strip ===== */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {kpis.map((k) => (

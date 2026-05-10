@@ -44,6 +44,7 @@ import complianceRoutes from "./routes/compliance";
 // Integrated CRM routes (broker dashboard + finance)
 import brokerDashboardRoutes from "./routes/brokerDashboard";
 import financeRoutes from "./routes/finance";
+import onboardingRoutes from "./routes/onboarding";
 // Phase 4 routes — disabled pending schema migration (Phase, UnitTypePlan,
 // CommissionTier, Invoice, Receipt, Refund, Escrow, Handover, Snag, KYC, etc.)
 // Files are present under src/routes but require ~36 additional schema models.
@@ -227,6 +228,7 @@ app.use("/api/stream", streamRoutes);
 app.use("/api/compliance", complianceRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
+app.use("/api/onboarding", onboardingRoutes);
 
 // ===== 404 HANDLER (must come before the error handler) =====
 app.use((req, res) => {
