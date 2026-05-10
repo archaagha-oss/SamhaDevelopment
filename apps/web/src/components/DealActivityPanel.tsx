@@ -1,14 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DealTimeline from "./DealTimeline";
-
-interface Activity {
-  id: string;
-  type: string;
-  summary: string;
-  activityDate: string;
-  createdBy?: string;
-}
+import ActivityTimeline, { type ActivityTimelineEntry } from "./ActivityTimeline";
 
 interface DealActivityPanelProps {
   dealId: string;
@@ -21,30 +14,18 @@ interface DealActivityPanelProps {
   onActivityUpdate?: () => void;
 }
 
-const activityIcon = (type: string, summary: string): string => {
-  if (type === "CALL") return "📞";
-  if (type === "EMAIL") return "✉️";
-  if (type === "WHATSAPP") return "💬";
-  if (type === "MEETING") return "🤝";
-  if (type === "SITE_VISIT") return "🏢";
-  const s = summary.toLowerCase();
-  if (s.includes("reserved")) return "🔒";
-  if (s.includes("generated") || s.includes("document")) return "📄";
-  if (s.includes("stage changed") || s.includes("→")) return "🔄";
-  if (s.includes("created")) return "✅";
-  if (s.includes("unit") && (s.includes("assign") || s.includes("changed"))) return "🏠";
-  return "📝";
-};
-
-const timeAgo = (dateStr: string): string => {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-};
-
+/**
+ * Side-by-side panel on the deal detail page with two tabs:
+ *   - Timeline: stage-progression milestones (reservation → SPA → Oqood → handover)
+ *     rendered by <DealTimeline>
+ *   - Activity: chronological feed of all activities on the deal (calls,
+ *     emails, WhatsApp, system events…) rendered by the canonical
+ *     <ActivityTimeline> shared with the lead profile and deal detail
+ *     screens. Previously this tab had its own row renderer with a
+ *     different icon set / time-ago helper / sort order; collapsing it
+ *     onto ActivityTimeline means inbound emails, delivery-status badges,
+ *     and bubble layout match across surfaces.
+ */
 export default function DealActivityPanel({
   dealId,
   stage,
@@ -55,14 +36,19 @@ export default function DealActivityPanel({
   completedDate,
 }: DealActivityPanelProps) {
   const [activeTab, setActiveTab] = useState<"timeline" | "activity">("timeline");
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<ActivityTimelineEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const loadActivities = useCallback(async () => {
     try {
       setActivityLoading(true);
-      const response = await axios.get(`/api/deals/${dealId}/activities`);
-      setActivities(response.data.data || []);
+      // GET /api/deals/:id/activities returns a plain array (not { data: [...] }),
+      // matching the lead-activities endpoint shape. Earlier this code read
+      // `response.data.data` which silently resolved to undefined, so the
+      // Activity tab always rendered empty regardless of how many activities
+      // a deal had. Caught while collapsing onto ActivityTimeline.
+      const response = await axios.get<ActivityTimelineEntry[]>(`/api/deals/${dealId}/activities`);
+      setActivities(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Failed to load activities:", error);
     } finally {
@@ -116,34 +102,16 @@ export default function DealActivityPanel({
         )}
 
         {activeTab === "activity" && (
-          <div className="divide-y divide-border">
-            {activityLoading && (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-
-            {!activityLoading && activities.length === 0 && (
-              <div className="px-6 py-8 text-center text-muted-foreground">
-                <p className="text-sm">No activities yet</p>
-              </div>
-            )}
-
-            {!activityLoading && activities.map((activity) => (
-              <div key={activity.id} className="px-6 py-4 hover:bg-muted/50 transition">
-                <div className="flex items-start gap-3">
-                  <span className="text-lg flex-shrink-0 mt-0.5">{activityIcon(activity.type, activity.summary)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground break-words">{activity.summary}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {timeAgo(activity.activityDate)}
-                      {activity.createdBy && <span> · {activity.createdBy}</span>}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          activityLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <ActivityTimeline
+              activities={activities}
+              emptyMessage="No activities yet"
+            />
+          )
         )}
       </div>
     </div>

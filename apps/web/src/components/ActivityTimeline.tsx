@@ -1,6 +1,26 @@
 import { useState, useMemo } from "react";
 
-export interface ConversationActivity {
+/**
+ * Canonical activity-timeline component for the app.
+ *
+ * Renders a chronologically-ordered feed (oldest → newest, chat convention)
+ * with two visual treatments:
+ *   - EMAIL / WHATSAPP / SMS render as inbound/outbound chat bubbles with
+ *     channel-specific tints + delivery-status badges (queued / sent /
+ *     delivered / read / failed / received).
+ *   - Everything else (CALL, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.)
+ *     renders as inline horizontal-line system events.
+ *
+ * Use this on every page that lists activities — lead profile, deal
+ * detail, deal activity panel. Previously DealActivityPanel had its own
+ * single-row renderer and LeadProfilePage's "Activity timeline" tab was
+ * already wrapping this; the 3-into-1 collapse just means the Deal
+ * panel now uses the same component, so icons / time-ago strings /
+ * inbound-vs-outbound treatment all match across surfaces.
+ *
+ * For pages that need to send replies, mount <ActivityReplyBox> after.
+ */
+export interface ActivityTimelineEntry {
   id: string;
   type: string;          // EMAIL | WHATSAPP | SMS | CALL | MEETING | NOTE | STAGE_CHANGE | SITE_VISIT
   direction?: string | null;        // INBOUND | OUTBOUND | null (system events)
@@ -13,8 +33,11 @@ export interface ConversationActivity {
   createdBy?: string | null;
 }
 
+/** @deprecated Use ActivityTimelineEntry. Kept as a re-export for any external imports. */
+export type ConversationActivity = ActivityTimelineEntry;
+
 interface Props {
-  activities: ConversationActivity[];
+  activities: ActivityTimelineEntry[];
   emptyMessage?: string;
 }
 
@@ -74,7 +97,7 @@ function isChannelType(t: string): boolean {
   return t === "EMAIL" || t === "WHATSAPP" || t === "SMS";
 }
 
-export default function ConversationThread({ activities, emptyMessage = "No conversation yet" }: Props) {
+export default function ActivityTimeline({ activities, emptyMessage = "No activity yet" }: Props) {
   // Newest at the bottom (chat convention)
   const ordered = useMemo(() => {
     const list = [...activities];
@@ -103,7 +126,7 @@ export default function ConversationThread({ activities, emptyMessage = "No conv
 
 // ─── Bubble for EMAIL / WHATSAPP / SMS ──────────────────────────────────────
 
-function Bubble({ act }: { act: ConversationActivity }) {
+function Bubble({ act }: { act: ActivityTimelineEntry }) {
   const isOutbound = (act.direction ?? "OUTBOUND") === "OUTBOUND";
   const tint = isOutbound
     ? CHANNEL_TINT_OUT[act.type] ?? "bg-muted/50 border-border text-foreground"
@@ -135,7 +158,7 @@ function Bubble({ act }: { act: ConversationActivity }) {
 
 // ─── Inline system event (CALL / MEETING / NOTE / STAGE_CHANGE / SITE_VISIT) ─
 
-function SystemEvent({ act }: { act: ConversationActivity }) {
+function SystemEvent({ act }: { act: ActivityTimelineEntry }) {
   return (
     <div className="flex items-center gap-2 my-1">
       <div className="flex-1 h-px bg-muted" />
@@ -153,6 +176,10 @@ function SystemEvent({ act }: { act: ConversationActivity }) {
 }
 
 // ─── Reply box (separate component so screens that don't accept inbound replies can omit it) ─
+//
+// Exported as `ActivityReplyBox` (canonical) and `ConversationReplyBox`
+// (legacy alias kept for the existing import sites; remove once those
+// migrate to the new name in a follow-up).
 
 interface ReplyBoxProps {
   /** Lead id (preferred) — recipient inferred server-side */
@@ -166,7 +193,7 @@ interface ReplyBoxProps {
   onSent?: () => void;
 }
 
-export function ConversationReplyBox({
+export function ActivityReplyBox({
   leadId, contactId, dealId, forcedChannel, availableChannels, onSent,
 }: ReplyBoxProps) {
   const [channel, setChannel] = useState<"EMAIL" | "WHATSAPP" | "SMS">(
@@ -259,3 +286,6 @@ export function ConversationReplyBox({
     </div>
   );
 }
+
+/** @deprecated Use ActivityReplyBox. Kept as a re-export for legacy imports. */
+export const ConversationReplyBox = ActivityReplyBox;

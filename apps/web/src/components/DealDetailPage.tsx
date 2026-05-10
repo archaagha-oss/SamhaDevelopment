@@ -14,7 +14,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import DealStepper from "./DealStepper";
 import DealTimeline from "./DealTimeline";
-import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
+import ActivityTimeline, { ActivityReplyBox } from "./ActivityTimeline";
 import { useEventStream } from "../hooks/useEventStream";
 
 interface StageHistoryEntry {
@@ -1553,12 +1553,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     <div className="w-5 h-5 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
-                  <ConversationThread
+                  <ActivityTimeline
                     activities={activities}
                     emptyMessage="No activities yet — log the first one above"
                   />
                 )}
-                <ConversationReplyBox
+                <ActivityReplyBox
                   leadId={deal.lead.id}
                   dealId={deal.id}
                   availableChannels={(() => {

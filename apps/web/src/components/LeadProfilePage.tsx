@@ -9,7 +9,7 @@ import InlineDialog from "./InlineDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
 import { StageBadge } from "@/components/ui/stage-badge";
-import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
+import ActivityTimeline, { ActivityReplyBox } from "./ActivityTimeline";
 import { useEventStream } from "../hooks/useEventStream";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -832,8 +832,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 </form>
               )}
 
-              <ConversationThread activities={activities} />
-              <ConversationReplyBox
+              <ActivityTimeline activities={activities} />
+              <ActivityReplyBox
                 leadId={lead.id}
                 availableChannels={(() => {
                   const out: ("EMAIL" | "WHATSAPP" | "SMS")[] = [];
