@@ -59,11 +59,8 @@ the breakdown:
 
 ### Consolidation plan
 
-1. **Delete `APP-SPECIFICATION-COMPLETE.md`.** Everything in it is in
-   `TECHNICAL-SPECIFICATION.md` (the latter is the authoritative source).
-2. **Move 3 historical week-N summaries to `docs/archive/`.** Their info is
-   rolled up into `INTEGRATED_CRM_EXECUTION_SUMMARY.md`. Saves root clutter
-   without data loss.
+1. ~~**Delete `APP-SPECIFICATION-COMPLETE.md`.**~~ Done in PR #9. Everything in it is in `TECHNICAL-SPECIFICATION.md` (the canonical source).
+2. ~~**Move 3 historical week-N summaries to `docs/archive/`.**~~ Done in PR #9 — `INITIALIZE-SUMMARY.md`, `WEEK1_COMPLETION_SUMMARY.md`, `WEEK2_PROGRESS_SUMMARY.md` moved.
 3. **Mark `COMPLETE_UX_REDESIGN_SUMMARY.md` and `INTEGRATION_GUIDE.md` as
    superseded** by `UX_AUDIT_2_FINDINGS.md` (the latest, most accurate audit).
    Add a banner to each pointing to the audit. They contain real architectural

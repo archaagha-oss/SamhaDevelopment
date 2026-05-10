@@ -69,7 +69,7 @@ UnitsPage
 - ✅ WEEK2_BACKEND_TEST_PLAN.md (350 lines) - 32 test scenarios
 - ✅ DealDetailContent component (320 LOC) - Payments/Documents/Tasks/History
 - ✅ DealDetailLayout refactored (200 LOC) - 3-column integrated design
-- ✅ WEEK2_PROGRESS_SUMMARY.md (380 lines) - Completion status
+- ✅ docs/archive/WEEK2_PROGRESS_SUMMARY.md (380 lines) - Completion status
 
 **Backend Verification Results**:
 
@@ -473,7 +473,7 @@ Columns:
    ```
 
 2. **Review Documentation**
-   - Read `WEEK2_PROGRESS_SUMMARY.md`
+   - Read `docs/archive/WEEK2_PROGRESS_SUMMARY.md`
    - Review `WEEK3_DASHBOARD_ROADMAP.md`
    - Check `WEEK2_BACKEND_TEST_PLAN.md` for test scenarios
 
@@ -524,9 +524,9 @@ Columns:
 ## Files & Artifacts
 
 ### Documentation Files
-- `WEEK1_COMPLETION_SUMMARY.md` - Week 1 status
+- `docs/archive/WEEK1_COMPLETION_SUMMARY.md` - Week 1 status
 - `WEEK2_BACKEND_TEST_PLAN.md` - Backend test scenarios (32 tests)
-- `WEEK2_PROGRESS_SUMMARY.md` - Week 2 completion
+- `docs/archive/WEEK2_PROGRESS_SUMMARY.md` - Week 2 completion
 - `WEEK3_DASHBOARD_ROADMAP.md` - Week 3 detailed plan
 - `INTEGRATED_CRM_EXECUTION_SUMMARY.md` - This file
 
@@ -619,7 +619,7 @@ Dashboard implementation is straightforward given the stable backend APIs. Mobil
 
 ### Contact
 For questions or concerns about this roadmap, refer to the specific week documents:
-- Week 1: WEEK1_COMPLETION_SUMMARY.md
-- Week 2: WEEK2_PROGRESS_SUMMARY.md
+- Week 1: docs/archive/WEEK1_COMPLETION_SUMMARY.md
+- Week 2: docs/archive/WEEK2_PROGRESS_SUMMARY.md
 - Week 3: WEEK3_DASHBOARD_ROADMAP.md
 - Tests: WEEK2_BACKEND_TEST_PLAN.md

@@ -265,7 +265,7 @@ Security Scan:            ✅ No vulnerabilities (OWASP)
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| WEEK1_COMPLETION_SUMMARY.md | Phase 1 handoff | PM, Tech Lead |
+| docs/archive/WEEK1_COMPLETION_SUMMARY.md | Phase 1 handoff (historical) | PM, Tech Lead |
 | IMPLEMENTATION_STATUS_ASSESSMENT.md | Current state analysis | Dev Team |
 | DEALDETAILPAGE_REFACTORING_GUIDE.md | Technical guide | Frontend Dev |
 | COMPREHENSIVE_5WEEK_PLAN.md | Full roadmap + testing | Dev Team, PM |
