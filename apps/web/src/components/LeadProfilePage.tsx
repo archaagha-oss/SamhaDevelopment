@@ -5,6 +5,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Phone, Mail, MessageCircle, Plus } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import InlineDialog from "./InlineDialog";
 import Breadcrumbs from "./Breadcrumbs";
 import UnitInterestPicker from "./UnitInterestPicker";
 import { StageBadge } from "@/components/ui/stage-badge";
@@ -97,15 +98,27 @@ function timeAgo(dateStr: string): string {
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <InlineDialog
+      open
+      onClose={onClose}
+      ariaLabel={title}
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+    >
       <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl my-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="font-semibold text-foreground text-base">{title}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            &times;
+          </button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
-    </div>
+    </InlineDialog>
   );
 }
 

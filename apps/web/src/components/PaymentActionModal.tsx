@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import InlineDialog from "./InlineDialog";
 
 export type PaymentAction =
   | "MARK_PAID"
@@ -107,8 +108,14 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
   const isConfirmOnly = action === "PDC_CLEARED" || action === "PDC_BOUNCED";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+    <InlineDialog
+      open
+      onClose={onClose}
+      ariaLabel={ACTION_TITLES[action]}
+      overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      contentClassName="bg-card rounded-2xl shadow-xl w-full max-w-md focus:outline-none"
+    >
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
@@ -268,6 +275,6 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           </button>
         </div>
       </div>
-    </div>
+    </InlineDialog>
   );
 }

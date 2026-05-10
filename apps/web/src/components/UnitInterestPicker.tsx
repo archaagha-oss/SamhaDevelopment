@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 interface UnitOption {
   id: string;
@@ -33,6 +34,8 @@ export default function UnitInterestPicker({
   const [localSelected, setLocalSelected] = useState(new Set(selectedUnitIds));
   const [localPrimary, setLocalPrimary] = useState(primaryUnitId);
   const [loading, setLoading] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: isOpen, onClose, containerRef: drawerRef });
 
   const projects = [...new Set(availableUnits.map((u) => u.project?.name).filter(Boolean))];
 
@@ -86,10 +89,17 @@ export default function UnitInterestPicker({
   return (
     <div className="fixed inset-0 z-50">
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden="true" />
 
       {/* Drawer */}
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-card shadow-2xl flex flex-col">
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add units of interest"
+        tabIndex={-1}
+        className="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-card shadow-2xl flex flex-col focus:outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <h2 className="font-bold text-foreground text-lg">Add Units of Interest</h2>

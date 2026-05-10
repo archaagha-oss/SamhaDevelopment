@@ -13,6 +13,7 @@ import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Spinner } from "../components/ui/spinner";
+import InlineDialog from "../components/InlineDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 interface TriageRow {
@@ -344,7 +345,7 @@ function AttachToLeadModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <InlineDialog open onClose={onClose} ariaLabel="Attach to lead">
       <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
           <h3 className="font-semibold text-foreground text-sm">Attach to lead</h3>
@@ -400,6 +401,6 @@ function AttachToLeadModal({
           </div>
         </div>
       </div>
-    </div>
+    </InlineDialog>
   );
 }

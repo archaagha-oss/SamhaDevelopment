@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Building2, Users } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
+import InlineDialog from "./InlineDialog";
 import { getBrokerStatusColor } from "../utils/statusColors";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -736,50 +737,60 @@ export default function BrokerPage() {
       )}
 
       {/* Create company modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
-              <h2 className="font-bold text-foreground">Create broker</h2>
-              <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
-            </div>
-            <form onSubmit={handleCreate} className="px-6 py-5 space-y-0">
-              <CompanyFormFields f={form} setF={setForm} />
-              <div className="flex gap-3 pt-5">
-                <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Create</button>
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              </div>
-            </form>
+      <InlineDialog
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        ariaLabel="Create broker"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+            <h2 className="font-bold text-foreground">Create broker</h2>
+            <button onClick={() => setShowForm(false)} aria-label="Close dialog" className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">×</button>
           </div>
+          <form onSubmit={handleCreate} className="px-6 py-5 space-y-0">
+            <CompanyFormFields f={form} setF={setForm} />
+            <div className="flex gap-3 pt-5">
+              <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Create</button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            </div>
+          </form>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Edit company modal */}
-      {showEditForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
-              <h2 className="font-bold text-foreground">Edit broker</h2>
-              <button onClick={() => setShowEditForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
-            </div>
-            <form onSubmit={handleEdit} className="px-6 py-5 space-y-0">
-              <CompanyFormFields f={editForm} setF={setEditForm} />
-              <div className="flex gap-3 pt-5">
-                <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Save changes</button>
-                <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              </div>
-            </form>
+      <InlineDialog
+        open={showEditForm}
+        onClose={() => setShowEditForm(false)}
+        ariaLabel="Edit broker"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl my-8">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+            <h2 className="font-bold text-foreground">Edit broker</h2>
+            <button onClick={() => setShowEditForm(false)} aria-label="Close dialog" className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">×</button>
           </div>
+          <form onSubmit={handleEdit} className="px-6 py-5 space-y-0">
+            <CompanyFormFields f={editForm} setF={setEditForm} />
+            <div className="flex gap-3 pt-5">
+              <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 text-sm">Save changes</button>
+              <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            </div>
+          </form>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Add agent modal */}
-      {showAgentForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-8">
+      <InlineDialog
+        open={showAgentForm}
+        onClose={() => setShowAgentForm(false)}
+        ariaLabel="Add agent"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-8">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
               <h2 className="font-bold text-foreground">Add Agent</h2>
-              <button onClick={() => setShowAgentForm(false)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
+              <button onClick={() => setShowAgentForm(false)} aria-label="Close dialog" className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">×</button>
             </div>
             <form onSubmit={handleAddAgent} className="px-6 py-5">
               {/* Identity */}
@@ -864,9 +875,8 @@ export default function BrokerPage() {
                 <button type="button" onClick={() => setShowAgentForm(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </InlineDialog>
 
       <ConfirmDialog
         open={confirmDeleteCompany}

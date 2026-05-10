@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import InlineDialog from "./InlineDialog";
 
 interface DealDetailContentProps {
   dealId: string;
@@ -274,51 +275,54 @@ export default function DealDetailContent({
       </div>
 
       {/* Mark Payment Modal */}
-      {showMarkPaidModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Mark Payment as Paid</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Amount (AED)
-                </label>
-                <input
-                  type="number"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={paidDate}
-                  onChange={(e) => setPaidDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button
-                  onClick={() => setShowMarkPaidModal(null)}
-                  className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted/50 text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleMarkPaymentPaid(showMarkPaidModal)}
-                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm font-medium"
-                >
-                  Mark as Paid
-                </button>
-              </div>
+      <InlineDialog
+        open={!!showMarkPaidModal}
+        onClose={() => setShowMarkPaidModal(null)}
+        ariaLabel="Mark payment as paid"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="bg-card rounded-lg p-6 max-w-sm w-full mx-4">
+          <h3 className="text-lg font-semibold mb-4">Mark Payment as Paid</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Amount (AED)
+              </label>
+              <input
+                type="number"
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                value={paidDate}
+                onChange={(e) => setPaidDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <button
+                onClick={() => setShowMarkPaidModal(null)}
+                className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted/50 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => showMarkPaidModal && handleMarkPaymentPaid(showMarkPaidModal)}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm font-medium"
+              >
+                Mark as Paid
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </InlineDialog>
     </div>
   );
 }

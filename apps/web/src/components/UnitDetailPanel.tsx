@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Unit, UnitStatusHistory } from "../types";
 import { getStatusColor } from "../utils/statusColors";
 import axios from "axios";
 import { toast } from "sonner";
+import { useModalA11y } from "../hooks/useModalA11y";
 import CreateOfferModal from "./CreateOfferModal";
 
 interface UnitDetailPanelProps {
@@ -44,6 +45,8 @@ export default function UnitDetailPanel({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const statusColor = getStatusColor(unit.status);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: isOpen, onClose, containerRef: panelRef });
 
   React.useEffect(() => {
     if (isOpen && unit.id) {
@@ -125,14 +128,21 @@ export default function UnitDetailPanel({
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       {/* Slide-over Panel */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto ${
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Unit ${unit.unitNumber}`}
+        aria-hidden={!isOpen}
+        tabIndex={-1}
+        className={`fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto focus:outline-none ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

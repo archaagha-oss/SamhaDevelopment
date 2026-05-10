@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import InlineDialog from "./InlineDialog";
 
 interface SearchResult {
   id: string;
@@ -224,17 +225,14 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose, visible, highlightedIndex, handleSelect, activeTab, totalCount]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] px-4 bg-black/70 backdrop-blur-sm"
-      onClick={onClose}
+    <InlineDialog
+      open={open}
+      onClose={onClose}
+      ariaLabel="Global search"
+      overlayClassName="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] px-4 bg-black/70 backdrop-blur-sm"
+      contentClassName="bg-card rounded-2xl shadow-2xl w-full max-w-2xl border border-border overflow-hidden focus:outline-none"
     >
-      <div
-        className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl border border-border overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Search bar */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
           <span className="text-muted-foreground text-lg flex-shrink-0">🔍</span>
@@ -345,7 +343,6 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
             <kbd className="font-mono bg-muted px-1 rounded">Esc</kbd> close
           </span>
         </div>
-      </div>
-    </div>
+    </InlineDialog>
   );
 }

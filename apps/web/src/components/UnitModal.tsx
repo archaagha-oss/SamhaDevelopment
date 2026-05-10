@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnitGallery from "./UnitGallery";
 import { formatArea } from "../utils/formatArea";
+import { useModalA11y } from "../hooks/useModalA11y";
 import { formatAED } from "../lib/format";
 
 interface Unit {
@@ -91,6 +92,8 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullUnit, setFullUnit] = useState<any>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: true, onClose, containerRef: dialogRef });
   const [historyOpen, setHistoryOpen] = useState(false);
   const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -174,12 +177,18 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="
-        fixed bg-card shadow-2xl flex flex-col overflow-hidden
-        left-0 right-0 bottom-0 top-16 rounded-t-2xl
-        sm:left-auto sm:top-0 sm:bottom-0 sm:right-0 sm:rounded-none sm:rounded-l-2xl sm:w-[420px] sm:max-w-full
-      ">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Unit ${currentUnit.unitNumber}`}
+        tabIndex={-1}
+        className="
+          fixed bg-card shadow-2xl flex flex-col overflow-hidden focus:outline-none
+          left-0 right-0 bottom-0 top-16 rounded-t-2xl
+          sm:left-auto sm:top-0 sm:bottom-0 sm:right-0 sm:rounded-none sm:rounded-l-2xl sm:w-[420px] sm:max-w-full
+        ">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card flex-shrink-0">
           <div>

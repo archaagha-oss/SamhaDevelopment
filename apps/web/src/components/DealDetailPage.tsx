@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
+import InlineDialog from "./InlineDialog";
 import { Pencil, Copy, Check, ClipboardList, Wallet, AlertTriangle, Home } from "lucide-react";
 import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
@@ -1131,32 +1132,35 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           })()}
 
           {/* Regenerate Sales Offer confirmation modal */}
-          {showRegenSalesOffer && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6">
-                <h3 className="text-base font-bold text-foreground mb-2">Generate New Version?</h3>
-                <p className="text-sm text-muted-foreground mb-5">
-                  This will create a new version of the Sales Offer capturing the current deal
-                  data. The existing version will remain accessible in the history.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => setShowRegenSalesOffer(false)}
-                    className="px-4 py-2 text-sm font-semibold text-muted-foreground bg-muted rounded-lg hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { setShowRegenSalesOffer(false); handleGenerateDocument("SALES_OFFER"); }}
-                    disabled={!!generatingDoc}
-                    className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate New Version"}
-                  </button>
-                </div>
+          <InlineDialog
+            open={showRegenSalesOffer}
+            onClose={() => setShowRegenSalesOffer(false)}
+            ariaLabel="Generate new sales offer version"
+            overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          >
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6">
+              <h3 className="text-base font-bold text-foreground mb-2">Generate New Version?</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                This will create a new version of the Sales Offer capturing the current deal
+                data. The existing version will remain accessible in the history.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowRegenSalesOffer(false)}
+                  className="px-4 py-2 text-sm font-semibold text-muted-foreground bg-muted rounded-lg hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowRegenSalesOffer(false); handleGenerateDocument("SALES_OFFER"); }}
+                  disabled={!!generatingDoc}
+                  className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate New Version"}
+                </button>
               </div>
             </div>
-          )}
+          </InlineDialog>
 
           {/* ── Notes ───────────────────────────────────────────────────────── */}
           <div className="bg-card rounded-xl border border-border p-4">
@@ -1818,223 +1822,232 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       </div>
 
       {/* ── Reserve Unit Confirmation Modal ───────────────────────────────────── */}
-      {showReserveConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-5 border-b border-border">
-              <h3 className="font-bold text-foreground text-lg">Confirm Reservation</h3>
+      <InlineDialog
+        open={showReserveConfirm}
+        onClose={() => setShowReserveConfirm(false)}
+        ariaLabel="Confirm reservation"
+        overlayClassName="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
+          <div className="px-6 py-5 border-b border-border">
+            <h3 className="font-bold text-foreground text-lg">Confirm Reservation</h3>
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <div className="bg-warning-soft border border-warning/30 rounded-xl p-4">
+              <p className="text-sm text-warning-soft-foreground font-medium">
+                This will lock Unit <span className="font-bold">{deal?.unit.unitNumber}</span> and prevent any other deal from booking it.
+              </p>
+              <p className="text-xs text-warning mt-1.5">This action cannot be undone by agents. Only an Admin can release a reserved unit.</p>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className="bg-warning-soft border border-warning/30 rounded-xl p-4">
-                <p className="text-sm text-warning-soft-foreground font-medium">
-                  This will lock Unit <span className="font-bold">{deal?.unit.unitNumber}</span> and prevent any other deal from booking it.
-                </p>
-                <p className="text-xs text-warning mt-1.5">This action cannot be undone by agents. Only an Admin can release a reserved unit.</p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Buyer</span>
+                <span className="font-medium">{deal?.lead.firstName} {deal?.lead.lastName}</span>
               </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Buyer</span>
-                  <span className="font-medium">{deal?.lead.firstName} {deal?.lead.lastName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Unit</span>
-                  <span className="font-medium">{deal?.unit.unitNumber} · {deal?.unit.type.replace(/_/g, " ")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price</span>
-                  <span className="font-bold text-primary">AED {deal?.salePrice.toLocaleString()}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Unit</span>
+                <span className="font-medium">{deal?.unit.unitNumber} · {deal?.unit.type.replace(/_/g, " ")}</span>
               </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={confirmReserveUnit}
-                  disabled={reserving}
-                  className="flex-1 py-2.5 bg-success text-white text-sm font-bold rounded-xl hover:bg-success/90 disabled:opacity-50 transition-colors"
-                >
-                  {reserving ? "Reserving…" : "Confirm — Reserve Unit"}
-                </button>
-                <button
-                  onClick={() => setShowReserveConfirm(false)}
-                  className="px-5 py-2.5 bg-muted text-foreground text-sm font-semibold rounded-xl hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Price</span>
+                <span className="font-bold text-primary">AED {deal?.salePrice.toLocaleString()}</span>
               </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={confirmReserveUnit}
+                disabled={reserving}
+                className="flex-1 py-2.5 bg-success text-white text-sm font-bold rounded-xl hover:bg-success/90 disabled:opacity-50 transition-colors"
+              >
+                {reserving ? "Reserving…" : "Confirm — Reserve Unit"}
+              </button>
+              <button
+                onClick={() => setShowReserveConfirm(false)}
+                className="px-5 py-2.5 bg-muted text-foreground text-sm font-semibold rounded-xl hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Cancel Deal Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Cancel Deal</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
-            </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
-                <textarea
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="e.g. Client withdrew, financing fell through…"
-                  rows={3}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-destructive/30 resize-none"
-                />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => { setShowCancelModal(false); setCancelReason(""); }} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
-                Keep Deal
-              </button>
-              <button
-                onClick={handleCancelDeal}
-                disabled={!cancelReason.trim() || cancelling}
-                className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
-              >
-                {cancelling ? "Cancelling…" : "Cancel Deal"}
-              </button>
+      <InlineDialog
+        open={showCancelModal}
+        onClose={() => { setShowCancelModal(false); setCancelReason(""); }}
+        ariaLabel="Cancel deal"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Cancel Deal</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Client withdrew, financing fell through…"
+                rows={3}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-destructive/30 resize-none"
+              />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => { setShowCancelModal(false); setCancelReason(""); }} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
+              Keep Deal
+            </button>
+            <button
+              onClick={handleCancelDeal}
+              disabled={!cancelReason.trim() || cancelling}
+              className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
+            >
+              {cancelling ? "Cancelling…" : "Cancel Deal"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Mark Paid Modal */}
-      {showMarkPaidModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Mark Payment as Paid</h3>
-            </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
-                <select
-                  value={paidMethod}
-                  onChange={(e) => setPaidMethod(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                >
-                  {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
-                    <option key={m} value={m}>{m.replace(/_/g," ")}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Date</label>
-                <input
-                  type="date"
-                  value={paidDate}
-                  onChange={(e) => setPaidDate(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
-                <input
-                  type="text"
-                  value={paidRef}
-                  onChange={(e) => setPaidRef(e.target.value)}
-                  placeholder="e.g. TXN-12345"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
-                <textarea
-                  value={paidNotes}
-                  onChange={(e) => setPaidNotes(e.target.value)}
-                  placeholder="Optional notes…"
-                  rows={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
-                />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowMarkPaidModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
-                Cancel
-              </button>
-              <button
-                onClick={confirmMarkPaid}
-                disabled={payingId !== null}
-                className="flex-1 py-2.5 bg-success text-white font-semibold rounded-lg hover:bg-success/90 text-sm disabled:opacity-50"
+      <InlineDialog
+        open={!!showMarkPaidModal}
+        onClose={() => setShowMarkPaidModal(null)}
+        ariaLabel="Mark payment as paid"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Mark Payment as Paid</h3>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
+              <select
+                value={paidMethod}
+                onChange={(e) => setPaidMethod(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               >
-                {payingId ? "Saving…" : "Confirm Paid"}
-              </button>
+                {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
+                  <option key={m} value={m}>{m.replace(/_/g," ")}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Date</label>
+              <input
+                type="date"
+                value={paidDate}
+                onChange={(e) => setPaidDate(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
+              <input
+                type="text"
+                value={paidRef}
+                onChange={(e) => setPaidRef(e.target.value)}
+                placeholder="e.g. TXN-12345"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
+              <textarea
+                value={paidNotes}
+                onChange={(e) => setPaidNotes(e.target.value)}
+                placeholder="Optional notes…"
+                rows={2}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
+              />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setShowMarkPaidModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
+              Cancel
+            </button>
+            <button
+              onClick={confirmMarkPaid}
+              disabled={payingId !== null}
+              className="flex-1 py-2.5 bg-success text-white font-semibold rounded-lg hover:bg-success/90 text-sm disabled:opacity-50"
+            >
+              {payingId ? "Saving…" : "Confirm Paid"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Partial Payment Modal */}
-      {showPartialModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Record Partial Payment</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Enter the amount received so far.</p>
+      <InlineDialog
+        open={!!showPartialModal}
+        onClose={() => setShowPartialModal(null)}
+        ariaLabel="Record partial payment"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Record Partial Payment</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Enter the amount received so far.</p>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
+              <input
+                type="number"
+                min="1"
+                value={partialAmount}
+                onChange={(e) => setPartialAmount(e.target.value)}
+                placeholder="e.g. 50000"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+              />
             </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={partialAmount}
-                  onChange={(e) => setPartialAmount(e.target.value)}
-                  placeholder="e.g. 50000"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
-                <select
-                  value={partialMethod}
-                  onChange={(e) => setPartialMethod(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                >
-                  {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
-                    <option key={m} value={m}>{m.replace(/_/g," ")}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
-                <input
-                  type="text"
-                  value={partialRef}
-                  onChange={(e) => setPartialRef(e.target.value)}
-                  placeholder="e.g. TXN-12345"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
-                <textarea
-                  value={partialNotes}
-                  onChange={(e) => setPartialNotes(e.target.value)}
-                  placeholder="Optional notes…"
-                  rows={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
-                />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPartialModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
-                Cancel
-              </button>
-              <button
-                onClick={confirmPartial}
-                disabled={submittingPartial || !partialAmount || parseFloat(partialAmount) <= 0}
-                className="flex-1 py-2.5 bg-warning text-warning-foreground font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50"
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
+              <select
+                value={partialMethod}
+                onChange={(e) => setPartialMethod(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
               >
-                {submittingPartial ? "Saving…" : "Record Partial"}
-              </button>
+                {["BANK_TRANSFER","CASH","CHEQUE","CARD","CRYPTO"].map((m) => (
+                  <option key={m} value={m}>{m.replace(/_/g," ")}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference / Receipt No.</label>
+              <input
+                type="text"
+                value={partialRef}
+                onChange={(e) => setPartialRef(e.target.value)}
+                placeholder="e.g. TXN-12345"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
+              <textarea
+                value={partialNotes}
+                onChange={(e) => setPartialNotes(e.target.value)}
+                placeholder="Optional notes…"
+                rows={2}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
+              />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setShowPartialModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">
+              Cancel
+            </button>
+            <button
+              onClick={confirmPartial}
+              disabled={submittingPartial || !partialAmount || parseFloat(partialAmount) <= 0}
+              className="flex-1 py-2.5 bg-warning text-warning-foreground font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50"
+            >
+              {submittingPartial ? "Saving…" : "Record Partial"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Document Upload Modal */}
       {showDocumentUploadModal && (
@@ -2048,103 +2061,109 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
 
       {/* PDC Modal */}
-      {showPdcModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Register Post-Dated Cheque</h3>
+      <InlineDialog
+        open={!!showPdcModal}
+        onClose={() => setShowPdcModal(null)}
+        ariaLabel="Register post-dated cheque"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Register Post-Dated Cheque</h3>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Number</label>
+              <input type="text" value={pdcForm.pdcNumber} onChange={(e) => setPdcForm((f) => ({...f, pdcNumber: e.target.value}))}
+                placeholder="e.g. 001234" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Number</label>
-                <input type="text" value={pdcForm.pdcNumber} onChange={(e) => setPdcForm((f) => ({...f, pdcNumber: e.target.value}))}
-                  placeholder="e.g. 001234" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Bank</label>
-                <input type="text" value={pdcForm.pdcBank} onChange={(e) => setPdcForm((f) => ({...f, pdcBank: e.target.value}))}
-                  placeholder="e.g. Emirates NBD" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Date</label>
-                <input type="date" value={pdcForm.pdcDate} onChange={(e) => setPdcForm((f) => ({...f, pdcDate: e.target.value}))}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Bank</label>
+              <input type="text" value={pdcForm.pdcBank} onChange={(e) => setPdcForm((f) => ({...f, pdcBank: e.target.value}))}
+                placeholder="e.g. Emirates NBD" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowPdcModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              <button onClick={confirmPdc} disabled={pdcId !== null} className="flex-1 py-2.5 bg-warning text-white font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50">
-                {pdcId ? "Saving…" : "Register PDC"}
-              </button>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Date</label>
+              <input type="date" value={pdcForm.pdcDate} onChange={(e) => setPdcForm((f) => ({...f, pdcDate: e.target.value}))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setShowPdcModal(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            <button onClick={confirmPdc} disabled={pdcId !== null} className="flex-1 py-2.5 bg-warning text-white font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50">
+              {pdcId ? "Saving…" : "Register PDC"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Waive Payment Modal */}
-      {waiveId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Waive Payment</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">This removes the payment from collection obligations.</p>
-            </div>
-            <div className="px-6 py-4">
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
-              <textarea value={waiveReason} onChange={(e) => setWaiveReason(e.target.value)}
-                placeholder="e.g. Developer incentive, agreed waiver…"
-                rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setWaiveId(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              <button onClick={confirmWaive} disabled={submittingWaive || !waiveReason.trim()}
-                className="flex-1 py-2.5 bg-neutral-700 text-white font-semibold rounded-lg hover:bg-neutral-600 text-sm disabled:opacity-50">
-                {submittingWaive ? "Waiving…" : "Waive Payment"}
-              </button>
-            </div>
+      <InlineDialog
+        open={!!waiveId}
+        onClose={() => setWaiveId(null)}
+        ariaLabel="Waive payment"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Waive Payment</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">This removes the payment from collection obligations.</p>
+          </div>
+          <div className="px-6 py-4">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
+            <textarea value={waiveReason} onChange={(e) => setWaiveReason(e.target.value)}
+              placeholder="e.g. Developer incentive, agreed waiver…"
+              rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
+          </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setWaiveId(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            <button onClick={confirmWaive} disabled={submittingWaive || !waiveReason.trim()}
+              className="flex-1 py-2.5 bg-neutral-700 text-white font-semibold rounded-lg hover:bg-neutral-600 text-sm disabled:opacity-50">
+              {submittingWaive ? "Waiving…" : "Waive Payment"}
+            </button>
           </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* Add Custom Milestone Modal */}
-      {showAddMilestone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Add Custom Milestone</h3>
+      <InlineDialog
+        open={showAddMilestone}
+        onClose={() => setShowAddMilestone(false)}
+        ariaLabel="Add custom milestone"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Add Custom Milestone</h3>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Label *</label>
+              <input type="text" value={milestoneForm.label} onChange={(e) => setMilestoneForm((f) => ({...f, label: e.target.value}))}
+                placeholder="e.g. Handover Balance" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Label *</label>
-                <input type="text" value={milestoneForm.label} onChange={(e) => setMilestoneForm((f) => ({...f, label: e.target.value}))}
-                  placeholder="e.g. Handover Balance" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (AED) *</label>
-                <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
-                  placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
-                <input type="date" value={milestoneForm.dueDate} onChange={(e) => setMilestoneForm((f) => ({...f, dueDate: e.target.value}))}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
-                <input type="text" value={milestoneForm.notes} onChange={(e) => setMilestoneForm((f) => ({...f, notes: e.target.value}))}
-                  placeholder="Optional" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (AED) *</label>
+              <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
+                placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowAddMilestone(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              <button onClick={confirmAddMilestone} disabled={addingMilestone || !milestoneForm.label || !milestoneForm.amount || !milestoneForm.dueDate}
-                className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
-                {addingMilestone ? "Adding…" : "Add Milestone"}
-              </button>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
+              <input type="date" value={milestoneForm.dueDate} onChange={(e) => setMilestoneForm((f) => ({...f, dueDate: e.target.value}))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
+              <input type="text" value={milestoneForm.notes} onChange={(e) => setMilestoneForm((f) => ({...f, notes: e.target.value}))}
+                placeholder="Optional" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setShowAddMilestone(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            <button onClick={confirmAddMilestone} disabled={addingMilestone || !milestoneForm.label || !milestoneForm.amount || !milestoneForm.dueDate}
+              className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
+              {addingMilestone ? "Adding…" : "Add Milestone"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
 
       {/* ── Sticky bottom primary action ──────────────────────────────────── */}
       {(() => {
@@ -2200,37 +2219,39 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       })()}
 
       {/* Restructure Schedule Modal */}
-      {showRestructure && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Restructure Payment Schedule</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Shifts all future PENDING payments by N days.</p>
+      <InlineDialog
+        open={showRestructure}
+        onClose={() => setShowRestructure(false)}
+        ariaLabel="Restructure payment schedule"
+      >
+        <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="font-bold text-foreground">Restructure Payment Schedule</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Shifts all future PENDING payments by N days.</p>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Shift by (days) *</label>
+              <input type="number" value={restructureDays} onChange={(e) => setRestructureDays(e.target.value)}
+                placeholder="e.g. 30 (positive = later, negative = earlier)"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
-            <div className="px-6 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Shift by (days) *</label>
-                <input type="number" value={restructureDays} onChange={(e) => setRestructureDays(e.target.value)}
-                  placeholder="e.g. 30 (positive = later, negative = earlier)"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
-                <textarea value={restructureReason} onChange={(e) => setRestructureReason(e.target.value)}
-                  placeholder="e.g. Construction delay, handover pushed to Q3 2026…"
-                  rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
-              </div>
-            </div>
-            <div className="px-6 pb-5 flex gap-3">
-              <button onClick={() => setShowRestructure(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
-              <button onClick={confirmRestructure} disabled={submittingRestructure || !restructureDays || !restructureReason.trim()}
-                className="flex-1 py-2.5 bg-accent-2 text-accent-2-foreground font-semibold rounded-lg hover:bg-accent-2 text-sm disabled:opacity-50">
-                {submittingRestructure ? "Restructuring…" : "Apply Shift"}
-              </button>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason *</label>
+              <textarea value={restructureReason} onChange={(e) => setRestructureReason(e.target.value)}
+                placeholder="e.g. Construction delay, handover pushed to Q3 2026…"
+                rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none" />
             </div>
           </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button onClick={() => setShowRestructure(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
+            <button onClick={confirmRestructure} disabled={submittingRestructure || !restructureDays || !restructureReason.trim()}
+              className="flex-1 py-2.5 bg-accent-2 text-accent-2-foreground font-semibold rounded-lg hover:bg-accent-2 text-sm disabled:opacity-50">
+              {submittingRestructure ? "Restructuring…" : "Apply Shift"}
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
       {showPurchasersModal && dealId && (
         <DealPurchasersModal
           dealId={dealId}
@@ -2250,52 +2271,55 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       />
 
       {/* Pause Reminders Modal */}
-      {showPauseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="px-6 py-5 border-b border-border">
-              <h3 className="text-base font-bold text-foreground">Pause Payment Reminders</h3>
-              <p className="text-xs text-muted-foreground mt-1">No automated emails will be sent while paused.</p>
+      <InlineDialog
+        open={showPauseModal}
+        onClose={() => setShowPauseModal(false)}
+        ariaLabel="Pause payment reminders"
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      >
+        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm">
+          <div className="px-6 py-5 border-b border-border">
+            <h3 className="text-base font-bold text-foreground">Pause Payment Reminders</h3>
+            <p className="text-xs text-muted-foreground mt-1">No automated emails will be sent while paused.</p>
+          </div>
+          <div className="px-6 py-4 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason <span className="text-muted-foreground">(optional)</span></label>
+              <textarea
+                value={pauseReason}
+                onChange={(e) => setPauseReason(e.target.value)}
+                placeholder="e.g. Buyer requested delay"
+                rows={2}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring resize-none"
+              />
             </div>
-            <div className="px-6 py-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason <span className="text-muted-foreground">(optional)</span></label>
-                <textarea
-                  value={pauseReason}
-                  onChange={(e) => setPauseReason(e.target.value)}
-                  placeholder="e.g. Buyer requested delay"
-                  rows={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Resume on <span className="text-muted-foreground">(optional)</span></label>
-                <input
-                  type="date"
-                  value={pauseUntil}
-                  onChange={(e) => setPauseUntil(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 px-6 pb-5">
-              <button
-                onClick={() => togglePauseReminders(true)}
-                disabled={pausingReminders}
-                className="flex-1 px-4 py-2.5 bg-warning text-warning-foreground text-sm font-semibold rounded-xl hover:bg-warning/90 transition-colors disabled:opacity-50"
-              >
-                {pausingReminders ? "Pausing…" : "Pause Reminders"}
-              </button>
-              <button
-                onClick={() => setShowPauseModal(false)}
-                className="flex-1 px-4 py-2.5 border border-border text-foreground text-sm font-semibold rounded-xl hover:bg-muted/50 transition-colors"
-              >
-                Cancel
-              </button>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Resume on <span className="text-muted-foreground">(optional)</span></label>
+              <input
+                type="date"
+                value={pauseUntil}
+                onChange={(e) => setPauseUntil(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
+              />
             </div>
           </div>
+          <div className="flex gap-3 px-6 pb-5">
+            <button
+              onClick={() => togglePauseReminders(true)}
+              disabled={pausingReminders}
+              className="flex-1 px-4 py-2.5 bg-warning text-warning-foreground text-sm font-semibold rounded-xl hover:bg-warning/90 transition-colors disabled:opacity-50"
+            >
+              {pausingReminders ? "Pausing…" : "Pause Reminders"}
+            </button>
+            <button
+              onClick={() => setShowPauseModal(false)}
+              className="flex-1 px-4 py-2.5 border border-border text-foreground text-sm font-semibold rounded-xl hover:bg-muted/50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      )}
+      </InlineDialog>
     </div>
   );
 }

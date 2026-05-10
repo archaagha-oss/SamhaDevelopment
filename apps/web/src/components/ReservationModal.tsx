@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { formatAED as fmtAED } from "../lib/format";
+import InlineDialog from "./InlineDialog";
 
 interface AvailableUnit {
   id: string;
@@ -75,8 +76,14 @@ export default function ReservationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border border-border">
+    <InlineDialog
+      open
+      onClose={onClose}
+      ariaLabel="Reserve unit"
+      overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      contentClassName="bg-card rounded-2xl shadow-2xl w-full max-w-lg border border-border focus:outline-none"
+    >
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
@@ -208,6 +215,6 @@ export default function ReservationModal({
           </button>
         </div>
       </div>
-    </div>
+    </InlineDialog>
   );
 }

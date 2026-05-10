@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import InlineDialog from "./InlineDialog";
 
 export type ContractStatus = "DRAFT" | "SENT" | "SIGNED" | "ARCHIVED";
 
@@ -60,8 +61,14 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+    <InlineDialog
+      open
+      onClose={onClose}
+      ariaLabel="Update contract status"
+      overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      contentClassName="bg-card rounded-2xl shadow-xl w-full max-w-md focus:outline-none"
+    >
+      <div>
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
             <h2 className="font-semibold text-foreground text-sm">Update Contract Status</h2>
@@ -118,6 +125,6 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
           </button>
         </div>
       </div>
-    </div>
+    </InlineDialog>
   );
 }
