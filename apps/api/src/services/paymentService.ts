@@ -3,6 +3,49 @@ import { prisma } from "../lib/prisma";
 import { paymentLogger } from "../lib/logger";
 
 // ---------------------------------------------------------------------------
+// Bulk import types — used by routes/payments bulk-import endpoint.
+// Kept here so route handlers stay thin and a unit test can exercise the
+// pure resolution + dispatch logic in isolation.
+// ---------------------------------------------------------------------------
+
+export interface BulkPaymentInputRow {
+  /** 1-based row number in the source file, used in the response. */
+  row: number;
+  paymentId?: string;
+  dealNumber?: string;
+  milestoneLabel?: string;
+  amount: number;
+  paidDate: Date;
+  paymentMethod: string;
+  receiptKey?: string;
+  notes?: string;
+}
+
+export interface BulkPaymentRowError {
+  row: number;
+  reason: string;
+  dealNumber?: string;
+  milestoneLabel?: string;
+  paymentId?: string;
+}
+
+export interface BulkPaymentRowSuccess {
+  row: number;
+  paymentId: string;
+  dealNumber?: string;
+  milestoneLabel?: string;
+  action: "MARKED_PAID" | "PARTIAL_RECORDED";
+}
+
+export interface BulkPaymentResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  successes: BulkPaymentRowSuccess[];
+  errors: BulkPaymentRowError[];
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -865,4 +908,153 @@ export async function recalculateDealPayments(
   });
 
   return { updated, skipped };
+}
+
+/**
+ * Apply a batch of payment-marking rows from a bulk-import file.
+ *
+ * Pure: takes already-parsed rows (no req/res, no multer). Each row is
+ * processed independently; one bad row does not abort the others. Per-row
+ * dispatch:
+ *   - amount === payment.amount → markPaymentPaid
+ *   - amount  <  payment.amount → recordPartialPayment
+ *   - amount  >  payment.amount → reject with AMOUNT_EXCEEDS_BALANCE
+ *
+ * Auditing: markPaymentPaid / recordPartialPayment already write
+ * PaymentAuditLog entries, so this function does not duplicate them.
+ *
+ * Resolution rules:
+ *   - If paymentId is set, that wins.
+ *   - Otherwise resolve via { deal.dealNumber, milestoneLabel }. If multiple
+ *     payments share the same milestoneLabel on a deal, the lowest sortOrder
+ *     wins (stable across reruns).
+ */
+export async function bulkApplyPayments(
+  rows: BulkPaymentInputRow[],
+  userId: string
+): Promise<BulkPaymentResult> {
+  const successes: BulkPaymentRowSuccess[] = [];
+  const errors: BulkPaymentRowError[] = [];
+
+  for (const row of rows) {
+    try {
+      // ---- 1. Resolve to a Payment ----
+      let payment: Awaited<ReturnType<typeof prisma.payment.findUnique>> | null = null;
+
+      if (row.paymentId) {
+        payment = await prisma.payment.findUnique({ where: { id: row.paymentId } });
+        if (!payment) {
+          errors.push({
+            row: row.row,
+            reason: "PAYMENT_NOT_FOUND",
+            paymentId: row.paymentId,
+            dealNumber: row.dealNumber,
+            milestoneLabel: row.milestoneLabel,
+          });
+          continue;
+        }
+      } else if (row.dealNumber && row.milestoneLabel) {
+        const deal = await prisma.deal.findUnique({
+          where: { dealNumber: row.dealNumber },
+          select: { id: true },
+        });
+        if (!deal) {
+          errors.push({
+            row: row.row,
+            reason: "DEAL_NOT_FOUND",
+            dealNumber: row.dealNumber,
+            milestoneLabel: row.milestoneLabel,
+          });
+          continue;
+        }
+        const matches = await prisma.payment.findMany({
+          where: { dealId: deal.id, milestoneLabel: row.milestoneLabel },
+          orderBy: [{ sortOrder: "asc" }, { dueDate: "asc" }],
+        });
+        if (matches.length === 0) {
+          errors.push({
+            row: row.row,
+            reason: "PAYMENT_NOT_FOUND",
+            dealNumber: row.dealNumber,
+            milestoneLabel: row.milestoneLabel,
+          });
+          continue;
+        }
+        payment = matches[0];
+      } else {
+        errors.push({
+          row: row.row,
+          reason: "MISSING_IDENTIFIER",
+          dealNumber: row.dealNumber,
+          milestoneLabel: row.milestoneLabel,
+        });
+        continue;
+      }
+
+      // ---- 2. Pre-flight checks ----
+      const targetAmount = payment.adjustedAmount ?? payment.amount;
+      const epsilon = 0.005; // tolerate sub-cent floating-point drift
+
+      if (row.amount > targetAmount + epsilon) {
+        errors.push({
+          row: row.row,
+          reason: "AMOUNT_EXCEEDS_BALANCE",
+          paymentId: payment.id,
+          dealNumber: row.dealNumber,
+          milestoneLabel: row.milestoneLabel,
+        });
+        continue;
+      }
+
+      // ---- 3. Dispatch ----
+      if (Math.abs(row.amount - targetAmount) <= epsilon) {
+        await markPaymentPaid(payment.id, {
+          paidDate: row.paidDate,
+          paymentMethod: row.paymentMethod,
+          paidBy: userId,
+          receiptKey: row.receiptKey,
+          notes: row.notes,
+        });
+        successes.push({
+          row: row.row,
+          paymentId: payment.id,
+          dealNumber: row.dealNumber,
+          milestoneLabel: row.milestoneLabel,
+          action: "MARKED_PAID",
+        });
+      } else {
+        await recordPartialPayment(payment.id, {
+          amount: row.amount,
+          paidDate: row.paidDate,
+          paymentMethod: row.paymentMethod,
+          paidBy: userId,
+          receiptKey: row.receiptKey,
+          notes: row.notes,
+        });
+        successes.push({
+          row: row.row,
+          paymentId: payment.id,
+          dealNumber: row.dealNumber,
+          milestoneLabel: row.milestoneLabel,
+          action: "PARTIAL_RECORDED",
+        });
+      }
+    } catch (err: any) {
+      errors.push({
+        row: row.row,
+        reason: err?.message || "UNKNOWN_ERROR",
+        paymentId: row.paymentId,
+        dealNumber: row.dealNumber,
+        milestoneLabel: row.milestoneLabel,
+      });
+    }
+  }
+
+  return {
+    totalRows: rows.length,
+    successCount: successes.length,
+    errorCount: errors.length,
+    successes,
+    errors,
+  };
 }

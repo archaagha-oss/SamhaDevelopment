@@ -1,11 +1,22 @@
 import { Router } from "express";
+import multer from "multer";
 import { requireFinanceAccess } from "../middleware/auth";
 import { idempotencyKey } from "../middleware/idempotency";
 import { validate } from "../middleware/validation";
-import { markPaymentPaidSchema } from "../schemas/validation";
-import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
+import { bulkPaymentRowSchema, markPaymentPaidSchema } from "../schemas/validation";
+import {
+  bulkApplyPayments,
+  markPaymentPaid,
+  recordPartialPayment,
+  waivePayment,
+  adjustPaymentDueDate,
+  adjustPaymentAmount,
+  type BulkPaymentInputRow,
+  type BulkPaymentRowError,
+} from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { prisma } from "../lib/prisma";
+import { parseCsv, rowsToObjects } from "../lib/csv";
 
 const router = Router();
 
@@ -412,5 +423,197 @@ router.post("/:id/generate-receipt", async (req, res) => {
     res.status(400).json({ error: error.message || "Failed to generate receipt", code: "GENERATE_RECEIPT_ERROR", statusCode: 400 });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Bulk payment import — POST /api/payments/bulk-import
+//
+// Finance team uploads a CSV of "this many milestones got paid this week";
+// the route resolves each row to a Payment and dispatches to the existing
+// markPaymentPaid / recordPartialPayment service helpers. One bad row does
+// not abort the rest. Idempotency-Key is honored (same key replays the
+// cached response).
+//
+// CSV shape:
+//   Header row required.
+//   Required columns: dealNumber OR paymentId; milestoneLabel; amount;
+//                     paidDate (ISO datetime or YYYY-MM-DD); paymentMethod
+//   Optional columns: receiptKey; notes
+// ---------------------------------------------------------------------------
+const bulkImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["text/csv", "application/vnd.ms-excel", "text/plain"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Invalid file type. Allowed: CSV (text/csv, application/vnd.ms-excel, text/plain)"));
+    }
+    cb(null, true);
+  },
+});
+
+router.post(
+  "/bulk-import",
+  idempotencyKey,
+  requireFinanceAccess,
+  // Wrap multer so its errors return JSON in the existing shape rather than
+  // the default HTML / text bodies.
+  (req, res, next) => {
+    bulkImportUpload.single("file")(req, res, (err: any) => {
+      if (err) {
+        const isSize = err.code === "LIMIT_FILE_SIZE";
+        return res.status(400).json({
+          error: err.message || "File upload failed",
+          code: isSize ? "FILE_TOO_LARGE" : "UPLOAD_ERROR",
+          statusCode: 400,
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const resolvedUser = (req as any).resolvedUser;
+      const userId: string = resolvedUser?.id ?? req.auth!.userId;
+
+      if (!req.file) {
+        return res.status(400).json({
+          error: "No file provided. Upload a CSV under field name 'file'.",
+          code: "NO_FILE",
+          statusCode: 400,
+        });
+      }
+
+      // ---- 1. Parse CSV ----
+      let parsed;
+      try {
+        parsed = parseCsv(req.file.buffer.toString("utf8"));
+      } catch (err: any) {
+        return res.status(400).json({
+          error: `Malformed CSV: ${err?.message ?? "could not parse"}`,
+          code: "CSV_PARSE_ERROR",
+          statusCode: 400,
+        });
+      }
+
+      if (parsed.header.length === 0) {
+        return res.status(400).json({
+          error: "CSV is empty or missing a header row",
+          code: "CSV_EMPTY",
+          statusCode: 400,
+        });
+      }
+
+      // ---- 2. Header validation ----
+      // Either paymentId OR dealNumber must be present in the header.
+      const hasPaymentId = parsed.header.includes("paymentId");
+      const hasDealNumber = parsed.header.includes("dealNumber");
+      const requiredAlways = ["amount", "paidDate", "paymentMethod"];
+      const missing = requiredAlways.filter((c) => !parsed.header.includes(c));
+      if (!hasPaymentId && !hasDealNumber) {
+        missing.unshift("paymentId or dealNumber");
+      }
+      if (!hasPaymentId && hasDealNumber && !parsed.header.includes("milestoneLabel")) {
+        missing.push("milestoneLabel (required when using dealNumber)");
+      }
+      if (missing.length > 0) {
+        return res.status(400).json({
+          error: `Missing required column(s): ${missing.join(", ")}`,
+          code: "CSV_MISSING_COLUMNS",
+          statusCode: 400,
+        });
+      }
+
+      // ---- 3. Per-row schema validation + normalization ----
+      const objects = rowsToObjects(parsed);
+      const totalRows = objects.length;
+
+      const validRows: BulkPaymentInputRow[] = [];
+      const validationErrors: BulkPaymentRowError[] = [];
+
+      objects.forEach((raw, idx) => {
+        // Row number reported to the user is 1-based and includes the header
+        // line at row 1. So data row 0 = file row 2.
+        const rowNum = idx + 2;
+
+        const amountStr = raw["amount"] ?? "";
+        const amount = parseFloat(amountStr);
+
+        const candidate = {
+          paymentId: raw["paymentId"] || undefined,
+          dealNumber: raw["dealNumber"] || undefined,
+          milestoneLabel: raw["milestoneLabel"] || undefined,
+          amount,
+          paidDate: raw["paidDate"] || "",
+          paymentMethod: (raw["paymentMethod"] || "").toUpperCase(),
+          receiptKey: raw["receiptKey"] || undefined,
+          notes: raw["notes"] || undefined,
+        };
+
+        const result = bulkPaymentRowSchema.safeParse(candidate);
+        if (!result.success) {
+          const reason = result.error.issues.map((i) => i.message).join("; ");
+          validationErrors.push({
+            row: rowNum,
+            reason: reason || "INVALID_ROW",
+            dealNumber: candidate.dealNumber,
+            milestoneLabel: candidate.milestoneLabel,
+            paymentId: candidate.paymentId,
+          });
+          return;
+        }
+
+        // Normalize date — accept "YYYY-MM-DD" and ISO datetime.
+        const paidDateStr = result.data.paidDate.trim();
+        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(paidDateStr);
+        const paidDate = new Date(dateOnly ? `${paidDateStr}T00:00:00Z` : paidDateStr);
+        if (isNaN(paidDate.getTime())) {
+          validationErrors.push({
+            row: rowNum,
+            reason: "INVALID_DATE",
+            dealNumber: candidate.dealNumber,
+            milestoneLabel: candidate.milestoneLabel,
+            paymentId: candidate.paymentId,
+          });
+          return;
+        }
+
+        validRows.push({
+          row: rowNum,
+          paymentId: result.data.paymentId,
+          dealNumber: result.data.dealNumber,
+          milestoneLabel: result.data.milestoneLabel,
+          amount: result.data.amount,
+          paidDate,
+          paymentMethod: result.data.paymentMethod,
+          receiptKey: result.data.receiptKey,
+          notes: result.data.notes,
+        });
+      });
+
+      // ---- 4. Apply rows ----
+      const applyResult = await bulkApplyPayments(validRows, userId);
+
+      // Merge validation errors with apply errors. Total rows reflects the
+      // file row count (not just the rows that passed schema validation).
+      const errors = [...validationErrors, ...applyResult.errors].sort(
+        (a, b) => a.row - b.row
+      );
+
+      res.json({
+        totalRows,
+        successCount: applyResult.successCount,
+        errorCount: errors.length,
+        successes: applyResult.successes,
+        errors,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: error.message || "Bulk import failed",
+        code: "BULK_IMPORT_ERROR",
+        statusCode: 500,
+      });
+    }
+  }
+);
 
 export default router;
