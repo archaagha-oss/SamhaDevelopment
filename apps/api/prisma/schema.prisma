@@ -24,7 +24,7 @@ datasource db {
 enum UnitStatus {
   NOT_RELEASED
   AVAILABLE
-  ON_HOLD    // temporary soft hold during offer period (auto-expires)
+  ON_HOLD // temporary soft hold during offer period (auto-expires)
   RESERVED
   BOOKED
   SOLD
@@ -78,9 +78,9 @@ enum UnitImageType {
   PHOTO
   FLOOR_PLAN
   FLOOR_MAP
-  SCHEDULE_DIMENSIONED   // SPA Schedule 1 — dimensioned plan
-  SCHEDULE_FURNISHED     // SPA Schedule 1 — furnished plan
-  SCHEDULE_FLOOR_PLAN    // SPA Schedule 3 — floor plan
+  SCHEDULE_DIMENSIONED // SPA Schedule 1 — dimensioned plan
+  SCHEDULE_FURNISHED // SPA Schedule 1 — furnished plan
+  SCHEDULE_FLOOR_PLAN // SPA Schedule 3 — floor plan
 }
 
 enum BankAccountPurpose {
@@ -213,11 +213,11 @@ enum MilestoneType {
 }
 
 enum MilestoneTrigger {
-  DAYS_FROM_RESERVATION  // dueDate = reservationDate + daysFromReservation
-  FIXED_DATE             // dueDate = fixedDate (specific calendar date)
-  ON_SPA_SIGNING         // dueDate auto-set when deal reaches SPA_SIGNED
-  ON_OQOOD               // dueDate auto-set when deal reaches OQOOD_REGISTERED
-  ON_HANDOVER            // dueDate auto-set when deal reaches HANDOVER_PENDING
+  DAYS_FROM_RESERVATION // dueDate = reservationDate + daysFromReservation
+  FIXED_DATE // dueDate = fixedDate (specific calendar date)
+  ON_SPA_SIGNING // dueDate auto-set when deal reaches SPA_SIGNED
+  ON_OQOOD // dueDate auto-set when deal reaches OQOOD_REGISTERED
+  ON_HANDOVER // dueDate auto-set when deal reaches HANDOVER_PENDING
 }
 
 // ----- Commission -----
@@ -360,11 +360,11 @@ enum NotificationPriority {
 // ============================================================
 
 model Organization {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  country  String    @default("UAE")
-  currency String    @default("AED")
-  timezone String    @default("Asia/Dubai")
+  id       String @id @default(cuid())
+  name     String @unique
+  country  String @default("UAE")
+  currency String @default("AED")
+  timezone String @default("Asia/Dubai")
 
   projects    Project[]
   appSettings AppSettings?
@@ -377,16 +377,16 @@ model Organization {
 }
 
 model Project {
-  id             String        @id @default(cuid())
-  name           String        @unique
-  location       String
-  description    String?       @db.Text
-  totalUnits     Int
-  totalFloors    Int?
-  projectStatus  ProjectStatus @default(ACTIVE)
-  handoverDate   DateTime
-  launchDate     DateTime?
-  startDate      DateTime?
+  id            String        @id @default(cuid())
+  name          String        @unique
+  location      String
+  description   String?       @db.Text
+  totalUnits    Int
+  totalFloors   Int?
+  projectStatus ProjectStatus @default(ACTIVE)
+  handoverDate  DateTime
+  launchDate    DateTime?
+  startDate     DateTime?
 
   completionStatus CompletionStatus @default(OFF_PLAN)
   purpose          PropertyPurpose  @default(SALE)
@@ -395,17 +395,17 @@ model Project {
   // ----- SPA particulars (developer / regulatory) -----
   // Populated from the project's RERA registration and used in the
   // generated Sale & Purchase Agreement particulars block.
-  commercialLicense  String? // e.g. "958954"
-  developerNumber    String? // RERA developer registration number (e.g. "2216")
-  developerAddress   String?
-  developerPhone     String?
-  developerEmail     String?
-  plotNumber         String? // e.g. "JVC10EMRH005"
-  buildingPermitRef  String? // e.g. "TKS/CEDSR-146631/JVC10EMRH005/2024"
-  buildingStructure  String? // e.g. "B+G+3P+19+R"
-  masterDeveloper    String? // e.g. "Jumeirah Village LLC"
-  masterCommunity    String? // e.g. "Jumeirah Village Circle"
-  permittedUse       String? // e.g. "Single Family Residential Purpose"
+  commercialLicense String? // e.g. "958954"
+  developerNumber   String? // RERA developer registration number (e.g. "2216")
+  developerAddress  String?
+  developerPhone    String?
+  developerEmail    String?
+  plotNumber        String? // e.g. "JVC10EMRH005"
+  buildingPermitRef String? // e.g. "TKS/CEDSR-146631/JVC10EMRH005/2024"
+  buildingStructure String? // e.g. "B+G+3P+19+R"
+  masterDeveloper   String? // e.g. "Jumeirah Village LLC"
+  masterCommunity   String? // e.g. "Jumeirah Village Circle"
+  permittedUse      String? // e.g. "Single Family Residential Purpose"
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -446,34 +446,34 @@ model ProjectImage {
 }
 
 model ProjectConfig {
-  id              String  @id @default(cuid())
-  projectId       String  @unique
-  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  dldPercent       Float   @default(4)
-  adminFee         Float   @default(5000)
-  reservationDays  Int     @default(7)
-  oqoodDays        Int     @default(90)
+  dldPercent      Float @default(4)
+  adminFee        Float @default(5000)
+  reservationDays Int   @default(7)
+  oqoodDays       Int   @default(90)
 
-  vatPercent       Float   @default(0)
-  agencyFeePercent Float   @default(2)
-  unitsPerFloor    Int     @default(8)
+  vatPercent       Float @default(0)
+  agencyFeePercent Float @default(2)
+  unitsPerFloor    Int   @default(8)
   totalFloors      Int?
 
   defaultUnitType String? @default("STUDIO")
-  defaultArea      Float?  @default(750)
-  defaultView      String? @default("GARDEN")
-  defaultPrice     Float?
+  defaultArea     Float?  @default(750)
+  defaultView     String? @default("GARDEN")
+  defaultPrice    Float?
 
   // ----- SPA business-rule constants -----
   // Defaults reflect the SAMHA-style legal SPA. Override per project as needed.
-  lateFeeMonthlyPercent           Float @default(2)   // 2% per month, daily accrual
-  delayCompensationAnnualPercent  Float @default(1)   // 1% per year of paid amount
-  delayCompensationCapPercent     Float @default(5)   // capped at 5% of purchase price
-  liquidatedDamagesPercent        Float @default(40)  // 40% on purchaser default
-  disposalThresholdPercent        Float @default(30)  // 30% paid before resale allowed
-  resaleProcessingFee             Float @default(3000)
-  gracePeriodMonths               Int   @default(12)  // auto-extension on completion date
+  lateFeeMonthlyPercent          Float @default(2) // 2% per month, daily accrual
+  delayCompensationAnnualPercent Float @default(1) // 1% per year of paid amount
+  delayCompensationCapPercent    Float @default(5) // capped at 5% of purchase price
+  liquidatedDamagesPercent       Float @default(40) // 40% on purchaser default
+  disposalThresholdPercent       Float @default(30) // 30% paid before resale allowed
+  resaleProcessingFee            Float @default(3000)
+  gracePeriodMonths              Int   @default(12) // auto-extension on completion date
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -512,8 +512,8 @@ model ProjectSpecification {
   floorFinish        String?
   wallFinish         String?
   ceilingFinish      String?
-  additionalFinishes String?  @db.Text
-  sortOrder          Int      @default(0)
+  additionalFinishes String?           @db.Text
+  sortOrder          Int               @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -542,11 +542,11 @@ model UserProjectAccess {
 // ============================================================
 
 model User {
-  id       String   @id @default(cuid())
-  clerkId  String   @unique
-  email    String   @unique
-  name     String
-  role     UserRole
+  id      String   @id @default(cuid())
+  clerkId String   @unique
+  email   String   @unique
+  name    String
+  role    UserRole
 
   // Organization
   jobTitle  String? @db.VarChar(255)
@@ -601,39 +601,39 @@ model Unit {
   unitNumber String
   floor      Int
   type       UnitType
-  area       Float     // sq metres
-  basePrice  Float     // original list price — immutable after creation
-  price      Float     // current asking price (AED)
+  area       Float // sq metres
+  basePrice  Float // original list price — immutable after creation
+  price      Float // current asking price (AED)
   view       ViewType
 
   // Physical layer
-  bathrooms      Int?
-  parkingSpaces  Int?
-  internalArea   Float?   // suite sq metres (CSV: Suite SQ.M)
-  externalArea   Float?   // balcony sq metres (CSV: Balcony SQ.M)
-  areaSqft       Float?   // total area in sq feet (SPA particulars print both units)
-  ratePerSqft    Float?   // unit rate per sq ft (SPA particulars)
-  smartHome      Boolean? // sales offer / particulars
+  bathrooms     Int?
+  parkingSpaces Int?
+  internalArea  Float? // suite sq metres (CSV: Suite SQ.M)
+  externalArea  Float? // balcony sq metres (CSV: Balcony SQ.M)
+  areaSqft      Float? // total area in sq feet (SPA particulars print both units)
+  ratePerSqft   Float? // unit rate per sq ft (SPA particulars)
+  smartHome     Boolean? // sales offer / particulars
 
   // Per-unit override of the project's anticipated completion date.
   // Falls back to project.handoverDate when null.
   anticipatedCompletionDate DateTime?
 
-  status        UnitStatus         @default(NOT_RELEASED)
+  status        UnitStatus          @default(NOT_RELEASED)
   statusHistory UnitStatusHistory[]
 
   // Operational layer
   blockReason    String?
   blockExpiresAt DateTime?
   holdExpiresAt  DateTime?
-  internalNotes  String?  @db.Text
-  tags           Json?    // string array e.g. ["corner", "premium"]
-  paymentPlan    String?  // e.g. "60/40", "50/50", "40/60"
+  internalNotes  String?   @db.Text
+  tags           Json? // string array e.g. ["corner", "premium"]
+  paymentPlan    String? // e.g. "60/40", "50/50", "40/60"
 
   // Portal listing (Bayut / Property Finder / Dubizzle)
-  trakheesiPermit String?  // Dubai DLD listing permit (required for portal feeds)
-  portalEnabled   Boolean  @default(false) // include in outbound XML feed
-  portalTitle     String?  // override for portal listing headline
+  trakheesiPermit   String? // Dubai DLD listing permit (required for portal feeds)
+  portalEnabled     Boolean @default(false) // include in outbound XML feed
+  portalTitle       String? // override for portal listing headline
   portalDescription String? @db.Text
 
   // Phase 1: assignments (operational agent tracking — not buyer tracking)
@@ -682,16 +682,16 @@ model UnitStatusHistory {
 }
 
 model UnitImage {
-  id        String        @id @default(cuid())
-  unitId    String
-  unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   url       String        @db.Text
   caption   String?
   type      UnitImageType @default(PHOTO)
   sortOrder Int           @default(0)
 
-  createdAt DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([unitId])
   @@index([type])
@@ -726,21 +726,21 @@ model Lead {
   budget Float?
   stage  LeadStage @default(NEW)
 
-  projectId       String?
-  project         Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
 
   assignedAgentId String
   assignedAgent   User   @relation("AssignedLeads", fields: [assignedAgentId], references: [id])
 
-  interests    LeadUnitInterest[]
-  activities   Activity[]
-  tasks        Task[]
-  stageHistory LeadStageHistory[]
-  deals        Deal[]
-  reservations Reservation[]
-  offers       Offer[]
-  documents    Document[]
-  dealPurchasers DealPurchaser[]
+  interests               LeadUnitInterest[]
+  activities              Activity[]
+  tasks                   Task[]
+  stageHistory            LeadStageHistory[]
+  deals                   Deal[]
+  reservations            Reservation[]
+  offers                  Offer[]
+  documents               Document[]
+  dealPurchasers          DealPurchaser[]
   communicationPreference CommunicationPreference?
 
   notes     String?  @db.Text
@@ -753,6 +753,9 @@ model Lead {
   @@index([projectId])
   @@index([firstName])
   @@index([lastName])
+  @@index([source])
+  @@index([createdAt])
+  @@index([assignedAgentId, stage])
 }
 
 model LeadUnitInterest {
@@ -801,25 +804,25 @@ model Activity {
   contactId String?
   contact   Contact? @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
 
-  type    String  // CALL, EMAIL, WHATSAPP, SMS, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
+  type    String // CALL, EMAIL, WHATSAPP, SMS, MEETING, NOTE, STAGE_CHANGE, SITE_VISIT, etc.
   summary String  @db.Text
   outcome String? @db.Text
 
-  callDuration Int?    // minutes
+  callDuration Int? // minutes
   messageId    String? // legacy WhatsApp message ID — superseded by providerMessageSid
 
   // Communication channel metadata (for EMAIL | WHATSAPP | SMS activities)
-  direction          String?  // INBOUND | OUTBOUND (null for non-comm activities)
-  providerMessageSid String?  @unique // Twilio Sid, SMTP message-id, etc — used for inbound webhook idempotency
-  deliveryStatus     String?  // queued | sent | delivered | read | failed
+  direction          String? // INBOUND | OUTBOUND (null for non-comm activities)
+  providerMessageSid String? @unique // Twilio Sid, SMTP message-id, etc — used for inbound webhook idempotency
+  deliveryStatus     String? // queued | sent | delivered | read | failed
 
   // For SITE_VISIT activities: which unit was physically visited
   siteVisitUnitId String?
 
-  activityDate DateTime @default(now()) // when the activity happened
+  activityDate DateTime  @default(now()) // when the activity happened
   followUpDate DateTime?
-  createdBy    String   // User email or id
-  createdAt    DateTime @default(now())
+  createdBy    String // User email or id
+  createdAt    DateTime  @default(now())
 
   @@index([leadId])
   @@index([dealId])
@@ -831,7 +834,7 @@ model Activity {
 }
 
 model Task {
-  id    String @id @default(cuid())
+  id String @id @default(cuid())
 
   title    String
   type     TaskType     @default(FOLLOW_UP)
@@ -847,7 +850,7 @@ model Task {
   assignedTo   User?   @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   dueDate     DateTime
-  notes       String?  @db.Text
+  notes       String?   @db.Text
   completedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -864,14 +867,14 @@ model Notification {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  message  String
-  leadId   String?
-  read     Boolean @default(false)
+  message String
+  leadId  String?
+  read    Boolean @default(false)
 
-  type     NotificationType     @default(GENERAL)
+  type       NotificationType     @default(GENERAL)
   entityId   String? // relevant entity id (dealId, unitId, paymentId …)
   entityType String? // "DEAL", "UNIT", "PAYMENT", etc.
-  priority NotificationPriority @default(NORMAL)
+  priority   NotificationPriority @default(NORMAL)
 
   createdAt DateTime @default(now())
 
@@ -891,15 +894,15 @@ model BrokerCompany {
   email String?
   phone String?
 
-  agents BrokerAgent[]
-  leads  Lead[]
-  deals  Deal[]
+  agents      BrokerAgent[]
+  leads       Lead[]
+  deals       Deal[]
   commissions Commission[]
 
-  reraLicenseNumber  String?
-  reraLicenseExpiry  DateTime?
-  tradeLicenseNumber String?
-  tradeLicenseExpiry DateTime?
+  reraLicenseNumber     String?
+  reraLicenseExpiry     DateTime?
+  tradeLicenseNumber    String?
+  tradeLicenseExpiry    DateTime?
   tradeLicenseCopyUrl   String?
   vatCertificateNo      String?
   vatCertificateExpiry  DateTime?
@@ -918,8 +921,8 @@ model BrokerCompany {
   bankAccountName       String?
   bankAccountNo         String?
   bankIban              String?
-  bankCurrency          String?  @default("AED")
-  commissionRate     Float    @default(4)
+  bankCurrency          String?   @default("AED")
+  commissionRate        Float     @default(4)
 
   createdAt DateTime @default(now())
 
@@ -971,7 +974,7 @@ model Reservation {
   status    ReservationStatus @default(ACTIVE)
   expiresAt DateTime
 
-  reservedBy String  // userId who created this reservation
+  reservedBy String // userId who created this reservation
   notes      String? @db.Text
 
   convertedToDealId String? // set when status = CONVERTED
@@ -996,18 +999,18 @@ model Offer {
   paymentPlan   PaymentPlan? @relation(fields: [paymentPlanId], references: [id])
 
   offeredPrice   Float
-  originalPrice  Float  // unit.price at time of offer
-  discountAmount Float  @default(0)
-  discountPct    Float  @default(0)
+  originalPrice  Float // unit.price at time of offer
+  discountAmount Float @default(0)
+  discountPct    Float @default(0)
 
-  notes     String? @db.Text
+  notes     String?     @db.Text
   status    OfferStatus @default(ACTIVE)
   expiresAt DateTime?
 
   rejectedReason String?
   acceptedBy     String? // userId
 
-  createdBy String  // userId
+  createdBy String // userId
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1044,9 +1047,9 @@ model PaymentPlanMilestone {
   planId String
   plan   PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  label           String
-  percentage      Float
-  triggerType     MilestoneTrigger @default(DAYS_FROM_RESERVATION)
+  label       String
+  percentage  Float
+  triggerType MilestoneTrigger @default(DAYS_FROM_RESERVATION)
 
   isDLDFee   Boolean @default(false)
   isAdminFee Boolean @default(false)
@@ -1055,8 +1058,8 @@ model PaymentPlanMilestone {
   // construction-stage instalments, CORPORATE for reservation/DLD/admin/handover.
   targetAccount PaymentTargetAccount @default(ESCROW)
 
-  daysFromReservation Int?       // used when triggerType = DAYS_FROM_RESERVATION
-  fixedDate           DateTime?  // used when triggerType = FIXED_DATE
+  daysFromReservation Int? // used when triggerType = DAYS_FROM_RESERVATION
+  fixedDate           DateTime? // used when triggerType = FIXED_DATE
   sortOrder           Int
 
   createdAt DateTime @default(now())
@@ -1088,11 +1091,11 @@ model Deal {
   stageHistory DealStageHistory[]
 
   salePrice         Float
-  discount          Float  @default(0)
+  discount          Float   @default(0)
   discountReason    String?
-  reservationAmount Float  @default(0)
+  reservationAmount Float   @default(0)
 
-  dldFee  Float
+  dldFee   Float
   adminFee Float @default(5000)
 
   paymentPlanId String
@@ -1112,7 +1115,7 @@ model Deal {
   documents  Document[]
   commission Commission?
   activities Activity[]
-  tasks      Task[]     @relation("DealTasks")
+  tasks      Task[]          @relation("DealTasks")
   purchasers DealPurchaser[]
 
   brokerCompanyId String?
@@ -1121,15 +1124,15 @@ model Deal {
   brokerAgent     BrokerAgent?   @relation(fields: [brokerAgentId], references: [id])
 
   // Per-deal financial overrides (null = use project defaults)
-  commissionRateOverride Float?   // overrides brokerCompany.commissionRate when set
-  adminFeeWaived         Boolean  @default(false)
+  commissionRateOverride Float? // overrides brokerCompany.commissionRate when set
+  adminFeeWaived         Boolean @default(false)
   adminFeeWaivedReason   String?
   adminFeeWaivedBy       String?
-  dldPaidBy              String   @default("BUYER") // "BUYER" | "DEVELOPER"
+  dldPaidBy              String  @default("BUYER") // "BUYER" | "DEVELOPER"
   dldWaivedReason        String?
   dldWaivedBy            String?
 
-  notes     String?  @db.Text
+  notes String? @db.Text
 
   // Reminder controls (finance collections)
   remindersPaused       Boolean   @default(false)
@@ -1145,6 +1148,9 @@ model Deal {
   @@index([isActive])
   @@index([reservationDate])
   @@index([dealNumber])
+  @@index([createdAt])
+  @@index([stage, createdAt])
+  @@index([leadId, isActive])
 }
 
 model DealStageHistory {
@@ -1176,19 +1182,19 @@ model DealPurchaser {
   leadId String?
   lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
-  name                       String
-  ownershipPercentage        Float    @default(100)
-  address                    String?  @db.Text
-  phone                      String?
-  email                      String?
-  nationality                String?
-  emiratesId                 String?
-  passportNumber             String?
-  companyRegistrationNumber  String?
-  authorizedSignatory        String?
-  sourceOfFunds              String?
-  isPrimary                  Boolean  @default(false)
-  sortOrder                  Int      @default(0)
+  name                      String
+  ownershipPercentage       Float   @default(100)
+  address                   String? @db.Text
+  phone                     String?
+  email                     String?
+  nationality               String?
+  emiratesId                String?
+  passportNumber            String?
+  companyRegistrationNumber String?
+  authorizedSignatory       String?
+  sourceOfFunds             String?
+  isPrimary                 Boolean @default(false)
+  sortOrder                 Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1206,12 +1212,12 @@ model Payment {
   dealId String
   deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
-  milestoneLabel String
-  amount         Float  // current effective amount (may reflect adjustments)
-  originalAmount Float  // amount when first created — immutable audit trail
-  adjustedAmount Float? // non-null if a manual adjustment has been made
+  milestoneLabel   String
+  amount           Float // current effective amount (may reflect adjustments)
+  originalAmount   Float // amount when first created — immutable audit trail
+  adjustedAmount   Float? // non-null if a manual adjustment has been made
   adjustmentReason String?
-  percentage     Float
+  percentage       Float
 
   dueDate DateTime
   status  PaymentStatus @default(PENDING)
@@ -1220,7 +1226,7 @@ model Payment {
   paidBy        String?
   paymentMethod String?
   receiptKey    String?
-  notes         String? @db.Text
+  notes         String?   @db.Text
 
   pdcNumber      String?
   pdcBank        String?
@@ -1238,10 +1244,10 @@ model Payment {
   // contract-signing and construction-stage instalments).
   targetAccount    PaymentTargetAccount @default(ESCROW)
   paymentReference String?
-  isWaived      Boolean @default(false)
-  waivedBy      String?
-  waivedAt      DateTime?
-  waivedReason  String?
+  isWaived         Boolean              @default(false)
+  waivedBy         String?
+  waivedAt         DateTime?
+  waivedReason     String?
 
   partialPayments PartialPayment[]
   auditLog        PaymentAuditLog[]
@@ -1270,7 +1276,7 @@ model PartialPayment {
   paymentMethod String
   paidBy        String
   receiptKey    String?
-  notes         String? @db.Text
+  notes         String?  @db.Text
 
   createdAt DateTime @default(now())
 
@@ -1292,26 +1298,26 @@ model PaymentAuditLog {
 }
 
 enum ReminderRuleType {
-  BEFORE_DUE   // 7 days before due
-  ON_DUE       // on the due date
-  OVERDUE_7    // 7 days after due
-  OVERDUE_30   // 30 days after due
+  BEFORE_DUE // 7 days before due
+  ON_DUE // on the due date
+  OVERDUE_7 // 7 days after due
+  OVERDUE_30 // 30 days after due
 }
 
 model ReminderLog {
-  id        String            @id @default(cuid())
+  id        String  @id @default(cuid())
   paymentId String
-  payment   Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  ruleType  ReminderRuleType
-  sentAt    DateTime          @default(now())
+  ruleType ReminderRuleType
+  sentAt   DateTime         @default(now())
 
-  channel   String            @default("EMAIL") // EMAIL | WHATSAPP | SMS
-  email     String?           // email address it was sent to (null when channel != EMAIL)
-  phoneE164 String?           // E.164 phone (when channel = WHATSAPP | SMS)
-  providerMessageId String?   // SMTP message-id, Twilio sid, etc.
-  status    String            @default("SENT") // SENT | FAILED | SKIPPED_NO_RECIPIENT | SKIPPED_PAUSED | SKIPPED_OPTOUT
-  failureReason String?       @db.Text
+  channel           String  @default("EMAIL") // EMAIL | WHATSAPP | SMS
+  email             String? // email address it was sent to (null when channel != EMAIL)
+  phoneE164         String? // E.164 phone (when channel = WHATSAPP | SMS)
+  providerMessageId String? // SMTP message-id, Twilio sid, etc.
+  status            String  @default("SENT") // SENT | FAILED | SKIPPED_NO_RECIPIENT | SKIPPED_PAUSED | SKIPPED_OPTOUT
+  failureReason     String? @db.Text
 
   @@index([paymentId])
   @@index([paymentId, ruleType])
@@ -1379,7 +1385,7 @@ model Document {
 
   expiryDate DateTime?
   uploadedBy String
-  uploadedAt DateTime @default(now())
+  uploadedAt DateTime  @default(now())
 
   softDeleted Boolean @default(false)
 
@@ -1402,7 +1408,7 @@ model ProjectStatusHistory {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  field    String  // "projectStatus" | "completionStatus" | "handoverDate"
+  field    String // "projectStatus" | "completionStatus" | "handoverDate"
   oldValue String?
   newValue String
 
@@ -1423,9 +1429,9 @@ model ProjectStatusHistory {
 }
 
 model ProjectUpdate {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   title       String
   body        String   @db.Text
@@ -1433,7 +1439,7 @@ model ProjectUpdate {
   publishedAt DateTime @default(now())
   createdBy   String
 
-  media       ProjectUpdateMedia[]
+  media ProjectUpdateMedia[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1444,16 +1450,16 @@ model ProjectUpdate {
 }
 
 model ProjectUpdateMedia {
-  id        String                  @id @default(cuid())
-  updateId  String
-  update    ProjectUpdate           @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  id       String        @id @default(cuid())
+  updateId String
+  update   ProjectUpdate @relation(fields: [updateId], references: [id], onDelete: Cascade)
 
-  type      ProjectUpdateMediaType  @default(PHOTO)
-  url       String                  @db.Text
-  storage   String                  @default("LOCAL") // "LOCAL" | "S3"
+  type      ProjectUpdateMediaType @default(PHOTO)
+  url       String                 @db.Text
+  storage   String                 @default("LOCAL") // "LOCAL" | "S3"
   caption   String?
-  sortOrder Int                     @default(0)
-  createdAt DateTime                @default(now())
+  sortOrder Int                    @default(0)
+  createdAt DateTime               @default(now())
 
   @@index([updateId])
 }
@@ -1487,14 +1493,14 @@ model UnitShareToken {
 // projectId=null means the rule applies globally (all projects).
 // Per-project rules override global rules for the same stage+documentType.
 model StageDocumentRule {
-  id           String       @id @default(cuid())
-  projectId    String?
-  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  dealStage    DealStage    // destination stage that requires this document
+  dealStage    DealStage // destination stage that requires this document
   documentType DocumentType // required document type
   required     Boolean      @default(true)
-  label        String       // e.g. "Signed SPA Agreement"
+  label        String // e.g. "Signed SPA Agreement"
 
   createdAt DateTime @default(now())
 
@@ -1517,7 +1523,7 @@ model LateFeeRule {
   feeType          LateFeeType
   feeAmount        Float
   maxFeeAmount     Float?
-  isActive         Boolean @default(true)
+  isActive         Boolean     @default(true)
 
   createdAt DateTime @default(now())
 
@@ -1542,8 +1548,8 @@ model PricingRule {
   adjustmentType  PricingAdjustmentType
   adjustmentValue Float
 
-  priority  Int     @default(0)
-  isActive  Boolean @default(true)
+  priority Int     @default(0)
+  isActive Boolean @default(true)
 
   validFrom  DateTime?
   validUntil DateTime?
@@ -1579,9 +1585,9 @@ model UnitPriceHistory {
 
 model DomainEvent {
   id            String    @id @default(cuid())
-  eventType     String    // e.g. "DEAL_CREATED", "UNIT_RESERVED"
-  aggregateId   String    // entity id (dealId, unitId, leadId …)
-  aggregateType String    // "DEAL", "UNIT", "LEAD", etc.
+  eventType     String // e.g. "DEAL_CREATED", "UNIT_RESERVED"
+  aggregateId   String // entity id (dealId, unitId, leadId …)
+  aggregateType String // "DEAL", "UNIT", "LEAD", etc.
   payload       Json
   version       Int       @default(1)
   processedAt   DateTime?
@@ -1595,7 +1601,7 @@ model DomainEvent {
 
 model BackgroundJob {
   id           String    @id @default(cuid())
-  type         String    // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
+  type         String // "RESERVATION_EXPIRY", "PAYMENT_REMINDER", "OQOOD_ALERT"
   payload      Json
   status       JobStatus @default(PENDING)
   scheduledAt  DateTime
@@ -1648,12 +1654,12 @@ model AppSettings {
 
   // Twilio public config (operator-managed, non-secret).
   // Secrets (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WEBHOOK_SIGNING_SECRET) live in env vars.
-  twilioWhatsappFrom              String? // e.g. "whatsapp:+14155238886"
-  twilioMessagingServiceSid       String? // SMS messaging-service for number pool
-  twilioWhatsappContentSidBeforeDue   String?
-  twilioWhatsappContentSidOnDue       String?
-  twilioWhatsappContentSidOverdue7    String?
-  twilioWhatsappContentSidOverdue30   String?
+  twilioWhatsappFrom                String? // e.g. "whatsapp:+14155238886"
+  twilioMessagingServiceSid         String? // SMS messaging-service for number pool
+  twilioWhatsappContentSidBeforeDue String?
+  twilioWhatsappContentSidOnDue     String?
+  twilioWhatsappContentSidOverdue7  String?
+  twilioWhatsappContentSidOverdue30 String?
 
   // Inbound capture (Phase D). Operator-managed so secrets/domains can be
   // rotated from the Settings UI without a redeploy. Env vars
@@ -1691,16 +1697,16 @@ model AppSettings {
 model ApiKey {
   id             String    @id @default(cuid())
   organizationId String
-  name           String    // human label, e.g. "iOS Buyer Portal — production"
+  name           String // human label, e.g. "iOS Buyer Portal — production"
   prefix         String    @unique // e.g. "sk_a8f3" — first 8 chars of the plaintext, for identification
   hashedKey      String    @unique // SHA-256 hex of the plaintext
-  scopes         Json      // string[] e.g. ["leads:create", "deals:read"]
+  scopes         Json // string[] e.g. ["leads:create", "deals:read"]
   expiresAt      DateTime?
   lastUsedAt     DateTime?
   revokedAt      DateTime?
 
   createdById String?
-  createdBy   User?   @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?    @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 
   @@index([organizationId, revokedAt])
@@ -1711,13 +1717,13 @@ model ApiKey {
 // can answer "who changed what, when, and why?". Lives in its own table to
 // keep AppSettings small and queries fast.
 model SettingsAuditLog {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
-  section        String   // "branding" | "localization" | "communication" | "finance" | "templates" | "notifications" | "integrations"
-  changedFields  Json     // string[] of keys that actually changed
-  before         Json?    // snapshot of changed fields, pre-edit (secrets masked)
-  after          Json?    // snapshot of changed fields, post-edit (secrets masked)
-  reason         String?  @db.Text
+  section        String // "branding" | "localization" | "communication" | "finance" | "templates" | "notifications" | "integrations"
+  changedFields  Json // string[] of keys that actually changed
+  before         Json? // snapshot of changed fields, pre-edit (secrets masked)
+  after          Json? // snapshot of changed fields, post-edit (secrets masked)
+  reason         String? @db.Text
 
   // Actor metadata
   userId    String?
@@ -1737,9 +1743,9 @@ model SettingsAuditLog {
 // ============================================================
 
 model Contact {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   firstName   String
   lastName    String?
@@ -1751,9 +1757,9 @@ model Contact {
   nationality String?
   source      ContactSource @default(MANUAL)
   notes       String?       @db.Text
-  tags        String?       // comma-separated
+  tags        String? // comma-separated
 
-  activities Activity[] @relation("ContactActivities")
+  activities              Activity[]               @relation("ContactActivities")
   communicationPreference CommunicationPreference?
 
   createdAt DateTime @default(now())
@@ -1778,23 +1784,23 @@ model CommunicationPreference {
   contactId String?  @unique
   contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
-  preferredChannel String?   // EMAIL | WHATSAPP | SMS — null = auto-pick
-  emailOptOut      Boolean   @default(false)
-  whatsappOptOut   Boolean   @default(false)
-  smsOptOut        Boolean   @default(false)
+  preferredChannel String? // EMAIL | WHATSAPP | SMS — null = auto-pick
+  emailOptOut      Boolean @default(false)
+  whatsappOptOut   Boolean @default(false)
+  smsOptOut        Boolean @default(false)
 
   // Outbound counters
-  emailSent        Int @default(0)
-  whatsappSent     Int @default(0)
-  smsSent          Int @default(0)
+  emailSent    Int @default(0)
+  whatsappSent Int @default(0)
+  smsSent      Int @default(0)
 
   // Engagement signals
-  emailOpens       Int @default(0)
-  emailClicks      Int @default(0)
-  emailReplies     Int @default(0)
-  whatsappReads    Int @default(0)
-  whatsappReplies  Int @default(0)
-  smsReplies       Int @default(0)
+  emailOpens      Int @default(0)
+  emailClicks     Int @default(0)
+  emailReplies    Int @default(0)
+  whatsappReads   Int @default(0)
+  whatsappReplies Int @default(0)
+  smsReplies      Int @default(0)
 
   lastEmailReplyAt    DateTime?
   lastWhatsappReplyAt DateTime?
@@ -1822,29 +1828,28 @@ model CommunicationPreference {
 // so an agent can attach them to the right lead.
 
 model InboundTriage {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  channel     String   // EMAIL | WHATSAPP | SMS
-  direction   String   @default("INBOUND")
-  fromAddress String   // E.164 phone or email
+  channel     String // EMAIL | WHATSAPP | SMS
+  direction   String  @default("INBOUND")
+  fromAddress String // E.164 phone or email
   toAddress   String?
-  subject     String?  @db.Text
-  body        String?  @db.Text
-  mediaUrls   Json?    // string[]
+  subject     String? @db.Text
+  body        String? @db.Text
+  mediaUrls   Json? // string[]
 
   providerMessageId String? @unique // Twilio MessageSid or email Message-ID — idempotency
   rawHeaders        Json?
 
-  status      String   @default("UNCLAIMED") // UNCLAIMED | CLAIMED | RESOLVED | DISCARDED
-  claimedById String?
-  claimedAt   DateTime?
-  resolvedActivityId String?  // if claim attached it to an Activity, link back
+  status             String    @default("UNCLAIMED") // UNCLAIMED | CLAIMED | RESOLVED | DISCARDED
+  claimedById        String?
+  claimedAt          DateTime?
+  resolvedActivityId String? // if claim attached it to an Activity, link back
 
-  receivedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([status, receivedAt])
   @@index([fromAddress])
   @@index([channel])
 }
-

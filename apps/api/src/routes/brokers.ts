@@ -9,6 +9,7 @@ import {
 } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { syncContactFromSource } from "../services/contactService";
+import { requireAuthentication, requireRole } from "../middleware/auth";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -31,6 +32,9 @@ const s3 = new S3Client({
 });
 
 const router = Router();
+
+// Every broker endpoint requires an authenticated user.
+router.use(requireAuthentication);
 
 // Upload broker file (certificates, EID, etc.)
 router.post("/upload", upload.single("file"), async (req, res) => {
@@ -353,11 +357,8 @@ router.patch("/companies/:id", async (req, res) => {
 });
 
 // Delete broker company
-router.delete("/companies/:id", async (req, res) => {
+router.delete("/companies/:id", requireRole(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
     const company = await prisma.brokerCompany.findUnique({ where: { id: req.params.id }, include: { deals: true } });
     if (!company) {
       return res.status(404).json({ error: "Company not found", code: "NOT_FOUND", statusCode: 404 });
@@ -421,11 +422,8 @@ router.patch("/agents/:id", async (req, res) => {
 });
 
 // Remove broker agent — only allowed if agent has no deals
-router.delete("/agents/:id", async (req, res) => {
+router.delete("/agents/:id", requireRole(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
     const agent = await prisma.brokerAgent.findUnique({
       where: { id: req.params.id },
       include: { deals: { select: { id: true }, take: 1 }, leads: { select: { id: true }, take: 1 } },

@@ -1,5 +1,10 @@
 # Samha CRM - Execution Checklist
 
+> **For launch day, use [`GO_LIVE_RUNBOOK.md`](./GO_LIVE_RUNBOOK.md)** —
+> it covers T-7d pre-flight, launch timeline, rollback, and the day-1 watch list.
+> This file is the **pre-Phase-1 setup** checklist (project-data preparation),
+> which is a different concern.
+
 Before starting Phase 1 implementation, complete these items. The sample data is already seeded (173 units, Samha Tower), but you need to prepare your actual project data.
 
 ## ✅ Pre-Phase-1 Requirements

@@ -1,0 +1,176 @@
+{
+  "totalRequests": 1112,
+  "totalErrors": 70,
+  "rows": [
+    {
+      "route": "GET /api/leads (list)",
+      "count": 347,
+      "errors": 30,
+      "p50_ms": 0.8,
+      "p95_ms": 86.3,
+      "p99_ms": 87.1,
+      "max_ms": 87.4,
+      "statusCounts": {
+        "429": 317,
+        "500": 30
+      }
+    },
+    {
+      "route": "GET /api/projects",
+      "count": 18,
+      "errors": 4,
+      "p50_ms": 0.7,
+      "p95_ms": 82.1,
+      "p99_ms": 83.7,
+      "max_ms": 84.2,
+      "statusCounts": {
+        "429": 14,
+        "500": 4
+      }
+    },
+    {
+      "route": "GET /api/users (list)",
+      "count": 12,
+      "errors": 2,
+      "p50_ms": 0.7,
+      "p95_ms": 81,
+      "p99_ms": 81.3,
+      "max_ms": 81.4,
+      "statusCounts": {
+        "429": 10,
+        "500": 2
+      }
+    },
+    {
+      "route": "GET /api/reports/pipeline",
+      "count": 70,
+      "errors": 0,
+      "p50_ms": 0.8,
+      "p95_ms": 51,
+      "p99_ms": 52.5,
+      "max_ms": 53,
+      "statusCounts": {
+        "404": 14,
+        "429": 56
+      }
+    },
+    {
+      "route": "GET /health",
+      "count": 1,
+      "errors": 0,
+      "p50_ms": 13.9,
+      "p95_ms": 13.9,
+      "p99_ms": 13.9,
+      "max_ms": 13.9,
+      "statusCounts": {
+        "200": 1
+      }
+    },
+    {
+      "route": "GET /api/units",
+      "count": 18,
+      "errors": 4,
+      "p50_ms": 0.8,
+      "p95_ms": 6.5,
+      "p99_ms": 6.6,
+      "max_ms": 6.6,
+      "statusCounts": {
+        "429": 14,
+        "500": 4
+      }
+    },
+    {
+      "route": "GET /api/settings",
+      "count": 12,
+      "errors": 2,
+      "p50_ms": 0.7,
+      "p95_ms": 6,
+      "p99_ms": 6.1,
+      "max_ms": 6.1,
+      "statusCounts": {
+        "429": 10,
+        "500": 2
+      }
+    },
+    {
+      "route": "GET /api/brokers/companies",
+      "count": 12,
+      "errors": 2,
+      "p50_ms": 0.7,
+      "p95_ms": 3.1,
+      "p99_ms": 3.7,
+      "max_ms": 3.8,
+      "statusCounts": {
+        "429": 10,
+        "500": 2
+      }
+    },
+    {
+      "route": "GET /api/leads (sample)",
+      "count": 347,
+      "errors": 22,
+      "p50_ms": 0.8,
+      "p95_ms": 2.9,
+      "p99_ms": 3.4,
+      "max_ms": 6.4,
+      "statusCounts": {
+        "429": 325,
+        "500": 22
+      }
+    },
+    {
+      "route": "GET /api/leads (search)",
+      "count": 65,
+      "errors": 4,
+      "p50_ms": 0.6,
+      "p95_ms": 2.7,
+      "p99_ms": 3.7,
+      "max_ms": 4.8,
+      "statusCounts": {
+        "429": 61,
+        "500": 4
+      }
+    },
+    {
+      "route": "GET /api/finance/dashboard",
+      "count": 70,
+      "errors": 0,
+      "p50_ms": 0.8,
+      "p95_ms": 1.4,
+      "p99_ms": 1.7,
+      "max_ms": 2.1,
+      "statusCounts": {
+        "404": 14,
+        "429": 56
+      }
+    },
+    {
+      "route": "GET /api/broker-dashboard/summary",
+      "count": 70,
+      "errors": 0,
+      "p50_ms": 0.7,
+      "p95_ms": 1.2,
+      "p99_ms": 1.4,
+      "max_ms": 1.6,
+      "statusCounts": {
+        "429": 70
+      }
+    },
+    {
+      "route": "GET /api/deals (list)",
+      "count": 70,
+      "errors": 0,
+      "p50_ms": 0.8,
+      "p95_ms": 0.9,
+      "p99_ms": 1.1,
+      "max_ms": 1.1,
+      "statusCounts": {
+        "429": 70
+      }
+    }
+  ],
+  "durationSec": 20,
+  "users": 50,
+  "apiBase": "http://localhost:3099",
+  "ranAt": "2026-05-10T09:29:25.301Z"
+}

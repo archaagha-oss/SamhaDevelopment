@@ -16,6 +16,7 @@ import { buildSpaSnapshot } from "../services/spaService";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess } from "../middleware/auth";
+import { idempotencyKey } from "../middleware/idempotency";
 
 const router = Router();
 
@@ -296,8 +297,9 @@ router.put("/:id/purchasers", validate(replaceDealPurchasersSchema), async (req,
   }
 });
 
-// Create deal
-router.post("/", validate(createDealSchema), async (req, res) => {
+// Create deal — idempotent on Idempotency-Key header (replays cached response
+// for 24h on retry, preventing duplicate deals from network retries).
+router.post("/", idempotencyKey, validate(createDealSchema), async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({
@@ -585,7 +587,8 @@ router.post("/:id/activities", async (req, res) => {
 });
 
 // Add custom milestone to an existing deal — ADMIN or Finance department.
-router.post("/:id/payments", requireFinanceAccess, async (req, res) => {
+// Idempotent on Idempotency-Key header.
+router.post("/:id/payments", idempotencyKey, requireFinanceAccess, async (req, res) => {
   try {
     const user = (req as any).resolvedUser;
     const { label, amount, dueDate, notes } = req.body;

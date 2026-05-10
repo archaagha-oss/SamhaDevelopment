@@ -1,5 +1,10 @@
 # Samha CRM - Initialization Summary
 
+> **📦 HISTORICAL — Phase-1 snapshot (April 2026).** Kept for reference. Current
+> status lives in [`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md);
+> roadmap in [`COMPREHENSIVE_5WEEK_PLAN.md`](./COMPREHENSIVE_5WEEK_PLAN.md) and
+> [`INTEGRATED_CRM_EXECUTION_SUMMARY.md`](./INTEGRATED_CRM_EXECUTION_SUMMARY.md).
+
 ## ✅ What's Been Created
 
 A production-ready full-stack web application for real estate sales pipeline management.

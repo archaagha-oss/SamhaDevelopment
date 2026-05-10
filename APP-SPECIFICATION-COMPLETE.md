@@ -1,6 +1,11 @@
 # Samha Development CRM — Complete App Specification
 **Version:** 2.0 | **Date:** April 23, 2026 | **Status:** Phase 3 Complete
 
+> **⚠ DUPLICATE — superseded by [`TECHNICAL-SPECIFICATION.md`](./TECHNICAL-SPECIFICATION.md).**
+> The two docs cover the same scope; `TECHNICAL-SPECIFICATION.md` is the canonical
+> source going forward. This file is kept for reference only and may be deleted
+> after Phase 1 of `LAUNCH_READINESS_AUDIT.md` lands.
+
 ---
 
 ## TABLE OF CONTENTS

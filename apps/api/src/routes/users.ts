@@ -27,6 +27,41 @@ const userListSelect = {
   _count:  { select: { assignedLeads: true, reports: true } },
 } satisfies Prisma.UserSelect;
 
+// ─── Get the calling user (canonical role source) ───────────────────────────
+// Frontend calls this on app load instead of trusting localStorage. The
+// returned role is what the API enforces; mismatched local UI hints become
+// irrelevant.
+router.get("/me", requireAuthentication, async (req, res) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+    }
+    const user = await prisma.user.findFirst({
+      where: { clerkId: userId },
+      select: {
+        id: true,
+        clerkId: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        jobTitle: true,
+        avatarUrl: true,
+        phone: true,
+        managerId: true,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User account not found", code: "USER_NOT_FOUND", statusCode: 404 });
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch user", code: "FETCH_ME_ERROR", statusCode: 500 });
+  }
+});
+
 // ─── List with filters ────────────────────────────────────────────────────────
 // Filters: ?role=, ?managerId=, ?status=, ?search=
 router.get("/", requireAuthentication, async (req, res) => {
@@ -57,31 +92,10 @@ router.get("/", requireAuthentication, async (req, res) => {
   }
 });
 
-// ─── Current user (whoami) ───────────────────────────────────────────────────
-// Returns the User row matching req.auth.userId (clerkId). In dev mode where
-// the mock user isn't seeded, falls back to the first ADMIN so the profile
-// page still has a target. Defined before /:id so the literal route wins.
-router.get("/me", requireAuthentication, async (req, res) => {
-  try {
-    const clerkId = req.auth?.userId;
-    let user = clerkId
-      ? await prisma.user.findFirst({ where: { clerkId }, select: { ...userListSelect, notificationPrefs: true } })
-      : null;
-
-    if (!user && process.env.NODE_ENV !== "production") {
-      // Dev-only fallback so the UI works even when the mock user isn't seeded.
-      user = await prisma.user.findFirst({
-        where: { role: "ADMIN" },
-        select: { ...userListSelect, notificationPrefs: true },
-      });
-    }
-
-    if (!user) return res.status(404).json({ error: "User not found", code: "NOT_FOUND", statusCode: 404 });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch current user", code: "FETCH_USER_ERROR", statusCode: 500 });
-  }
-});
+// (The canonical "whoami" endpoint is defined above at the top of this file.
+// A previous duplicate handler that fell back to the first ADMIN in dev has
+// been removed — that fallback was a security hazard analogous to the
+// dev-mode role bypass closed in middleware/auth.ts.)
 
 // ─── Get user detail ──────────────────────────────────────────────────────────
 router.get("/:id", requireAuthentication, async (req, res) => {

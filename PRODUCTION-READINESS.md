@@ -1,7 +1,21 @@
 # Production Readiness Checklist
 
 **Last Updated:** April 2026
-**Status:** Ready for cPanel Deployment
+**Status:** Pre-launch — see [`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md)
+
+> **2026-05-10 update.** A fresh four-dimension audit
+> ([`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md)) found
+> **three P0 launch blockers** that supersede the "Ready for cPanel Deployment"
+> status above:
+>
+> 1. Mock auth hardcoded in `apps/api/src/index.ts:131-134` — every request gets `dev-user-1`.
+> 2. No external error tracking, no metrics endpoint, no alerting configured.
+> 3. No CI/CD deploy automation; releases are manual rsync with no rollback.
+>
+> Plus 7 P1 issues (PII unmasked in list responses, no idempotency keys on payments,
+> missing DB indexes, etc.). **Do not deploy to production** until Phase 0 of the
+> audit is closed. See [`GO_LIVE_RUNBOOK.md`](./GO_LIVE_RUNBOOK.md) for the
+> launch procedure once it is.
 
 ---
 

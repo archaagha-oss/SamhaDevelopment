@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication, requireRole } from "../middleware/auth";
+import { validate } from "../middleware/validation";
+import { createContactSchema, updateContactSchema } from "../schemas/validation";
 
 const router = Router();
+
+// Contacts are an internal CRM directory — every endpoint requires auth.
+router.use(requireAuthentication);
 
 // ─── List contacts ────────────────────────────────────────────────────────────
 
@@ -70,7 +76,11 @@ router.get("/:id", async (req, res) => {
 
 // ─── Create contact ───────────────────────────────────────────────────────────
 
-router.post("/", async (req, res) => {
+router.post(
+  "/",
+  requireRole(["ADMIN", "MANAGER", "MEMBER"]),
+  validate(createContactSchema),
+  async (req, res) => {
   try {
     const org = await prisma.organization.findFirst();
     if (!org) return res.status(404).json({ error: "Organization not found", code: "NOT_FOUND", statusCode: 404 });
@@ -79,10 +89,6 @@ router.post("/", async (req, res) => {
       firstName, lastName, email, phone, whatsapp,
       company, jobTitle, nationality, source, notes, tags,
     } = req.body;
-
-    if (!firstName) {
-      return res.status(400).json({ error: "firstName is required", code: "VALIDATION_ERROR", statusCode: 400 });
-    }
 
     const contact = await prisma.contact.create({
       data: {
@@ -109,7 +115,11 @@ router.post("/", async (req, res) => {
 
 // ─── Update contact ───────────────────────────────────────────────────────────
 
-router.patch("/:id", async (req, res) => {
+router.patch(
+  "/:id",
+  requireRole(["ADMIN", "MANAGER", "MEMBER"]),
+  validate(updateContactSchema),
+  async (req, res) => {
   try {
     const existing = await prisma.contact.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Contact not found", code: "NOT_FOUND", statusCode: 404 });
@@ -144,7 +154,7 @@ router.patch("/:id", async (req, res) => {
 
 // ─── Delete contact ───────────────────────────────────────────────────────────
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const existing = await prisma.contact.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Contact not found", code: "NOT_FOUND", statusCode: 404 });

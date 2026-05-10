@@ -84,22 +84,70 @@ router.get("/leads", async (req, res) => {
 });
 
 // GET /payments — PaymentReportPage grouped by status
+//
+// Returns a summary first (totals + counts per bucket via DB aggregates), then
+// a paginated rows page for one bucket. The legacy "all rows in one shot"
+// shape — previously the cause of the N+1 risk flagged in the audit — is gone.
+//
+// Query params:
+//   ?summary=1        → totals + counts per status (cheap)
+//   ?status=OVERDUE   → rows in that bucket only
+//   ?cursor=<id>      → cursor pagination
+//   ?limit=50         → page size (cap 200)
+//
+// Default behaviour (no params) returns the summary + the first page of OVERDUE.
 router.get("/payments", async (req, res) => {
   try {
-    const payments = await prisma.payment.findMany({
-      include: { deal: { include: { unit: true, lead: true } } },
-      orderBy: { dueDate: "asc" },
+    const wantSummaryOnly = req.query.summary === "1";
+    const status = req.query.status as string | undefined;
+    const cursor = req.query.cursor as string | undefined;
+    const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || "50", 10)));
+
+    // Bucket counts + totals via DB aggregates — sub-100ms even on large tables
+    // because of the existing Payment.status / Payment.(dealId,status) indexes.
+    const groups = await prisma.payment.groupBy({
+      by: ["status", "isWaived"],
+      _count: { _all: true },
+      _sum: { amount: true },
     });
-    const byStatus: Record<string, any[]> = {};
+
     const totals: Record<string, number> = {};
-    payments.forEach((p) => {
-      // Waived payments (CANCELLED + isWaived=true) get their own bucket
-      const bucket = (p.status === "CANCELLED" && (p as any).isWaived) ? "WAIVED" : p.status;
-      if (!byStatus[bucket]) byStatus[bucket] = [];
-      byStatus[bucket].push(p);
-      totals[bucket] = (totals[bucket] || 0) + p.amount;
+    const counts: Record<string, number> = {};
+    for (const g of groups) {
+      const bucket = g.status === "CANCELLED" && g.isWaived ? "WAIVED" : g.status;
+      counts[bucket] = (counts[bucket] || 0) + (g._count._all ?? 0);
+      totals[bucket] = (totals[bucket] || 0) + (g._sum.amount ?? 0);
+    }
+
+    if (wantSummaryOnly) {
+      return res.json({ counts, totals });
+    }
+
+    // Page through one bucket (default OVERDUE — the finance team's hot list).
+    const wantStatus = status || "OVERDUE";
+    const where: any = wantStatus === "WAIVED"
+      ? { status: "CANCELLED", isWaived: true }
+      : { status: wantStatus };
+
+    const page = await prisma.payment.findMany({
+      where,
+      include: { deal: { include: { unit: true, lead: true } } },
+      orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    res.json({ byStatus, totals });
+
+    const hasMore = page.length > limit;
+    const rows = hasMore ? page.slice(0, limit) : page;
+    const nextCursor = hasMore ? rows[rows.length - 1].id : null;
+
+    res.json({
+      counts,
+      totals,
+      bucket: wantStatus,
+      rows,
+      nextCursor,
+    });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch payments report", code: "FETCH_PAYMENTS_REPORT_ERROR", statusCode: 500 });
   }

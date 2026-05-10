@@ -5,6 +5,14 @@ import swaggerUi from "swagger-ui-express";
 import { openAPISpec } from "./docs/openapi";
 import { prisma } from "./lib/prisma";
 import { logger } from "./lib/logger";
+import { setupClerkAuth } from "./middleware/auth";
+import {
+  requestId,
+  httpMetrics,
+  metricsHandler,
+  initObservability,
+  captureError,
+} from "./lib/observability";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
@@ -63,9 +71,20 @@ app.use((_req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
   res.removeHeader("X-Powered-By");
   next();
 });
+
+// ── Observability (request IDs + HTTP metrics) ────────────────────────────
+app.use(requestId);
+app.use(httpMetrics);
+initObservability().catch(() => {});
+
+// ── Metrics endpoint (auth via METRICS_TOKEN env var) ─────────────────────
+app.get("/metrics", metricsHandler);
 
 // ── Webhooks (mounted BEFORE rate-limit + auth + json parser) ──────────────
 // Webhooks come from external providers (Twilio, SendGrid). They install
@@ -73,11 +92,11 @@ app.use((_req, res, next) => {
 // so a burst of inbound messages doesn't push real users over the limit.
 app.use("/api/webhooks", webhookRoutes);
 
-// ── Rate limiting (100 req / min per IP) ──────────────────────────────────
+// ── Rate limiting (configurable per IP) ───────────────────────────────────
 // In-memory limiter — fine for a single instance. Replace with a Redis-backed
 // `express-rate-limit` store before scaling horizontally.
-const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT = 100;
+const RATE_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
+const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10);
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 // Periodic sweep — without this, every unique IP that hits once accumulates
@@ -127,11 +146,34 @@ app.use("/uploads", express.static("uploads"));
 //    middleware so anonymous clients can hit them.
 app.use("/public/share", publicShareRoutes);
 
-// ── Mock auth for development (Clerk disabled) ────────────────────────────
-app.use((req, res, next) => {
-  req.auth = { userId: "dev-user-1" };
-  next();
-});
+// ── Authentication ────────────────────────────────────────────────────────
+// In production we MUST use real Clerk. In dev a mock auth fallback is
+// available, but only when explicitly opted in via ALLOW_MOCK_AUTH=true.
+// The default in dev is now real Clerk (fail closed); turning the mock on
+// is a deliberate choice an engineer makes for a local-only loop.
+const isProduction = process.env.NODE_ENV === "production";
+const useMockAuth =
+  !isProduction && process.env.ALLOW_MOCK_AUTH === "true";
+
+if (useMockAuth) {
+  logger.warn(
+    "ALLOW_MOCK_AUTH=true — mock auth active; every request becomes dev-user-1. " +
+      "Never set this in production."
+  );
+  app.use((req, _res, next) => {
+    req.auth = { userId: "dev-user-1" };
+    next();
+  });
+} else {
+  if (!process.env.CLERK_SECRET_KEY) {
+    logger.error(
+      "CLERK_SECRET_KEY is required. Set it, or for local dev only set " +
+        "ALLOW_MOCK_AUTH=true to enable the mock-auth fallback."
+    );
+    process.exit(1);
+  }
+  app.use(setupClerkAuth());
+}
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
@@ -208,11 +250,10 @@ app.use((req, res) => {
 // Global error handler — must have 4 parameters
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error("Unhandled Express error", {
-    message: err.message,
-    stack: err.stack,
+  captureError(err, {
     path: req.path,
     method: req.method,
+    requestId: (req as any).requestId,
   });
   res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", statusCode: 500 });
 });
@@ -232,7 +273,11 @@ process.on("SIGINT", async () => {
 });
 
 process.on("unhandledRejection", (reason) => {
-  logger.error("Unhandled promise rejection", { reason });
+  captureError(reason, { source: "unhandledRejection" });
+});
+
+process.on("uncaughtException", (err) => {
+  captureError(err, { source: "uncaughtException" });
 });
 
 export default app;

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 jobs:
   build:
@@ -70,3 +70,123 @@ jobs:
         run: npm test --prefix apps/api --if-present
         env:
           DATABASE_URL: mysql://root:root@localhost:3306/test_db
+
+      - name: Lint — api
+        continue-on-error: true
+        run: npm run lint --prefix apps/api --if-present
+
+      - name: Lint — web
+        continue-on-error: true
+        run: npm run lint --prefix apps/web --if-present
+
+      - name: Build — api
+        run: npm run build --prefix apps/api
+
+      - name: Build — web
+        run: npm run build --prefix apps/web
+        env:
+          VITE_API_URL: http://localhost:3000
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci
+
+      - name: Package release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p release
+          tar -czf release/samha-api-${GITHUB_REF_NAME}.tar.gz \
+            apps/api/dist apps/api/package.json apps/api/prisma \
+            package.json package-lock.json
+          tar -czf release/samha-web-${GITHUB_REF_NAME}.tar.gz \
+            -C apps/web dist
+
+      - name: Upload release artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.ref_name }}
+          path: release/
+          retention-days: 90
+
+  # Tag-triggered cPanel deploy. Activates only on `git push origin vX.Y.Z`.
+  # Required repository secrets:
+  #   CPANEL_HOST, CPANEL_USER, CPANEL_SSH_KEY (private key, PEM)
+  #   CPANEL_API_PATH (e.g. /home/cpaneluser/apps/api)
+  #   CPANEL_WEB_PATH (e.g. /home/cpaneluser/public_html)
+  # Set the GitHub environment "production" with required reviewers so a
+  # human approval gate is in front of every release.
+  deploy:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-${{ github.ref_name }}
+          path: release/
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CPANEL_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.CPANEL_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Pre-deploy DB snapshot (rollback target)
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.CPANEL_USER }}@${{ secrets.CPANEL_HOST }}" \
+            "cd ${{ secrets.CPANEL_API_PATH }} && ./scripts/backup.sh \
+              > logs/pre-deploy-${{ github.ref_name }}.log 2>&1"
+        continue-on-error: true # backup script may not exist on first run
+
+      - name: Upload API artifact
+        run: |
+          scp -i ~/.ssh/deploy_key release/samha-api-${{ github.ref_name }}.tar.gz \
+            "${{ secrets.CPANEL_USER }}@${{ secrets.CPANEL_HOST }}:/tmp/"
+
+      - name: Upload web artifact
+        run: |
+          scp -i ~/.ssh/deploy_key release/samha-web-${{ github.ref_name }}.tar.gz \
+            "${{ secrets.CPANEL_USER }}@${{ secrets.CPANEL_HOST }}:/tmp/"
+
+      - name: Apply API release (atomic swap + PM2 reload)
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.CPANEL_USER }}@${{ secrets.CPANEL_HOST }}" bash <<'REMOTE'
+            set -euo pipefail
+            cd "${{ secrets.CPANEL_API_PATH }}"
+            ts=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p releases
+            tar -xzf /tmp/samha-api-${{ github.ref_name }}.tar.gz -C releases/
+            mv releases/apps/api/dist "releases/${ts}-dist"
+            ln -sfn "releases/${ts}-dist" current-dist
+            npx --prefix apps/api prisma migrate deploy --schema apps/api/prisma/schema.prisma || true
+            pm2 reload ecosystem.config.js --env production --update-env
+            rm /tmp/samha-api-${{ github.ref_name }}.tar.gz
+          REMOTE
+
+      - name: Apply web release (atomic swap)
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.CPANEL_USER }}@${{ secrets.CPANEL_HOST }}" bash <<'REMOTE'
+            set -euo pipefail
+            cd "${{ secrets.CPANEL_WEB_PATH }}"
+            ts=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p releases
+            tar -xzf /tmp/samha-web-${{ github.ref_name }}.tar.gz -C "releases/${ts}"
+            ln -sfn "releases/${ts}/dist" current
+            rm /tmp/samha-web-${{ github.ref_name }}.tar.gz
+          REMOTE
+
+      - name: Smoke test live API
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 "https://api.${{ secrets.PRODUCTION_DOMAIN }}/health" | grep -q '"status":"ok"'; then
+              echo "Health OK"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed after 5 attempts; manual investigation required"
+          exit 1

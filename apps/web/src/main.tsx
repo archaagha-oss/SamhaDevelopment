@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { router } from "./router";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import "./lib/axiosBootstrap"; // VITE_API_URL baseURL + Idempotency-Key interceptor
 import "./index.css";
 
 const queryClient = new QueryClient({

@@ -2,6 +2,15 @@
 
 A full-stack web application for managing real estate sales pipelines with unit inventory tracking, status management, and sales team coordination.
 
+> **Heading toward production?** Start here:
+>
+> - [`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md) — feature, bloat, security, and production-readiness audit. **Three P0 blockers** must close before launch.
+> - [`GO_LIVE_RUNBOOK.md`](./GO_LIVE_RUNBOOK.md) — launch-day procedure, rollback plan, day-1 watch list.
+> - [`MANUAL_QA_CHECKLIST.md`](./MANUAL_QA_CHECKLIST.md) — click-through tests for every flow. Run before each release; smoke-test section runs on production after every deploy.
+> - [`CI_TEST_MATRIX.md`](./CI_TEST_MATRIX.md) — module → test coverage map.
+> - [`USER_MANUAL.md`](./USER_MANUAL.md) and [`ADMIN_MANUAL.md`](./ADMIN_MANUAL.md) — end-user and admin reference docs.
+> - [`UX_AUDIT_2_FINDINGS.md`](./UX_AUDIT_2_FINDINGS.md) — interaction / visual fixes (R1–R7).
+
 ## 📋 Project Structure
 
 ```
@@ -18,7 +27,7 @@ samha-crm/
 ### Backend
 - **Node.js** with Express
 - **TypeScript** for type safety
-- **Prisma** ORM with PostgreSQL
+- **Prisma** ORM with MySQL / MariaDB (production target: cPanel-managed MariaDB)
 - **Clerk** for authentication
 
 ### Frontend
@@ -31,7 +40,7 @@ samha-crm/
 ## 📦 Prerequisites
 
 - **Node.js** v18+ and npm/yarn/pnpm
-- **PostgreSQL** v12+ (local or remote)
+- **MySQL** v8+ or **MariaDB** v10.5+ (local or remote)
 - **Clerk account** (for authentication setup)
 
 ## 🚀 Quick Start
@@ -47,7 +56,7 @@ npm install
 
 **Backend** (`apps/api/.env`):
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/samha_crm"
+DATABASE_URL="mysql://user:password@localhost:3306/samha_crm"
 CLERK_SECRET_KEY="your_clerk_secret_key"
 NODE_ENV="development"
 PORT=3000

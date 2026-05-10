@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireFinanceAccess } from "../middleware/auth";
+import { idempotencyKey } from "../middleware/idempotency";
 import { validate } from "../middleware/validation";
 import { markPaymentPaidSchema } from "../schemas/validation";
 import { markPaymentPaid, recordPartialPayment, waivePayment, adjustPaymentDueDate, adjustPaymentAmount } from "../services/paymentService";
@@ -156,7 +157,7 @@ router.patch("/:id/pdc-bounced", requireFinanceAccess, async (req, res) => {
 });
 
 // Record partial payment — FINANCE or ADMIN only
-router.post("/:id/partial", requireFinanceAccess, async (req, res) => {
+router.post("/:id/partial", idempotencyKey, requireFinanceAccess, async (req, res) => {
   try {
     const { amount, paymentMethod, receiptKey, notes } = req.body;
     if (!amount || isNaN(parseFloat(amount))) {

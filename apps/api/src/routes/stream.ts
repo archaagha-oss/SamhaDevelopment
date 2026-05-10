@@ -9,7 +9,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { sseHub } from "../services/sseHub.js";
+import { sseHub, SseRegistrationError } from "../services/sseHub.js";
 
 const router = Router();
 
@@ -19,6 +19,24 @@ router.get("/events", (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
   }
 
+  const clientId = `${userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const client = { id: clientId, userId, res };
+
+  // Try to register first — connection caps reject early before we open the stream.
+  try {
+    sseHub.register(client);
+  } catch (err) {
+    if (err instanceof SseRegistrationError) {
+      const status = err.code === "PER_USER_LIMIT" ? 429 : 503;
+      return res.status(status).json({
+        error: err.message,
+        code: err.code,
+        statusCode: status,
+      });
+    }
+    throw err;
+  }
+
   // SSE response headers
   res.set({
     "Content-Type":      "text/event-stream",
@@ -26,16 +44,10 @@ router.get("/events", (req: Request, res: Response) => {
     "Connection":        "keep-alive",
     "X-Accel-Buffering": "no", // disable nginx buffering
   });
-  // Some proxies need an immediate flush.
   res.flushHeaders?.();
-
-  const clientId = `${userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const client = { id: clientId, userId, res };
 
   // Greet so the client knows the connection is live (and to flush any proxy buffers)
   res.write(`event: hello\ndata: ${JSON.stringify({ clientId, ts: Date.now() })}\n\n`);
-
-  sseHub.register(client);
 
   req.on("close", () => {
     sseHub.unregister(client);
