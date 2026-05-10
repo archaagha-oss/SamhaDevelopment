@@ -42,6 +42,7 @@ const SalesOfferPrintPage           = lazy(() => import("./components/SalesOffer
 const InvoicePrintPage              = lazy(() => import("./components/InvoicePrintPage"));
 const ReceiptPrintPage              = lazy(() => import("./components/ReceiptPrintPage"));
 const ReportsPage                   = lazy(() => import("./pages/ReportsPage"));
+const AgentLeaderboardPage          = lazy(() => import("./pages/AgentLeaderboardPage"));
 const ReservationsPage              = lazy(() => import("./components/ReservationsPage"));
 const OffersPage                    = lazy(() => import("./components/OffersPage"));
 const SettingsPage                  = lazy(() => import("./pages/SettingsPage"));
@@ -140,6 +141,7 @@ export const router = createBrowserRouter([
       { path: "team/:userId",                              element: <MemberDetailPage /> },
       { path: "team/:userId/edit",                         element: <MemberEditPage /> },
       { path: "reports",                                   element: <ReportsPage /> },
+      { path: "reports/agents",                            element: <AgentLeaderboardPage /> },
       { path: "contacts",                                  element: <ContactsPage /> },
       { path: "contacts/new",                              element: <ContactEditPage /> },
       { path: "contacts/:contactId",                       element: <ContactDetailPage /> },

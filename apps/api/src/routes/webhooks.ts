@@ -18,6 +18,8 @@ import multer from "multer";
 import { prisma } from "../lib/prisma.js";
 import { processInbound, type NormalizedInbound } from "../services/inboundProcessor.js";
 import { twilioWebhookValidator } from "../middleware/twilioWebhook.js";
+import { parsePortalLeadEmail, detectPortal } from "../services/portalLeadParserService.js";
+import { ingestPortalLead } from "../services/portalLeadIngestService.js";
 
 const router = Router();
 
@@ -123,6 +125,28 @@ router.post(
 
       const body = req.body as SendGridInboundBody;
       const normalized = normalizeSendGridEmail(body);
+
+      // Portal-lead branch: if the inbound looks like a Bayut / Property Finder
+      // / Dubizzle lead handoff, parse + ingest as a new Lead. Otherwise fall
+      // through to the generic inbound triage (matches existing leads or lands
+      // in the Hot Inbox). Closes audit gap #1.
+      const fromAddress = normalized.fromEmail ?? body.from ?? "";
+      const portal = detectPortal(
+        body.subject ?? "",
+        fromAddress,
+        body.text ?? body.html ?? ""
+      );
+      if (portal !== "UNKNOWN") {
+        const parsed = parsePortalLeadEmail({
+          subject: body.subject ?? "",
+          fromAddress,
+          body: body.text ?? body.html ?? "",
+        });
+        const ingest = await ingestPortalLead(parsed);
+        console.log(`[Webhook] portal=${portal} ingest=${ingest.status}${ingest.leadId ? ` lead=${ingest.leadId}` : ""}${ingest.reason ? ` (${ingest.reason})` : ""}`);
+        return res.status(200).send("");
+      }
+
       const result = await processInbound(normalized);
       console.log(`[Webhook] SendGrid inbound email → ${result.status} (${result.matchReason ?? ""})`);
       res.status(200).send("");

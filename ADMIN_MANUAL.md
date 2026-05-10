@@ -273,26 +273,63 @@ Configure alerts:
 
 ### 6.5 Backups
 
-Configured via the `apps/api/scripts/backup.sh` script (forthcoming —
-`LAUNCH_READINESS_AUDIT.md` E.1.5):
+Two scripts in `apps/api/scripts/` handle backup and restore. Both read
+`apps/api/.env` for `DATABASE_URL` and the optional `BACKUP_*` variables.
 
-```
-0 2 * * * cd /home/<user>/apps/api && ./scripts/backup.sh >> logs/backup.log 2>&1
-```
+#### Daily backup (production cron)
 
-Backups land in `s3://samha-prod-backups/<YYYY-MM-DD>/dump.sql.gz` with 30-day
-retention.
-
-**Run a restore drill at least monthly.** Restore the latest backup to a
-sandbox DB and run the seed verification queries below:
-
-```sql
-SELECT COUNT(*) FROM Lead;
-SELECT COUNT(*) FROM Deal WHERE stage NOT IN ('CANCELLED', 'HANDED_OVER');
-SELECT MAX(createdAt) FROM Activity;
+```cron
+# crontab -e
+0 2 * * * cd /home/<cpanel-user>/apps/api && ./scripts/backup.sh >> logs/backup.log 2>&1
 ```
 
-The restored DB should match production within the backup's lag.
+**What it does:**
+
+- `mysqldump --single-transaction --routines --triggers --hex-blob` — InnoDB
+  consistent snapshot, no table locks.
+- `gzip -9` to `apps/api/backups/samha-<dbname>-<UTC-timestamp>.sql.gz`.
+- If `BACKUP_S3_BUCKET` is set, uploads to
+  `s3://<bucket>/<prefix>/<timestamp>/<file>` with `STANDARD_IA` storage class.
+- Prunes local backups older than `BACKUP_RETENTION_DAYS` (default 7) and
+  S3 backups older than `BACKUP_S3_RETENTION_DAYS` (default 30).
+- Exits non-zero on failure so cron emails / monitoring picks it up.
+
+**Configure** (in `apps/api/.env`):
+
+```
+BACKUP_DIR=/home/cpaneluser/apps/api/backups
+BACKUP_RETENTION_DAYS=7
+BACKUP_S3_BUCKET=samha-prod-backups
+BACKUP_S3_PREFIX=samha-backups
+BACKUP_S3_RETENTION_DAYS=30
+```
+
+The `aws` CLI must be on `$PATH` if you want S3 upload; the script silently
+warns and continues with local-only retention if it isn't.
+
+#### Restore (drill or recovery)
+
+```bash
+# Monthly drill — restores latest local backup into samha_drill (sandbox DB)
+./scripts/restore.sh drill
+
+# Restore a specific file
+./scripts/restore.sh drill backups/samha-samha_crm_prod-20260601T020000Z.sql.gz
+
+# Production recovery (requires --force AND typed DB-name confirmation)
+./scripts/restore.sh recover backups/<file>.sql.gz --force
+```
+
+After restoring, the script prints row counts for `Lead`, `Deal`, `Unit`,
+`Payment`, `Activity`, `User`, plus the most-recent activity / payment
+timestamps and active-deal count. Compare against production live values to
+confirm the restore is consistent within the backup's lag.
+
+#### Drill cadence
+
+Run the drill at least **monthly** (and after any major schema migration).
+Treat a drill failure as a P1 incident — your last-known-good backup might
+also be corrupt.
 
 ---
 

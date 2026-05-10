@@ -324,7 +324,155 @@ export async function adjustPaymentAmount(
 }
 
 /**
+ * Compute the late-fee amount for a given overdue payment using the most-
+ * specific active LateFeeRule on the project. Returns null if no rule applies
+ * yet (days-late below trigger) or no rules are configured.
+ *
+ * Rule selection: among active rules whose triggerAfterDays ≤ daysLate, pick
+ * the one with the *highest* triggerAfterDays. This lets you stack rules like
+ * "5% one-time after 7 days" + "1%/day after 30 days" — the second rule wins
+ * once we cross day-30 because it's more specific to the late stage.
+ *
+ * Capped by maxFeeAmount when set.
+ */
+export async function computeLateFee(
+  paymentId: string
+): Promise<{
+  amount: number;
+  ruleId: string;
+  ruleName: string;
+  daysLate: number;
+} | null> {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: { deal: { select: { unit: { select: { projectId: true } } } } },
+  });
+  if (!payment) return null;
+  const projectId = payment.deal?.unit?.projectId;
+  if (!projectId) return null;
+
+  const now = new Date();
+  const daysLate = Math.floor(
+    (now.getTime() - payment.dueDate.getTime()) / (24 * 60 * 60 * 1000)
+  );
+  if (daysLate <= 0) return null;
+
+  const rules = await prisma.lateFeeRule.findMany({
+    where: { projectId, isActive: true, triggerAfterDays: { lte: daysLate } },
+    orderBy: { triggerAfterDays: "desc" },
+  });
+  if (rules.length === 0) return null;
+  const rule = rules[0];
+
+  let amount = 0;
+  switch (rule.feeType) {
+    case "FIXED_ONE_TIME":
+      amount = rule.feeAmount;
+      break;
+    case "PERCENTAGE_PER_DAY":
+      amount = (payment.amount * rule.feeAmount * daysLate) / 100;
+      break;
+    case "PERCENTAGE_PER_MONTH": {
+      // Daily accrual against a monthly percentage.
+      const monthsLate = daysLate / 30;
+      amount = (payment.amount * rule.feeAmount * monthsLate) / 100;
+      break;
+    }
+  }
+
+  if (rule.maxFeeAmount != null && amount > rule.maxFeeAmount) {
+    amount = rule.maxFeeAmount;
+  }
+  amount = Math.round(amount * 100) / 100; // 2 decimal places
+
+  return amount > 0
+    ? { amount, ruleId: rule.id, ruleName: rule.name, daysLate }
+    : null;
+}
+
+/**
+ * Materialize a late-fee Payment (sibling of the overdue one) for the deal.
+ * Idempotent: tags the new Payment.paymentReference with `LATE_FEE:<srcId>`
+ * and refuses to create a duplicate. If the rule changes or the accrued
+ * amount grows over time, calls beyond the first one update the existing
+ * row's amount in place rather than stacking new ones.
+ */
+export async function applyLateFeeIfApplicable(
+  paymentId: string
+): Promise<{ created: boolean; updated: boolean; lateFeePaymentId?: string; amount?: number }> {
+  const fee = await computeLateFee(paymentId);
+  if (!fee) return { created: false, updated: false };
+
+  const source = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (!source) return { created: false, updated: false };
+
+  const reference = `LATE_FEE:${paymentId}`;
+  const existing = await prisma.payment.findFirst({
+    where: { paymentReference: reference, milestoneType: "LATE_FEE" },
+  });
+
+  if (existing) {
+    if (Math.abs(existing.amount - fee.amount) < 0.01) {
+      return { created: false, updated: false, lateFeePaymentId: existing.id, amount: existing.amount };
+    }
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: existing.id },
+        data: { amount: fee.amount, updatedAt: new Date() },
+      }),
+      prisma.paymentAuditLog.create({
+        data: {
+          paymentId: existing.id,
+          action: "LATE_FEE_RECALCULATED",
+          changedBy: "system",
+          reason: `Recalc: ${fee.ruleName} → ${fee.amount} (${fee.daysLate}d late)`,
+        },
+      }),
+    ]);
+    return { created: false, updated: true, lateFeePaymentId: existing.id, amount: fee.amount };
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const lateFee = await tx.payment.create({
+      data: {
+        dealId: source.dealId,
+        milestoneLabel: `Late fee — ${source.milestoneLabel}`,
+        amount: fee.amount,
+        originalAmount: fee.amount,
+        percentage: 0,
+        dueDate: new Date(),
+        status: "OVERDUE",
+        milestoneType: "LATE_FEE",
+        paymentReference: reference,
+        targetAccount: "CORPORATE",
+        notes: `Auto-applied per LateFeeRule "${fee.ruleName}" (${fee.daysLate} days late).`,
+      },
+    });
+    await tx.paymentAuditLog.create({
+      data: {
+        paymentId: lateFee.id,
+        action: "LATE_FEE_APPLIED",
+        changedBy: "system",
+        reason: `Rule: ${fee.ruleName}; ${fee.daysLate}d late; amount ${fee.amount}`,
+      },
+    });
+    return lateFee;
+  });
+
+  paymentLogger.info("Late fee applied", {
+    sourcePaymentId: paymentId,
+    lateFeePaymentId: created.id,
+    amount: fee.amount,
+    daysLate: fee.daysLate,
+    ruleName: fee.ruleName,
+  });
+
+  return { created: true, updated: false, lateFeePaymentId: created.id, amount: fee.amount };
+}
+
+/**
  * Mark a single payment as OVERDUE if it is PENDING and its due date has passed.
+ * After marking, attempts to apply any active LateFeeRule for the project.
  */
 export async function markPaymentOverdue(paymentId: string) {
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
@@ -357,6 +505,14 @@ export async function markPaymentOverdue(paymentId: string) {
       },
     }),
   ]);
+
+  // Late-fee accrual is best-effort; failure here must not block the OVERDUE
+  // transition itself.
+  try {
+    await applyLateFeeIfApplicable(paymentId);
+  } catch (err) {
+    paymentLogger.error("applyLateFeeIfApplicable failed", { paymentId, err: String(err) });
+  }
 
   return updated;
 }
@@ -398,6 +554,24 @@ export async function checkAndMarkOverduePayments(): Promise<number> {
       })
     ),
   ]);
+
+  // Accrue late fees for every newly-overdue payment AND for every payment
+  // already in OVERDUE state (so percentage-per-day rules grow over time).
+  // Failures per-payment don't abort the batch.
+  const allOverdue = await prisma.payment.findMany({
+    where: { status: "OVERDUE", milestoneType: { not: "LATE_FEE" } },
+    select: { id: true },
+  });
+  for (const p of allOverdue) {
+    try {
+      await applyLateFeeIfApplicable(p.id);
+    } catch (err) {
+      paymentLogger.error("[cron] applyLateFeeIfApplicable failed", {
+        paymentId: p.id,
+        err: String(err),
+      });
+    }
+  }
 
   return ids.length;
 }
