@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 
+# Claude Code agent worktrees (subagent isolation directories — git's
+# worktree machinery tracks them out-of-band; the directory contents
+# themselves should not enter version control).
+.claude/worktrees/
+
 # Build outputs
 dist/
 build/
