@@ -1,5 +1,10 @@
 # Week 1: Frontend Wireframe Implementation - COMPLETE
 
+> **📦 HISTORICAL — Week-1 snapshot (April 2026).** Rolled up into
+> [`INTEGRATED_CRM_EXECUTION_SUMMARY.md`](./INTEGRATED_CRM_EXECUTION_SUMMARY.md).
+> Current launch posture lives in
+> [`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md).
+
 ## Executive Summary
 
 **Status: 3/3 Core Tasks Complete** ✅

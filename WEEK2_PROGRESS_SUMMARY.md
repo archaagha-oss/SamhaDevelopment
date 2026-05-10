@@ -1,7 +1,12 @@
 # Week 2 Execution: Backend Verification & Frontend Refactoring
 
-**Date**: May 7, 2026  
-**Status**: COMPLETE  
+> **📦 HISTORICAL — Week-2 snapshot (May 2026).** Rolled up into
+> [`INTEGRATED_CRM_EXECUTION_SUMMARY.md`](./INTEGRATED_CRM_EXECUTION_SUMMARY.md).
+> Current launch posture lives in
+> [`LAUNCH_READINESS_AUDIT.md`](./LAUNCH_READINESS_AUDIT.md).
+
+**Date**: May 7, 2026
+**Status**: COMPLETE
 **Deliverables**: 4/5 tasks completed, final testing ready
 
 ---

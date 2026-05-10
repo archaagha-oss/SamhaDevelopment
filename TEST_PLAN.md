@@ -1,5 +1,13 @@
 # Phase 2: End-to-End Test Plan
 
+> **Newer test docs supersede this one for launch:**
+>
+> - [`MANUAL_QA_CHECKLIST.md`](./MANUAL_QA_CHECKLIST.md) — full click-through script per flow.
+> - [`CI_TEST_MATRIX.md`](./CI_TEST_MATRIX.md) — module → automated test coverage map.
+>
+> The Phase-2 scenarios below are still valid as integration-test specs; treat
+> this file as historical context for those two newer docs.
+
 ## Critical Path Tests
 
 ### Test 1: Offer → Deal Integration

@@ -1,7 +1,13 @@
 # Complete UX Redesign: Projects, Units, Leads & Deals
 ## FINAL IMPLEMENTATION SUMMARY
 
-**Status:** ✅ **ALL THREE PHASES COMPLETE**  
+> **⚠ STALE — claims contradicted by codebase.** This doc says all three phases
+> are complete and references `LeadsPageV2`, `UnitSearchFilters`, and
+> `NotificationCenter` components that **do not exist** in the codebase. The
+> latest, accurate UX guidance is [`UX_AUDIT_2_FINDINGS.md`](./UX_AUDIT_2_FINDINGS.md)
+> (2026-05-10) — that audit is the source of truth for current UX work.
+
+**Status:** ✅ **ALL THREE PHASES COMPLETE**
 **Completion Date:** May 6, 2026  
 **Total Implementation Time:** ~40 hours across 3 phases
 

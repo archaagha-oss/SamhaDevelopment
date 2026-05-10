@@ -1,5 +1,11 @@
 # Integration Guide: UX Redesign (All Phases)
 
+> **⚠ STALE — references components that do not exist.** This guide instructs
+> how to integrate `LeadsPageV2`, `UnitSearchFilters`, `NotificationCenter`
+> components — **none of which exist in the codebase**. Treat this file as
+> historical context only. For current UX work see
+> [`UX_AUDIT_2_FINDINGS.md`](./UX_AUDIT_2_FINDINGS.md).
+
 **Purpose:** Step-by-step instructions to integrate Phase 1, 2, and 3 changes
 
 ---
