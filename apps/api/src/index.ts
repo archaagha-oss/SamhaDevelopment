@@ -16,6 +16,8 @@ import {
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
 import { releaseExpiredHolds } from "./services/unitService";
+import { checkAndExpireReservations } from "./services/reservationService";
+import { sweepComplianceNotifications } from "./services/complianceNotificationService";
 
 // Import routes
 import projectRoutes from "./routes/projects";
@@ -61,6 +63,40 @@ setInterval(() => {
     console.error("[Cron] ON_HOLD expiry sweep error:", err);
   });
 }, 60 * 60 * 1000);
+
+// Hourly sweep: expire reservations past their expiresAt and release the
+// reserved unit back to AVAILABLE. Closes audit gap #6.
+setInterval(() => {
+  checkAndExpireReservations()
+    .then((n) => {
+      if (n > 0) logger.info(`[Cron] expired ${n} reservation(s)`);
+    })
+    .catch((err: unknown) => {
+      console.error("[Cron] reservation expiry sweep error:", err);
+    });
+}, 60 * 60 * 1000);
+
+// Daily sweep: scan compliance expiries (RERA / Trade / VAT / EID) and
+// create Notification rows for ADMIN/MANAGER on items newly within the
+// alert horizon. Idempotent — won't re-notify the same expiry within the
+// dedup window. Closes audit gap #10.
+setInterval(() => {
+  sweepComplianceNotifications()
+    .then((stats) => {
+      if (stats.created > 0) {
+        logger.info(`[Cron] compliance sweep: ${stats.created} new notification(s)`);
+      }
+    })
+    .catch((err: unknown) => {
+      console.error("[Cron] compliance notification sweep error:", err);
+    });
+}, 24 * 60 * 60 * 1000);
+
+// Run the compliance sweep once shortly after boot so a freshly-deployed
+// instance doesn't have to wait 24h to surface anything that's already due.
+setTimeout(() => {
+  sweepComplianceNotifications().catch(() => {});
+}, 60_000).unref?.();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

@@ -73,24 +73,71 @@ export function maskLeadList<T extends Record<string, any>>(leads: T[], role: Ro
 }
 
 /**
- * Look up the calling user's role. Cached on the request object so multiple
- * calls within one request hit the DB only once.
+ * Look up the calling user's role + DB id. Cached on the request object so
+ * multiple calls within one request hit the DB only once. Returns the User.id
+ * (NOT the clerkId) for use in scoped where-clauses.
  */
-export async function resolveCallerRole(req: Request): Promise<Role | null> {
-  const cached = (req as any)._cachedRole;
+export interface ResolvedCaller {
+  role: Role | null;
+  userId: string | null;
+}
+
+export async function resolveCaller(req: Request): Promise<ResolvedCaller> {
+  const cached = (req as any)._cachedCaller as ResolvedCaller | undefined;
   if (cached !== undefined) return cached;
 
-  const userId = req.auth?.userId;
-  if (!userId) {
-    (req as any)._cachedRole = null;
-    return null;
+  const clerkId = req.auth?.userId;
+  if (!clerkId) {
+    const empty: ResolvedCaller = { role: null, userId: null };
+    (req as any)._cachedCaller = empty;
+    return empty;
   }
 
   const user = await prisma.user.findFirst({
-    where: { clerkId: userId },
-    select: { role: true },
+    where: { clerkId },
+    select: { id: true, role: true },
   });
-  const role = (user?.role as Role | undefined) ?? null;
-  (req as any)._cachedRole = role;
-  return role;
+  const resolved: ResolvedCaller = {
+    role: (user?.role as Role | undefined) ?? null,
+    userId: user?.id ?? null,
+  };
+  (req as any)._cachedCaller = resolved;
+  return resolved;
+}
+
+/** Backward-compat: just the role. */
+export async function resolveCallerRole(req: Request): Promise<Role | null> {
+  return (await resolveCaller(req)).role;
+}
+
+/**
+ * Single-org data scoping (closes audit D.1.2 / D.1.3 follow-up).
+ *
+ * - ADMIN, MANAGER: see everything; returns {}.
+ * - MEMBER, VIEWER: see only records where they are the assigned owner.
+ *
+ * Returns a Prisma where-fragment to merge into existing queries. The caller
+ * decides which field to scope on (assignedAgentId for Lead, lead.assignedAgentId
+ * for Deal, etc.) — this helper just produces the value side.
+ *
+ * Usage:
+ *   const scope = await leadAccessFilter(req);
+ *   const where = { ...existingWhere, ...scope };
+ */
+export async function leadAccessFilter(req: Request): Promise<Record<string, unknown>> {
+  const { role, userId } = await resolveCaller(req);
+  if (!role || !userId) return { id: "__none__" }; // unknown caller → see nothing
+  if (FULL_ACCESS_ROLES.includes(role)) return {};
+  return { assignedAgentId: userId };
+}
+
+/**
+ * Same as leadAccessFilter but produces the relational filter for queries
+ * over Deal (deals don't have assignedAgentId directly; they inherit from lead).
+ */
+export async function dealAccessFilter(req: Request): Promise<Record<string, unknown>> {
+  const { role, userId } = await resolveCaller(req);
+  if (!role || !userId) return { id: "__none__" };
+  if (FULL_ACCESS_ROLES.includes(role)) return {};
+  return { lead: { assignedAgentId: userId } };
 }

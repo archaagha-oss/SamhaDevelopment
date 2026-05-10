@@ -1350,7 +1350,12 @@ model Commission {
   paidDate   DateTime?
   paidAmount Float?
   paidVia    String?
-  receiptKey String?
+  receiptKey String? // proof-of-payment doc captured at PAID time
+
+  // Form A (or equivalent commission-authorization doc). Required before
+  // a commission can be marked PAID — the route enforces it. Closes audit
+  // gap #7 ("audit risk: commission paid without supporting doc").
+  documentKey String?
 
   notes String? @db.Text
 
