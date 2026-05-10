@@ -16,7 +16,7 @@ export const FEATURE_FLAGS: { key: string; label: string; description: string; d
   { key: "escrowModule",         label: "Escrow Module",          description: "Enable escrow account tracking and reconciliation", default: false },
   { key: "snagList",             label: "Snag List",              description: "Defect tracking during the handover phase",         default: false },
   { key: "handoverChecklist",    label: "Handover Checklist",     description: "Step-by-step handover workflow per unit",           default: true  },
-  { key: "kycVerification",      label: "KYC Verification",       description: "Buyer document verification workflow",              default: true  },
+  { key: "kycVerification",      label: "KYC Verification",       description: "Buyer document verification workflow (backend partial — keep off until complete)", default: false },
   { key: "commissionTiers",      label: "Commission Tiers",       description: "Multi-tier broker commission rules",                default: false },
   { key: "constructionProgress", label: "Construction Progress",  description: "Project-level construction tracking with media",    default: false },
   { key: "bulkUnitImport",       label: "Bulk Unit Import",       description: "CSV import for unit creation",                      default: true  },

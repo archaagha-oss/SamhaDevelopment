@@ -25,7 +25,10 @@ export const FEATURE_DEFAULTS: Record<string, boolean> = {
   escrowModule:         false,
   snagList:             false,
   handoverChecklist:    true,
-  kycVerification:      true,
+  // KYC backend is partial — UI lives at /lead-kyc but several POST/PATCH paths
+  // still hit unimplemented routes. Default OFF until that ships; toggle on
+  // in Settings if you want to dogfood the read paths.
+  kycVerification:      false,
   commissionTiers:      false,
   constructionProgress: false,
   bulkUnitImport:       true,

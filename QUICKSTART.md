@@ -151,7 +151,7 @@ curl http://localhost:3000/health
 - **README.md** - Complete guide
 - **SETUP.md** - Detailed setup
 - **API.md** - All endpoints
-- **INITIALIZE-SUMMARY.md** - What was created
+- **docs/archive/INITIALIZE-SUMMARY.md** - What was created (historical)
 - **EXECUTION-CHECKLIST.md** - Phase 1 requirements
 
 ---
