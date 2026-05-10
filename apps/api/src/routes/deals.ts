@@ -20,6 +20,7 @@ import {
   optimisticUpdate,
   readExpectedVersion,
   handleOptimisticLockError,
+  OptimisticLockError,
 } from "../lib/optimisticLock";
 
 const router = Router();
@@ -213,11 +214,24 @@ router.get("/:id/spa-snapshot", async (req, res) => {
 
 router.get("/:id/purchasers", async (req, res) => {
   try {
-    const purchasers = await prisma.dealPurchaser.findMany({
-      where: { dealId: req.params.id },
-      orderBy: { sortOrder: "asc" },
-    });
-    res.json(purchasers);
+    const [purchasers, deal] = await Promise.all([
+      prisma.dealPurchaser.findMany({
+        where: { dealId: req.params.id },
+        orderBy: { sortOrder: "asc" },
+      }),
+      prisma.deal.findUnique({
+        where: { id: req.params.id },
+        select: { version: true },
+      }),
+    ]);
+    if (!deal) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    // Response shape includes the deal's optimistic-lock version so the
+    // editor can echo it on PUT — purchaser writes bump the parent deal's
+    // version so two agents editing the joint-purchasers list never silently
+    // overwrite each other.
+    res.json({ purchasers, dealVersion: deal.version });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch purchasers", code: "FETCH_PURCHASERS_ERROR", statusCode: 500 });
   }
@@ -232,6 +246,16 @@ router.put("/:id/purchasers", validate(replaceDealPurchasersSchema), async (req,
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
     const dealId = req.params.id;
+
+    const expectedVersion = readExpectedVersion(req);
+    if (expectedVersion === null) {
+      return res.status(400).json({
+        error: "Missing or invalid expectedVersion. Reload the purchaser list and try again.",
+        code: "EXPECTED_VERSION_REQUIRED",
+        statusCode: 400,
+      });
+    }
+
     const incoming = req.body.purchasers as Array<{
       leadId?: string | null;
       name: string;
@@ -267,36 +291,60 @@ router.put("/:id/purchasers", validate(replaceDealPurchasersSchema), async (req,
       });
     }
 
-    await prisma.$transaction([
-      prisma.dealPurchaser.deleteMany({ where: { dealId } }),
-      ...incoming.map((p, idx) =>
-        prisma.dealPurchaser.create({
-          data: {
-            dealId,
-            leadId: p.leadId ?? null,
-            name: p.name,
-            ownershipPercentage: p.ownershipPercentage,
-            address: p.address ?? null,
-            phone: p.phone ?? null,
-            email: p.email || null,
-            nationality: p.nationality ?? null,
-            emiratesId: p.emiratesId ?? null,
-            passportNumber: p.passportNumber ?? null,
-            companyRegistrationNumber: p.companyRegistrationNumber ?? null,
-            authorizedSignatory: p.authorizedSignatory ?? null,
-            sourceOfFunds: p.sourceOfFunds ?? null,
-            isPrimary: p.isPrimary ?? false,
-            sortOrder: p.sortOrder ?? idx,
-          },
-        })
-      ),
-    ]);
+    // Lock + replace in one transaction. The deal-version check is the lock
+    // — if 0 rows match, another agent has already edited the deal (or its
+    // purchaser list, which bumps the same version) since this client read it.
+    let newVersion: number;
+    try {
+      newVersion = await prisma.$transaction(async (tx) => {
+        const lock = await tx.deal.updateMany({
+          where: { id: dealId, version: expectedVersion },
+          data: { version: { increment: 1 } },
+        });
+        if (lock.count === 0) {
+          const current = await tx.deal.findUnique({
+            where: { id: dealId },
+            select: { id: true, version: true },
+          });
+          throw new OptimisticLockError("Deal", current?.version ?? -1, current ?? null);
+        }
+
+        await tx.dealPurchaser.deleteMany({ where: { dealId } });
+        for (let idx = 0; idx < incoming.length; idx++) {
+          const p = incoming[idx];
+          await tx.dealPurchaser.create({
+            data: {
+              dealId,
+              leadId: p.leadId ?? null,
+              name: p.name,
+              ownershipPercentage: p.ownershipPercentage,
+              address: p.address ?? null,
+              phone: p.phone ?? null,
+              email: p.email || null,
+              nationality: p.nationality ?? null,
+              emiratesId: p.emiratesId ?? null,
+              passportNumber: p.passportNumber ?? null,
+              companyRegistrationNumber: p.companyRegistrationNumber ?? null,
+              authorizedSignatory: p.authorizedSignatory ?? null,
+              sourceOfFunds: p.sourceOfFunds ?? null,
+              isPrimary: p.isPrimary ?? false,
+              sortOrder: p.sortOrder ?? idx,
+            },
+          });
+        }
+
+        return expectedVersion + 1;
+      });
+    } catch (err) {
+      if (handleOptimisticLockError(err, res)) return;
+      throw err;
+    }
 
     const purchasers = await prisma.dealPurchaser.findMany({
       where: { dealId },
       orderBy: { sortOrder: "asc" },
     });
-    res.json(purchasers);
+    res.json({ purchasers, dealVersion: newVersion });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to save purchasers", code: "SAVE_PURCHASERS_ERROR", statusCode: 400 });
   }

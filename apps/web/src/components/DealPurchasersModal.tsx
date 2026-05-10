@@ -3,6 +3,7 @@ import axios from "axios";
 import Modal from "./Modal";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useOptimisticConflict } from "../hooks/useOptimisticConflict";
 
 interface Props {
   dealId: string;
@@ -54,10 +55,47 @@ const blank = (sortOrder: number, isPrimary: boolean): Purchaser => ({
 // exactly one row must be marked primary.
 export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props) {
   const [purchasers, setPurchasers] = useState<Purchaser[]>([]);
+  const [dealVersion, setDealVersion] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // 409 OPTIMISTIC_LOCK_CONFLICT — another agent saved the purchaser list
+  // (or any other deal field) while this modal was open. The toast's
+  // Reload action refetches GET /purchasers to get the fresh list +
+  // version, so the user can re-apply edits on top of the current state.
+  const handleConflict = useOptimisticConflict<{ purchasers: Array<Partial<Purchaser> & { id: string }>; dealVersion: number }>({
+    onReload: async () => {
+      const fresh = await axios.get(`/api/deals/${dealId}/purchasers`);
+      hydrateFromResponse(fresh.data);
+    },
+  });
+
+  function hydrateFromResponse(data: { purchasers: Array<Partial<Purchaser> & { id: string }>; dealVersion: number }) {
+    setDealVersion(data.dealVersion);
+    const existing = data.purchasers ?? [];
+    if (existing.length === 0) return; // caller decides what to seed
+    setPurchasers(
+      existing.map((p, i) => ({
+        id: p.id,
+        leadId: (p.leadId as string | null) ?? null,
+        name: p.name ?? "",
+        ownershipPercentage: p.ownershipPercentage ?? 0,
+        address: (p.address as string) ?? "",
+        phone: (p.phone as string) ?? "",
+        email: (p.email as string) ?? "",
+        nationality: (p.nationality as string) ?? "",
+        emiratesId: (p.emiratesId as string) ?? "",
+        passportNumber: (p.passportNumber as string) ?? "",
+        companyRegistrationNumber: (p.companyRegistrationNumber as string) ?? "",
+        authorizedSignatory: (p.authorizedSignatory as string) ?? "",
+        sourceOfFunds: (p.sourceOfFunds as string) ?? "",
+        isPrimary: !!p.isPrimary,
+        sortOrder: p.sortOrder ?? i,
+      })),
+    );
+  }
 
   useEffect(() => {
     Promise.all([
@@ -65,28 +103,9 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
       axios.get(`/api/deals/${dealId}`),
     ])
       .then(([pRes, dRes]) => {
-        const existing = (pRes.data ?? []) as Array<Partial<Purchaser> & { id: string }>;
-        if (existing.length > 0) {
-          setPurchasers(
-            existing.map((p, i) => ({
-              id: p.id,
-              leadId: (p.leadId as string | null) ?? null,
-              name: p.name ?? "",
-              ownershipPercentage: p.ownershipPercentage ?? 0,
-              address: (p.address as string) ?? "",
-              phone: (p.phone as string) ?? "",
-              email: (p.email as string) ?? "",
-              nationality: (p.nationality as string) ?? "",
-              emiratesId: (p.emiratesId as string) ?? "",
-              passportNumber: (p.passportNumber as string) ?? "",
-              companyRegistrationNumber: (p.companyRegistrationNumber as string) ?? "",
-              authorizedSignatory: (p.authorizedSignatory as string) ?? "",
-              sourceOfFunds: (p.sourceOfFunds as string) ?? "",
-              isPrimary: !!p.isPrimary,
-              sortOrder: p.sortOrder ?? i,
-            })),
-          );
-        } else {
+        const payload = pRes.data as { purchasers: Array<Partial<Purchaser> & { id: string }>; dealVersion: number };
+        hydrateFromResponse(payload);
+        if ((payload.purchasers ?? []).length === 0) {
           // Seed from the deal's primary lead so the user has a starting point.
           const lead = dRes.data?.lead;
           if (lead) {
@@ -149,29 +168,43 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
       return;
     }
 
+    if (dealVersion === null) {
+      setError("Couldn't read the deal's current version. Reload and try again.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await axios.put(`/api/deals/${dealId}/purchasers`, {
-        purchasers: purchasers.map((p, i) => ({
-          leadId: p.leadId ?? undefined,
-          name: p.name,
-          ownershipPercentage: p.ownershipPercentage,
-          address: p.address || null,
-          phone: p.phone || null,
-          email: p.email || null,
-          nationality: p.nationality || null,
-          emiratesId: p.emiratesId || null,
-          passportNumber: p.passportNumber || null,
-          companyRegistrationNumber: p.companyRegistrationNumber || null,
-          authorizedSignatory: p.authorizedSignatory || null,
-          sourceOfFunds: p.sourceOfFunds || null,
-          isPrimary: p.isPrimary,
-          sortOrder: i,
-        })),
-      });
+      const res = await axios.put<{ purchasers: unknown; dealVersion: number }>(
+        `/api/deals/${dealId}/purchasers`,
+        {
+          expectedVersion: dealVersion,
+          purchasers: purchasers.map((p, i) => ({
+            leadId: p.leadId ?? undefined,
+            name: p.name,
+            ownershipPercentage: p.ownershipPercentage,
+            address: p.address || null,
+            phone: p.phone || null,
+            email: p.email || null,
+            nationality: p.nationality || null,
+            emiratesId: p.emiratesId || null,
+            passportNumber: p.passportNumber || null,
+            companyRegistrationNumber: p.companyRegistrationNumber || null,
+            authorizedSignatory: p.authorizedSignatory || null,
+            sourceOfFunds: p.sourceOfFunds || null,
+            isPrimary: p.isPrimary,
+            sortOrder: i,
+          })),
+        },
+      );
+      setDealVersion(res.data.dealVersion);
       setSaved(true);
       onSaved?.();
     } catch (err: any) {
+      if (handleConflict(err)) {
+        setSubmitting(false);
+        return;
+      }
       setError(err.response?.data?.error || "Failed to save purchasers");
     } finally {
       setSubmitting(false);
