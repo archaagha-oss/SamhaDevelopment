@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Camera, Ruler } from "lucide-react";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 interface UnitImage {
   id: string;
@@ -17,6 +19,12 @@ interface Props {
 export default function UnitGallery({ images, onDelete, onUpload }: Props) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  useModalA11y({
+    open: lightboxIndex !== null,
+    onClose: () => setLightboxIndex(null),
+    containerRef: lightboxRef,
+  });
 
   if (images.length === 0) return null;
 
@@ -95,16 +103,27 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
           onClick={() => setLightboxIndex(null)}
           onKeyDown={handleKeyDown}
           role="dialog"
-          tabIndex={-1}
+          aria-modal="true"
+          aria-label={currentImage.caption || "Unit image"}
         >
-          <div className="bg-black rounded-lg max-w-4xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={lightboxRef}
+            tabIndex={-1}
+            className="bg-black rounded-lg max-w-4xl w-full overflow-hidden focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Lightbox content */}
             <div className="relative">
               <img src={currentImage.url} alt={currentImage.caption || "Unit"} className="w-full h-auto max-h-[70vh] object-contain" />
 
               {/* Type badge */}
-              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
-                {currentImage.type === "PHOTO" ? "📷 Photo" : "📐 Floor Plan"}
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white inline-flex items-center gap-1.5">
+                {currentImage.type === "PHOTO" ? (
+                  <Camera className="size-3" aria-hidden="true" />
+                ) : (
+                  <Ruler className="size-3" aria-hidden="true" />
+                )}
+                {currentImage.type === "PHOTO" ? "Photo" : "Floor plan"}
               </span>
 
               {/* Navigation buttons */}

@@ -1,5 +1,9 @@
 import { useState, useRef } from "react";
 import axios from "axios";
+import { Camera } from "lucide-react";
+import Modal from "./Modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   unitId: string;
@@ -84,158 +88,142 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="font-bold text-foreground">Upload Image</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
-            type="button"
-          >
-            ×
-          </button>
-        </div>
+    <Modal
+      open
+      onClose={onClose}
+      title="Upload image"
+      size="md"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={uploading}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleUpload} disabled={!file || uploading}>
+            {uploading ? "Uploading…" : "Upload"}
+          </Button>
+        </>
+      }
+    >
+      <div className="px-6 py-4 space-y-4">
+        {/* Drop Zone */}
+        <div
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove("bg-info-soft");
+            handleDrop(e);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add("bg-info-soft");
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove("bg-info-soft");
+          }}
+          className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer transition-colors relative"
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
 
-        <div className="px-6 py-4 space-y-4">
-          {/* Drop Zone */}
-          <div
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.remove("bg-info-soft");
-              handleDrop(e);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.add("bg-info-soft");
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.remove("bg-info-soft");
-            }}
-            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer transition-colors relative"
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            {preview ? (
-              <div>
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-full h-40 object-cover rounded-lg mb-3"
-                />
-                <p className="text-sm text-muted-foreground">
-                  {file?.name}
-                </p>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setFile(null);
-                    setPreview(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="text-primary hover:text-primary text-xs mt-2 font-medium"
-                >
-                  Change file
-                </button>
-              </div>
-            ) : (
-              <div>
-                <p className="text-2xl mb-2">📸</p>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Drop image here or click to select
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  JPEG, PNG, or WebP up to 10MB
-                </p>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-          </div>
-
-          {/* Caption */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Caption (optional)
-            </label>
-            <input
-              type="text"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="e.g. Living room view"
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
-            />
-          </div>
-
-          {/* Image Type */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">
-              Image Type
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-ring"
-            >
-              <option value="PHOTO">Photo</option>
-              <option value="FLOOR_PLAN">Floor Plan</option>
-              <option value="FLOOR_MAP">Floor Location Map</option>
-              <optgroup label="SPA Schedules">
-                <option value="SCHEDULE_DIMENSIONED">Schedule 1 — Dimensioned plan</option>
-                <option value="SCHEDULE_FURNISHED">Schedule 1 — Furnished plan</option>
-                <option value="SCHEDULE_FLOOR_PLAN">Schedule 3 — Floor plan</option>
-              </optgroup>
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Schedule images appear automatically in the generated SPA. One image per schedule type per unit.
-            </p>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3">
-              <p className="text-destructive text-sm">{error}</p>
+          {preview ? (
+            <div>
+              <img
+                src={preview}
+                alt="Preview"
+                className="w-full h-40 object-cover rounded-lg mb-3"
+              />
+              <p className="text-sm text-muted-foreground">{file?.name}</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setFile(null);
+                  setPreview(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-primary hover:text-primary text-xs mt-2 font-medium"
+              >
+                Change file
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <Camera className="size-8 text-muted-foreground mb-2" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground mb-1">
+                Drop image here or click to select
+              </p>
+              <p className="text-xs text-muted-foreground">
+                JPEG, PNG, or WebP up to 10MB
+              </p>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            aria-label="Choose image to upload"
+          />
         </div>
 
-        {/* Actions */}
-        <div className="px-6 py-3 border-t border-border flex gap-2">
-          <button
-            onClick={onClose}
-            disabled={uploading}
-            className="flex-1 px-3 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted/50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading ? "Uploading..." : "Upload"}
-          </button>
+        {/* Caption */}
+        <div>
+          <label htmlFor="image-caption" className="block text-xs font-semibold text-muted-foreground mb-1">
+            Caption (optional)
+          </label>
+          <Input
+            id="image-caption"
+            type="text"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="e.g. Living room view"
+          />
         </div>
+
+        {/* Image Type */}
+        <div>
+          <label htmlFor="image-type" className="block text-xs font-semibold text-muted-foreground mb-1">
+            Image type
+          </label>
+          <select
+            id="image-type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full h-10 border border-input rounded-md px-3 text-sm bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="PHOTO">Photo</option>
+            <option value="FLOOR_PLAN">Floor plan</option>
+            <option value="FLOOR_MAP">Floor location map</option>
+            <optgroup label="SPA schedules">
+              <option value="SCHEDULE_DIMENSIONED">Schedule 1 — Dimensioned plan</option>
+              <option value="SCHEDULE_FURNISHED">Schedule 1 — Furnished plan</option>
+              <option value="SCHEDULE_FLOOR_PLAN">Schedule 3 — Floor plan</option>
+            </optgroup>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Schedule images appear automatically in the generated SPA. One image per schedule type per unit.
+          </p>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div role="alert" className="bg-destructive-soft border border-destructive/30 rounded-lg p-3">
+            <p className="text-destructive text-sm">{error}</p>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

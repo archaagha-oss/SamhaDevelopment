@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatAED as fmtAED } from "../lib/format";
+import Modal from "./Modal";
+import { Button } from "@/components/ui/button";
 
 interface UnitInfo {
   unitNumber: string;
@@ -120,14 +122,27 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-auto">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-          <h3 className="font-semibold text-foreground text-sm">Share unit with a lead</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
+    <Modal
+      open
+      onClose={onClose}
+      size="lg"
+      title="Share unit with a lead"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSend}
+            disabled={!picked || !body.trim() || sending || availableChannels.length === 0}
+          >
+            {sending ? "Sending…" : `Send via ${CHANNEL_LABEL[channel] ?? "?"}`}
+          </Button>
+        </>
+      }
+    >
+      <div className="px-5 py-4 space-y-4">
           {/* Unit summary */}
           <div className="bg-muted/50 rounded-lg border border-border px-3 py-2">
             <p className="text-sm font-semibold text-foreground">
@@ -221,24 +236,7 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
               />
             </>
           )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-muted/50">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-muted-foreground text-sm font-medium hover:bg-muted rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSend}
-            disabled={!picked || !body.trim() || sending || availableChannels.length === 0}
-            className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
-          >
-            {sending ? "Sending…" : `Send via ${CHANNEL_LABEL[channel] ?? "?"}`}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

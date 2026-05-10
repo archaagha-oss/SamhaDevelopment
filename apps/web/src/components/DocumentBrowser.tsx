@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import { Document } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 interface Props {
   dealId: string;
@@ -55,6 +57,12 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<{ url: string; name: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Document | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  useModalA11y({
+    open: !!previewUrl,
+    onClose: () => setPreviewUrl(null),
+    containerRef: previewRef,
+  });
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -209,13 +217,22 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
           onClick={() => setPreviewUrl(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={previewUrl.name}
         >
-          <div className="max-w-4xl max-h-[90vh] bg-card rounded-lg overflow-hidden relative">
+          <div
+            ref={previewRef}
+            tabIndex={-1}
+            className="max-w-4xl max-h-[90vh] bg-card rounded-lg overflow-hidden relative focus:outline-none"
+          >
             <button
+              type="button"
               onClick={() => setPreviewUrl(null)}
-              className="absolute top-4 right-4 bg-white/90 hover:bg-card rounded-lg p-2 z-10"
+              aria-label="Close preview"
+              className="absolute top-4 right-4 bg-white/90 hover:bg-card rounded-lg p-2 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              ✕
+              <X className="size-4" aria-hidden="true" />
             </button>
             <img
               src={previewUrl.url}

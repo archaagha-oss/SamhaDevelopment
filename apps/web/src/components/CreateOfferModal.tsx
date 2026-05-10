@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 interface CreateOfferModalProps {
   isOpen: boolean;
@@ -33,6 +34,9 @@ export default function CreateOfferModal({
   unitArea: initialUnitArea,
   onOfferCreated,
 }: CreateOfferModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: isOpen, onClose, containerRef: dialogRef });
+
   const [leadId, setLeadId] = useState(initialLeadId || "");
   const [unitId, setUnitId] = useState(initialUnitId || "");
   const [unitNumber, setUnitNumber] = useState(initialUnitNumber || "");
@@ -158,10 +162,17 @@ export default function CreateOfferModal({
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-40 transition-opacity" onClick={onClose} aria-hidden="true" />
 
-      {/* Slide-over Modal */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto">
+      {/* Slide-over panel */}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Create offer"
+        tabIndex={-1}
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 overflow-y-auto focus:outline-none"
+      >
         {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-foreground">Create Offer</h2>

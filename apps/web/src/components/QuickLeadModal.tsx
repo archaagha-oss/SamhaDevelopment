@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useAgents } from "../hooks/useAgents";
+import Modal from "./Modal";
 import ConfirmDialog from "./ConfirmDialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   onClose: () => void;
@@ -62,23 +64,35 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+    <>
+      <Modal
+        open
+        onClose={handleClose}
+        title={
           <div>
-            <h2 className="font-bold text-foreground text-lg">Quick Add Lead</h2>
+            <h2 className="font-bold text-foreground text-lg">Quick add lead</h2>
             <p className="text-muted-foreground text-xs mt-0.5">Capture basic info in seconds</p>
           </div>
-          <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
-        </div>
-
+        }
+        size="sm"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button form="quick-lead-form" type="submit" disabled={submitting}>
+              {submitting ? "Creating…" : "Create lead"}
+            </Button>
+          </>
+        }
+      >
         <form id="quick-lead-form" onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={lbl}>First Name *</label>
+              <label htmlFor="ql-firstName" className={lbl}>First Name *</label>
               <input
+                id="ql-firstName"
                 ref={firstNameRef}
                 required
                 value={firstName}
@@ -91,8 +105,9 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
               />
             </div>
             <div>
-              <label className={lbl}>Last Name *</label>
+              <label htmlFor="ql-lastName" className={lbl}>Last Name *</label>
               <input
+                id="ql-lastName"
                 required
                 value={lastName}
                 onChange={(e) => {
@@ -107,11 +122,13 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
 
           {/* Phone */}
           <div>
-            <label className={lbl}>Phone *</label>
+            <label htmlFor="ql-phone" className={lbl}>Phone *</label>
             <div className="relative">
               <input
+                id="ql-phone"
                 required
                 type="tel"
+                inputMode="tel"
                 value={phone}
                 onChange={(e) => {
                   setPhone(e.target.value);
@@ -126,8 +143,9 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
 
           {/* Assigned agent */}
           <div>
-            <label className={lbl}>Assigned Sales Agent *</label>
+            <label htmlFor="ql-agent" className={lbl}>Assigned Sales Agent *</label>
             <select
+              id="ql-agent"
               required
               value={assignedAgentId}
               onChange={(e) => {
@@ -156,29 +174,10 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
           </label>
 
           {error && (
-            <p className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
+            <p role="alert" className="text-sm text-destructive bg-destructive-soft border border-destructive/30 px-3 py-2 rounded-lg">{error}</p>
           )}
         </form>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-border flex gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            form="quick-lead-form"
-            type="submit"
-            disabled={submitting}
-            className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm transition-colors disabled:opacity-50"
-          >
-            {submitting ? "Creating…" : "Create Lead"}
-          </button>
-        </div>
-      </div>
+      </Modal>
 
       <ConfirmDialog
         open={confirmDiscard}
@@ -190,6 +189,6 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
         onConfirm={() => { setConfirmDiscard(false); onClose(); }}
         onCancel={() => setConfirmDiscard(false)}
       />
-    </div>
+    </>
   );
 }

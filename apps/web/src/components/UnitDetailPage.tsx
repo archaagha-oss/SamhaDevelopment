@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Ruler, Camera, MapPin, Plus, MessageCircle } from "lucide-react";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
+import { useModalA11y } from "../hooks/useModalA11y";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
 import { formatArea } from "../utils/formatArea";
@@ -39,6 +40,8 @@ export default function UnitDetailPage() {
   const [apiError, setApiError]       = useState<ApiError | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [viewingImage, setViewingImage]       = useState<UnitImage | null>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: !!viewingImage, onClose: () => setViewingImage(null), containerRef: lightboxRef });
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Inline price editing
@@ -620,7 +623,12 @@ export default function UnitDetailPage() {
           aria-modal="true"
           aria-label={viewingImage.caption || "Unit image"}
         >
-          <div className="bg-black rounded-lg max-w-5xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={lightboxRef}
+            tabIndex={-1}
+            className="bg-black rounded-lg max-w-5xl w-full overflow-hidden focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative">
               <img
                 src={viewingImage.url}

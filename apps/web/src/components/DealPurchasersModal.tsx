@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Modal from "./Modal";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Props {
   dealId: string;
@@ -176,26 +179,25 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
-          <div>
-            <h2 className="font-bold text-foreground">Joint Purchasers</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              All purchasers are jointly and severally liable under the SPA. Ownership must sum to 100%.
-            </p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
-            ×
-          </button>
+    <Modal
+      open
+      onClose={onClose}
+      size="xl"
+      title={
+        <div>
+          <h2 className="font-bold text-foreground">Joint purchasers</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            All purchasers are jointly and severally liable under the SPA. Ownership must sum to 100%.
+          </p>
         </div>
-
-        <div className="px-6 py-5 space-y-5">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="w-6 h-6 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
+      }
+    >
+      <div className="px-6 py-5 space-y-5">
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <Spinner size="md" />
+          </div>
+        ) : (
             <>
               {purchasers.map((p, idx) => (
                 <div key={idx} className="border border-border rounded-xl p-4 space-y-3">
@@ -323,24 +325,26 @@ export default function DealPurchasersModal({ dealId, onClose, onSaved }: Props)
               )}
 
               <div className="flex gap-3 pt-1">
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
                   onClick={onClose}
-                  className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm"
                 >
                   {saved ? "Close" : "Cancel"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1"
                   onClick={handleSave}
                   disabled={submitting}
-                  className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50"
                 >
-                  {submitting ? "Saving…" : "Save Purchasers"}
-                </button>
+                  {submitting ? "Saving…" : "Save purchasers"}
+                </Button>
               </div>
             </>
           )}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
