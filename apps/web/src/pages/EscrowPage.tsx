@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { Landmark } from "lucide-react";
 import { escrowApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import EmptyState from "../components/EmptyState";
 
 const SELECT_CLASS =
   "h-9 text-sm border border-input rounded-md px-2.5 bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -34,6 +36,7 @@ interface LedgerEntry {
 }
 
 export default function EscrowPage() {
+  const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [accounts, setAccounts] = useState<EscrowAccount[]>([]);
   const [active, setActive] = useState<string | null>(null);
@@ -107,7 +110,15 @@ export default function EscrowPage() {
           <div className="space-y-5">
 
       {accounts.length === 0 ? (
-        <p className="text-muted-foreground">No escrow accounts configured for this project.</p>
+        <EmptyState
+          icon={<Landmark className="size-10 text-muted-foreground" aria-hidden="true" />}
+          title="No escrow accounts yet"
+          description="Add the project's escrow accounts so customer payments can be reconciled against the trustee bank. Configure them under the project's bank-accounts settings."
+          action={{
+            label: "Open project settings",
+            onClick: () => navigate(`/projects/${projectId}/settings`),
+          }}
+        />
       ) : (
         <>
           <div className="flex gap-2 flex-wrap">

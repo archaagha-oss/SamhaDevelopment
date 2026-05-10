@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, ClipboardList } from "lucide-react";
 import { snagsApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Spinner } from "../components/ui/spinner";
+import EmptyState from "../components/EmptyState";
 
 interface SnagItem {
   id: string;
@@ -130,7 +131,12 @@ export default function SnagListPage() {
       {loading ? (
         <p className="text-muted-foreground flex items-center gap-2"><Spinner size="sm" /> Loading…</p>
       ) : lists.length === 0 ? (
-        <p className="text-muted-foreground">No snag lists for this unit yet.</p>
+        <EmptyState
+          icon={<ClipboardList className="size-10 text-muted-foreground" aria-hidden="true" />}
+          title="No snag lists yet"
+          description="Walk-through findings, severity, contractor, and resolution status all live on a snag list. Create one when you start handover."
+          action={{ label: "Create snag list", onClick: ensureList }}
+        />
       ) : (
         lists.map((list) => (
           <section key={list.id} className="border rounded p-4 space-y-3">

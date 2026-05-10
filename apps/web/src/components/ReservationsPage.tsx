@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
@@ -49,6 +50,7 @@ function expiryCountdown(expiresAt: string) {
 }
 
 export default function ReservationsPage() {
+  const navigate = useNavigate();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "CANCELLED" | "CONVERTED">("ACTIVE");
@@ -140,7 +142,12 @@ export default function ReservationsPage() {
           <EmptyState
             icon={<CalendarCheck className="size-10 text-muted-foreground" aria-hidden="true" />}
             title={search ? "No reservations match your search" : `No ${filter === "ALL" ? "" : filter.toLowerCase() + " "}reservations`}
-            description={search ? "Try clearing your search or switching the status filter." : "Reservations created from leads will appear here."}
+            description={search ? "Try clearing your search or switching the status filter." : "Reservations are created from a lead's profile when they accept an offer."}
+            action={
+              search
+                ? undefined
+                : { label: "Browse leads", onClick: () => navigate("/leads") }
+            }
           />
         ) : (
           <div className="bg-card rounded-xl border border-border overflow-hidden">

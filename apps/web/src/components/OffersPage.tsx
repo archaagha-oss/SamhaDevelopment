@@ -191,7 +191,12 @@ export default function OffersPage() {
           <EmptyState
             icon={<FileText className="size-10 text-muted-foreground" aria-hidden="true" />}
             title={search || filter !== "ALL" ? "No offers match your filters" : "No offers yet"}
-            description={search || filter !== "ALL" ? "Try clearing your search or switching the status filter." : "Create offers from a lead's profile to get started."}
+            description={search || filter !== "ALL" ? "Try clearing your search or switching the status filter." : "Offers are created from a lead's profile. Pick a lead to send their first offer."}
+            action={
+              search || filter !== "ALL"
+                ? undefined
+                : { label: "Browse leads", onClick: () => navigate("/leads") }
+            }
           />
         ) : (
           <div className="bg-card rounded-xl border border-border overflow-hidden">

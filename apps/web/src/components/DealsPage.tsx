@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, Handshake } from "lucide-react";
 import { useDeals } from "../hooks/useDeals";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
@@ -428,7 +428,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
               {filtered.length === 0 ? (
                 <tr><td colSpan={8}>
                   <EmptyState
-                    icon="◈"
+                    icon={<Handshake className="size-10 text-muted-foreground" aria-hidden="true" />}
                     title={debouncedSearch || selectedStage ? "No deals match your filters" : "No deals yet"}
                     description={debouncedSearch || selectedStage ? "Try adjusting your search or stage filter." : "Create your first deal to get started."}
                     action={!debouncedSearch && !selectedStage ? { label: "Create deal", onClick: () => navigate("/deals/new") } : undefined}

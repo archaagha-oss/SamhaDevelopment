@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Layers } from "lucide-react";
 import { phasesApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Spinner } from "../components/ui/spinner";
+import EmptyState from "../components/EmptyState";
 
 interface Phase {
   id: string;
@@ -27,6 +28,7 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function PhasesPage() {
+  const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,15 @@ export default function PhasesPage() {
       {loading ? (
         <p className="text-muted-foreground flex items-center gap-2"><Spinner size="sm" /> Loading…</p>
       ) : phases.length === 0 ? (
-        <p className="text-muted-foreground">No phases configured for this project.</p>
+        <EmptyState
+          icon={<Layers className="size-10 text-muted-foreground" aria-hidden="true" />}
+          title="No phases configured"
+          description="Phases group units by floor range and release stage. Configure them from the project's settings page."
+          action={{
+            label: "Open project settings",
+            onClick: () => navigate(`/projects/${projectId}/settings`),
+          }}
+        />
       ) : (
         <table className="w-full border-collapse">
           <thead>

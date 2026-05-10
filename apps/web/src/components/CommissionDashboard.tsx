@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, CircleDollarSign } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ type Tab = "PENDING_APPROVAL" | "APPROVED" | "PAID";
 const fmtM = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(0)}K` : String(n);
 
 export default function CommissionDashboard() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("PENDING_APPROVAL");
   const [pending, setPending] = useState<Commission[]>([]);
   const [approved, setApproved] = useState<Commission[]>([]);
@@ -189,11 +191,12 @@ export default function CommissionDashboard() {
               {tableRows.length === 0 ? (
                 <tr><td colSpan={8}>
                   <EmptyState
-                    icon="◇"
+                    icon={<CircleDollarSign className="size-10 text-muted-foreground" aria-hidden="true" />}
                     title={tab === "PENDING_APPROVAL" ? "No commissions pending approval" : "No commissions awaiting payment"}
                     description={tab === "PENDING_APPROVAL"
                       ? "Commissions appear here once SPA is signed and Oqood is registered."
                       : "Once commissions are approved, they appear here for payment processing."}
+                    action={{ label: "Browse deals", onClick: () => navigate("/deals") }}
                   />
                 </td></tr>
               ) : tableRows.map((c) => {

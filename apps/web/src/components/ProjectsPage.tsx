@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { Pencil, Building2, Search } from "lucide-react";
 import EmptyState from "./EmptyState";
 import Modal from "./Modal";
 import { SkeletonCard } from "./Skeleton";
@@ -238,14 +238,14 @@ export default function ProjectsPage() {
           </div>
         ) : projects.length === 0 ? (
           <EmptyState
-            icon="⊕"
+            icon={<Building2 className="size-10 text-muted-foreground" aria-hidden="true" />}
             title="No projects yet"
             description="Create your first project to start adding units and tracking deals."
-            action={{ label: "Create Project", onClick: openCreate }}
+            action={{ label: "Create project", onClick: openCreate }}
           />
         ) : visible.length === 0 ? (
           <EmptyState
-            icon="⌕"
+            icon={<Search className="size-10 text-muted-foreground" aria-hidden="true" />}
             title="No matching projects"
             description="Try clearing filters or searching with a different term."
             action={{ label: "Clear filters", onClick: clearFilters }}

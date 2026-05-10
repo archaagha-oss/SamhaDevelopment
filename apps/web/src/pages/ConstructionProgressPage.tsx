@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { HardHat } from "lucide-react";
 import { constructionApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import EmptyState from "../components/EmptyState";
 
 interface Milestone {
   id: string;
@@ -131,7 +133,11 @@ export default function ConstructionProgressPage() {
             );
           })}
           {milestones.length === 0 && (
-            <p className="text-muted-foreground">No construction milestones yet.</p>
+            <EmptyState
+              icon={<HardHat className="size-10 text-muted-foreground" aria-hidden="true" />}
+              title="No construction milestones yet"
+              description="Track on-site progress (foundation, structure, MEP, finishing, handover) with milestones. They feed the customer-facing progress bar on the project page."
+            />
           )}
         </div>
       )}

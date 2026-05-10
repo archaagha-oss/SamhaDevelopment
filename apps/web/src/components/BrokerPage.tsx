@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Building2 } from "lucide-react";
+import { Building2, Users } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
 import { getBrokerStatusColor } from "../utils/statusColors";
@@ -527,7 +527,7 @@ export default function BrokerPage() {
             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
             {filtered.length === 0 ? (
               <EmptyState
-                icon="🏢"
+                icon={<Building2 className="size-10 text-muted-foreground" aria-hidden="true" />}
                 title={search ? "No companies match your search" : "No broker companies yet"}
                 description={search ? "Try a different keyword." : "Add your first broker company to start managing agents."}
                 action={!search ? { label: "Create broker", onClick: () => setShowForm(true) } : undefined}
@@ -670,7 +670,7 @@ export default function BrokerPage() {
                   </div>
                   {selected.agents.length === 0 ? (
                     <EmptyState
-                      icon="👥"
+                      icon={<Users className="size-10 text-muted-foreground" aria-hidden="true" />}
                       title="No agents registered"
                       description="Add agents to this company so deals can be linked to a broker contact."
                       action={{ label: "Create agent", onClick: () => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); } }}

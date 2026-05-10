@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { FileText } from "lucide-react";
@@ -40,6 +41,7 @@ const CONTRACT_STATUS_ORDER: ContractStatus[] = ["DRAFT", "SENT", "SIGNED", "ARC
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const [documents, setDocuments]   = useState<Document[]>([]);
   const [loading, setLoading]       = useState(true);
   const [filterStatus, setFilterStatus] = useState<ContractStatus | "ALL">("ALL");
@@ -170,7 +172,12 @@ export default function ContractsPage() {
         <EmptyState
           icon={<FileText className="size-10 text-muted-foreground" aria-hidden="true" />}
           title={search || filterStatus !== "ALL" || filterType !== "ALL" ? "No documents match your filters" : "No documents yet"}
-          description={search || filterStatus !== "ALL" || filterType !== "ALL" ? "Try clearing your filters or search." : "Upload SPA, Oqood, or other contract documents from a deal."}
+          description={search || filterStatus !== "ALL" || filterType !== "ALL" ? "Try clearing your filters or search." : "Upload SPA, Oqood, or other contract documents from a deal's documents tab."}
+          action={
+            search || filterStatus !== "ALL" || filterType !== "ALL"
+              ? undefined
+              : { label: "Browse deals", onClick: () => navigate("/deals") }
+          }
         />
       ) : (
         <>

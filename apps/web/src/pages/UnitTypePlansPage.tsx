@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { LayoutGrid } from "lucide-react";
 import { typePlansApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Spinner } from "../components/ui/spinner";
+import EmptyState from "../components/EmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 interface Plan {
@@ -179,7 +181,12 @@ export default function UnitTypePlansPage() {
                 <Spinner size="sm" /> Loading…
               </p>
             ) : plans.length === 0 ? (
-              <p className="text-muted-foreground">No type plans yet.</p>
+              <EmptyState
+                icon={<LayoutGrid className="size-10 text-muted-foreground" aria-hidden="true" />}
+                title="No type plans yet"
+                description="Define standard layouts (1BR, 2BR, etc.) once and reuse them across units. Type plans capture area, bathrooms, parking, and base price."
+                action={!showForm ? { label: "Create type plan", onClick: () => setShowForm(true) } : undefined}
+              />
             ) : (
               <table className="w-full border-collapse">
                 <thead>

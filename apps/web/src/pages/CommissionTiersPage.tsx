@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Coins } from "lucide-react";
 import { commissionTiersApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Spinner } from "../components/ui/spinner";
+import EmptyState from "../components/EmptyState";
 
 interface Tier {
   id?: string;
@@ -106,9 +107,11 @@ export default function CommissionTiersPage() {
                 <Spinner size="md" />
               </div>
             ) : rules.length === 0 ? (
-              <div className="bg-card rounded-xl border border-dashed border-border py-16 text-center">
-                <p className="text-sm text-muted-foreground">No tiered commission rules configured.</p>
-              </div>
+              <EmptyState
+                icon={<Coins className="size-10 text-muted-foreground" aria-hidden="true" />}
+                title="No tiered commission rules"
+                description="Sale-price brackets that determine broker commission live here. Without one, the broker company's flat rate applies. Configure them under Settings → Commission tiers."
+              />
             ) : (
               rules.map((rule) => (
                 <section key={rule.id} className="bg-card rounded-xl border border-border p-5 space-y-3">
