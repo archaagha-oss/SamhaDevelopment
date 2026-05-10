@@ -185,27 +185,29 @@ async function runJob(job: JobRecord): Promise<void> {
 // Job dispatcher
 // ---------------------------------------------------------------------------
 
+/**
+ * Handler map: job type → async handler fn.
+ *
+ * Exported so alternative queue backends (e.g. BullMQ — see
+ * `bullmqAdapter.ts`) can dispatch by job name without re-implementing the
+ * switch statement. Keep this in sync with the `JobType` union above.
+ */
+export const jobHandlerMap: Record<JobType, (payload: JobPayload) => Promise<void>> = {
+  RESERVATION_EXPIRY: handleReservationExpiry,
+  PAYMENT_REMINDER: handlePaymentReminder,
+  OQOOD_DEADLINE_WARNING: handleOqoodDeadlineWarning,
+  RESERVATION_EXPIRY_CHECK: () => handleReservationExpiryCheck(),
+  PAYMENT_OVERDUE_CHECK: () => handlePaymentOverdueCheck(),
+  UNIT_HOLD_EXPIRY_CHECK: () => handleUnitHoldExpiryCheck(),
+  PAYMENT_REMINDER_SWEEP: () => handlePaymentReminderSweep(),
+};
+
 async function dispatchJob(type: JobType, payload: JobPayload): Promise<void> {
-  switch (type) {
-    case "RESERVATION_EXPIRY":
-      return handleReservationExpiry(payload);
-    case "PAYMENT_REMINDER":
-      return handlePaymentReminder(payload);
-    case "OQOOD_DEADLINE_WARNING":
-      return handleOqoodDeadlineWarning(payload);
-    case "RESERVATION_EXPIRY_CHECK":
-      return handleReservationExpiryCheck();
-    case "PAYMENT_OVERDUE_CHECK":
-      return handlePaymentOverdueCheck();
-    case "UNIT_HOLD_EXPIRY_CHECK":
-      return handleUnitHoldExpiryCheck();
-    case "PAYMENT_REMINDER_SWEEP":
-      return handlePaymentReminderSweep();
-    default: {
-      const exhaustive: never = type;
-      throw new Error(`Unknown job type: ${exhaustive}`);
-    }
+  const handler = jobHandlerMap[type];
+  if (!handler) {
+    throw new Error(`Unknown job type: ${type}`);
   }
+  return handler(payload);
 }
 
 // ---------------------------------------------------------------------------

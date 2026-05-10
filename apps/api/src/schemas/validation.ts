@@ -152,6 +152,38 @@ export const markPaymentPaidSchema = z.object({
   paidBy: z.string().min(1, "Paid by is required"),
 });
 
+// One row of a bulk payment-import CSV. Either dealNumber+milestoneLabel or
+// paymentId must be provided; paymentId wins when both are supplied.
+// paidDate accepts ISO datetime (e.g. "2025-09-12T00:00:00Z") OR YYYY-MM-DD
+// (e.g. "2025-09-12"). Validation here is intentionally lenient — the
+// service layer normalizes dates.
+export const bulkPaymentRowSchema = z
+  .object({
+    paymentId: z.string().trim().min(1).optional(),
+    dealNumber: z.string().trim().min(1).optional(),
+    milestoneLabel: z.string().trim().min(1).optional(),
+    amount: z.number().positive("Amount must be positive"),
+    paidDate: z
+      .string()
+      .min(1, "paidDate is required")
+      .refine(
+        (v) => /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(v.trim()),
+        "paidDate must be ISO datetime or YYYY-MM-DD"
+      ),
+    paymentMethod: z.string().trim().min(1, "paymentMethod is required"),
+    receiptKey: z.string().trim().optional(),
+    notes: z.string().trim().optional(),
+  })
+  .refine(
+    (v) => Boolean(v.paymentId) || (Boolean(v.dealNumber) && Boolean(v.milestoneLabel)),
+    {
+      message: "Either paymentId, or both dealNumber and milestoneLabel, must be provided",
+      path: ["paymentId"],
+    }
+  );
+
+export type BulkPaymentRowInput = z.infer<typeof bulkPaymentRowSchema>;
+
 // ===== BROKERS =====
 export const createBrokerCompanySchema = z.object({
   name: z.string().min(1, "Broker name is required"),
@@ -395,6 +427,19 @@ export const createContactSchema = z.object({
 });
 
 export const updateContactSchema = createContactSchema.partial();
+
+// ===== HANDOVER CHECKLIST =====
+export const updateChecklistItemSchema = z
+  .object({
+    completed: z.boolean().optional(),
+    notes:     z.string().optional(),
+  })
+  .refine(
+    (v) => v.completed !== undefined || v.notes !== undefined,
+    { message: "At least one of `completed` or `notes` is required" },
+  );
+
+export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
 
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

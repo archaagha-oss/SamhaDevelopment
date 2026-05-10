@@ -331,6 +331,54 @@ Run the drill at least **monthly** (and after any major schema migration).
 Treat a drill failure as a P1 incident — your last-known-good backup might
 also be corrupt.
 
+### 6.6 Background job queue
+
+The API runs background work (reservation expiry, payment reminders, Oqood
+deadline warnings, etc.) via one of two backends. Switch with the
+`JOB_QUEUE_BACKEND` env var.
+
+| Backend | When to use | Requirements |
+| --- | --- | --- |
+| `db` (default) | Single-instance deployments (current cPanel setup). Dev. Anyone who doesn't want to run Redis. | None — uses the existing `BackgroundJob` Prisma table and a 30s polling loop. |
+| `bullmq` | Multi-instance / horizontally-scaled API. Higher throughput. When you want a real queue dashboard (Bull Board, Arena). | `REDIS_URL` set; `bullmq` + `ioredis` installed (they are listed in `optionalDependencies` in `apps/api/package.json`). |
+
+**Why two backends?** Phase 0 launch ships single-instance on cPanel — the
+DB poller is sufficient and avoids a Redis dependency. The bullmq path was
+added (Phase 2 in `LAUNCH_READINESS_AUDIT.md`) so the same code can scale
+horizontally without rewrites once we move off cPanel.
+
+**How to switch to bullmq.**
+
+1. Stand up Redis (managed: AWS ElastiCache, Upstash, Redis Cloud — or
+   self-hosted on the same VPC as the API).
+2. On every API instance:
+   ```
+   JOB_QUEUE_BACKEND=bullmq
+   REDIS_URL=redis://<host>:6379
+   BULLMQ_CONCURRENCY=4   # optional — defaults to 4
+   ```
+3. Install the optional deps: `npm install bullmq ioredis` inside `apps/api`.
+4. Restart the API. Look for `[Boot] Job queue backend: bullmq` in the logs.
+
+**Failure modes.** With `JOB_QUEUE_BACKEND=bullmq`:
+
+- If `REDIS_URL` is unset, or bullmq/ioredis aren't installed, the API
+  exits non-zero at boot. (Operator explicitly opted in — silent fallback
+  to the DB poller would be surprising.)
+- If Redis becomes unreachable while running, the API stays up serving
+  HTTP. ioredis reconnects automatically; jobs pause until Redis recovers.
+  Errors are logged at `error` level.
+
+**Switching back to `db`.** Set `JOB_QUEUE_BACKEND=db` (or unset it) and
+restart. The DB poller picks up scheduled work from the `BackgroundJob`
+table as before. In-flight bullmq jobs that haven't completed at switchover
+won't be migrated automatically — drain them or accept the loss.
+
+**Retention / retry shape.** Both backends use the same retry policy: 3
+attempts, exponential back-off starting at 60s. BullMQ retains the last 100
+completed and 500 failed jobs (tunable via `removeOnComplete` /
+`removeOnFail` in `bullmqAdapter.ts`).
+
 ---
 
 ## 7. Audit log

@@ -1118,6 +1118,8 @@ model Deal {
   tasks      Task[]          @relation("DealTasks")
   purchasers DealPurchaser[]
 
+  handoverChecklist HandoverChecklist?
+
   brokerCompanyId String?
   brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
   brokerAgentId   String?
@@ -1857,4 +1859,51 @@ model InboundTriage {
   @@index([status, receivedAt])
   @@index([fromAddress])
   @@index([channel])
+}
+
+// ============================================================
+// SECTION: HANDOVER CHECKLIST
+// ============================================================
+//
+// One checklist per deal — tracks the operational items required
+// before the unit is handed over to the buyer. Closes audit gap #9.
+
+model HandoverChecklist {
+  id     String @id @default(cuid())
+  dealId String @unique
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  status      String    @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  completedAt DateTime?
+  completedBy String? // User.id
+
+  notes String? @db.Text
+
+  items HandoverChecklistItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+}
+
+model HandoverChecklistItem {
+  id          String            @id @default(cuid())
+  checklistId String
+  checklist   HandoverChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  category String // PAYMENTS | DOCUMENTS | INSPECTION | KEYS | UTILITIES | OTHER
+  label    String
+
+  required    Boolean   @default(true)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  completedBy String?
+
+  notes     String? @db.Text
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([checklistId])
 }

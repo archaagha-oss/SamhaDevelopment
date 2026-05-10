@@ -15,6 +15,7 @@ import {
 } from "./lib/observability";
 import { registerDealHandlers } from "./events/handlers/dealHandlers";
 import { startJobProcessor } from "./events/jobs/jobHandlers";
+import { resolveJobQueueBackend } from "./events/jobs/queueBackend";
 import { releaseExpiredHolds } from "./services/unitService";
 import { checkAndExpireReservations } from "./services/reservationService";
 import { sweepComplianceNotifications } from "./services/complianceNotificationService";
@@ -44,6 +45,7 @@ import triageRoutes from "./routes/triage";
 import communicationsRoutes from "./routes/communications";
 import streamRoutes from "./routes/stream";
 import complianceRoutes from "./routes/compliance";
+import handoverRoutes from "./routes/handover";
 // Integrated CRM routes (broker dashboard + finance)
 import brokerDashboardRoutes from "./routes/brokerDashboard";
 import financeRoutes from "./routes/finance";
@@ -55,7 +57,32 @@ dotenv.config();
 
 // ── Bootstrap event system + background jobs ──────────────────────────────────
 registerDealHandlers();
-startJobProcessor(30_000); // poll every 30 s
+
+// Job-queue backend selection. Two choices:
+//   - JOB_QUEUE_BACKEND=bullmq → Redis-backed BullMQ (REDIS_URL required)
+//   - JOB_QUEUE_BACKEND=db (default) → existing DB-polling loop
+// See ADMIN_MANUAL.md §6.6 and apps/api/src/events/jobs/bullmqAdapter.ts.
+const jobBackend = resolveJobQueueBackend(process.env);
+if (jobBackend === "bullmq") {
+  // Operator explicitly asked for bullmq. If the adapter can't load (deps
+  // missing, REDIS_URL not set, Redis unreachable on first connect) we exit
+  // non-zero — silent fallback to the DB poller would be surprising.
+  (async () => {
+    try {
+      const { createBullmqAdapter } = await import("./events/jobs/bullmqAdapter");
+      await createBullmqAdapter();
+      logger.info("[Boot] Job queue backend: bullmq");
+    } catch (err) {
+      logger.error(
+        `[Boot] JOB_QUEUE_BACKEND=bullmq but adapter failed to start: ${err instanceof Error ? err.message : String(err)}`
+      );
+      process.exit(1);
+    }
+  })();
+} else {
+  startJobProcessor(30_000); // poll every 30 s
+  logger.info("[Boot] Job queue backend: db (DB polling)");
+}
 
 // Hourly sweep: release expired ON_HOLD units
 setInterval(() => {
@@ -261,6 +288,7 @@ app.use("/api/triage", triageRoutes);
 app.use("/api/communications", communicationsRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/compliance", complianceRoutes);
+app.use("/api/handover", handoverRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
 
@@ -304,6 +332,18 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on("SIGINT", async () => {
   console.log("\n🛑 Shutting down gracefully...");
+
+  // If the bullmq adapter is active, close worker + queue first so in-flight
+  // jobs finish cleanly before Prisma disconnects.
+  if (jobBackend === "bullmq") {
+    try {
+      const { bullmqShutdown } = await import("./events/jobs/bullmqAdapter");
+      await bullmqShutdown();
+    } catch (err) {
+      console.error("[Shutdown] bullmqShutdown error:", err);
+    }
+  }
+
   await prisma.$disconnect();
   process.exit(0);
 });

@@ -24,13 +24,18 @@ if (API_BASE) {
 // Routes that are safe to send Idempotency-Key on. The server middleware is
 // active for these paths today; adding more is harmless (server ignores the
 // header unless its middleware is also wired).
-const IDEMPOTENT_POST_PATTERNS: RegExp[] = [
+//
+// Exported for unit tests in `__tests__/idempotencyKey.test.ts`. The runtime
+// behaviour is unchanged; we just made the predicate importable.
+export const IDEMPOTENT_POST_PATTERNS: RegExp[] = [
   /^\/?api\/deals\/?$/,
   /^\/?api\/deals\/[^/]+\/payments\/?$/,
   /^\/?api\/payments\/[^/]+\/partial\/?$/,
 ];
 
-function shouldAttachIdempotencyKey(config: InternalAxiosRequestConfig): boolean {
+export function shouldAttachIdempotencyKey(
+  config: Pick<InternalAxiosRequestConfig, "method" | "url">,
+): boolean {
   if ((config.method || "").toUpperCase() !== "POST") return false;
   const url = config.url || "";
   return IDEMPOTENT_POST_PATTERNS.some((pat) => pat.test(url));
