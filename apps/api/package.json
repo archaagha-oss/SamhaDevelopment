@@ -49,5 +49,10 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^4.1.4"
+  },
+  "// optionalDependencies": "bullmq + ioredis are ONLY required when JOB_QUEUE_BACKEND=bullmq. Listed as optional so npm install succeeds on platforms / single-instance deployments where Redis isn't available and the homegrown DB-poller (the default) is used. See ADMIN_MANUAL.md §6.6 and apps/api/src/events/jobs/bullmqAdapter.ts.",
+  "optionalDependencies": {
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.0"
   }
 }
