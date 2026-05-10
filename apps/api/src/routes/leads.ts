@@ -6,7 +6,7 @@ import { createLead, updateLeadStage, validateLeadTransition } from "../services
 import { createDeal as createDealService } from "../services/dealService";
 import { syncContactFromSource } from "../services/contactService";
 import { requireAuthentication, requireRole } from "../middleware/auth";
-import { maskLeadPii, maskLeadList, resolveCallerRole } from "../lib/pii";
+import { maskLeadPii, maskLeadList, resolveCallerRole, leadAccessFilter } from "../lib/pii";
 import {
   setPreferredChannel,
   setOptOut,
@@ -29,7 +29,7 @@ router.get("/", async (req, res) => {
     const pageSize = Math.min(200, Math.max(1, parseInt(limit as string) || 50));
     const skip     = (pageNum - 1) * pageSize;
 
-    const where: any = {};
+    const where: any = { ...(await leadAccessFilter(req)) };
     if (stage)           where.stage           = stage;
     if (source)          where.source          = source;
     if (assignedAgentId) where.assignedAgentId = assignedAgentId;
@@ -114,10 +114,14 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    // Single-org access scope: VIEWER / MEMBER can only see leads they're
+    // assigned to. ADMIN / MANAGER see all. Using findFirst (not findUnique)
+    // because findUnique can't take relational scoping in the WHERE.
+    const accessScope = await leadAccessFilter(req);
     // Bound the unbounded includes — see LAUNCH_READINESS_AUDIT §3.2.
     // For older history, hit the dedicated endpoints (cursor-paginated).
-    const lead = await prisma.lead.findUnique({
-      where: { id: req.params.id },
+    const lead = await prisma.lead.findFirst({
+      where: { id: req.params.id, ...accessScope },
       include: {
         assignedAgent: true,
         brokerCompany: true,

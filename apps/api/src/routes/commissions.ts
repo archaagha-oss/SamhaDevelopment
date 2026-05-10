@@ -146,7 +146,12 @@ router.patch("/:id/approve", requireFinanceAccess, async (req, res) => {
   }
 });
 
-// Mark commission as paid — FINANCE or ADMIN only
+// Mark commission as paid — FINANCE or ADMIN only.
+// Form A doc (Commission.documentKey) is required: closes audit gap #7
+// ("audit risk: commission paid without supporting doc"). The Form A may be
+// uploaded as part of this same request via the body.documentKey field, or
+// captured earlier via PATCH /:id/document. Either way it must be present
+// before status flips to PAID.
 router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
   try {
     const commission = await prisma.commission.findUnique({ where: { id: req.params.id } });
@@ -156,7 +161,15 @@ router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
     if (commission.status === "PAID") {
       return res.status(400).json({ error: "Commission is already paid", code: "ALREADY_PAID", statusCode: 400 });
     }
-    const { paidAmount, paidVia, receiptKey } = req.body;
+    const { paidAmount, paidVia, receiptKey, documentKey: bodyDocumentKey } = req.body;
+    const effectiveDocumentKey = bodyDocumentKey ?? (commission as any).documentKey;
+    if (!effectiveDocumentKey) {
+      return res.status(400).json({
+        error: "Form A (commission authorization doc) is required before marking PAID. Upload via PATCH /api/commissions/:id/document or include documentKey in this request.",
+        code: "FORM_A_REQUIRED",
+        statusCode: 400,
+      });
+    }
     const updated = await prisma.commission.update({
       where: { id: req.params.id },
       data: {
@@ -165,7 +178,8 @@ router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
         paidAmount: paidAmount ? parseFloat(paidAmount) : commission.amount,
         paidVia: paidVia || null,
         receiptKey: receiptKey || null,
-      },
+        ...(bodyDocumentKey ? { documentKey: bodyDocumentKey } : {}),
+      } as any,
     });
     commissionLogger.info("Commission paid", {
       commissionId: updated.id, dealId: updated.dealId,
@@ -174,6 +188,28 @@ router.patch("/:id/paid", requireFinanceAccess, async (req, res) => {
     res.json(updated);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to mark commission as paid", code: "COMMISSION_UPDATE_ERROR", statusCode: 400 });
+  }
+});
+
+// Attach (or replace) the Form A authorization doc on a commission. The doc
+// must be uploaded separately (multipart upload route → S3 key); this
+// endpoint just records the key on the Commission row. ADMIN/MANAGER only.
+router.patch("/:id/document", requireFinanceAccess, async (req, res) => {
+  try {
+    const { documentKey } = req.body;
+    if (!documentKey || typeof documentKey !== "string") {
+      return res.status(400).json({ error: "documentKey is required", code: "MISSING_FIELD", statusCode: 400 });
+    }
+    const updated = await prisma.commission.update({
+      where: { id: req.params.id },
+      data: { documentKey } as any,
+    });
+    commissionLogger.info("Commission Form A doc attached", {
+      commissionId: updated.id, documentKey,
+    });
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to attach commission document", code: "COMMISSION_DOC_ERROR", statusCode: 400 });
   }
 });
 

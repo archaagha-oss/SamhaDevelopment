@@ -17,6 +17,7 @@ import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess } from "../middleware/auth";
 import { idempotencyKey } from "../middleware/idempotency";
+import { dealAccessFilter } from "../lib/pii";
 
 const router = Router();
 
@@ -28,7 +29,8 @@ router.get("/", async (req, res) => {
     const pageSize = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
     const skip = (pageNum - 1) * pageSize;
 
-    const where: any = {};
+    // Single-org access scope: VIEWER / MEMBER see only deals on their own leads.
+    const where: any = { ...(await dealAccessFilter(req)) };
     if (stage) where.stage = stage;
     if (search) {
       where.OR = [
@@ -74,11 +76,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get deal detail with Oqood countdown and commission unlock status
+// Get deal detail with Oqood countdown and commission unlock status.
+// Scoped: VIEWER / MEMBER see only deals on their own leads.
 router.get("/:id", async (req, res) => {
   try {
-    const deal = await prisma.deal.findUnique({
-      where: { id: req.params.id },
+    const accessScope = await dealAccessFilter(req);
+    const deal = await prisma.deal.findFirst({
+      where: { id: req.params.id, ...accessScope },
       include: {
         lead: { include: { communicationPreference: true } },
         unit: {

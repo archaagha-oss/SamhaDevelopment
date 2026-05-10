@@ -2,6 +2,7 @@ import { LeadStage } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { eventBus, type DomainEventPayload } from "../eventBus.js";
 import { scheduleJob } from "../jobs/jobHandlers.js";
+import { generateAutoTaskForStage } from "../../services/autoTaskService.js";
 
 // ---------------------------------------------------------------------------
 // Helper: log an activity on a lead (fire-and-forget, errors are non-fatal)
@@ -165,6 +166,14 @@ export async function handleDealStageChanged(payload: DomainEventPayload): Promi
 
     if (newStage === "CANCELLED") {
       await syncLeadOnDealCancelled(deal.leadId, dealId);
+    }
+
+    // Auto-generate a follow-up Task on action-required transitions.
+    // Best-effort — failure here must not break the stage-change pipeline.
+    try {
+      await generateAutoTaskForStage(dealId, newStage, payload.userId ?? "system");
+    } catch (err) {
+      console.error("[dealHandlers] generateAutoTaskForStage error:", err);
     }
   } catch (err) {
     console.error("[dealHandlers] handleDealStageChanged error:", err);
