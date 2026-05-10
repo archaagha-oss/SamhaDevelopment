@@ -24,7 +24,7 @@ export function useFeatureFlag(key: string, fallback = false): boolean {
 export const FEATURE_DEFAULTS: Record<string, boolean> = {
   escrowModule:         false,
   snagList:             false,
-  handoverChecklist:    false,
+  handoverChecklist:    true,
   kycVerification:      true,
   commissionTiers:      false,
   constructionProgress: false,

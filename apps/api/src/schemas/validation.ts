@@ -396,6 +396,19 @@ export const createContactSchema = z.object({
 
 export const updateContactSchema = createContactSchema.partial();
 
+// ===== HANDOVER CHECKLIST =====
+export const updateChecklistItemSchema = z
+  .object({
+    completed: z.boolean().optional(),
+    notes:     z.string().optional(),
+  })
+  .refine(
+    (v) => v.completed !== undefined || v.notes !== undefined,
+    { message: "At least one of `completed` or `notes` is required" },
+  );
+
+export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
