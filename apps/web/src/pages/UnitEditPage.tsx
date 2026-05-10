@@ -9,6 +9,7 @@ import {
 import { Button } from "../components/ui/button";
 import FieldError from "../components/ui/field-error";
 import { useZodValidation } from "../lib/validation";
+import { useOptimisticConflict } from "../hooks/useOptimisticConflict";
 
 // Format: e.g. "1-12" (floor 1, unit 12) or "12-345"
 const UNIT_NUMBER_RE = /^\d{1,3}-\d{1,3}$/;
@@ -64,6 +65,8 @@ interface Unit {
   ratePerSqft?: number | null;
   smartHome?: boolean | null;
   anticipatedCompletionDate?: string | null;
+  /** Optimistic-lock counter — see useOptimisticConflict + lib/optimisticLock. */
+  version: number;
 }
 
 const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];
@@ -116,23 +119,7 @@ export default function UnitEditPage() {
             axios.get(`/api/units/${unitId}`)
               .then((r) => {
                 if (cancelled) return;
-                const u = r.data as Unit;
-                setUnit(u);
-                setForm({
-                  unitNumber:                u.unitNumber ?? "",
-                  floor:                     u.floor != null ? String(u.floor) : "",
-                  type:                      u.type ?? "STUDIO",
-                  area:                      u.area != null ? String(u.area) : "",
-                  price:                     u.price != null ? String(u.price) : "",
-                  view:                      u.view ?? "SEA",
-                  parkingSpaces:             u.parkingSpaces != null ? String(u.parkingSpaces) : "",
-                  internalArea:              u.internalArea != null ? String(u.internalArea) : "",
-                  externalArea:              u.externalArea != null ? String(u.externalArea) : "",
-                  areaSqft:                  u.areaSqft != null ? String(u.areaSqft) : "",
-                  ratePerSqft:               u.ratePerSqft != null ? String(u.ratePerSqft) : "",
-                  smartHome:                 u.smartHome === true ? "yes" : u.smartHome === false ? "no" : "",
-                  anticipatedCompletionDate: u.anticipatedCompletionDate ? u.anticipatedCompletionDate.slice(0, 10) : "",
-                });
+                hydrateFromUnit(r.data as Unit);
               })
               .catch(() => { if (!cancelled) setLoadError(true); }),
           );
@@ -144,6 +131,34 @@ export default function UnitEditPage() {
     })();
     return () => { cancelled = true; };
   }, [projectId, isEdit, unitId]);
+
+  function hydrateFromUnit(u: Unit) {
+    setUnit(u);
+    setForm({
+      unitNumber:                u.unitNumber ?? "",
+      floor:                     u.floor != null ? String(u.floor) : "",
+      type:                      u.type ?? "STUDIO",
+      area:                      u.area != null ? String(u.area) : "",
+      price:                     u.price != null ? String(u.price) : "",
+      view:                      u.view ?? "SEA",
+      parkingSpaces:             u.parkingSpaces != null ? String(u.parkingSpaces) : "",
+      internalArea:              u.internalArea != null ? String(u.internalArea) : "",
+      externalArea:              u.externalArea != null ? String(u.externalArea) : "",
+      areaSqft:                  u.areaSqft != null ? String(u.areaSqft) : "",
+      ratePerSqft:               u.ratePerSqft != null ? String(u.ratePerSqft) : "",
+      smartHome:                 u.smartHome === true ? "yes" : u.smartHome === false ? "no" : "",
+      anticipatedCompletionDate: u.anticipatedCompletionDate ? u.anticipatedCompletionDate.slice(0, 10) : "",
+    });
+  }
+
+  // 409 OPTIMISTIC_LOCK_CONFLICT: another agent edited this unit while the
+  // form was open. Sticky toast → Reload pulls the server snapshot back into
+  // the form so the user can re-apply their edits on top of the current row.
+  const handleConflict = useOptimisticConflict<Unit>({
+    onReload: (fresh) => {
+      if (fresh) hydrateFromUnit(fresh);
+    },
+  });
 
   const set = (k: keyof typeof BLANK, v: string) => {
     clearError(k as string);
@@ -188,7 +203,23 @@ export default function UnitEditPage() {
       if (form.anticipatedCompletionDate) payload.anticipatedCompletionDate = form.anticipatedCompletionDate;
 
       if (isEdit && unitId) {
-        await axios.patch(`/api/units/${unitId}`, payload);
+        if (!unit) {
+          // Should be unreachable — `unit` is set by the same load that
+          // gates `isEdit`. Bail out rather than send expectedVersion=0.
+          throw new Error("Unit not loaded yet");
+        }
+        try {
+          await axios.patch(`/api/units/${unitId}`, {
+            ...payload,
+            expectedVersion: unit.version,
+          });
+        } catch (err) {
+          if (handleConflict(err)) {
+            setSubmitting(false);
+            return;
+          }
+          throw err;
+        }
         toast.success(`Unit ${unit?.unitNumber ?? unitId.slice(0, 6)} updated`);
         navigate(`/projects/${projectId}/units/${unitId}`);
       } else {

@@ -9,6 +9,7 @@ import {
 import { Button } from "../components/ui/button";
 import FieldError from "../components/ui/field-error";
 import { useZodValidation } from "../lib/validation";
+import { useOptimisticConflict } from "../hooks/useOptimisticConflict";
 
 // Sale price + discount validation. The API enforces the same rules; client
 // adds them so the user gets feedback before the round-trip.
@@ -48,6 +49,8 @@ interface Deal {
   stage: string;
   lead?: { firstName: string; lastName: string };
   unit?: { unitNumber: string };
+  /** Optimistic-lock counter — see useOptimisticConflict + lib/optimisticLock. */
+  version: number;
 }
 
 interface BrokerCompany {
@@ -114,20 +117,7 @@ export default function DealEditPage() {
           axios.get("/api/users").catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
-        const d = dealRes.data as Deal;
-        setDeal(d);
-        setForm({
-          salePrice: String(d.salePrice ?? ""),
-          discount: String(d.discount ?? 0),
-          brokerCompanyId: d.brokerCompany?.id ?? "",
-          brokerAgentId: d.brokerAgent?.id ?? "",
-          commissionRateOverride: d.commissionRateOverride ? String(d.commissionRateOverride) : "",
-          adminFeeWaived: d.adminFeeWaived ?? false,
-          adminFeeWaivedReason: d.adminFeeWaivedReason ?? "",
-          dldPaidBy: (d.dldPaidBy ?? "BUYER") as "BUYER" | "DEVELOPER",
-          dldWaivedReason: d.dldWaivedReason ?? "",
-          assignedAgentId: d.assignedAgent?.id ?? "",
-        });
+        hydrateFromDeal(dealRes.data as Deal);
         setBrokerCompanies(Array.isArray(brokersRes.data) ? brokersRes.data : []);
         setAgents(
           (Array.isArray(usersRes.data) ? usersRes.data : []).filter(
@@ -143,6 +133,31 @@ export default function DealEditPage() {
     load();
     return () => { cancelled = true; };
   }, [dealId]);
+
+  function hydrateFromDeal(d: Deal) {
+    setDeal(d);
+    setForm({
+      salePrice: String(d.salePrice ?? ""),
+      discount: String(d.discount ?? 0),
+      brokerCompanyId: d.brokerCompany?.id ?? "",
+      brokerAgentId: d.brokerAgent?.id ?? "",
+      commissionRateOverride: d.commissionRateOverride ? String(d.commissionRateOverride) : "",
+      adminFeeWaived: d.adminFeeWaived ?? false,
+      adminFeeWaivedReason: d.adminFeeWaivedReason ?? "",
+      dldPaidBy: (d.dldPaidBy ?? "BUYER") as "BUYER" | "DEVELOPER",
+      dldWaivedReason: d.dldWaivedReason ?? "",
+      assignedAgentId: d.assignedAgent?.id ?? "",
+    });
+  }
+
+  // 409 OPTIMISTIC_LOCK_CONFLICT: another agent edited this deal while the
+  // form was open. Sticky toast → Reload pulls the server snapshot back into
+  // the form so the user can re-apply their edits on top of the current row.
+  const handleConflict = useOptimisticConflict<Deal>({
+    onReload: (fresh) => {
+      if (fresh) hydrateFromDeal(fresh);
+    },
+  });
 
   const isLocked = !!deal && LOCKED_STAGES.includes(deal.stage);
   const selectedCompany = useMemo(
@@ -160,21 +175,30 @@ export default function DealEditPage() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      await axios.patch(`/api/deals/${deal.id}`, {
-        salePrice: parseFloat(form.salePrice),
-        discount: parseFloat(form.discount) || 0,
-        brokerCompanyId: form.brokerCompanyId || null,
-        brokerAgentId: form.brokerAgentId || null,
-        commissionRateOverride:
-          form.brokerCompanyId && form.commissionRateOverride
-            ? parseFloat(form.commissionRateOverride)
-            : null,
-        adminFeeWaived: form.adminFeeWaived,
-        adminFeeWaivedReason: form.adminFeeWaived ? form.adminFeeWaivedReason || null : null,
-        dldPaidBy: form.dldPaidBy,
-        dldWaivedReason: form.dldPaidBy === "DEVELOPER" ? form.dldWaivedReason || null : null,
-        assignedAgentId: form.assignedAgentId || null,
-      });
+      try {
+        await axios.patch(`/api/deals/${deal.id}`, {
+          salePrice: parseFloat(form.salePrice),
+          discount: parseFloat(form.discount) || 0,
+          brokerCompanyId: form.brokerCompanyId || null,
+          brokerAgentId: form.brokerAgentId || null,
+          commissionRateOverride:
+            form.brokerCompanyId && form.commissionRateOverride
+              ? parseFloat(form.commissionRateOverride)
+              : null,
+          adminFeeWaived: form.adminFeeWaived,
+          adminFeeWaivedReason: form.adminFeeWaived ? form.adminFeeWaivedReason || null : null,
+          dldPaidBy: form.dldPaidBy,
+          dldWaivedReason: form.dldPaidBy === "DEVELOPER" ? form.dldWaivedReason || null : null,
+          assignedAgentId: form.assignedAgentId || null,
+          expectedVersion: deal.version,
+        });
+      } catch (err) {
+        if (handleConflict(err)) {
+          setSubmitting(false);
+          return;
+        }
+        throw err;
+      }
       toast.success("Deal updated");
       navigate(`/deals/${deal.id}`);
     } catch (err: any) {
