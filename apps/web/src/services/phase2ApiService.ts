@@ -97,20 +97,19 @@ export const snagsApi = {
 };
 
 // ----- Handover -----
+// Backend mounts at /api/handover (see apps/api/src/routes/handover.ts).
+// `byDeal` is get-or-seed — it always returns a checklist, never 404s for a
+// missing-checklist case, so `ensure` is now a thin alias for callers that
+// want the create-on-first-access semantics by name.
 export const handoverApi = {
   byDeal: (dealId: string) =>
-    axios.get(`/api/handover/deal/${dealId}`).then((r: any) => r.data),
+    axios.get(`/api/handover/${dealId}`).then((r: any) => r.data),
   ensure: (dealId: string) =>
-    axios.post(`/api/handover/deal/${dealId}`).then((r: any) => r.data),
+    axios.get(`/api/handover/${dealId}`).then((r: any) => r.data),
   setItem: (itemId: string, body: Record<string, unknown>) =>
     axios.patch(`/api/handover/items/${itemId}`, body).then((r: any) => r.data),
-  ready: (dealId: string) =>
-    axios.get(`/api/handover/deal/${dealId}/ready`).then((r: any) => r.data),
-  complete: (
-    checklistId: string,
-    body?: { customerName?: string; customerSignatureKey?: string },
-  ) =>
-    axios.post(`/api/handover/${checklistId}/complete`, body ?? {}).then((r: any) => r.data),
+  complete: (dealId: string) =>
+    axios.post(`/api/handover/${dealId}/complete`).then((r: any) => r.data),
 };
 
 // ----- Title deeds -----

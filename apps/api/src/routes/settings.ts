@@ -15,7 +15,7 @@ const router = Router();
 export const FEATURE_FLAGS: { key: string; label: string; description: string; default: boolean }[] = [
   { key: "escrowModule",         label: "Escrow Module",          description: "Enable escrow account tracking and reconciliation", default: false },
   { key: "snagList",             label: "Snag List",              description: "Defect tracking during the handover phase",         default: false },
-  { key: "handoverChecklist",    label: "Handover Checklist",     description: "Step-by-step handover workflow per unit",           default: false },
+  { key: "handoverChecklist",    label: "Handover Checklist",     description: "Step-by-step handover workflow per unit",           default: true  },
   { key: "kycVerification",      label: "KYC Verification",       description: "Buyer document verification workflow",              default: true  },
   { key: "commissionTiers",      label: "Commission Tiers",       description: "Multi-tier broker commission rules",                default: false },
   { key: "constructionProgress", label: "Construction Progress",  description: "Project-level construction tracking with media",    default: false },
