@@ -181,7 +181,7 @@ export default function ContactDetailPage() {
               <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Affiliation</h3>
               <div className="space-y-2">
                 <DetailRow label="Company"     value={contact.company} />
-                <DetailRow label="Job Title"   value={contact.jobTitle} />
+                <DetailRow label="Job title"   value={contact.jobTitle} />
                 <DetailRow label="Nationality" value={contact.nationality} />
               </div>
             </div>

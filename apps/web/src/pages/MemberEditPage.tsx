@@ -202,7 +202,7 @@ export default function MemberEditPage() {
           <div className="bg-card rounded-xl border border-border p-5 space-y-5">
             <Section title="Identity">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Full Name" required htmlFor="name" error={errors.name}>
+                <Field label="Full name" required htmlFor="name" error={errors.name}>
                   <input
                     id="name"
                     name="name"
@@ -239,7 +239,7 @@ export default function MemberEditPage() {
           <div className="bg-card rounded-xl border border-border p-5 space-y-5">
             <Section title="Position">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Job Title">
+                <Field label="Job title">
                   <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Senior Sales Agent" className={inputCls} />
                 </Field>
                 <Field label="Reports To (Manager)">
@@ -287,7 +287,7 @@ export default function MemberEditPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Employment Type">
+                <Field label="Employment type">
                   <select
                     value={employmentType}
                     onChange={(e) => setEmploymentType((e.target.value || "") as EmpType | "")}
@@ -302,7 +302,7 @@ export default function MemberEditPage() {
                 <Field label="Employee ID">
                   <input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder="EMP-001" className={inputCls} />
                 </Field>
-                <Field label="Joined Date">
+                <Field label="Joined date">
                   <input type="date" value={joinedAt} onChange={(e) => setJoinedAt(e.target.value)} className={inputCls} />
                 </Field>
               </div>

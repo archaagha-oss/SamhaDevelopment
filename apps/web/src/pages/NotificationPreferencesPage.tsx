@@ -207,7 +207,7 @@ export default function NotificationPreferencesPage() {
           </div>
         </Card>
 
-        <Card title="Quiet Hours" description="Personal quiet hours layer on top of the org-wide window. Urgent alerts still come through.">
+        <Card title="Quiet hours" description="Personal quiet hours layer on top of the org-wide window. Urgent alerts still come through.">
           <QuietHoursControl
             value={prefs.quietHours}
             onChange={(qh) => setPrefs({ ...prefs, quietHours: qh })}

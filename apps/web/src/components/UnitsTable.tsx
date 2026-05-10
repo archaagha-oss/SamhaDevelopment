@@ -58,14 +58,14 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  NOT_RELEASED: "Not Released",
+  NOT_RELEASED: "Not released",
   AVAILABLE:    "Available",
-  ON_HOLD:      "On Hold",
+  ON_HOLD:      "On hold",
   RESERVED:     "Reserved",
   BOOKED:       "Booked",
   SOLD:         "Sold",
   BLOCKED:      "Blocked",
-  HANDED_OVER:  "Handed Over",
+  HANDED_OVER:  "Handed over",
 };
 
 const ALL_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];

@@ -7,8 +7,8 @@ interface Props {
 }
 
 const DEAL_STAGE_LABELS: Record<string, string> = {
-  ENQUIRY: "Enquiry", QUALIFICATION: "Qualification", SITE_VISIT: "Site Visit",
-  NEGOTIATION: "Negotiation", OFFER_SENT: "Offer Sent", ACCEPTED: "Accepted",
+  ENQUIRY: "Enquiry", QUALIFICATION: "Qualification", SITE_VISIT: "Site visit",
+  NEGOTIATION: "Negotiation", OFFER_SENT: "Offer sent", ACCEPTED: "Accepted",
   PENDING: "Pending", COMPLETED: "Completed", LOST: "Lost",
 };
 

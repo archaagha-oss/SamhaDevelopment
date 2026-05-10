@@ -35,14 +35,14 @@ interface Props {
 const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "CHEQUE", "PDC", "CREDIT_CARD"];
 
 const ACTION_TITLES: Record<PaymentAction, string> = {
-  MARK_PAID:    "Mark as Paid",
-  MARK_PDC:     "Register PDC (Post-Dated Cheque)",
-  PDC_CLEARED:  "Confirm PDC Cleared",
-  PDC_BOUNCED:  "Mark PDC as Bounced",
-  PARTIAL:      "Record Partial Payment",
-  ADJUST_DATE:  "Adjust Due Date",
-  ADJUST_AMOUNT:"Adjust Amount",
-  WAIVE:        "Waive Payment",
+  MARK_PAID:    "Mark as paid",
+  MARK_PDC:     "Register PDC (post-dated cheque)",
+  PDC_CLEARED:  "Confirm PDC cleared",
+  PDC_BOUNCED:  "Mark PDC as bounced",
+  PARTIAL:      "Record partial payment",
+  ADJUST_DATE:  "Adjust due date",
+  ADJUST_AMOUNT:"Adjust amount",
+  WAIVE:        "Waive payment",
 };
 
 export default function PaymentActionModal({ payment, action, onClose, onSuccess }: Props) {

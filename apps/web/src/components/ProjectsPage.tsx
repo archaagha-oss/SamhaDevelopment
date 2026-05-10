@@ -34,7 +34,7 @@ const BLANK = {
 
 const STATUS_CONFIG: Record<StatusKey, { label: string; chip: string; dot: string; accent: string }> = {
   ACTIVE:    { label: "Active",    chip: "bg-success-soft text-success", dot: "bg-success", accent: "bg-success" },
-  ON_HOLD:   { label: "On Hold",   chip: "bg-warning-soft text-warning",     dot: "bg-warning",   accent: "bg-warning" },
+  ON_HOLD:   { label: "On hold",   chip: "bg-warning-soft text-warning",     dot: "bg-warning",   accent: "bg-warning" },
   COMPLETED: { label: "Completed", chip: "bg-info-soft text-primary",       dot: "bg-primary",    accent: "bg-primary" },
   CANCELLED: { label: "Cancelled", chip: "bg-destructive-soft text-destructive",         dot: "bg-destructive",     accent: "bg-neutral-300" },
 };
@@ -337,7 +337,7 @@ export default function ProjectsPage() {
               Cancel
             </button>
             <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
-              {submitting ? "Saving…" : "Create Project"}
+              {submitting ? "Saving…" : "Create project"}
             </button>
           </div>
         </form>

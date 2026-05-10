@@ -287,7 +287,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Leads" }]}
-        title="Leads Pipeline"
+        title="Leads pipeline"
         subtitle={`${total} leads total`}
         actions={<Button onClick={() => setShowForm(true)}>Create lead</Button>}
         tabs={stageTabs}
@@ -561,7 +561,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
 
       <ConfirmDialog
         open={!!confirmDeleteId}
-        title="Delete Lead"
+        title="Delete lead"
         message="Delete this lead? This cannot be undone."
         confirmLabel="Delete"
         variant="danger"

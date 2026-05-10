@@ -94,7 +94,7 @@ function FileUploadField({
         disabled={uploading}
         className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card hover:bg-muted/50 transition-colors disabled:opacity-50"
       >
-        {value ? "✓ Uploaded" : uploading ? "Uploading…" : "Choose File"}
+        {value ? "✓ Uploaded" : uploading ? "Uploading…" : "Choose file"}
       </button>
     </div>
   );
@@ -211,7 +211,7 @@ export default function BrokerOnboarding() {
         {/* Step 1: Company Info */}
         {step === 1 && (
           <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Company Details</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">Company details</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
@@ -268,7 +268,7 @@ export default function BrokerOnboarding() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Compliance Documents</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Compliance documents</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <label className={LABEL_CLS}>RERA License Number *</label>
@@ -300,7 +300,7 @@ export default function BrokerOnboarding() {
                 />
               </div>
               <FileUploadField
-                label="Trade License Copy"
+                label="Trade license copy"
                 value={company.tradeLicenseCopyUrl}
                 onChange={(url) => handleCompanyChange("tradeLicenseCopyUrl", url)}
               />
@@ -320,7 +320,7 @@ export default function BrokerOnboarding() {
                 onChange={(url) => handleCompanyChange("vatCertificateUrl", url)}
               />
               <FileUploadField
-                label="Corporate Tax Certificate"
+                label="Corporate tax certificate"
                 value={company.corporateTaxCertUrl}
                 onChange={(url) => handleCompanyChange("corporateTaxCertUrl", url)}
               />
@@ -331,7 +331,7 @@ export default function BrokerOnboarding() {
               />
             </div>
 
-            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Bank Details</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4 mt-8">Bank details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={LABEL_CLS}>Bank Name</label>
@@ -350,7 +350,7 @@ export default function BrokerOnboarding() {
                   value={company.bankAccountName}
                   onChange={(e) => handleCompanyChange("bankAccountName", e.target.value)}
                   className={INPUT_CLS}
-                  placeholder="Company Name"
+                  placeholder="Company name"
                 />
               </div>
               <div>
@@ -390,11 +390,11 @@ export default function BrokerOnboarding() {
         {/* Step 2: Agents */}
         {step === 2 && (
           <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Register Agents</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">Register agents</h2>
 
             {/* Add Agent Form */}
             <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Add Agent</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Add agent</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className={LABEL_CLS}>First Name *</label>
@@ -495,7 +495,7 @@ export default function BrokerOnboarding() {
             {/* Added Agents List */}
             {agents.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Registered Agents ({agents.length})</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Registered agents ({agents.length})</h3>
                 <div className="space-y-2">
                   {agents.map((a, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded border border-border">
@@ -539,11 +539,11 @@ export default function BrokerOnboarding() {
             <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
               ✓
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding Complete!</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding complete!</h2>
             <p className="text-muted-foreground mb-8">Your broker company and agents have been successfully registered.</p>
 
             <div className="bg-muted/50 rounded-lg p-4 mb-8 text-left">
-              <h3 className="font-semibold text-foreground mb-2">What's Next?</h3>
+              <h3 className="font-semibold text-foreground mb-2">What's next?</h3>
               <ul className="text-sm text-foreground space-y-1">
                 <li>✓ Company and {agents.length} agent(s) registered</li>
                 <li>✓ RERA and compliance documents stored</li>

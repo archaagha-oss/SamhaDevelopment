@@ -33,14 +33,14 @@ export const ROLE_CFG: Record<Role, { label: string; chip: string; dot: string; 
 
 export const STATUS_CFG: Record<Status, { label: string; chip: string; dot: string }> = {
   ACTIVE:      { label: "Active",      chip: "bg-success-soft text-success",         dot: "bg-success" },
-  ON_LEAVE:    { label: "On Leave",    chip: "bg-warning-soft text-warning",         dot: "bg-warning" },
+  ON_LEAVE:    { label: "On leave",    chip: "bg-warning-soft text-warning",         dot: "bg-warning" },
   SUSPENDED:   { label: "Suspended",   chip: "bg-destructive-soft text-destructive", dot: "bg-destructive" },
   DEACTIVATED: { label: "Deactivated", chip: "bg-muted text-muted-foreground",       dot: "bg-neutral-400" },
 };
 
 export const EMP_LABEL: Record<EmpType, string> = {
-  FULL_TIME: "Full Time",
-  PART_TIME: "Part Time",
+  FULL_TIME: "Full time",
+  PART_TIME: "Part time",
   CONTRACT:  "Contract",
   INTERN:    "Intern",
 };

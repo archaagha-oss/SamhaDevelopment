@@ -31,7 +31,7 @@ type Tab = (typeof TABS)[number];
 function mapLeads(data: any[]): SearchResult[] {
   return data.map((l) => ({
     id: l.id,
-    title: l.name ?? "Unknown Lead",
+    title: l.name ?? "Unknown lead",
     subtitle: [l.email, l.phone].filter(Boolean).join(" · "),
     type: "lead",
     status: l.stage,

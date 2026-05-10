@@ -179,7 +179,7 @@ export default function HandoverChecklistPage() {
 
       {!checklist.completedAt && (
         <div className="border rounded p-4 bg-muted/50 space-y-2">
-          <h2 className="font-medium">Customer Sign-off</h2>
+          <h2 className="font-medium">Customer sign-off</h2>
           <p className="text-xs text-muted-foreground">
             All required items {ready ? "have been completed" : "must be completed"} before customer sign-off.
           </p>

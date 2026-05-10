@@ -15,14 +15,14 @@ interface UnitDetailPanelProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  NOT_RELEASED: "Not Released",
+  NOT_RELEASED: "Not released",
   AVAILABLE: "Available",
-  ON_HOLD: "On Hold",
+  ON_HOLD: "On hold",
   RESERVED: "Reserved",
   BOOKED: "Booked",
   SOLD: "Sold",
   BLOCKED: "Blocked",
-  HANDED_OVER: "Handed Over",
+  HANDED_OVER: "Handed over",
 };
 
 const UNIT_TYPE_LABELS: Record<string, string> = {
@@ -201,7 +201,7 @@ export default function UnitDetailPanel({
           {/* History */}
           {history.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">Status History</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Status history</h3>
               <div className="space-y-2">
                 {history.map((entry) => (
                   <div key={entry.id} className="flex items-start gap-3 pb-3 border-b border-border last:border-b-0">

@@ -236,7 +236,7 @@ export default function TaskDashboard() {
 
       {showAddForm && (
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">New Task</h3>
+          <h3 className="text-sm font-semibold text-foreground">New task</h3>
           <input
             type="text"
             value={addForm.title}
@@ -268,7 +268,7 @@ export default function TaskDashboard() {
               disabled={!addForm.title.trim() || !addForm.dueDate || submitting}
               className="px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
-              {submitting ? "Creating…" : "Create Task"}
+              {submitting ? "Creating…" : "Create task"}
             </button>
           </div>
         </div>
@@ -285,8 +285,8 @@ export default function TaskDashboard() {
       ) : (
         <div className="space-y-4">
           <Section title="Overdue" tasks={overdue} colorClass="text-destructive bg-destructive-soft" />
-          <Section title="Due Today" tasks={todayTasks} colorClass="text-warning bg-warning-soft" />
-          <Section title="This Week" tasks={upcoming} colorClass="text-muted-foreground bg-muted/50" />
+          <Section title="Due today" tasks={todayTasks} colorClass="text-warning bg-warning-soft" />
+          <Section title="This week" tasks={upcoming} colorClass="text-muted-foreground bg-muted/50" />
         </div>
       )}
     </div>

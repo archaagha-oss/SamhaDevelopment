@@ -281,7 +281,7 @@ export default function FinanceDashboard() {
 
             {/* Collection Rate by Stage */}
             <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-semibold text-foreground mb-4">Collection Rate by Stage</h3>
+              <h3 className="font-semibold text-foreground mb-4">Collection rate by stage</h3>
               <div className="space-y-3">
                 {pipeline.map((item) => (
                   <div key={item.stage}>

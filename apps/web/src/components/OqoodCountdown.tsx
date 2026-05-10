@@ -26,7 +26,7 @@ export default function OqoodCountdown({
   };
 
   const statusLabels = {
-    green: "On Track",
+    green: "On track",
     yellow: "Approaching",
     red: "Urgent",
     overdue: "Overdue",

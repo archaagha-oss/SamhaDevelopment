@@ -30,10 +30,10 @@ const SEVERITY_TINT: Record<Severity, { row: string; pill: string; label: string
 };
 
 const KIND_LABEL: Record<string, string> = {
-  BROKER_RERA_LICENSE:  "Broker RERA License",
-  BROKER_TRADE_LICENSE: "Trade License",
-  BROKER_VAT_CERT:      "VAT Certificate",
-  AGENT_RERA_CARD:      "Agent RERA Card",
+  BROKER_RERA_LICENSE:  "Broker RERA license",
+  BROKER_TRADE_LICENSE: "Trade license",
+  BROKER_VAT_CERT:      "VAT certificate",
+  AGENT_RERA_CARD:      "Agent RERA card",
   AGENT_EID:            "Agent Emirates ID",
   BUYER_EID:            "Buyer Emirates ID",
 };

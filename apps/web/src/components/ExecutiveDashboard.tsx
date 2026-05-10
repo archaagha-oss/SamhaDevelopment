@@ -242,31 +242,31 @@ export default function ExecutiveDashboard(): React.ReactNode {
   // ===== KPIs (top strip) =====
   const kpis = [
     {
-      label: "Revenue Collected",
+      label: "Revenue collected",
       value: `AED ${fmtAED(overview.revenueCollected)}`,
       sub: period === "ALL" ? "All time" : activePeriodLabel,
       tone: KPI_TONES.success, icon: "↑",
     },
     {
-      label: "Pipeline Value",
+      label: "Pipeline value",
       value: `AED ${fmtAED(overview.pipelineValue)}`,
       sub: `${overview.totalDeals} active deals`,
       tone: KPI_TONES.brand, icon: "◈",
     },
     {
-      label: "Units Sold",
+      label: "Units sold",
       value: `${overview.unitsSold} / ${overview.totalUnits}`,
       sub: `${overview.soldPercentage}% sold`,
       tone: KPI_TONES.active, icon: "⊞",
     },
     {
-      label: "Conversion Rate",
+      label: "Conversion rate",
       value: `${leadsReport.conversionRate}%`,
       sub: `${leadsReport.convertedToDeals} of ${leadsReport.totalLeads} leads`,
       tone: KPI_TONES.info, icon: "↗",
     },
     {
-      label: "Overdue Payments",
+      label: "Overdue payments",
       value: `AED ${fmtAED(overview.overduePayments)}`,
       sub: `${overdueAlertsCount} payment${overdueAlertsCount === 1 ? "" : "s"}`,
       tone: KPI_TONES.danger, icon: "!",
@@ -334,7 +334,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
             >
               <span className={refreshing ? "animate-spin inline-block" : "inline-block"} aria-hidden="true">↻</span>
             </Button>
-            <Button onClick={() => navigate("/reports")}>View Reports</Button>
+            <Button onClick={() => navigate("/reports")}>View reports</Button>
           </>
         }
       />
@@ -367,7 +367,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <span className="text-warning">⚠</span>
-            <h2 className="text-sm font-semibold text-foreground">Action Items</h2>
+            <h2 className="text-sm font-semibold text-foreground">Action items</h2>
             {actionItemsCount > 0 && (
               <span className="px-2 py-0.5 bg-warning-soft text-warning-soft-foreground text-xs font-bold rounded-full">
                 {actionItemsCount}
@@ -423,7 +423,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-baseline justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Revenue Trend</h2>
+            <h2 className="text-sm font-semibold text-foreground">Revenue trend</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Collected vs expected · {activePeriodLabel.toLowerCase()} · {activeProjectName}
             </p>
@@ -483,7 +483,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-baseline justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Unit Inventory</h2>
+              <h2 className="text-sm font-semibold text-foreground">Unit inventory</h2>
               <p className="text-xs text-muted-foreground mt-0.5">{activeProjectName}</p>
             </div>
             <button onClick={() => navigate("/units")} className="text-xs text-primary hover:text-primary/80 transition-colors">Manage →</button>
@@ -555,7 +555,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
         {/* Lead pipeline */}
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Lead Pipeline</h2>
+            <h2 className="text-sm font-semibold text-foreground">Lead pipeline</h2>
             <button onClick={() => navigate("/leads")} className="text-xs text-primary hover:text-primary/80 transition-colors">View leads →</button>
           </div>
           {stageEntries.length > 0 ? (
@@ -590,7 +590,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
         {/* Top agents leaderboard */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-baseline justify-between px-5 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">Top Performers</h2>
+            <h2 className="text-sm font-semibold text-foreground">Top performers</h2>
             <button onClick={() => navigate("/team")} className="text-xs text-primary hover:text-primary/80 transition-colors">Team →</button>
           </div>
           {agents.length > 0 ? (
@@ -626,7 +626,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
         {/* Tasks */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-baseline justify-between px-5 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">Open Tasks</h2>
+            <h2 className="text-sm font-semibold text-foreground">Open tasks</h2>
             <button onClick={() => navigate("/tasks")} className="text-xs text-primary hover:text-primary/80 transition-colors">All tasks →</button>
           </div>
           {tasks.length > 0 ? (
@@ -675,7 +675,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
       {/* ===== Quick Actions ===== */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">Quick Actions</h2>
+          <h2 className="text-sm font-semibold text-foreground">Quick actions</h2>
           <p className="text-xs text-muted-foreground">Jump straight into common flows</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">

@@ -774,7 +774,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               >
                 {reserving
                   ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
-                  : "🔒 Reserve Unit"}
+                  : "🔒 Reserve unit"}
               </button>
             )}
             {deal.stage === "RESERVATION_CONFIRMED" && salesOfferDocs.length === 0 && canGenerateSalesOffer && (
@@ -918,7 +918,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
                   className="text-xs text-primary font-semibold hover:underline"
                 >
-                  {showChangeUnit ? "Cancel" : "Change Unit"}
+                  {showChangeUnit ? "Cancel" : "Change unit"}
                 </button>
               ) : deal.unit.status === "RESERVED" ? (
                 <span className="text-xs font-bold text-success bg-success-soft px-2.5 py-1 rounded-full border border-success/30">
@@ -994,7 +994,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   disabled={!changeUnitId || assigningUnit}
                   className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
-                  {assigningUnit ? "Assigning…" : "Assign Unit"}
+                  {assigningUnit ? "Assigning…" : "Assign unit"}
                 </button>
               </div>
             )}
@@ -1019,7 +1019,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     >
                       {generatingDoc === "SALES_OFFER"
                         ? "Generating…"
-                        : hasExisting ? "Generate New Version" : "Generate Sales Offer"}
+                        : hasExisting ? "Generate new version" : "Generate Sales Offer"}
                     </button>
                   )}
                   {!canGenerateSalesOffer && deal.stage !== "CANCELLED" && (
@@ -1139,7 +1139,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           >
             <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6">
-              <h3 className="text-base font-bold text-foreground mb-2">Generate New Version?</h3>
+              <h3 className="text-base font-bold text-foreground mb-2">Generate new version?</h3>
               <p className="text-sm text-muted-foreground mb-5">
                 This will create a new version of the Sales Offer capturing the current deal
                 data. The existing version will remain accessible in the history.
@@ -1156,7 +1156,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   disabled={!!generatingDoc}
                   className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate New Version"}
+                  {generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate new version"}
                 </button>
               </div>
             </div>
@@ -1180,7 +1180,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               disabled={savingNotes}
               className="mt-2 px-4 py-1.5 bg-neutral-700 text-white text-sm font-semibold rounded-lg hover:bg-muted disabled:opacity-50"
             >
-              {savingNotes ? "Saving…" : "Save Notes"}
+              {savingNotes ? "Saving…" : "Save notes"}
             </button>
           </div>
 
@@ -1206,7 +1206,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage History"}
+                    {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage history"}
                   </button>
                 ))}
               </div>
@@ -1283,8 +1283,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 {/* Financial summary */}
                 <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
                   {[
-                    { label: "Total Price", value: `AED ${netPrice.toLocaleString()}`, color: "text-foreground" },
-                    { label: "Total Paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-success" },
+                    { label: "Total price", value: `AED ${netPrice.toLocaleString()}`, color: "text-foreground" },
+                    { label: "Total paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-success" },
                     { label: "Remaining", value: `AED ${remaining.toLocaleString()}`, color: remaining > 0 ? "text-foreground" : "text-success" },
                     { label: "Overdue", value: overdueAmt > 0 ? `AED ${overdueAmt.toLocaleString()}` : "—", color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
                   ].map(({ label, value, color }) => (
@@ -1350,7 +1350,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                     disabled={payingId === p.id}
                                     className="px-2.5 py-1 text-xs font-semibold bg-success text-white rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50"
                                   >
-                                    {payingId === p.id ? "…" : "Mark Paid"}
+                                    {payingId === p.id ? "…" : "Mark paid"}
                                   </button>
                                   <button
                                     onClick={() => { setShowPartialModal(p.id); setPartialAmount(""); setPartialMethod("BANK_TRANSFER"); setPartialRef(""); setPartialNotes(""); }}
@@ -1421,7 +1421,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                     disabled={generatingInvoice === p.id}
                                     className="px-2.5 py-1 text-xs font-medium border border-primary/40 text-primary rounded-lg hover:bg-info-soft transition-colors disabled:opacity-50"
                                   >
-                                    {generatingInvoice === p.id ? "Generating…" : "Generate Invoice"}
+                                    {generatingInvoice === p.id ? "Generating…" : "Generate invoice"}
                                   </button>
                                 )
                               )}
@@ -1441,7 +1441,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                                     disabled={generatingReceipt === p.id}
                                     className="px-2.5 py-1 text-xs font-medium border border-success/30 text-success rounded-lg hover:bg-success-soft transition-colors disabled:opacity-50"
                                   >
-                                    {generatingReceipt === p.id ? "Generating…" : "Generate Receipt"}
+                                    {generatingReceipt === p.id ? "Generating…" : "Generate receipt"}
                                   </button>
                                 )
                               )}
@@ -1482,7 +1482,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     { type: "NOTE",    label: "Note",    icon: "📝" },
                     { type: "CALL",    label: "Call",    icon: "📞" },
                     { type: "MEETING", label: "Meeting", icon: "🤝" },
-                    { type: "SITE_VISIT", label: "Site Visit", icon: "🏢" },
+                    { type: "SITE_VISIT", label: "Site visit", icon: "🏢" },
                   ] as const).map(({ type, label, icon }) => (
                     <button
                       key={type}
@@ -1606,7 +1606,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       </div>
                       <button onClick={submitDealTask} disabled={!addTaskForm.title.trim() || !addTaskForm.dueDate || addingTask}
                         className="px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
-                        {addingTask ? "Creating…" : "Create Task"}
+                        {addingTask ? "Creating…" : "Create task"}
                       </button>
                     </div>
                   )}
@@ -1674,7 +1674,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* ── Deal Status ─────────────────────────────────────────────────── */}
           <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Deal Status</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Deal status</h3>
 
             {/* Current stage */}
             <div className="flex items-center gap-2 mb-4">
@@ -1692,7 +1692,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               >
                 {reserving ? (
                   <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
-                ) : "Reserve Unit"}
+                ) : "Reserve unit"}
               </button>
             )}
             {deal.stage === "RESERVATION_CONFIRMED" && (
@@ -1724,7 +1724,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Oqood countdown */}
           <div className={`rounded-xl border p-4 ${oqoodStyle}`}>
-            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3 opacity-70">Oqood Deadline</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3 opacity-70">Oqood deadline</h3>
             {oqood.isOverdue ? (
               <div>
                 <p className="text-2xl font-bold">Overdue</p>
@@ -1767,7 +1767,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground mb-2">Unlock Conditions</p>
                 {[
                   { label: "SPA Signed",       met: spaOk },
-                  { label: "Oqood Registered", met: oqoodOk },
+                  { label: "Oqood registered", met: oqoodOk },
                 ].map(({ label, met }) => (
                   <div key={label} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${met ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
                     <span className="font-bold">{met ? "✓" : "✗"}</span>
@@ -1784,7 +1784,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {/* Next Stage Requirements */}
           {stageRequirements.length > 0 && (
             <div className="bg-card rounded-xl border border-border p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Next Stage Checklist</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Next stage checklist</h3>
               <div className="space-y-2">
                 {stageRequirements.map((req) => (
                   <div
@@ -1815,7 +1815,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
           {/* Reservation date */}
           <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Reserved On</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Reserved on</h3>
             <p className="text-base font-semibold text-foreground">{fmtDate(deal.reservationDate)}</p>
           </div>
         </div>
@@ -1830,7 +1830,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
           <div className="px-6 py-5 border-b border-border">
-            <h3 className="font-bold text-foreground text-lg">Confirm Reservation</h3>
+            <h3 className="font-bold text-foreground text-lg">Confirm reservation</h3>
           </div>
           <div className="px-6 py-5 space-y-4">
             <div className="bg-warning-soft border border-warning/30 rounded-xl p-4">
@@ -1859,7 +1859,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 disabled={reserving}
                 className="flex-1 py-2.5 bg-success text-white text-sm font-bold rounded-xl hover:bg-success/90 disabled:opacity-50 transition-colors"
               >
-                {reserving ? "Reserving…" : "Confirm — Reserve Unit"}
+                {reserving ? "Reserving…" : "Confirm — reserve unit"}
               </button>
               <button
                 onClick={() => setShowReserveConfirm(false)}
@@ -1880,7 +1880,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Cancel Deal</h3>
+            <h3 className="font-bold text-foreground">Cancel deal</h3>
             <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
           </div>
           <div className="px-6 py-4 space-y-3">
@@ -1904,7 +1904,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               disabled={!cancelReason.trim() || cancelling}
               className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
             >
-              {cancelling ? "Cancelling…" : "Cancel Deal"}
+              {cancelling ? "Cancelling…" : "Cancel deal"}
             </button>
           </div>
         </div>
@@ -1918,11 +1918,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Mark Payment as Paid</h3>
+            <h3 className="font-bold text-foreground">Mark payment as paid</h3>
           </div>
           <div className="px-6 py-4 space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment method</label>
               <select
                 value={paidMethod}
                 onChange={(e) => setPaidMethod(e.target.value)}
@@ -1934,7 +1934,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Date</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment date</label>
               <input
                 type="date"
                 value={paidDate}
@@ -1972,7 +1972,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               disabled={payingId !== null}
               className="flex-1 py-2.5 bg-success text-white font-semibold rounded-lg hover:bg-success/90 text-sm disabled:opacity-50"
             >
-              {payingId ? "Saving…" : "Confirm Paid"}
+              {payingId ? "Saving…" : "Confirm paid"}
             </button>
           </div>
         </div>
@@ -1986,12 +1986,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Record Partial Payment</h3>
+            <h3 className="font-bold text-foreground">Record partial payment</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Enter the amount received so far.</p>
           </div>
           <div className="px-6 py-4 space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount received (AED) *</label>
               <input
                 type="number"
                 min="1"
@@ -2002,7 +2002,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment method</label>
               <select
                 value={partialMethod}
                 onChange={(e) => setPartialMethod(e.target.value)}
@@ -2043,7 +2043,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               disabled={submittingPartial || !partialAmount || parseFloat(partialAmount) <= 0}
               className="flex-1 py-2.5 bg-warning text-warning-foreground font-semibold rounded-lg hover:bg-warning/90 text-sm disabled:opacity-50"
             >
-              {submittingPartial ? "Saving…" : "Record Partial"}
+              {submittingPartial ? "Saving…" : "Record partial"}
             </button>
           </div>
         </div>
@@ -2068,11 +2068,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Register Post-Dated Cheque</h3>
+            <h3 className="font-bold text-foreground">Register post-dated cheque</h3>
           </div>
           <div className="px-6 py-4 space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Number</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque number</label>
               <input type="text" value={pdcForm.pdcNumber} onChange={(e) => setPdcForm((f) => ({...f, pdcNumber: e.target.value}))}
                 placeholder="e.g. 001234" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
@@ -2082,7 +2082,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 placeholder="e.g. Emirates NBD" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque Date</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Cheque date</label>
               <input type="date" value={pdcForm.pdcDate} onChange={(e) => setPdcForm((f) => ({...f, pdcDate: e.target.value}))}
                 className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
@@ -2104,7 +2104,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Waive Payment</h3>
+            <h3 className="font-bold text-foreground">Waive payment</h3>
             <p className="text-xs text-muted-foreground mt-0.5">This removes the payment from collection obligations.</p>
           </div>
           <div className="px-6 py-4">
@@ -2117,7 +2117,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <button onClick={() => setWaiveId(null)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
             <button onClick={confirmWaive} disabled={submittingWaive || !waiveReason.trim()}
               className="flex-1 py-2.5 bg-neutral-700 text-white font-semibold rounded-lg hover:bg-neutral-600 text-sm disabled:opacity-50">
-              {submittingWaive ? "Waiving…" : "Waive Payment"}
+              {submittingWaive ? "Waiving…" : "Waive payment"}
             </button>
           </div>
         </div>
@@ -2131,7 +2131,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Add Custom Milestone</h3>
+            <h3 className="font-bold text-foreground">Add custom milestone</h3>
           </div>
           <div className="px-6 py-4 space-y-3">
             <div>
@@ -2145,7 +2145,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Due date *</label>
               <input type="date" value={milestoneForm.dueDate} onChange={(e) => setMilestoneForm((f) => ({...f, dueDate: e.target.value}))}
                 className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
             </div>
@@ -2159,7 +2159,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <button onClick={() => setShowAddMilestone(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
             <button onClick={confirmAddMilestone} disabled={addingMilestone || !milestoneForm.label || !milestoneForm.amount || !milestoneForm.dueDate}
               className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 text-sm disabled:opacity-50">
-              {addingMilestone ? "Adding…" : "Add Milestone"}
+              {addingMilestone ? "Adding…" : "Add milestone"}
             </button>
           </div>
         </div>
@@ -2226,7 +2226,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl w-full max-w-xs shadow-2xl">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground">Restructure Payment Schedule</h3>
+            <h3 className="font-bold text-foreground">Restructure payment schedule</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Shifts all future PENDING payments by N days.</p>
           </div>
           <div className="px-6 py-4 space-y-3">
@@ -2247,7 +2247,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <button onClick={() => setShowRestructure(false)} className="flex-1 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted text-sm">Cancel</button>
             <button onClick={confirmRestructure} disabled={submittingRestructure || !restructureDays || !restructureReason.trim()}
               className="flex-1 py-2.5 bg-accent-2 text-accent-2-foreground font-semibold rounded-lg hover:bg-accent-2 text-sm disabled:opacity-50">
-              {submittingRestructure ? "Restructuring…" : "Apply Shift"}
+              {submittingRestructure ? "Restructuring…" : "Apply shift"}
             </button>
           </div>
         </div>
@@ -2262,9 +2262,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
       <ConfirmDialog
         open={!!pendingStage}
-        title="Change Deal Stage"
+        title="Change deal stage"
         message={`Move deal to "${pendingStage?.replace(/_/g, " ")}"? This will trigger all associated side effects.`}
-        confirmLabel="Move Stage"
+        confirmLabel="Move stage"
         variant="warning"
         onConfirm={confirmStageChange}
         onCancel={() => setPendingStage(null)}
@@ -2279,7 +2279,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       >
         <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm">
           <div className="px-6 py-5 border-b border-border">
-            <h3 className="text-base font-bold text-foreground">Pause Payment Reminders</h3>
+            <h3 className="text-base font-bold text-foreground">Pause payment reminders</h3>
             <p className="text-xs text-muted-foreground mt-1">No automated emails will be sent while paused.</p>
           </div>
           <div className="px-6 py-4 space-y-4">
@@ -2309,7 +2309,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               disabled={pausingReminders}
               className="flex-1 px-4 py-2.5 bg-warning text-warning-foreground text-sm font-semibold rounded-xl hover:bg-warning/90 transition-colors disabled:opacity-50"
             >
-              {pausingReminders ? "Pausing…" : "Pause Reminders"}
+              {pausingReminders ? "Pausing…" : "Pause reminders"}
             </button>
             <button
               onClick={() => setShowPauseModal(false)}

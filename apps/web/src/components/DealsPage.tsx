@@ -408,7 +408,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                   { label: "Buyer", col: "buyer" },
                   { label: "Unit", col: "unit" },
                   { label: "Stage", col: "stage" },
-                  { label: "Sale Price", col: "salePrice" },
+                  { label: "Sale price", col: "salePrice" },
                   { label: "Payments", col: null },
                   { label: "Commission", col: null },
                   { label: "", col: null },

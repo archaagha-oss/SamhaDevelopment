@@ -91,7 +91,7 @@ export default function FinanceDashboard() {
           {summary.data && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricsCard
-                label="Total Due"
+                label="Total due"
                 value={`AED ${(summary.data.totalDue / 1000000).toFixed(1)}M`}
                 subtext={`${summary.data.collectionRate}% collected`}
                 trend="stable"
@@ -113,7 +113,7 @@ export default function FinanceDashboard() {
                 className="bg-destructive-soft border-destructive/30"
               />
               <MetricsCard
-                label="At Risk"
+                label="At risk"
                 value={`AED ${(summary.data.atRisk / 1000000).toFixed(1)}M`}
                 subtext="Due in 30 days"
                 trend="down"
@@ -127,7 +127,7 @@ export default function FinanceDashboard() {
             {/* Payment Breakdown Pie Chart */}
             {breakdown.data && (
               <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Payment Status Breakdown</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-4">Payment status breakdown</h3>
                 <PaymentBreakdownChart data={breakdown.data} />
               </div>
             )}
@@ -145,7 +145,7 @@ export default function FinanceDashboard() {
           {overdue.data && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">Overdue Payments</h3>
+                <h3 className="text-sm font-semibold text-foreground">Overdue payments</h3>
                 <span className="px-2 py-1 bg-destructive-soft text-destructive rounded text-xs font-medium">
                   {overdue.total} alerts
                 </span>
@@ -164,7 +164,7 @@ export default function FinanceDashboard() {
           {/* Broker Performance Table */}
           {brokerPerf.data && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Broker Collection Performance</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Broker collection performance</h3>
               <BrokerPerformanceTable data={brokerPerf.data} loading={brokerPerf.loading} />
             </div>
           )}
@@ -172,7 +172,7 @@ export default function FinanceDashboard() {
           {/* Upcoming Payments Timeline */}
           {upcoming.data && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Upcoming Payment Due Dates (30 Days)</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Upcoming payment due dates (30 days)</h3>
               <UpcomingPaymentsTimeline data={upcoming.data} onNavigateDeal={(dealId) => navigate(`/deals/${dealId}`)} />
             </div>
           )}

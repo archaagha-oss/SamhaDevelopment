@@ -358,7 +358,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               disabled={acting}
               className="w-full py-2.5 text-sm font-semibold border border-warning/30 text-warning rounded-lg hover:bg-warning-soft transition-colors disabled:opacity-50"
             >
-              {acting ? "…" : "Release Hold"}
+              {acting ? "…" : "Release hold"}
             </button>
           )}
           {isBookedOrSold && activeDeal && (
@@ -424,7 +424,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               <div className="flex gap-2">
                 <button onClick={() => { setShowBlockInput(false); setBlockReason(""); }} className="flex-1 py-1.5 text-xs bg-card border border-border rounded text-muted-foreground hover:bg-muted/50">Cancel</button>
                 <button onClick={handleBlock} disabled={acting || !blockReason.trim()} className="flex-1 py-1.5 text-xs bg-destructive text-white rounded hover:bg-destructive/90 disabled:opacity-50">
-                  {acting ? "Blocking…" : "Confirm Block"}
+                  {acting ? "Blocking…" : "Confirm block"}
                 </button>
               </div>
             </div>
@@ -435,7 +435,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               disabled={acting}
               className="w-full py-2 text-sm font-medium border border-success/30 text-success rounded-lg hover:bg-success-soft transition-colors disabled:opacity-50"
             >
-              {acting ? "…" : "Make Available"}
+              {acting ? "…" : "Make available"}
             </button>
           )}
 
@@ -453,7 +453,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               <div className="flex gap-2">
                 <button onClick={() => setConfirmDelete(false)} className="flex-1 py-1.5 text-xs bg-card border border-border rounded text-muted-foreground hover:bg-muted/50">Cancel</button>
                 <button onClick={handleDelete} disabled={deleting} className="flex-1 py-1.5 text-xs bg-destructive text-white rounded hover:bg-destructive/90 disabled:opacity-50">
-                  {deleting ? "Deleting…" : "Confirm Delete"}
+                  {deleting ? "Deleting…" : "Confirm delete"}
                 </button>
               </div>
             </div>

@@ -43,10 +43,10 @@ interface Collections {
 
 const STAGE_ORDER = ["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT","SPA_SIGNED","OQOOD_PENDING","OQOOD_REGISTERED","INSTALLMENTS_ACTIVE","HANDOVER_PENDING","COMPLETED","CANCELLED"];
 const STAGE_LABELS: Record<string, string> = {
-  RESERVATION_PENDING: "Res. Pending", RESERVATION_CONFIRMED: "Res. Confirmed",
-  SPA_PENDING: "SPA Pending", SPA_SENT: "SPA Sent", SPA_SIGNED: "SPA Signed",
-  OQOOD_PENDING: "Oqood Pending", OQOOD_REGISTERED: "Oqood Reg.",
-  INSTALLMENTS_ACTIVE: "Installments", HANDOVER_PENDING: "Handover Pending",
+  RESERVATION_PENDING: "Res. pending", RESERVATION_CONFIRMED: "Res. confirmed",
+  SPA_PENDING: "SPA pending", SPA_SENT: "SPA sent", SPA_SIGNED: "SPA signed",
+  OQOOD_PENDING: "Oqood pending", OQOOD_REGISTERED: "Oqood reg.",
+  INSTALLMENTS_ACTIVE: "Installments", HANDOVER_PENDING: "Handover pending",
   COMPLETED: "Completed", CANCELLED: "Cancelled",
 };
 
@@ -164,10 +164,10 @@ function PipelineTab({ overview, dealStages, leads, range }: {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Total Deals"      value={fmtNum(overview.totalDeals)}  />
-        <KPI label="Pipeline Value"   value={fmtAED(overview.pipelineValue)} color="text-primary" />
-        <KPI label="Total Leads"      value={fmtNum(overview.totalLeads)}  />
-        <KPI label="Conversion Rate"  value={leads.conversionRate + "%"}   color="text-success"
+        <KPI label="Total deals"      value={fmtNum(overview.totalDeals)}  />
+        <KPI label="Pipeline value"   value={fmtAED(overview.pipelineValue)} color="text-primary" />
+        <KPI label="Total leads"      value={fmtNum(overview.totalLeads)}  />
+        <KPI label="Conversion rate"  value={leads.conversionRate + "%"}   color="text-success"
           sub={`${leads.convertedToDeals} of ${leads.totalLeads} leads`} />
       </div>
 
@@ -228,8 +228,8 @@ function PipelineTab({ overview, dealStages, leads, range }: {
       {/* Conversion funnel */}
       {(() => {
         const funnelStages = [
-          { label: "Total Leads",  value: overview.totalLeads,  color: "bg-chart-7" },
-          { label: "Active Deals", value: overview.totalDeals,  color: "bg-primary"   },
+          { label: "Total leads",  value: overview.totalLeads,  color: "bg-chart-7" },
+          { label: "Active deals", value: overview.totalDeals,  color: "bg-primary"   },
           {
             label: "Res. Confirmed",
             value: sorted.find((s) => s.stage === STAGE_LABELS["RESERVATION_CONFIRMED"])?.count
@@ -305,8 +305,8 @@ function RevenueTab({ overview, monthly, range }: {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Collected"       value={fmtAED(totalCollected)}           color="text-success" />
         <KPI label="Overdue"         value={fmtAED(overview.overduePayments)} color="text-destructive" />
-        <KPI label="Pipeline Value"  value={fmtAED(overview.pipelineValue)}   color="text-primary" />
-        <KPI label="Collection Rate" value={collectionRate} sub={`${fmtAED(totalCollected)} of ${fmtAED(totalExpected)}`} />
+        <KPI label="Pipeline value"  value={fmtAED(overview.pipelineValue)}   color="text-primary" />
+        <KPI label="Collection rate" value={collectionRate} sub={`${fmtAED(totalCollected)} of ${fmtAED(totalExpected)}`} />
       </div>
 
       <div className="bg-card rounded-xl border border-border p-5">
@@ -407,9 +407,9 @@ function AgentsTab({ agents }: { agents: AgentSummary[] }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Total Agents"     value={String(agents.length)} />
-        <KPI label="Total Deals"      value={fmtNum(totalDeals)} />
-        <KPI label="Commission Paid"  value={fmtAED(totalComm)} color="text-success" />
+        <KPI label="Total agents"     value={String(agents.length)} />
+        <KPI label="Total deals"      value={fmtNum(totalDeals)} />
+        <KPI label="Commission paid"  value={fmtAED(totalComm)} color="text-success" />
         <KPI label="Avg Close Rate"   value={avgClose.toFixed(1) + "%"} />
       </div>
 
@@ -441,7 +441,7 @@ function AgentsTab({ agents }: { agents: AgentSummary[] }) {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["Agent","Role","Leads","Deals","Closed Leads","Close Rate","Revenue","Commission"].map((h) => (
+              {["Agent","Role","Leads","Deals","Closed leads","Close rate","Revenue","Commission"].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -520,12 +520,12 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Total Units"  value={fmtNum(overview.totalUnits)} />
+        <KPI label="Total units"  value={fmtNum(overview.totalUnits)} />
         <KPI label="Available"    value={fmtNum(totalAvail)} color="text-success"
           sub={pct(totalAvail, totalUnits) + " of total"} />
         <KPI label="Sold"         value={fmtNum(totalSold)} color="text-warning"
           sub={overview.soldPercentage + "% sold"} />
-        <KPI label="Total Value"  value={fmtAED(totalValue)} color="text-primary" />
+        <KPI label="Total value"  value={fmtAED(totalValue)} color="text-primary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -580,7 +580,7 @@ function InventoryTab({ overview, inventory }: { overview: Overview; inventory: 
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["Project","Total","Available","Reserved","Booked","Sold","Blocked","Avail. Rate","Total Value"].map((h) => (
+              {["Project","Total","Available","Reserved","Booked","Sold","Blocked","Avail. rate","Total value"].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -676,8 +676,8 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Total Collected"    value={fmtAED(overview.revenueCollected)} color="text-success" />
-        <KPI label="Overdue Amount"     value={fmtAED(overview.overduePayments)}  color="text-destructive"
+        <KPI label="Total collected"    value={fmtAED(overview.revenueCollected)} color="text-success" />
+        <KPI label="Overdue amount"     value={fmtAED(overview.overduePayments)}  color="text-destructive"
           sub={`${collections.overdue.count} payment${collections.overdue.count !== 1 ? "s" : ""}`} />
         <KPI label="Due in 7 Days"      value={fmtAED(collections.upcoming.next7Days.total)}  color="text-warning"
           sub={`${collections.upcoming.next7Days.count} payments`} />
@@ -713,7 +713,7 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
-                {["Deal #","Buyer","Unit","Milestone","Due Date","Days Late","Aging","Amount"].map((h) => (
+                {["Deal #","Buyer","Unit","Milestone","Due date","Days late","Aging","Amount"].map((h) => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -759,7 +759,7 @@ function FinanceTab({ overview, collections }: { overview: Overview; collections
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount"].map((h) => (
+              {["Deal #", "Buyer", "Unit", "Milestone", "Due date", "Amount"].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>

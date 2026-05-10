@@ -175,7 +175,7 @@ export default function CreateOfferModal({
       >
         {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Create Offer</h2>
+          <h2 className="text-lg font-bold text-foreground">Create offer</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
             ×
           </button>
@@ -340,7 +340,7 @@ export default function CreateOfferModal({
               disabled={loading || !leadId || !unitId || !offeredPrice}
             >
               {loading && <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              {loading ? "Creating..." : "Create Offer"}
+              {loading ? "Creating..." : "Create offer"}
             </button>
           </div>
         </form>

@@ -32,11 +32,11 @@ interface PaymentPlan {
 }
 
 const TRIGGER_LABELS: Record<string, string> = {
-  DAYS_FROM_RESERVATION: "Days from Reservation",
-  FIXED_DATE:            "Fixed Date",
-  ON_SPA_SIGNING:        "On SPA Signing",
+  DAYS_FROM_RESERVATION: "Days from reservation",
+  FIXED_DATE:            "Fixed date",
+  ON_SPA_SIGNING:        "On SPA signing",
   ON_OQOOD:              "On Oqood",
-  ON_HANDOVER:           "On Handover",
+  ON_HANDOVER:           "On handover",
 };
 
 const TRIGGER_BADGE_COLORS: Record<string, string> = {

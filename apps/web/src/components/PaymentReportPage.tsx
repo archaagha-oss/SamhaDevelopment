@@ -61,7 +61,7 @@ function getActions(status: string): PaymentAction[] {
 }
 
 const ACTION_LABELS: Partial<Record<PaymentAction, string>> = {
-  MARK_PAID:    "Mark Paid",
+  MARK_PAID:    "Mark paid",
   PARTIAL:      "Partial",
   MARK_PDC:     "PDC",
   PDC_CLEARED:  "Cleared",
@@ -83,7 +83,7 @@ const ACTION_STYLES: Partial<Record<PaymentAction, string>> = {
 };
 
 function exportCSV(payments: Payment[], filename: string) {
-  const header = ["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount (AED)", "Status", "Days Overdue"];
+  const header = ["Deal #", "Buyer", "Unit", "Milestone", "Due date", "Amount (AED)", "Status", "Days overdue"];
   const rows = payments.map((p) => {
     const days = Math.floor((Date.now() - new Date(p.dueDate).getTime()) / 86400000);
     return [
@@ -284,7 +284,7 @@ export default function PaymentReportPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
-                {["Deal #", "Buyer", "Unit", "Milestone", "Due Date", "Amount", "Info", ...(availableActions.length ? ["Actions"] : [])].map((h) => (
+                {["Deal #", "Buyer", "Unit", "Milestone", "Due date", "Amount", "Info", ...(availableActions.length ? ["Actions"] : [])].map((h) => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>

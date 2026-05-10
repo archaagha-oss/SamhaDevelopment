@@ -29,7 +29,7 @@ const DOC_TYPE_CONFIG: Record<string, { label: string; badge: string }> = {
   SPA:               { label: "SPA",              badge: "bg-info-soft text-primary"    },
   OQOOD_CERTIFICATE: { label: "Oqood",            badge: "bg-chart-7/15 text-chart-7" },
   RESERVATION_FORM:  { label: "Reservation Form", badge: "bg-warning-soft text-warning" },
-  PAYMENT_RECEIPT:   { label: "Payment Receipt",  badge: "bg-success-soft text-success"  },
+  PAYMENT_RECEIPT:   { label: "Payment receipt",  badge: "bg-success-soft text-success"  },
   PASSPORT:          { label: "Passport",         badge: "bg-chart-7/15 text-chart-7"    },
   EMIRATES_ID:       { label: "Emirates ID",      badge: "bg-stage-active text-stage-active-foreground"},
   VISA:              { label: "Visa",             badge: "bg-chart-5/15 text-chart-5"    },
@@ -187,7 +187,7 @@ export default function ContractsPage() {
               <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/50 border-b border-border">
                   <tr>
-                    {["Document", "Type", "Deal", "Buyer", "Unit", "Contract Status", "Uploaded", "Actions"].map((h) => (
+                    {["Document", "Type", "Deal", "Buyer", "Unit", "Contract status", "Uploaded", "Actions"].map((h) => (
                       <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -297,7 +297,7 @@ export default function ContractsPage() {
       {/* Stage requirements summary */}
       {!loading && documents.length > 0 && (
         <div className="bg-card rounded-xl border border-border p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Document Type Summary</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Document type summary</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(
               documents.reduce<Record<string, { total: number; signed: number }>>((acc, d) => {

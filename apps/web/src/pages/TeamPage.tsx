@@ -79,9 +79,9 @@ export default function TeamPage() {
           <div className="space-y-5">
             {/* KPI cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <KpiCard label="Active Members" value={kpi.active}      accent="success" />
+              <KpiCard label="Active members" value={kpi.active}      accent="success" />
               <KpiCard label="Managers"       value={kpi.managers}    accent="primary" />
-              <KpiCard label="On Leave"       value={kpi.onLeave}     accent="warning" />
+              <KpiCard label="On leave"       value={kpi.onLeave}     accent="warning" />
               <KpiCard label="Deactivated"    value={kpi.deactivated} accent="muted" />
             </div>
 
@@ -136,7 +136,7 @@ export default function TeamPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 border-b border-border">
                       <tr>
-                        {["Member", "Job Title", "Manager", "Role", "Status", "Employee ID", "Last Active"].map((h) => (
+                        {["Member", "Job title", "Manager", "Role", "Status", "Employee ID", "Last active"].map((h) => (
                           <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                         ))}
                       </tr>

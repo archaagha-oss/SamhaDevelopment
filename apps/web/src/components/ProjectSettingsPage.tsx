@@ -380,7 +380,7 @@ export default function ProjectSettingsPage() {
             <div className="pt-6 mt-8 border-t border-border" />
             <section className="bg-card rounded-lg border border-destructive/30 p-6">
               <header className="mb-4">
-                <h2 className="text-sm font-semibold text-destructive">Danger Zone</h2>
+                <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
                 <p className="text-xs text-muted-foreground">Destructive actions. These cannot be undone.</p>
               </header>
               <div className="flex items-center justify-between gap-4">

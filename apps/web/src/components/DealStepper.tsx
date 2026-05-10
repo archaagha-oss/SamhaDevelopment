@@ -9,8 +9,8 @@ const STEPS: { stage: string; label: string }[] = [
   { stage: "SPA_PENDING",            label: "SPA Drafted" },
   { stage: "SPA_SENT",               label: "SPA Sent" },
   { stage: "SPA_SIGNED",             label: "SPA Signed" },
-  { stage: "OQOOD_PENDING",          label: "Oqood Filed" },
-  { stage: "OQOOD_REGISTERED",       label: "Oqood Registered" },
+  { stage: "OQOOD_PENDING",          label: "Oqood filed" },
+  { stage: "OQOOD_REGISTERED",       label: "Oqood registered" },
   { stage: "INSTALLMENTS_ACTIVE",    label: "Installments" },
   { stage: "HANDOVER_PENDING",       label: "Handover" },
   { stage: "COMPLETED",              label: "Completed" },
@@ -22,7 +22,7 @@ export default function DealStepper({ current, cancelled = false }: Props) {
   return (
     <div className="bg-card rounded-xl border border-border p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deal Progress</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deal progress</h3>
         <span className="text-[11px] text-muted-foreground">
           {cancelled ? "Cancelled" : `${Math.max(currentIndex, 0) + 1} of ${STEPS.length}`}
         </span>

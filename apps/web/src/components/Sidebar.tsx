@@ -37,7 +37,7 @@ const salesItems: NavItemDef[] = [
   { page: "projects",      label: "Projects",     Icon: IconBuilding },
   { page: "units",         label: "Units",        Icon: IconGrid },
   { page: "tasks",         label: "Activities",   Icon: IconCheck },
-  { page: "inbox",         label: "Hot Inbox",    Icon: IconBookmark },
+  { page: "inbox",         label: "Hot inbox",    Icon: IconBookmark },
   { page: "reservations",  label: "Reservations", Icon: IconBookmark },
   { page: "offers-list",   label: "Offers",       Icon: IconTag },
   { page: "contracts",     label: "Contracts",    Icon: IconFile },

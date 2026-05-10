@@ -15,7 +15,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Earned */}
       <MetricsCard
-        label="Total Earned"
+        label="Total earned"
         value={`AED ${(data.totalEarned / 1000000).toFixed(1)}M`}
         subtext={`${data.totalDeals} deals`}
         trend="stable"
@@ -32,7 +32,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
 
       {/* Pending Approval */}
       <MetricsCard
-        label="Pending Approval"
+        label="Pending approval"
         value={`AED ${(data.pending / 1000000).toFixed(1)}M`}
         subtext={`${data.pendingDeals} deals`}
         trend="stable"

@@ -49,11 +49,11 @@ interface Plan {
 }
 
 const TRIGGER_TYPES = [
-  { value: "DAYS_FROM_RESERVATION", label: "Days from Reservation" },
-  { value: "FIXED_DATE",            label: "Fixed Calendar Date" },
-  { value: "ON_SPA_SIGNING",        label: "On SPA Signing" },
-  { value: "ON_OQOOD",              label: "On Oqood Registration" },
-  { value: "ON_HANDOVER",           label: "On Handover" },
+  { value: "DAYS_FROM_RESERVATION", label: "Days from reservation" },
+  { value: "FIXED_DATE",            label: "Fixed calendar date" },
+  { value: "ON_SPA_SIGNING",        label: "On SPA signing" },
+  { value: "ON_OQOOD",              label: "On Oqood registration" },
+  { value: "ON_HANDOVER",           label: "On handover" },
 ];
 
 const BLANK_MILESTONE: MilestoneInput = {

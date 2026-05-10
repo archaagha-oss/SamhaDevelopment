@@ -166,7 +166,7 @@ export default function MemberDetailPage() {
       }
       kpis={
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Stat label="Direct Reports" value={member._count?.reports        ?? 0} />
+          <Stat label="Direct reports" value={member._count?.reports        ?? 0} />
           <Stat label="Leads"          value={member._count?.assignedLeads  ?? 0} />
           <Stat label="Units"          value={member._count?.assignedUnits  ?? 0} />
           <Stat label="Tasks"          value={member._count?.tasks          ?? 0} />
@@ -184,7 +184,7 @@ export default function MemberDetailPage() {
 
           <div className="bg-card rounded-xl border border-border p-5 space-y-5">
             <DetailGroup title="Position">
-              <DetailRow label="Job Title" value={member.jobTitle} />
+              <DetailRow label="Job title" value={member.jobTitle} />
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-xs text-muted-foreground">Reports To</span>
                 {member.manager ? (
@@ -202,7 +202,7 @@ export default function MemberDetailPage() {
                 )}
               </div>
               <DetailRow label="Role" value={roleCfg.label} />
-              <DetailRow label="Role Permissions" value={roleCfg.description} />
+              <DetailRow label="Role permissions" value={roleCfg.description} />
             </DetailGroup>
           </div>
 
@@ -210,12 +210,12 @@ export default function MemberDetailPage() {
             <DetailGroup title="Employment">
               <DetailRow label="Status" value={statusCfg.label} />
               <DetailRow
-                label="Employment Type"
+                label="Employment type"
                 value={member.employmentType ? EMP_LABEL[member.employmentType as EmpType] : null}
               />
               <DetailRow label="Joined" value={fmtDate(member.joinedAt)} />
-              <DetailRow label="Account Created" value={fmtDate(member.createdAt)} />
-              <DetailRow label="Last Seen" value={fmtRelative(member.lastSeenAt)} />
+              <DetailRow label="Account created" value={fmtDate(member.createdAt)} />
+              <DetailRow label="Last seen" value={fmtRelative(member.lastSeenAt)} />
             </DetailGroup>
           </div>
         </>

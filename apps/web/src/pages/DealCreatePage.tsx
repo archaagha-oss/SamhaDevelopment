@@ -19,7 +19,7 @@ interface Milestone   { label: string; percentage: number; isDLDFee: boolean; is
 interface PaymentPlan { id: string; name: string; description?: string; isActive?: boolean; milestones?: Milestone[] }
 interface BrokerCompany { id: string; name: string; agents: { id: string; name: string }[] }
 
-const STEPS = ["Lead", "Unit & Price", "Payment Plan", "Broker & Incentives"] as const;
+const STEPS = ["Lead", "Unit & price", "Payment plan", "Broker & incentives"] as const;
 
 const inp = "w-full border border-input rounded-xl px-4 py-2.5 text-sm bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const lbl = "block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide";

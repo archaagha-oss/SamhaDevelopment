@@ -19,7 +19,7 @@ const TYPE_LABELS: Record<string, string> = {
   SPA: "SPA",
   OQOOD_CERTIFICATE: "Oqood",
   RESERVATION_FORM: "Reservation Form",
-  PAYMENT_RECEIPT: "Payment Receipt",
+  PAYMENT_RECEIPT: "Payment receipt",
   PASSPORT: "Passport",
   EMIRATES_ID: "Emirates ID",
   VISA: "Visa",
@@ -68,7 +68,7 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
           allMet ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
         }`}>
-          {allMet ? "All Complete" : `${missing.length} Missing`}
+          {allMet ? "All complete" : `${missing.length} missing`}
         </span>
       </div>
       <div className="space-y-1.5">

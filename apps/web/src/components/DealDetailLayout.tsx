@@ -167,7 +167,7 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
           <DealSummaryPanel
             deal={deal}
             onPrimaryAction={handlePrimaryAction}
-            primaryActionLabel="Next Step"
+            primaryActionLabel="Next step"
             primaryActionColor="bg-primary hover:bg-primary/90"
           />
         </div>

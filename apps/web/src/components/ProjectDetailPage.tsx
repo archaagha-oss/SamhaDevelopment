@@ -28,14 +28,14 @@ interface Project {
 // See: design-system/MASTER.md
 const PROJECT_STATUS: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Active",    cls: "bg-stage-success text-stage-success-foreground" },
-  ON_HOLD:   { label: "On Hold",   cls: "bg-stage-attention text-stage-attention-foreground" },
+  ON_HOLD:   { label: "On hold",   cls: "bg-stage-attention text-stage-attention-foreground" },
   COMPLETED: { label: "Completed", cls: "bg-stage-info text-stage-info-foreground" },
   CANCELLED: { label: "Cancelled", cls: "bg-stage-danger text-stage-danger-foreground" },
 };
 
 const COMPLETION_LABEL: Record<string, string> = {
   OFF_PLAN: "Off-Plan",
-  UNDER_CONSTRUCTION: "Under Construction",
+  UNDER_CONSTRUCTION: "Under construction",
   READY: "Ready",
 };
 
@@ -195,15 +195,15 @@ export default function ProjectDetailPage() {
 
         {/* KPI strip — 4 actionable metrics */}
         <div className="px-4 sm:px-6 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Kpi label="Total Units" value={project.totalUnits} />
+          <Kpi label="Total units" value={project.totalUnits} />
           <Kpi
             label="Handover"
             value={handoverFmt}
             sub={daysLabel}
             valueClass={handoverTone}
           />
-          <Kpi label="Active Leads" value={activeLeads} accent="text-chart-1" />
-          <Kpi label="Open Deals"   value={openDeals}   accent="text-accent-2" />
+          <Kpi label="Active leads" value={activeLeads} accent="text-chart-1" />
+          <Kpi label="Open deals"   value={openDeals}   accent="text-accent-2" />
         </div>
 
         {/* Tab nav — underline style, matches Settings page */}
@@ -283,7 +283,7 @@ export default function ProjectDetailPage() {
           <div className="p-4 sm:p-6 space-y-6">
             <section className="bg-card rounded-lg border border-border p-6">
               <header className="mb-4">
-                <h2 className="text-sm font-semibold text-foreground">Handover Countdown</h2>
+                <h2 className="text-sm font-semibold text-foreground">Handover countdown</h2>
                 <p className="text-xs text-muted-foreground">Time remaining until {handoverFmt}.</p>
               </header>
               <div className="flex items-baseline justify-between mb-2">

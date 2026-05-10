@@ -131,7 +131,7 @@ export default function DealSummaryPanel({
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Payment Progress */}
         <div>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Payment Progress</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Payment progress</h3>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
@@ -151,7 +151,7 @@ export default function DealSummaryPanel({
         {/* Payment Milestones */}
         {deal.payments && deal.payments.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Payment Milestones</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3">Payment milestones</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {deal.payments.map((payment) => (
                 <div

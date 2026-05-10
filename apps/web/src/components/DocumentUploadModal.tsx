@@ -14,9 +14,9 @@ const DOCUMENT_TYPES: DocumentType[] = ["SPA", "OQOOD_CERTIFICATE", "MORTGAGE_AP
 const TYPE_LABELS: Record<string, string> = {
   SPA: "Sales Purchase Agreement",
   OQOOD_CERTIFICATE: "RERA Registration",
-  MORTGAGE_APPROVAL: "Mortgage Documents",
+  MORTGAGE_APPROVAL: "Mortgage documents",
   RESERVATION_FORM: "Reservation Form",
-  PAYMENT_RECEIPT: "Payment Receipt",
+  PAYMENT_RECEIPT: "Payment receipt",
   PASSPORT: "Passport",
   EMIRATES_ID: "Emirates ID",
   VISA: "Visa",
@@ -144,7 +144,7 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-2xl p-0 gap-0">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="font-bold text-foreground">Upload Documents</h2>
+          <h2 className="font-bold text-foreground">Upload documents</h2>
         </div>
 
         <div className="px-6 py-6 space-y-6">

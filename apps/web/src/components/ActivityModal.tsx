@@ -18,7 +18,7 @@ const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: string }[] = [
   { value: "WHATSAPP",   label: "WhatsApp",   icon: "💬" },
   { value: "EMAIL",      label: "Email",      icon: "📧" },
   { value: "MEETING",    label: "Meeting",    icon: "📅" },
-  { value: "SITE_VISIT", label: "Site Visit", icon: "🏗️" },
+  { value: "SITE_VISIT", label: "Site visit", icon: "🏗️" },
   { value: "NOTE",       label: "Note",       icon: "📝" },
 ];
 
@@ -107,7 +107,7 @@ export default function ActivityModal({
       <div>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-white font-semibold text-base">Log Activity</h2>
+          <h2 className="text-white font-semibold text-base">Log activity</h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground text-2xl leading-none"
@@ -251,7 +251,7 @@ export default function ActivityModal({
             disabled={saving}
             className="px-5 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
           >
-            {saving ? "Saving…" : "Save Activity"}
+            {saving ? "Saving…" : "Save activity"}
           </button>
         </div>
       </div>

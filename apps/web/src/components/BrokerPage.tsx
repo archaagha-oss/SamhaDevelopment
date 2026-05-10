@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 const BROKER_STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Active",
   INACTIVE: "Inactive",
-  PENDING_APPROVAL: "Pending Approval",
+  PENDING_APPROVAL: "Pending approval",
 };
 
 const EMIRATES = ["Abu Dhabi", "Dubai", "Sharjah", "Ajman", "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"];
@@ -130,7 +130,7 @@ function FileUploadField({
           disabled={uploading}
           className="px-3 py-1.5 text-xs border border-border rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground disabled:opacity-50 whitespace-nowrap"
         >
-          {uploading ? "Uploading…" : value ? "Replace" : "Choose File"}
+          {uploading ? "Uploading…" : value ? "Replace" : "Choose file"}
         </button>
         {value ? (
           <a href={value} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate max-w-[180px]">
@@ -387,7 +387,7 @@ export default function BrokerPage() {
               <input placeholder="ORN" value={f.officeRegistrationNo} onChange={(e) => setF({ ...f, officeRegistrationNo: e.target.value })} className={INPUT_CLS} />
             </div>
           </div>
-          <FileUploadField label="Trade License Copy" value={f.tradeLicenseCopyUrl} onChange={(url) => setF({ ...f, tradeLicenseCopyUrl: url })} />
+          <FileUploadField label="Trade license copy" value={f.tradeLicenseCopyUrl} onChange={(url) => setF({ ...f, tradeLicenseCopyUrl: url })} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={LABEL_CLS}>VAT Certificate No</label>
@@ -399,7 +399,7 @@ export default function BrokerPage() {
             </div>
           </div>
           <FileUploadField label="VAT Certificate / Non-VAT Declaration" value={f.vatCertificateUrl} onChange={(url) => setF({ ...f, vatCertificateUrl: url })} />
-          <FileUploadField label="Corporate Tax Certificate" value={f.corporateTaxCertUrl} onChange={(url) => setF({ ...f, corporateTaxCertUrl: url })} />
+          <FileUploadField label="Corporate tax certificate" value={f.corporateTaxCertUrl} onChange={(url) => setF({ ...f, corporateTaxCertUrl: url })} />
           <FileUploadField label="ORN Certificate" value={f.ornCertificateUrl} onChange={(url) => setF({ ...f, ornCertificateUrl: url })} />
           <div>
             <label className={LABEL_CLS}>Company Website</label>
@@ -525,7 +525,7 @@ export default function BrokerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Company list */}
           <div className="lg:col-span-1 space-y-2">
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
+            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Broker companies</h3>
             {filtered.length === 0 ? (
               <EmptyState
                 icon={<Building2 className="size-10 text-muted-foreground" aria-hidden="true" />}
@@ -715,13 +715,13 @@ export default function BrokerPage() {
 
                 {/* Commission breakdown */}
                 <div className="px-6 py-4">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Commission Breakdown</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Commission breakdown</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: "Total",   amount: getTotalCommission(selected), color: "text-foreground" },
                       { label: "Paid",    amount: getPaidCommission(selected),  color: "text-success" },
                       { label: "Pending", amount: selected.commissions.filter((c) => ["PENDING_APPROVAL","APPROVED"].includes(c.status)).reduce((s,c)=>s+c.amount,0), color: "text-warning" },
-                      { label: "Not Due", amount: selected.commissions.filter((c) => c.status === "NOT_DUE").reduce((s,c)=>s+c.amount,0), color: "text-muted-foreground" },
+                      { label: "Not due", amount: selected.commissions.filter((c) => c.status === "NOT_DUE").reduce((s,c)=>s+c.amount,0), color: "text-muted-foreground" },
                     ].map((item) => (
                       <div key={item.label} className="bg-muted/50 rounded-lg p-3 border border-border">
                         <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -789,7 +789,7 @@ export default function BrokerPage() {
       >
         <div className="bg-card rounded-2xl w-full max-w-lg shadow-2xl my-8">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
-              <h2 className="font-bold text-foreground">Add Agent</h2>
+              <h2 className="font-bold text-foreground">Add agent</h2>
               <button onClick={() => setShowAgentForm(false)} aria-label="Close dialog" className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">×</button>
             </div>
             <form onSubmit={handleAddAgent} className="px-6 py-5">

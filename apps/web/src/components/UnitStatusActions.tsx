@@ -12,14 +12,14 @@ interface Props {
 const DEAL_OWNED = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"];
 
 const STATUS_DISPLAY: Record<string, { label: string; color: string }> = {
-  NOT_RELEASED: { label: "Not Released",  color: "bg-muted text-foreground border-border" },
+  NOT_RELEASED: { label: "Not released",  color: "bg-muted text-foreground border-border" },
   AVAILABLE:    { label: "Available",     color: "bg-success-soft text-success border-success/30" },
-  ON_HOLD:      { label: "On Hold",       color: "bg-warning-soft text-warning border-warning/30" },
+  ON_HOLD:      { label: "On hold",       color: "bg-warning-soft text-warning border-warning/30" },
   RESERVED:     { label: "Reserved",      color: "bg-warning-soft text-warning border-warning/30" },
   BOOKED:       { label: "Booked",        color: "bg-stage-active text-stage-active-foreground border-accent-2/30" },
   SOLD:         { label: "Sold",          color: "bg-destructive-soft text-destructive border-destructive/30" },
   BLOCKED:      { label: "Blocked",       color: "bg-neutral-200 text-muted-foreground border-border" },
-  HANDED_OVER:  { label: "Handed Over",   color: "bg-chart-5/15 text-chart-5 border-chart-5/30" },
+  HANDED_OVER:  { label: "Handed over",   color: "bg-chart-5/15 text-chart-5 border-chart-5/30" },
 };
 
 type FormMode = "RELEASE" | "BLOCK" | "UNBLOCK" | "UNLIST" | null;

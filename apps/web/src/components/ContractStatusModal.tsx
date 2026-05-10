@@ -33,11 +33,11 @@ const TYPE_LABELS: Record<string, string> = {
   SPA: "Sales Purchase Agreement",
   OQOOD_CERTIFICATE: "RERA Registration (Oqood)",
   RESERVATION_FORM: "Reservation Form",
-  PAYMENT_RECEIPT: "Payment Receipt",
+  PAYMENT_RECEIPT: "Payment receipt",
   PASSPORT: "Passport",
   EMIRATES_ID: "Emirates ID",
   VISA: "Visa",
-  MORTGAGE: "Mortgage Document",
+  MORTGAGE: "Mortgage document",
   OTHER: "Other",
 };
 
@@ -71,7 +71,7 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
       <div>
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="font-semibold text-foreground text-sm">Update Contract Status</h2>
+            <h2 className="font-semibold text-foreground text-sm">Update contract status</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {document.deal.dealNumber} · {document.deal.lead.firstName} {document.deal.lead.lastName} · {document.deal.unit.unitNumber}
             </p>
@@ -121,7 +121,7 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
             disabled={loading}
             className="px-5 py-2 text-sm font-medium rounded-lg bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors"
           >
-            {loading ? "Saving..." : "Update Status"}
+            {loading ? "Saving..." : "Update status"}
           </button>
         </div>
       </div>

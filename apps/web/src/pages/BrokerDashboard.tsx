@@ -42,7 +42,7 @@ export default function BrokerDashboard() {
   if (hasError && !isLoading) {
     return (
       <div className="flex flex-col h-full gap-4 p-6">
-        <Breadcrumbs crumbs={[{ label: "Broker" }, { label: "Commission Dashboard" }]} />
+        <Breadcrumbs crumbs={[{ label: "Broker" }, { label: "Commission dashboard" }]} />
         <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-6 text-center">
           <p className="text-destructive font-medium">{summary.error || unlockStatus.error}</p>
           <button onClick={() => window.location.reload()} className="mt-3 text-sm text-destructive underline">
@@ -86,7 +86,7 @@ export default function BrokerDashboard() {
           {unlockStatus.data && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">Commission Unlock Status</h3>
+                <h3 className="text-sm font-semibold text-foreground">Commission unlock status</h3>
                 <span className="px-3 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
                   {unlockStatus.data.filter((d) => d.unlockStatus === "PENDING").length} waiting
                 </span>
@@ -101,7 +101,7 @@ export default function BrokerDashboard() {
           {/* Approved Commissions Section */}
           {approvedComms.data && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Approved Commissions</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Approved commissions</h3>
               <ApprovedCommissionsTable
                 data={approvedComms.data}
                 loading={approvedComms.loading}
@@ -116,7 +116,7 @@ export default function BrokerDashboard() {
           {pendingApprovals.error === null && pendingApprovals.data.length > 0 && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">Pending Approvals</h3>
+                <h3 className="text-sm font-semibold text-foreground">Pending approvals</h3>
                 <span className="px-3 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
                   {pendingApprovals.total} pending
                 </span>
@@ -139,7 +139,7 @@ export default function BrokerDashboard() {
           {/* Broker Performance Section (FINANCE/ADMIN only) */}
           {brokerPerf.data && brokerPerf.data.length > 0 && (
             <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Broker Performance Summary</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Broker performance summary</h3>
               <BrokerPerformanceSummary data={brokerPerf.data} loading={brokerPerf.loading} />
             </div>
           )}

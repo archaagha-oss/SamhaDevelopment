@@ -316,7 +316,7 @@ export default function SettingsPage() {
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Settings" }]}
-        title="App Settings"
+        title="App settings"
         subtitle="Organization-level configuration and operational tools. All changes are recorded in the audit log."
         tabs={
           <div
@@ -469,7 +469,7 @@ function CompanySection({ form, set, saving, onSave }: SectionProps) {
 
   return (
     <div className="space-y-4">
-      <Card title="Company Profile">
+      <Card title="Company profile">
         <div className="space-y-4">
           <div>
             <label className={lbl}>Company Name</label>
@@ -488,7 +488,7 @@ function CompanySection({ form, set, saving, onSave }: SectionProps) {
         </div>
       </Card>
 
-      <Card title="Primary Brand" description="Drives primary buttons, focus rings, brand-tinted backgrounds, links, and the first chart series — across every screen.">
+      <Card title="Primary brand" description="Drives primary buttons, focus rings, brand-tinted backgrounds, links, and the first chart series — across every screen.">
         <div>
           <label className={lbl}>Preset palettes</label>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -540,7 +540,7 @@ function CompanySection({ form, set, saving, onSave }: SectionProps) {
         </div>
       </Card>
 
-      <Card title="Secondary Brand" description="Accent color for premium tags, the violet-tinted &quot;active&quot; stage, and the second chart series. Pick one that contrasts well with your primary.">
+      <Card title="Secondary brand" description="Accent color for premium tags, the violet-tinted &quot;active&quot; stage, and the second chart series. Pick one that contrasts well with your primary.">
         <div>
           <label className={lbl}>Preset palettes</label>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -761,7 +761,7 @@ function CommunicationSection({ form, set, saving, onSave }: SectionProps) {
 
   return (
     <div className="space-y-4">
-      <Card title="Email Sender">
+      <Card title="Email sender">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={lbl}>From Name</label>
@@ -899,7 +899,7 @@ function IntegrationsSection({ form, set, saving, onSave }: SectionProps) {
       </Card>
 
       <Card
-        title="Inbound Email Capture"
+        title="Inbound email capture"
         description="Configure where incoming replies land so they auto-attach to the right deal."
       >
         <div className="grid grid-cols-2 gap-4">
@@ -962,7 +962,7 @@ function NotificationsSection({ form, set, saving, onSave }: SectionProps) {
 
   return (
     <div className="space-y-4">
-      <Card title="Channel Master Switches" description="Toggling a channel off here disables it for every event below.">
+      <Card title="Channel master switches" description="Toggling a channel off here disables it for every event below.">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {([
             { k: "inApp" as const,    label: "In-App" },
@@ -1023,7 +1023,7 @@ function NotificationsSection({ form, set, saving, onSave }: SectionProps) {
         </div>
       </Card>
 
-      <Card title="Quiet Hours" description="Suppress non-urgent notifications during a daily window. Urgent alerts (overdue, escalations) still come through.">
+      <Card title="Quiet hours" description="Suppress non-urgent notifications during a daily window. Urgent alerts (overdue, escalations) still come through.">
         <div className="flex items-center gap-3">
           <label className="inline-flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={quietHours.enabled} onChange={(e) => setQuiet("enabled", e.target.checked)} className="h-4 w-4 accent-primary" />
@@ -1052,7 +1052,7 @@ function NotificationsSection({ form, set, saving, onSave }: SectionProps) {
 function FinanceSection({ form, set, saving, onSave }: SectionProps) {
   return (
     <div className="space-y-4">
-      <Card title="Payment Instructions" description="Auto-injected into invoices and reminder emails. Include bank name, account name, IBAN, and Swift code.">
+      <Card title="Payment instructions" description="Auto-injected into invoices and reminder emails. Include bank name, account name, IBAN, and Swift code.">
         <textarea
           className={inp + " resize-y min-h-[140px] font-mono text-xs"}
           value={form.paymentInstructions}
@@ -1069,7 +1069,7 @@ function FinanceSection({ form, set, saving, onSave }: SectionProps) {
 
 function PermissionsMatrix() {
   return (
-    <Card title="Role Permissions Reference">
+    <Card title="Role permissions reference">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -1082,14 +1082,14 @@ function PermissionsMatrix() {
           </thead>
           <tbody className="divide-y divide-border">
             {[
-              ["Create Deal",          true,  true,  true,  false],
-              ["Reserve Unit",         true,  true,  true,  false],
-              ["Record Payment",       true,  false, false, false],
-              ["Generate Receipt",     true,  false, false, false],
-              ["Manage Settings",      true,  false, false, false],
-              ["View Audit Log",       true,  false, false, false],
-              ["View Reports",         true,  true,  true,  true ],
-              ["Manage Users",         true,  false, false, false],
+              ["Create deal",          true,  true,  true,  false],
+              ["Reserve unit",         true,  true,  true,  false],
+              ["Record payment",       true,  false, false, false],
+              ["Generate receipt",     true,  false, false, false],
+              ["Manage settings",      true,  false, false, false],
+              ["View audit log",       true,  false, false, false],
+              ["View reports",         true,  true,  true,  true ],
+              ["Manage users",         true,  false, false, false],
             ].map(([action, ...perms]) => (
               <tr key={String(action)}>
                 <td className="py-2.5 pr-4 text-sm text-foreground">{action}</td>
@@ -1379,7 +1379,7 @@ function SystemInfoSection() {
         </dl>
       </Card>
 
-      <Card title="Data Counts">
+      <Card title="Data counts">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
           <Row label="Users" value={info.counts.users} />
           <Row label="Leads" value={info.counts.leads} />
@@ -1456,7 +1456,7 @@ function FeatureFlagsSection({ form, set, saving, onSave }: SectionProps) {
   return (
     <div className="space-y-4">
       <Card
-        title="Feature Flags"
+        title="Feature flags"
         description="Toggle in-development modules without redeploying. Changes apply on the next page load."
         action={<span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-full tabular-nums">{enabledCount} / {catalog.length} on</span>}
       >

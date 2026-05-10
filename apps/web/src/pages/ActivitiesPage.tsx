@@ -385,14 +385,14 @@ function CreateTaskModal({ users, onClose, onCreated }: {
     <Modal
       open
       onClose={() => { if (!loading) onClose(); }}
-      title="Create Task"
+      title="Create task"
       size="md"
       footer={
         <>
           <button onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50">Cancel</button>
           <button onClick={submit} disabled={loading}
             className="px-5 py-2 text-sm font-medium rounded-lg bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors">
-            {loading ? "Creating..." : "Create Task"}
+            {loading ? "Creating..." : "Create task"}
           </button>
         </>
       }
@@ -544,9 +544,9 @@ export default function ActivitiesPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Pending Tasks",  value: pendingTasks,    color: "text-warning",   bg: "bg-warning-soft" },
+          { label: "Pending tasks",  value: pendingTasks,    color: "text-warning",   bg: "bg-warning-soft" },
           { label: "Overdue",        value: overdueTasks,    color: "text-destructive",     bg: "bg-destructive-soft"   },
-          { label: "Due Today",      value: todayItems,      color: "text-primary",    bg: "bg-info-soft"  },
+          { label: "Due today",      value: todayItems,      color: "text-primary",    bg: "bg-info-soft"  },
           { label: "Activities",     value: totalActivities, color: "text-muted-foreground",   bg: "bg-muted/50" },
         ].map(({ label, value, color, bg }) => (
           <div key={label} className={`rounded-xl p-4 ${bg} border border-transparent`}>

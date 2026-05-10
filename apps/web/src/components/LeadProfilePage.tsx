@@ -778,7 +778,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground text-sm">Activity Timeline</h3>
+                  <h3 className="font-semibold text-foreground text-sm">Activity timeline</h3>
                   <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full font-medium">{activities.length}</span>
                 </div>
                 <button
@@ -956,7 +956,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
           {/* Interested units (always visible) */}
           <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested Units</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested units</h3>
             {lead.interests.length === 0 ? (
               <p className="text-sm text-muted-foreground">No units linked</p>
             ) : (
@@ -1012,7 +1012,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         <div className="space-y-4">
           {/* Lead info */}
           <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead Info</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead info</h3>
             <div className="space-y-2.5">
               {[
                 ["Source",      lead.source],
@@ -1164,7 +1164,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
       {/* ── Create Deal Modal ───────────────────────────────────────────────────── */}
       {showCreateDealModal && (
-        <Modal title="Create Deal" onClose={() => setShowCreateDealModal(false)}>
+        <Modal title="Create deal" onClose={() => setShowCreateDealModal(false)}>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               A deal will be created and linked to this lead. Agent and contact are carried forward automatically.
@@ -1200,7 +1200,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                           </optgroup>
                         )}
                         {others.length > 0 && (
-                          <optgroup label="Other Available Units">
+                          <optgroup label="Other available units">
                             {others.map((u) => (
                               <option key={u.id} value={u.id}>
                                 Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — AED {u.price.toLocaleString()}
@@ -1248,7 +1248,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
       {/* ── Create Reservation Modal ────────────────────────────────────────────── */}
       {showDealForm && (
-        <Modal title="Create Reservation" onClose={() => setShowDealForm(false)}>
+        <Modal title="Create reservation" onClose={() => setShowDealForm(false)}>
           <form onSubmit={handleDealSubmit} className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Unit *</label>
@@ -1270,7 +1270,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         </optgroup>
                       )}
                       {others.length > 0 && (
-                        <optgroup label="Other Available Units">
+                        <optgroup label="Other available units">
                           {others.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.unitNumber} · {u.type} · AED {u.price.toLocaleString()}{u.status === "ON_HOLD" ? " (On Hold)" : ""}
@@ -1407,7 +1407,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             <div className="flex gap-2 pt-2">
               <button type="submit" disabled={submittingOffer} className={primaryBtn}>
-                {submittingOffer ? "Saving…" : revisingOffer ? "Create New Version" : "Generate Offer"}
+                {submittingOffer ? "Saving…" : revisingOffer ? "Create new version" : "Generate offer"}
               </button>
               <button
                 type="button"
@@ -1423,7 +1423,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete Lead"
+        title="Delete lead"
         message="Delete this lead? This cannot be undone."
         confirmLabel="Delete"
         variant="danger"

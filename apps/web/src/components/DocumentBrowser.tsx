@@ -14,9 +14,9 @@ interface Props {
 const TYPE_LABELS: Record<string, string> = {
   SPA: "Sales Purchase Agreement",
   OQOOD_CERTIFICATE: "RERA Registration",
-  MORTGAGE_APPROVAL: "Mortgage Documents",
+  MORTGAGE_APPROVAL: "Mortgage documents",
   RESERVATION_FORM: "Reservation Form",
-  PAYMENT_RECEIPT: "Payment Receipt",
+  PAYMENT_RECEIPT: "Payment receipt",
   PASSPORT: "Passport",
   EMIRATES_ID: "Emirates ID",
   VISA: "Visa",

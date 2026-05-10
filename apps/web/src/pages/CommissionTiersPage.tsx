@@ -158,7 +158,7 @@ export default function CommissionTiersPage() {
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 border-b border-border">
                         <tr>
-                          {["Min Sale", "Max Sale", "Rate %", "Flat Bonus"].map((h) => (
+                          {["Min sale", "Max sale", "Rate %", "Flat bonus"].map((h) => (
                             <th
                               key={h}
                               className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide"
