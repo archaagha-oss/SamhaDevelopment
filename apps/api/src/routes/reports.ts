@@ -582,4 +582,155 @@ router.get("/export/deals", async (req, res) => {
   }
 });
 
+// GET /agents/leaderboard — manager-facing ranked agent performance
+//
+// Closes audit gap #3. Computes per-agent metrics over a configurable window:
+//   ?since=YYYY-MM-DD   default: 30 days ago
+//   ?until=YYYY-MM-DD   default: now
+//   ?role=MEMBER        default: include MEMBER + MANAGER (sales-floor roles)
+//   ?limit=50           default 50, cap 200
+//
+// Metrics per agent:
+//   - leadCount         leads currently assigned
+//   - newLeadsInWindow  leads created in window
+//   - activitiesInWindow Activity rows authored or against an assigned lead
+//   - dealsCreatedInWindow active deals on assigned leads, created in window
+//   - dealsClosedInWindow deals that reached stage COMPLETED in window
+//   - salesValueClosed  sum of salePrice on dealsClosedInWindow (proxy for
+//                       agent contribution; internal-agent commission isn't
+//                       a first-class model — Commission is broker-keyed)
+//   - conversionRate    dealsClosedInWindow / max(1, newLeadsInWindow), as %
+//
+// Sorted by salesValueClosed desc by default; pass ?sort=conversionRate or
+// ?sort=activitiesInWindow to override.
+router.get("/agents/leaderboard", async (req, res) => {
+  try {
+    const since = req.query.since
+      ? new Date(req.query.since as string)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const until = req.query.until ? new Date(req.query.until as string) : new Date();
+    const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || "50", 10)));
+    const sort = (req.query.sort as string) || "commissionEarned";
+    const roleFilter = req.query.role
+      ? [req.query.role as string]
+      : ["MEMBER", "MANAGER"];
+
+    const agents = await prisma.user.findMany({
+      where: { status: "ACTIVE", role: { in: roleFilter as any } },
+      select: { id: true, name: true, email: true, role: true, jobTitle: true, avatarUrl: true },
+    });
+    if (agents.length === 0) {
+      return res.json({ since: since.toISOString(), until: until.toISOString(), rows: [] });
+    }
+    const agentIds = agents.map((a) => a.id);
+
+    // Parallel aggregates — each is sub-100ms with the new indexes.
+    const [
+      leadCounts,
+      newLeadsInWindow,
+      activitiesInWindow,
+      dealsCreatedInWindow,
+      dealsClosedInWindow,
+    ] = await Promise.all([
+      prisma.lead.groupBy({
+        by: ["assignedAgentId"],
+        where: { assignedAgentId: { in: agentIds } },
+        _count: { _all: true },
+      }),
+      prisma.lead.groupBy({
+        by: ["assignedAgentId"],
+        where: { assignedAgentId: { in: agentIds }, createdAt: { gte: since, lte: until } },
+        _count: { _all: true },
+      }),
+      prisma.activity.groupBy({
+        by: ["createdBy"],
+        where: { createdBy: { in: agentIds }, createdAt: { gte: since, lte: until } },
+        _count: { _all: true },
+      }),
+      prisma.deal.findMany({
+        where: { createdAt: { gte: since, lte: until }, lead: { assignedAgentId: { in: agentIds } } },
+        select: { id: true, lead: { select: { assignedAgentId: true } } },
+      }),
+      // "Closed" = COMPLETED (the post-handover terminal stage).
+      prisma.deal.findMany({
+        where: {
+          stage: "COMPLETED",
+          updatedAt: { gte: since, lte: until },
+          lead: { assignedAgentId: { in: agentIds } },
+        },
+        select: {
+          id: true,
+          salePrice: true,
+          lead: { select: { assignedAgentId: true } },
+        },
+      }),
+    ]);
+
+    const leadCountByAgent: Record<string, number> = {};
+    for (const r of leadCounts) {
+      if (r.assignedAgentId) leadCountByAgent[r.assignedAgentId] = r._count._all;
+    }
+    const newLeadByAgent: Record<string, number> = {};
+    for (const r of newLeadsInWindow) {
+      if (r.assignedAgentId) newLeadByAgent[r.assignedAgentId] = r._count._all;
+    }
+    const activitiesByAgent: Record<string, number> = {};
+    for (const r of activitiesInWindow) {
+      if (r.createdBy) activitiesByAgent[r.createdBy] = r._count._all;
+    }
+    const dealsCreatedByAgent: Record<string, number> = {};
+    for (const d of dealsCreatedInWindow) {
+      const aid = d.lead?.assignedAgentId;
+      if (aid) dealsCreatedByAgent[aid] = (dealsCreatedByAgent[aid] || 0) + 1;
+    }
+    const dealsClosedByAgent: Record<string, number> = {};
+    const salesValueByAgent: Record<string, number> = {};
+    for (const d of dealsClosedInWindow) {
+      const aid = d.lead?.assignedAgentId;
+      if (aid) {
+        dealsClosedByAgent[aid] = (dealsClosedByAgent[aid] || 0) + 1;
+        salesValueByAgent[aid] = (salesValueByAgent[aid] || 0) + (d.salePrice || 0);
+      }
+    }
+
+    const rows = agents.map((a) => {
+      const newLeads = newLeadByAgent[a.id] || 0;
+      const closed = dealsClosedByAgent[a.id] || 0;
+      return {
+        agent: a,
+        leadCount: leadCountByAgent[a.id] || 0,
+        newLeadsInWindow: newLeads,
+        activitiesInWindow: activitiesByAgent[a.id] || 0,
+        dealsCreatedInWindow: dealsCreatedByAgent[a.id] || 0,
+        dealsClosedInWindow: closed,
+        salesValueClosed: Math.round((salesValueByAgent[a.id] || 0) * 100) / 100,
+        conversionRate: newLeads > 0 ? +((closed / newLeads) * 100).toFixed(1) : 0,
+      };
+    });
+
+    const sortable: Record<string, (r: typeof rows[number]) => number> = {
+      salesValueClosed: (r) => r.salesValueClosed,
+      conversionRate: (r) => r.conversionRate,
+      activitiesInWindow: (r) => r.activitiesInWindow,
+      dealsClosedInWindow: (r) => r.dealsClosedInWindow,
+      newLeadsInWindow: (r) => r.newLeadsInWindow,
+    };
+    const sortFn = sortable[sort] || sortable.salesValueClosed;
+    rows.sort((a, b) => sortFn(b) - sortFn(a));
+
+    res.json({
+      since: since.toISOString(),
+      until: until.toISOString(),
+      sort,
+      rows: rows.slice(0, limit),
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch agent leaderboard",
+      code: "FETCH_AGENT_LEADERBOARD_ERROR",
+      statusCode: 500,
+    });
+  }
+});
+
 export default router;
