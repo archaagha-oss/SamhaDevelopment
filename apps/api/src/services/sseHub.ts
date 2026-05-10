@@ -22,25 +22,53 @@ export interface SseClient {
 }
 
 const HEARTBEAT_MS = 25_000;
+// Connection caps — closes audit P1 E.2. A user with multiple browser tabs
+// usually has ≤ 4 connections; 10 leaves headroom and protects against runaway
+// reconnect loops. Total cap of 5,000 keeps memory bounded even under burst.
+const MAX_CLIENTS_PER_USER = parseInt(process.env.SSE_MAX_CLIENTS_PER_USER || "10", 10);
+const MAX_TOTAL_CLIENTS = parseInt(process.env.SSE_MAX_TOTAL_CLIENTS || "5000", 10);
+
+export class SseRegistrationError extends Error {
+  constructor(message: string, public code: "PER_USER_LIMIT" | "GLOBAL_LIMIT") {
+    super(message);
+    this.name = "SseRegistrationError";
+  }
+}
 
 class SseHub {
   private byUser = new Map<string, Map<string, SseClient>>();
   private heartbeat: NodeJS.Timeout | null = null;
+  private totalClients = 0;
 
   register(client: SseClient): void {
+    if (this.totalClients >= MAX_TOTAL_CLIENTS) {
+      throw new SseRegistrationError(
+        `Server SSE capacity exceeded (${MAX_TOTAL_CLIENTS} clients)`,
+        "GLOBAL_LIMIT"
+      );
+    }
     let bucket = this.byUser.get(client.userId);
     if (!bucket) {
       bucket = new Map();
       this.byUser.set(client.userId, bucket);
     }
+    if (bucket.size >= MAX_CLIENTS_PER_USER) {
+      throw new SseRegistrationError(
+        `User ${client.userId} has too many open SSE connections (${MAX_CLIENTS_PER_USER})`,
+        "PER_USER_LIMIT"
+      );
+    }
     bucket.set(client.id, client);
+    this.totalClients += 1;
     this.ensureHeartbeat();
   }
 
   unregister(client: SseClient): void {
     const bucket = this.byUser.get(client.userId);
     if (!bucket) return;
-    bucket.delete(client.id);
+    if (bucket.delete(client.id)) {
+      this.totalClients = Math.max(0, this.totalClients - 1);
+    }
     if (bucket.size === 0) this.byUser.delete(client.userId);
     if (this.byUser.size === 0 && this.heartbeat) {
       clearInterval(this.heartbeat);

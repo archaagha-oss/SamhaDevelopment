@@ -379,6 +379,23 @@ export const replaceDealPurchasersSchema = z.object({
   purchasers: z.array(upsertDealPurchaserSchema).min(1, "At least one purchaser is required"),
 });
 
+// ===== CONTACT =====
+export const createContactSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional().or(z.literal("")),
+  email: z.string().email("Invalid email").optional().or(z.literal("")).or(z.null()),
+  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number").optional().or(z.literal("")).or(z.null()),
+  whatsapp: z.string().optional().or(z.literal("")).or(z.null()),
+  company: z.string().optional().or(z.literal("")).or(z.null()),
+  jobTitle: z.string().optional().or(z.literal("")).or(z.null()),
+  nationality: z.string().optional().or(z.literal("")).or(z.null()),
+  source: z.enum(["MANUAL", "LEAD", "BROKER", "REFERRAL", "IMPORT"]).optional(),
+  notes: z.string().optional().or(z.literal("")).or(z.null()),
+  tags: z.string().optional().or(z.literal("")).or(z.null()),
+});
+
+export const updateContactSchema = createContactSchema.partial();
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;

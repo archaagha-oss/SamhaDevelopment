@@ -9,6 +9,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
@@ -70,10 +71,19 @@ export default function AppShell() {
   // below to keep its precedence over the shortcut layer.
   useKeyboardShortcuts();
 
-  // Mock user for dev (TODO: integrate real Clerk auth in future phase)
-  const user = { firstName: "Dev", fullName: "Dev User", primaryEmailAddress: { emailAddress: "dev@samha.local" } };
-  // Role drives sidebar visibility. Read from localStorage so QA can swap roles for testing.
-  const role: Role = (typeof window !== "undefined" ? (localStorage.getItem("samha:role") as Role | null) : null) ?? "ADMIN";
+  // Source the role from /api/users/me — the same record the API uses for
+  // authorization. While the request is in flight the sidebar treats the
+  // user as VIEWER (least privilege). Editing localStorage no longer affects
+  // sidebar visibility — see audit D.1.8.
+  const { data: currentUser } = useCurrentUser();
+  const role: Role = (currentUser?.role as Role) ?? "VIEWER";
+  const user = currentUser
+    ? {
+        firstName: currentUser.name.split(" ")[0] ?? currentUser.name,
+        fullName: currentUser.name,
+        primaryEmailAddress: { emailAddress: currentUser.email },
+      }
+    : { firstName: "…", fullName: "Loading", primaryEmailAddress: { emailAddress: "" } };
   const handleSignOut = () => {
     localStorage.clear();
     navigate("/sign-in");

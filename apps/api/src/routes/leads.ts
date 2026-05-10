@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { validate } from "../middleware/validation";
-import { createLeadSchema, logActivitySchema } from "../schemas/validation";
+import { createLeadSchema, updateLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
 import { createDeal as createDealService } from "../services/dealService";
 import { syncContactFromSource } from "../services/contactService";
 import { requireAuthentication, requireRole } from "../middleware/auth";
+import { maskLeadPii, maskLeadList, resolveCallerRole } from "../lib/pii";
 import {
   setPreferredChannel,
   setOptOut,
@@ -95,8 +96,12 @@ router.get("/", async (req, res) => {
       nextFollowUpDate: nextFollowUpMap[l.id] ?? null,
     }));
 
+    // Mask PII for VIEWER / MEMBER. ADMIN and MANAGER see full fidelity.
+    const role = await resolveCallerRole(req);
+    const data = maskLeadList(enriched, role);
+
     res.json({
-      data: enriched,
+      data,
       pagination: { page: pageNum, limit: pageSize, total, pages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
@@ -109,6 +114,8 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    // Bound the unbounded includes — see LAUNCH_READINESS_AUDIT §3.2.
+    // For older history, hit the dedicated endpoints (cursor-paginated).
     const lead = await prisma.lead.findUnique({
       where: { id: req.params.id },
       include: {
@@ -116,25 +123,28 @@ router.get("/:id", async (req, res) => {
         brokerCompany: true,
         brokerAgent:   true,
         interests:     { include: { unit: true } },
-        activities:    { orderBy: { createdAt: "desc" } },
-        tasks:         { orderBy: { dueDate: "asc" } },
+        activities:    { orderBy: { createdAt: "desc" }, take: 50 },
+        tasks:         { orderBy: { dueDate: "asc" }, take: 25 },
         deals: {
           include: {
             unit: { select: { unitNumber: true, type: true } },
           },
           orderBy: { createdAt: "desc" },
+          take: 25,
         },
         offers: {
           include: {
             unit: { select: { unitNumber: true, type: true, floor: true } },
           },
           orderBy: { createdAt: "desc" },
+          take: 25,
         },
         documents: {
           where: { source: "GENERATED", softDeleted: false },
           orderBy: { createdAt: "desc" },
+          take: 25,
         },
-        stageHistory: { orderBy: { changedAt: "desc" } },
+        stageHistory: { orderBy: { changedAt: "desc" }, take: 20 },
         communicationPreference: true,
       } as any,
     });
@@ -143,7 +153,8 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
     }
 
-    res.json(lead);
+    const role = await resolveCallerRole(req);
+    res.json(maskLeadPii(lead, role));
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch lead", code: "FETCH_LEAD_ERROR", statusCode: 500 });
   }
@@ -383,12 +394,8 @@ router.get("/:leadId/activities", async (req, res) => {
 // Note: stage changes must go through PATCH /:id/stage (enforces state machine).
 // If stage is included here it is silently ignored.
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
-
     const {
       firstName, lastName, phone, email, nationality,
       source, budget, assignedAgentId, notes,
