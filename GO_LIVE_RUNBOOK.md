@@ -75,6 +75,13 @@ DB_POOL_TIMEOUT_MS=30000
 REQUEST_TIMEOUT_MS=30000
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
+
+# Background job queue (see ADMIN_MANUAL.md §6.6)
+# Default is the DB-polling loop — set to "bullmq" only when you have Redis
+# provisioned and need horizontal API scaling.
+# JOB_QUEUE_BACKEND=db
+# REDIS_URL=redis://<host>:6379
+# BULLMQ_CONCURRENCY=4
 ```
 
 Verify with:
