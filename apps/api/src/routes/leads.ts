@@ -11,6 +11,11 @@ import {
   type Channel,
 } from "../services/communicationPreferenceService";
 import { requireAuthentication } from "../middleware/auth";
+import {
+  optimisticUpdate,
+  readExpectedVersion,
+  handleOptimisticLockError,
+} from "../lib/optimisticLock";
 
 const router = Router();
 router.use(requireAuthentication);
@@ -411,6 +416,15 @@ router.patch("/:id", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
+    const expectedVersion = readExpectedVersion(req);
+    if (expectedVersion === null) {
+      return res.status(400).json({
+        error: "Missing or invalid expectedVersion. Reload the lead and try again.",
+        code: "EXPECTED_VERSION_REQUIRED",
+        statusCode: 400,
+      });
+    }
+
     const {
       firstName, lastName, phone, email, nationality,
       source, budget, assignedAgentId, notes,
@@ -450,9 +464,18 @@ router.patch("/:id", async (req, res) => {
     if (authorizedSignatory       !== undefined) data.authorizedSignatory       = authorizedSignatory || null;
     if (sourceOfFunds             !== undefined) data.sourceOfFunds             = sourceOfFunds || null;
 
-    const lead = await prisma.lead.update({
-      where: { id: req.params.id },
+    await optimisticUpdate({
+      model: prisma.lead as any,
+      modelLabel: "Lead",
+      id: req.params.id,
+      expectedVersion,
       data,
+    });
+
+    // Re-read with the same include shape the detail endpoint uses so the
+    // form can hydrate from the response without an extra GET.
+    const lead = await prisma.lead.findUnique({
+      where: { id: req.params.id },
       include: {
         assignedAgent: true,
         brokerCompany: true,
@@ -463,6 +486,7 @@ router.patch("/:id", async (req, res) => {
 
     res.json(lead);
   } catch (error: any) {
+    if (handleOptimisticLockError(error, res)) return;
     res.status(400).json({ error: error.message || "Failed to update lead", code: "LEAD_UPDATE_ERROR", statusCode: 400 });
   }
 });

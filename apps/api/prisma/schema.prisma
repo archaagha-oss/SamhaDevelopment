@@ -653,6 +653,11 @@ model Unit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Optimistic-lock counter. Bumped by every update that goes through
+  // optimisticUpdate(); clients send the version they last saw and the API
+  // returns 409 if it no longer matches. See lib/optimisticLock.ts.
+  version Int @default(0)
+
   @@unique([projectId, unitNumber])
   @@index([projectId])
   @@index([floor])
@@ -746,6 +751,9 @@ model Lead {
   notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Optimistic-lock counter. See lib/optimisticLock.ts.
+  version Int @default(0)
 
   @@index([phone])
   @@index([assignedAgentId])
@@ -1138,6 +1146,9 @@ model Deal {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Optimistic-lock counter. See lib/optimisticLock.ts.
+  version Int @default(0)
 
   @@index([leadId])
   @@index([unitId])

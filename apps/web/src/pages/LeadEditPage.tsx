@@ -8,6 +8,7 @@ import {
 } from "../components/layout";
 import { Button } from "../components/ui/button";
 import FieldError from "../components/ui/field-error";
+import { useOptimisticConflict } from "../hooks/useOptimisticConflict";
 import { useZodValidation } from "../lib/validation";
 import { useAgents } from "../hooks/useAgents";
 import EmiratesIdScan from "../components/EmiratesIdScan";
@@ -73,6 +74,9 @@ interface Lead {
   authorizedSignatory?: string | null;
   sourceOfFunds?: string | null;
   interests?: Array<{ id: string; unitId: string; isPrimary: boolean; unit: { unitNumber: string } }>;
+  /** Optimistic-lock counter — must echo back on PATCH so the server can
+   * detect concurrent edits. See useOptimisticConflict + lib/optimisticLock. */
+  version: number;
 }
 
 interface BrokerCompany { id: string; name: string }
@@ -153,36 +157,7 @@ export default function LeadEditPage() {
       try {
         const r = await axios.get(`/api/leads/${leadId}`);
         if (cancelled) return;
-        const l = r.data as Lead;
-        setLead(l);
-        setForm({
-          firstName:                 l.firstName ?? "",
-          lastName:                  l.lastName ?? "",
-          phone:                     l.phone ?? "",
-          email:                     l.email ?? "",
-          nationality:               l.nationality ?? "",
-          source:                    l.source ?? "DIRECT",
-          budget:                    l.budget != null ? String(l.budget) : "",
-          notes:                     l.notes ?? "",
-          assignedAgentId:           l.assignedAgent?.id ?? l.assignedAgentId ?? "",
-          brokerCompanyId:           l.brokerCompanyId ?? "",
-          brokerAgentId:             l.brokerAgentId ?? "",
-          address:                   l.address ?? "",
-          emiratesId:                l.emiratesId ?? "",
-          passportNumber:            l.passportNumber ?? "",
-          companyRegistrationNumber: l.companyRegistrationNumber ?? "",
-          authorizedSignatory:       l.authorizedSignatory ?? "",
-          sourceOfFunds:             l.sourceOfFunds ?? "",
-        });
-        const ids = new Set((l.interests ?? []).map((i) => i.unitId));
-        setSelectedUnitIds(ids);
-        setPrimaryUnitId(((l.interests ?? []).find((i) => i.isPrimary))?.unitId ?? "");
-        setInterestedUnitMeta(
-          (l.interests ?? []).reduce<Record<string, { unitNumber: string }>>((acc, i) => {
-            acc[i.unitId] = { unitNumber: i.unit.unitNumber };
-            return acc;
-          }, {}),
-        );
+        hydrateFromLead(r.data as Lead);
       } catch {
         if (!cancelled) setLoadError(true);
       } finally {
@@ -191,6 +166,48 @@ export default function LeadEditPage() {
     })();
     return () => { cancelled = true; };
   }, [isEdit, leadId]);
+
+  function hydrateFromLead(l: Lead) {
+    setLead(l);
+    setForm({
+      firstName:                 l.firstName ?? "",
+      lastName:                  l.lastName ?? "",
+      phone:                     l.phone ?? "",
+      email:                     l.email ?? "",
+      nationality:               l.nationality ?? "",
+      source:                    l.source ?? "DIRECT",
+      budget:                    l.budget != null ? String(l.budget) : "",
+      notes:                     l.notes ?? "",
+      assignedAgentId:           l.assignedAgent?.id ?? l.assignedAgentId ?? "",
+      brokerCompanyId:           l.brokerCompanyId ?? "",
+      brokerAgentId:             l.brokerAgentId ?? "",
+      address:                   l.address ?? "",
+      emiratesId:                l.emiratesId ?? "",
+      passportNumber:            l.passportNumber ?? "",
+      companyRegistrationNumber: l.companyRegistrationNumber ?? "",
+      authorizedSignatory:       l.authorizedSignatory ?? "",
+      sourceOfFunds:             l.sourceOfFunds ?? "",
+    });
+    const ids = new Set((l.interests ?? []).map((i) => i.unitId));
+    setSelectedUnitIds(ids);
+    setPrimaryUnitId(((l.interests ?? []).find((i) => i.isPrimary))?.unitId ?? "");
+    setInterestedUnitMeta(
+      (l.interests ?? []).reduce<Record<string, { unitNumber: string }>>((acc, i) => {
+        acc[i.unitId] = { unitNumber: i.unit.unitNumber };
+        return acc;
+      }, {}),
+    );
+  }
+
+  // 409 OPTIMISTIC_LOCK_CONFLICT: another agent edited this lead while the
+  // form was open. The handler shows a sticky toast with a Reload action that
+  // pulls the server's snapshot back into the form so the user can re-apply
+  // their edits on top of the current row.
+  const handleConflict = useOptimisticConflict<Lead>({
+    onReload: (fresh) => {
+      if (fresh) hydrateFromLead(fresh);
+    },
+  });
 
   const set = (patch: Partial<typeof BLANK>) => {
     Object.keys(patch).forEach((k) => clearError(k));
@@ -250,7 +267,18 @@ export default function LeadEditPage() {
       if (isEdit && lead) {
         const payload = diffPayload();
         if (Object.keys(payload).length > 0) {
-          await axios.patch(`/api/leads/${lead.id}`, payload);
+          try {
+            await axios.patch(`/api/leads/${lead.id}`, {
+              ...payload,
+              expectedVersion: lead.version,
+            });
+          } catch (err) {
+            if (handleConflict(err)) {
+              setSubmitting(false);
+              return;
+            }
+            throw err;
+          }
         }
         toast.success("Lead updated");
         navigate(`/leads/${lead.id}`);

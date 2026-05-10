@@ -13,6 +13,11 @@ import {
 import { updateUnitStatus, isDealOwnedStatus } from "../services/unitService";
 import { prisma } from "../lib/prisma";
 import { generateToken, buildPublicShareUrl } from "../services/shareTokenService";
+import {
+  optimisticUpdate,
+  readExpectedVersion,
+  handleOptimisticLockError,
+} from "../lib/optimisticLock";
 import { requireAuthentication } from "../middleware/auth";
 
 const router = Router();
@@ -397,6 +402,15 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
+    const expectedVersion = readExpectedVersion(req);
+    if (expectedVersion === null) {
+      return res.status(400).json({
+        error: "Missing or invalid expectedVersion. Reload the unit and try again.",
+        code: "EXPECTED_VERSION_REQUIRED",
+        statusCode: 400,
+      });
+    }
+
     const {
       type, area, price, view, floor, assignedAgentId,
       bathrooms, parkingSpaces, internalArea, externalArea,
@@ -451,9 +465,16 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
       });
     }
 
-    const updated = await prisma.unit.update({ where: { id: req.params.id }, data });
+    const updated = await optimisticUpdate({
+      model: prisma.unit as any,
+      modelLabel: "Unit",
+      id: req.params.id,
+      expectedVersion,
+      data,
+    });
     res.json(updated);
   } catch (error: any) {
+    if (handleOptimisticLockError(error, res)) return;
     res.status(400).json({ error: error.message || "Failed to update unit", code: "UPDATE_UNIT_ERROR", statusCode: 400 });
   }
 });

@@ -16,6 +16,11 @@ import { buildSpaSnapshot } from "../services/spaService";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess, requireAuthentication } from "../middleware/auth";
+import {
+  optimisticUpdate,
+  readExpectedVersion,
+  handleOptimisticLockError,
+} from "../lib/optimisticLock";
 
 const router = Router();
 router.use(requireAuthentication);
@@ -410,13 +415,29 @@ router.patch("/:id", async (req, res) => {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
+    const expectedVersion = readExpectedVersion(req);
+    if (expectedVersion === null) {
+      return res.status(400).json({
+        error: "Missing or invalid expectedVersion. Reload the deal and try again.",
+        code: "EXPECTED_VERSION_REQUIRED",
+        statusCode: 400,
+      });
+    }
+
     const { discount, spaSignedDate, oqoodRegisteredDate, notes } = req.body;
     const data: any = {};
     if (discount !== undefined) data.discount = parseFloat(discount) || 0;
     if (spaSignedDate !== undefined) data.spaSignedDate = spaSignedDate ? new Date(spaSignedDate) : null;
     if (oqoodRegisteredDate !== undefined) data.oqoodRegisteredDate = oqoodRegisteredDate ? new Date(oqoodRegisteredDate) : null;
     if (notes !== undefined) data.notes = notes;
-    const deal = await prisma.deal.update({ where: { id: req.params.id }, data });
+
+    const deal = await optimisticUpdate({
+      model: prisma.deal as any,
+      modelLabel: "Deal",
+      id: req.params.id,
+      expectedVersion,
+      data,
+    });
 
     // Log notes change as an activity
     if (notes !== undefined) {
@@ -432,6 +453,7 @@ router.patch("/:id", async (req, res) => {
 
     res.json(deal);
   } catch (error: any) {
+    if (handleOptimisticLockError(error, res)) return;
     res.status(400).json({ error: error.message || "Failed to update deal", code: "DEAL_UPDATE_ERROR", statusCode: 400 });
   }
 });
