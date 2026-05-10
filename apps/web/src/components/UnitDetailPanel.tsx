@@ -150,8 +150,10 @@ export default function UnitDetailPanel({
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-foreground">Unit {unit.unitNumber}</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
+            aria-label="Close panel"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ×
           </button>

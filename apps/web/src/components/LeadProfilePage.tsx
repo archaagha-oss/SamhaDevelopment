@@ -111,7 +111,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             &times;
           </button>
@@ -704,7 +704,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               activeTab === t.key
                 ? "border-primary/40 text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"

@@ -93,8 +93,10 @@ export default function ReservationModal({
             )}
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
+            aria-label="Close dialog"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ×
           </button>

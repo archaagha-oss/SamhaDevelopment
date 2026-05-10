@@ -57,7 +57,7 @@ export default function Modal({
               type="button"
               onClick={onClose}
               aria-label="Close dialog"
-              className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus:outline-none focus:ring-2 focus:ring-ring"
+              className="text-muted-foreground hover:text-foreground text-xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               ×
             </button>

@@ -67,7 +67,7 @@ export default function DealActivityPanel({
         <div className="flex gap-4 px-6 py-3">
           <button
             onClick={() => setActiveTab("timeline")}
-            className={`text-sm font-medium pb-3 border-b-2 transition ${
+            className={`text-sm font-medium pb-3 border-b-2 transition rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               activeTab === "timeline"
                 ? "text-primary border-primary/40"
                 : "text-muted-foreground border-transparent hover:text-foreground"
@@ -77,7 +77,7 @@ export default function DealActivityPanel({
           </button>
           <button
             onClick={() => setActiveTab("activity")}
-            className={`text-sm font-medium pb-3 border-b-2 transition ${
+            className={`text-sm font-medium pb-3 border-b-2 transition rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               activeTab === "activity"
                 ? "text-primary border-primary/40"
                 : "text-muted-foreground border-transparent hover:text-foreground"

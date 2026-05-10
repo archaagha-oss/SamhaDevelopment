@@ -108,7 +108,7 @@ export default function DealDetailContent({
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-sm font-medium pb-3 border-b-2 transition whitespace-nowrap ${
+              className={`text-sm font-medium pb-3 border-b-2 transition whitespace-nowrap rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeTab === tab
                   ? "text-primary border-primary/40"
                   : "text-muted-foreground border-transparent hover:text-foreground"

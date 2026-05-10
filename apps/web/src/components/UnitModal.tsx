@@ -197,7 +197,12 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               {statusLabels[currentUnit.status] || currentUnit.status}
             </span>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">×</button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >×</button>
         </div>
 
         <div className="flex-1 overflow-y-auto">

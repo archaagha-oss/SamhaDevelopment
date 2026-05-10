@@ -228,7 +228,7 @@ export default function ProjectDetailPage() {
                 onClick={() => setTab(t.key as Tab)}
                 role="tab"
                 aria-selected={active}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   active
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"

@@ -176,7 +176,12 @@ export default function CreateOfferModal({
         {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-foreground">Create offer</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             ×
           </button>
         </div>

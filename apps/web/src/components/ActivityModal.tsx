@@ -109,8 +109,10 @@ export default function ActivityModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-white font-semibold text-base">Log activity</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-2xl leading-none"
+            aria-label="Close dialog"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ×
           </button>

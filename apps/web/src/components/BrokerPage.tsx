@@ -642,7 +642,12 @@ export default function BrokerPage() {
                       <button onClick={openEditForm} className="text-xs px-2.5 py-1 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
                         Edit
                       </button>
-                      <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground text-xl leading-none ml-1">×</button>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(null)}
+                        aria-label="Clear selected company"
+                        className="text-muted-foreground hover:text-foreground text-xl leading-none ml-1 p-1 -m-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >×</button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
