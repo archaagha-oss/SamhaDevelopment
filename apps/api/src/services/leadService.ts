@@ -1,5 +1,6 @@
 import { LeadStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { syncContactFromSource } from "./contactService";
 
 // ---------------------------------------------------------------------------
 // Lead stage transition machine
@@ -151,6 +152,17 @@ export async function createLead(input: CreateLeadInput) {
       title:   "First contact within 24h",
       dueDate: tomorrow,
     },
+  });
+
+  await syncContactFromSource({
+    ref: { kind: "lead", id: lead.id },
+    firstName:   lead.firstName,
+    lastName:    lead.lastName,
+    email:       lead.email,
+    phone:       lead.phone,
+    nationality: lead.nationality,
+    company:     lead.brokerCompany?.name ?? null,
+    notes:       lead.notes,
   });
 
   return lead;

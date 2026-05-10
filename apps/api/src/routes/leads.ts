@@ -4,6 +4,7 @@ import { createLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
 import { createDeal as createDealService } from "../services/dealService";
+import { syncContactFromSource } from "../services/contactService";
 import {
   setPreferredChannel,
   setOptOut,
@@ -431,6 +432,17 @@ router.patch("/:id", async (req, res) => {
         brokerAgent:   true,
         interests:     { include: { unit: true } },
       },
+    });
+
+    await syncContactFromSource({
+      ref: { kind: "lead", id: lead.id },
+      firstName:   lead.firstName,
+      lastName:    lead.lastName,
+      email:       lead.email,
+      phone:       lead.phone,
+      nationality: lead.nationality,
+      company:     lead.brokerCompany?.name ?? null,
+      notes:       lead.notes,
     });
 
     res.json(lead);
