@@ -10,6 +10,7 @@
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import { ParsedPortalLead } from "./portalLeadParserService";
+import { syncContactFromSource } from "./contactService";
 
 const FALLBACK_FIRST = "Portal";
 const FALLBACK_LAST = "Lead";
@@ -147,6 +148,15 @@ export async function ingestPortalLead(parsed: ParsedPortalLead): Promise<Ingest
       title: `First contact within 24h (${sourceTag})`,
       dueDate: tomorrow,
     },
+  });
+
+  await syncContactFromSource({
+    ref: { kind: "lead", id: lead.id },
+    firstName: lead.firstName,
+    lastName:  lead.lastName,
+    email:     lead.email,
+    phone:     lead.phone,
+    notes:     lead.notes,
   });
 
   logger.info("[portalIngest] lead created", {

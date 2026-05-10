@@ -8,6 +8,7 @@ import {
   createBrokerAgentSchema,
 } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
+import { syncContactFromSource } from "../services/contactService";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -147,6 +148,15 @@ router.post(
         },
       });
 
+      await syncContactFromSource({
+        ref: { kind: "broker-company", id: company.id },
+        firstName: company.name,
+        email:     company.email,
+        phone:     company.phone,
+        company:   company.name,
+        jobTitle:  "Broker Company",
+      });
+
       res.status(201).json(company);
     } catch (error: any) {
       res.status(400).json({
@@ -230,6 +240,17 @@ router.post(
           eidBackUrl: eidBackUrl || null,
           acceptedConsent: acceptedConsent ?? false,
         },
+        include: { company: { select: { name: true } } },
+      });
+
+      await syncContactFromSource({
+        ref: { kind: "broker-agent", id: agent.id },
+        firstName: agent.firstName ?? agent.name,
+        lastName:  agent.lastName,
+        email:     agent.email,
+        phone:     agent.phone,
+        company:   agent.company?.name ?? null,
+        jobTitle:  "Broker Agent",
       });
 
       res.status(201).json(agent);
@@ -315,6 +336,16 @@ router.patch("/companies/:id", async (req, res) => {
       if (bodyVals[f] !== undefined) data[f] = bodyVals[f] || null;
     }
     const company = await prisma.brokerCompany.update({ where: { id: req.params.id }, data });
+
+    await syncContactFromSource({
+      ref: { kind: "broker-company", id: company.id },
+      firstName: company.name,
+      email:     company.email,
+      phone:     company.phone,
+      company:   company.name,
+      jobTitle:  "Broker Company",
+    });
+
     res.json(company);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update company", code: "COMPANY_UPDATE_ERROR", statusCode: 400 });
@@ -367,7 +398,22 @@ router.patch("/agents/:id", async (req, res) => {
     if (eidFrontUrl !== undefined) data.eidFrontUrl = eidFrontUrl || null;
     if (eidBackUrl !== undefined) data.eidBackUrl = eidBackUrl || null;
     if (acceptedConsent !== undefined) data.acceptedConsent = acceptedConsent;
-    const agent = await prisma.brokerAgent.update({ where: { id: req.params.id }, data });
+    const agent = await prisma.brokerAgent.update({
+      where: { id: req.params.id },
+      data,
+      include: { company: { select: { name: true } } },
+    });
+
+    await syncContactFromSource({
+      ref: { kind: "broker-agent", id: agent.id },
+      firstName: agent.firstName ?? agent.name,
+      lastName:  agent.lastName,
+      email:     agent.email,
+      phone:     agent.phone,
+      company:   agent.company?.name ?? null,
+      jobTitle:  "Broker Agent",
+    });
+
     res.json(agent);
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update agent", code: "AGENT_UPDATE_ERROR", statusCode: 400 });
