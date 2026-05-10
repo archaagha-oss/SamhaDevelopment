@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { requireAuthentication, requireRole } from "../middleware/auth";
 
 const router = Router();
+
+// Contacts are an internal CRM directory — every endpoint requires auth.
+router.use(requireAuthentication);
 
 // ─── List contacts ────────────────────────────────────────────────────────────
 
@@ -144,7 +148,7 @@ router.patch("/:id", async (req, res) => {
 
 // ─── Delete contact ───────────────────────────────────────────────────────────
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const existing = await prisma.contact.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Contact not found", code: "NOT_FOUND", statusCode: 404 });

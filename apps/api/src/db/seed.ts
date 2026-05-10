@@ -84,6 +84,20 @@ interface SeedUser {
 
 const USERS: SeedUser[] = [
   {
+    // Local-development mock account. The mock auth path in apps/api/src/index.ts
+    // sets req.auth = { userId: "dev-user-1" }; this row gives that clerkId a
+    // real User record so requireRole can resolve a role rather than returning
+    // 403. Disabled in production (mock auth is gated by ALLOW_MOCK_AUTH=true).
+    name: "Dev User (mock)",
+    email: "dev@samha.local",
+    clerkId: "dev-user-1",
+    role: "ADMIN" as UserRole,
+    jobTitle: "Local Development Mock",
+    employeeId: "EMP-DEV",
+    employmentType: "FULL_TIME" as EmploymentType,
+    reportsTo: null,
+  },
+  {
     name: "Mohamed Admin",
     email: "admin@samha.ae",
     clerkId: "admin_001",

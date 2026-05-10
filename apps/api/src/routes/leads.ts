@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { createLead, updateLeadStage, validateLeadTransition } from "../services/leadService";
 import { createDeal as createDealService } from "../services/dealService";
 import { syncContactFromSource } from "../services/contactService";
+import { requireAuthentication, requireRole } from "../middleware/auth";
 import {
   setPreferredChannel,
   setOptOut,
@@ -13,6 +14,10 @@ import {
 } from "../services/communicationPreferenceService";
 
 const router = Router();
+
+// Every lead endpoint requires an authenticated user. Public unit shares are a
+// different surface (publicShareRoutes) — leads are always staff-internal.
+router.use(requireAuthentication);
 
 // ─── List leads ──────────────────────────────────────────────────────────────
 
@@ -598,12 +603,8 @@ router.post("/:id/create-deal", async (req, res) => {
 
 // ─── Delete lead ──────────────────────────────────────────────────────────────
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    if (!req.auth?.userId) {
-      return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
-    }
-
     const lead = await prisma.lead.findUnique({
       where: { id: req.params.id },
       include: { deals: { where: { isActive: true } } },

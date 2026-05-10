@@ -24,11 +24,11 @@ export const requireAuthentication = (
 /**
  * Middleware factory: ensure the calling user has one of the allowed roles.
  *
- * Role resolution order:
- *  1. Look up User row by clerkId = req.auth.userId
- *  2. In dev mode (NODE_ENV !== "production"), unknown users default to ADMIN
- *     so the mock "dev-user-1" account can reach all routes.
- *  3. In production, unknown users get 403.
+ * Role resolution: looks up User by clerkId = req.auth.userId. If no row is
+ * found, returns 403 — fail closed, in every environment, including dev.
+ * The previous "dev mode grants ADMIN to unknown users" bypass has been
+ * removed; the local seed now provisions a dev-user-1 record with role=ADMIN
+ * so the mock auth path still works for local development.
  *
  * Roles: ADMIN, MANAGER, MEMBER, VIEWER. Finance-sensitive operations gate
  * to ["ADMIN", "MANAGER"] — promote a user to MANAGER to give them sign-off
@@ -48,8 +48,6 @@ export const requireRole = (allowedRoles: string[]) => {
       });
     }
 
-    const isDev = process.env.NODE_ENV !== "production";
-
     try {
       const user = await prisma.user.findFirst({
         where: { clerkId: req.auth.userId },
@@ -57,10 +55,6 @@ export const requireRole = (allowedRoles: string[]) => {
       });
 
       if (!user) {
-        if (isDev) {
-          // Dev mode: mock user gets full access — safe because auth is mocked
-          return next();
-        }
         return res.status(403).json({
           error: "User account not found",
           code: "USER_NOT_FOUND",
