@@ -114,13 +114,16 @@ export async function createDeal(input: CreateDealInput) {
       );
     }
 
-    // ── Ensure no other active deal on this unit ───────────────────────────
-    const existingActiveDeal = await tx.deal.findFirst({
-      where: { unitId, isActive: true },
-    });
-    if (existingActiveDeal) {
+    // ── Cross-project guard ────────────────────────────────────────────────
+    // If the lead is scoped to a project (e.g. a portal lead came in for
+    // Project A), the chosen unit must belong to that same project. Without
+    // this check a misclick on the unit picker can create a deal that bypasses
+    // project-level access controls — the deal would then live under unit's
+    // project but the lead would still appear in the other project's pipeline.
+    if (lead.projectId && lead.projectId !== unit.projectId) {
       throw new Error(
-        `Unit already has an active deal: ${existingActiveDeal.dealNumber}`
+        `Lead is scoped to a different project than the selected unit. ` +
+        `Pick a unit from the lead's project, or remove the lead's project assignment first.`
       );
     }
 

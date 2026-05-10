@@ -105,7 +105,22 @@ router.get("/stats", async (req, res) => {
 // PATCH /:id/approve — FINANCE or ADMIN only
 router.patch("/:id/approve", requireFinanceAccess, async (req, res) => {
   try {
-    const resolvedUser = (req as any).resolvedUser;
+    const resolvedUser = (req as any).resolvedUser as { id: string; name: string; role: string } | undefined;
+    // requireFinanceAccess attaches resolvedUser when the role check passes.
+    // If we land here without one, the middleware contract has been broken —
+    // refuse rather than silently writing approvedBy=null and losing the audit
+    // trail of who signed off on the commission.
+    if (!resolvedUser?.id) {
+      commissionLogger.error("Commission approve: missing resolvedUser despite passing requireFinanceAccess", {
+        commissionId: req.params.id,
+      });
+      return res.status(500).json({
+        error: "Approver identity could not be resolved. Please retry; if this persists, contact an administrator.",
+        code: "APPROVER_UNRESOLVED",
+        statusCode: 500,
+      });
+    }
+
     const commission = await prisma.commission.findUnique({
       where: { id: req.params.id },
       include: { deal: { select: { spaSignedDate: true, oqoodRegisteredDate: true } } },
@@ -133,13 +148,13 @@ router.patch("/:id/approve", requireFinanceAccess, async (req, res) => {
       where: { id: req.params.id },
       data: {
         status: "APPROVED",
-        approvedBy: resolvedUser?.id ?? null,
+        approvedBy: resolvedUser.id,
         approvedDate: new Date(),
       },
     });
     commissionLogger.info("Commission approved", {
       commissionId: updated.id, dealId: updated.dealId,
-      amount: updated.amount, approvedBy: resolvedUser?.id,
+      amount: updated.amount, approvedBy: resolvedUser.id, approverName: resolvedUser.name,
     });
     res.json(updated);
   } catch (error) {

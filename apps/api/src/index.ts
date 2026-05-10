@@ -124,7 +124,14 @@ app.use(
 
 // ── Body parser + static must be in place before publicShare so it can serve
 //    media URLs and parse JSON. They are also required by /api/* below.
-app.use(express.json());
+//
+// Cap JSON / urlencoded payloads at 1MB. Express defaults to 100KB, which
+// is too tight for some bulk-create payloads (deal milestones, multi-purchaser
+// SPA particulars), but anything bigger than ~1MB is almost certainly an
+// abuse vector — file uploads use multipart and are routed through documentService
+// directly, so the JSON body parser never needs to handle binary blobs.
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.static("public"));
 // Local document storage (dev mode — replaces S3). Files written by
 // documentService land here and are accessed at /uploads/<key>.
@@ -221,17 +228,7 @@ app.use("/api/compliance", complianceRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
 
-// ===== ERROR HANDLING =====
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Internal server error",
-    code: err.code || "INTERNAL_ERROR",
-    statusCode: err.statusCode || 500,
-  });
-});
-
-// 404 handler
+// ===== 404 HANDLER (must come before the error handler) =====
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
@@ -240,16 +237,41 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler — must have 4 parameters
+// ===== ERROR HANDLER (single, must have 4 parameters) =====
+//
+// Express identifies error-handling middleware by its arity (4 args). Routes
+// that throw or call next(err) land here. We:
+//   • log every error structurally via the project logger so it shows up in
+//     downstream observability (was previously split between console.error
+//     and logger.error in two separate handlers, the second of which was
+//     unreachable because it sat after the 404 handler);
+//   • surface err.statusCode / err.code / err.message when present (these are
+//     attached by route handlers that throw http-friendly errors), defaulting
+//     to a generic 500 + INTERNAL_ERROR when not.
+//
+// In production, if NODE_ENV !== "development", the err.message is replaced
+// with a generic string so internal exception text never leaks to clients —
+// route handlers that want to surface a friendly message must set err.expose
+// = true on the thrown error.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const statusCode = err.statusCode || 500;
+  const code = err.code || "INTERNAL_ERROR";
+  const isDev = process.env.NODE_ENV !== "production";
+  const safeMessage = err.expose || isDev || statusCode < 500
+    ? (err.message || "Internal server error")
+    : "Internal server error";
+
   logger.error("Unhandled Express error", {
     message: err.message,
+    code,
+    statusCode,
     stack: err.stack,
     path: req.path,
     method: req.method,
   });
-  res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", statusCode: 500 });
+
+  res.status(statusCode).json({ error: safeMessage, code, statusCode });
 });
 
 // ===== SERVER STARTUP =====

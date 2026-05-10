@@ -41,19 +41,45 @@ router.get("/", async (req, res) => {
       }
     }
 
+    // ── Eager-load shape for the LIST endpoint (NOT detail) ────────────────
+    // The list view (LeadsPage) renders only:
+    //   - assignedAgent.name          (sidebar / table cell)
+    //   - interests[].unit.unitNumber (chip strip)
+    //   - active-deal pill            (already selective below)
+    //
+    // Full assignedAgent/brokerCompany/brokerAgent records and full unit
+    // records are unnecessary here, and the default Prisma include shape was
+    // pulling whole tables on every page load — the lead-list payload was
+    // ~15-20× larger than what the UI consumes. Detail endpoint (/:id) keeps
+    // the deep includes; this is list only.
     const [total, leads] = await Promise.all([
       prisma.lead.count({ where }),
       prisma.lead.findMany({
         where,
-        include: {
-          assignedAgent: true,
-          brokerCompany: true,
-          brokerAgent:   true,
-          interests:     { include: { unit: true } },
-          _count:        { select: { activities: true, tasks: true } },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          email: true,
+          source: true,
+          stage: true,
+          budget: true,
+          projectId: true,
+          assignedAgentId: true,
+          brokerCompanyId: true,
+          brokerAgentId: true,
+          createdAt: true,
+          updatedAt: true,
+          notes: true,
+          assignedAgent: { select: { id: true, name: true } },
+          interests: {
+            select: { unit: { select: { id: true, unitNumber: true } } },
+          },
+          _count: { select: { activities: true, tasks: true } },
           deals: {
             where: { isActive: true },
-            select: { id: true, stage: true, dealNumber: true, unit: { select: { unitNumber: true } } as any },
+            select: { id: true, stage: true, dealNumber: true, unit: { select: { unitNumber: true } } },
           },
         },
         orderBy: { createdAt: "desc" },
