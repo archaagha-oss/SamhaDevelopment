@@ -8,6 +8,7 @@ import UnitsTable from "./UnitsTable";
 import ProjectUpdatesTab from "./ProjectUpdatesTab";
 import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
 import { StageBadge } from "./ui/stage-badge";
+import SlimHeader, { SlimHeaderSentinel } from "@/components/ui/SlimHeader";
 
 interface Project {
   id: string;
@@ -159,8 +160,23 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
+      <SlimHeader
+        primary={
+          <>
+            <span className="truncate">{project.name}</span>
+            <span className="text-muted-foreground hidden md:inline">· {project.location}</span>
+          </>
+        }
+        badges={
+          <span className={`text-xs px-2 py-0.5 rounded-md font-semibold whitespace-nowrap ${statusCfg.cls}`}>
+            {statusCfg.label}
+          </span>
+        }
+        onBack={() => navigate("/projects")}
+      />
       {/* Sticky header — compact title row + meta line + KPI strip + tabs */}
       <div className="bg-card border-b border-border flex-shrink-0">
+        <SlimHeaderSentinel />
         <div className="px-4 sm:px-6 pt-4 pb-3">
           <button
             onClick={() => navigate("/projects")}
