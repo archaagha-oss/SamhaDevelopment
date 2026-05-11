@@ -441,6 +441,48 @@ export const updateChecklistItemSchema = z
 
 export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
 
+// ===== SNAGS =====
+const SNAG_SEVERITIES = ["COSMETIC", "MINOR", "MAJOR", "CRITICAL"] as const;
+const SNAG_STATUSES = [
+  "RAISED",
+  "ACKNOWLEDGED",
+  "IN_PROGRESS",
+  "FIXED",
+  "REJECTED",
+  "CLOSED",
+] as const;
+const SNAG_PHOTO_KINDS = ["BEFORE", "AFTER"] as const;
+
+export const createSnagListSchema = z.object({
+  label: z.string().optional().nullable(),
+});
+
+export const addSnagItemSchema = z.object({
+  room:           z.string().optional().nullable(),
+  category:       z.string().optional().nullable(),
+  description:    z.string().min(1, "Description is required"),
+  severity:       z.enum(SNAG_SEVERITIES),
+  contractorName: z.string().optional().nullable(),
+  dueDate:        z.string().optional().nullable(),
+});
+
+export const updateSnagStatusSchema = z.object({
+  status:          z.enum(SNAG_STATUSES),
+  rejectionReason: z.string().optional().nullable(),
+  fixedDate:       z.string().optional().nullable(),
+});
+
+export const addSnagPhotoSchema = z.object({
+  s3Key:   z.string().min(1, "s3Key is required"),
+  caption: z.string().optional().nullable(),
+  kind:    z.enum(SNAG_PHOTO_KINDS).default("BEFORE"),
+});
+
+export type CreateSnagListInput   = z.infer<typeof createSnagListSchema>;
+export type AddSnagItemInput      = z.infer<typeof addSnagItemSchema>;
+export type UpdateSnagStatusInput = z.infer<typeof updateSnagStatusSchema>;
+export type AddSnagPhotoInput     = z.infer<typeof addSnagPhotoSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
