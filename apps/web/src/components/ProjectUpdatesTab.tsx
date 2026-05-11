@@ -7,6 +7,7 @@ import {
   useUpdateProjectUpdate,
   useUploadProjectUpdateMedia,
 } from "../hooks/useProjectUpdates";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   projectId: string;
@@ -17,6 +18,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
   const create = useCreateProjectUpdate(projectId);
   const patch = useUpdateProjectUpdate(projectId);
   const remove = useDeleteProjectUpdate(projectId);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const uploadMedia = useUploadProjectUpdateMedia(projectId);
   const deleteMedia = useDeleteProjectUpdateMedia(projectId);
 
@@ -119,9 +121,7 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm("Delete this update permanently?")) remove.mutate(u.id);
-                    }}
+                    onClick={() => setConfirmDeleteId(u.id)}
                     style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                   >
                     Delete
@@ -199,6 +199,19 @@ export default function ProjectUpdatesTab({ projectId }: Props) {
           ))
         )}
       </div>
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete update?"
+        message="This update will be permanently removed from the project timeline."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          if (id) remove.mutate(id);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </section>
   );
 }

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
+import { optimisticAction } from "@/lib/optimisticToast";
 import { PageContainer, PageHeader } from "./layout";
 import { FilterBar } from "./data";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,6 @@ export default function PaymentPlansPage() {
   const navigate = useNavigate();
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [cloning, setCloning] = useState<string | null>(null);
-  const [confirmTogglePlan, setConfirmTogglePlan] = useState<PaymentPlan | null>(null);
   const [search, setSearch] = useState("");
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("active");
 
@@ -80,25 +79,27 @@ export default function PaymentPlansPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDeactivate = (plan: PaymentPlan, e: React.MouseEvent) => {
+  // Optimistic toggle with Undo (UX_AUDIT_2 §R5): the toggle is fully
+  // reversible via the same endpoints, so the ConfirmDialog confirmation
+  // gate has been replaced with an inline Undo toast.
+  const handleDeactivate = async (plan: PaymentPlan, e: React.MouseEvent) => {
     e.stopPropagation();
-    setConfirmTogglePlan(plan);
-  };
-
-  const doTogglePlan = async () => {
-    const plan = confirmTogglePlan;
-    if (!plan) return;
-    setConfirmTogglePlan(null);
     setDeactivating(plan.id);
+    const apply = (active: boolean) =>
+      active
+        ? axios.patch(`/api/payment-plans/${plan.id}`, { isActive: true })
+        : axios.delete(`/api/payment-plans/${plan.id}`);
     try {
-      if (plan.isActive) {
-        await axios.delete(`/api/payment-plans/${plan.id}`);
-        toast.success(`"${plan.name}" deactivated`);
-      } else {
-        await axios.patch(`/api/payment-plans/${plan.id}`, { isActive: true });
-        toast.success(`"${plan.name}" reactivated`);
-      }
-      load();
+      await optimisticAction({
+        do: async () => { await apply(!plan.isActive); await load(); },
+        undo: async () => { await apply(plan.isActive); await load(); },
+        message: plan.isActive
+          ? `"${plan.name}" deactivated`
+          : `"${plan.name}" reactivated`,
+        description: plan.isActive
+          ? "It won't appear in new deal forms. Undo within 5 seconds."
+          : undefined,
+      });
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to update plan");
     } finally {
@@ -323,18 +324,6 @@ export default function PaymentPlansPage() {
           </div>
         </PageContainer>
       </div>
-
-      <ConfirmDialog
-        open={!!confirmTogglePlan}
-        title={confirmTogglePlan?.isActive ? "Deactivate plan" : "Reactivate plan"}
-        message={confirmTogglePlan?.isActive
-          ? `Deactivate "${confirmTogglePlan?.name}"? It will no longer appear in new deal forms.`
-          : `Reactivate "${confirmTogglePlan?.name}"?`}
-        confirmLabel={confirmTogglePlan?.isActive ? "Deactivate" : "Reactivate"}
-        variant={confirmTogglePlan?.isActive ? "danger" : "info"}
-        onConfirm={doTogglePlan}
-        onCancel={() => setConfirmTogglePlan(null)}
-      />
     </div>
   );
 }

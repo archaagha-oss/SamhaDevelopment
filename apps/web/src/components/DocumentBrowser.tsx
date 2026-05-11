@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { FileText, ClipboardList, Image as ImageIcon, Paperclip, Eye, Download, Trash2, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Document } from "../types";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   dealId: string;
@@ -55,6 +56,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<{ url: string; name: string } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -84,8 +86,6 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
   };
 
   const handleDelete = async (docId: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
-
     setDeleting(docId);
     try {
       await axios.delete(`/api/documents/${docId}`);
@@ -190,7 +190,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
                     <Download className="size-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(doc.id)}
+                    onClick={() => setConfirmDeleteId(doc.id)}
                     disabled={deleting === doc.id}
                     className="p-2 text-destructive hover:text-destructive hover:bg-card rounded-lg disabled:opacity-50"
                     title="Delete"
@@ -226,6 +226,20 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete document?"
+        message="The file will be permanently removed. This can't be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          if (id) handleDelete(id);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </>
   );
 }

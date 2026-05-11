@@ -434,12 +434,14 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       setOffers(updatedOffers);
       toast.success(`Offer ${status.toLowerCase()}`);
 
-      // Prompt to create a deal immediately after acceptance
+      // After offer acceptance, the obvious next step is to open the
+      // reservation deal. The reservation modal is itself the confirmation
+      // surface (it has its own Cancel button + form), so we skip the
+      // intermediate window.confirm prompt per UX_AUDIT_2 §R5 — workflow
+      // continuations don't need a confirmation gate.
       if (status === "ACCEPTED") {
         const accepted = updatedOffers.find((o: any) => o.id === offerId);
-        if (accepted && window.confirm("Offer accepted. Create a reservation deal now?")) {
-          openReservationFromOffer(accepted);
-        }
+        if (accepted) openReservationFromOffer(accepted);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to update offer");
