@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 interface CreateOfferModalProps {
   isOpen: boolean;
@@ -238,7 +240,7 @@ export default function CreateOfferModal({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">List Price:</span>
-                <span className="font-medium text-foreground">AED {unitPrice.toLocaleString()}</span>
+                <span className="font-medium text-foreground">{formatDirham(unitPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Area:</span>

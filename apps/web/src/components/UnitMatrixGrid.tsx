@@ -5,6 +5,8 @@ import { Unit, UnitStatus, UnitType } from "../types";
 import { getStatusColor } from "../utils/statusColors";
 import { useFilterState } from "../hooks/useFilterState";
 import UnitDetailPanel from "./UnitDetailPanel";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 interface UnitMatrixGridProps {
   projectId?: string;
@@ -55,7 +57,7 @@ const UnitCell = memo(function UnitCell({ unit, onClick }: UnitCellProps) {
       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-primary text-primary-foreground text-xs py-2 px-3 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
         Unit {unit.unitNumber} | {UNIT_TYPE_LABELS[unit.type] || unit.type}
         <br />
-        {unit.area.toFixed(2)} sqft | AED {pricePerSqft}/sqft
+        <span className="inline-flex items-baseline gap-1">{unit.area.toFixed(2)} sqft | {formatDirham(pricePerSqft)}/sqft</span>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -249,31 +251,37 @@ export default function UnitMatrixGrid({
             {/* Min Price Filter */}
             <div>
               <label htmlFor="min-price" className="block text-xs font-medium text-foreground mb-1">
-                Min Price (AED)
+                Min Price
               </label>
-              <input
-                id="min-price"
-                type="number"
-                value={filters.minPrice}
-                onChange={(e) => updateFilters({ minPrice: e.target.value })}
-                placeholder="e.g., 500000"
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
-              />
+              <div className="relative">
+                <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <input
+                  id="min-price"
+                  type="number"
+                  value={filters.minPrice}
+                  onChange={(e) => updateFilters({ minPrice: e.target.value })}
+                  placeholder="e.g., 500000"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
+                />
+              </div>
             </div>
 
             {/* Max Price Filter */}
             <div>
               <label htmlFor="max-price" className="block text-xs font-medium text-foreground mb-1">
-                Max Price (AED)
+                Max Price
               </label>
-              <input
-                id="max-price"
-                type="number"
-                value={filters.maxPrice}
-                onChange={(e) => updateFilters({ maxPrice: e.target.value })}
-                placeholder="e.g., 1000000"
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
-              />
+              <div className="relative">
+                <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <input
+                  id="max-price"
+                  type="number"
+                  value={filters.maxPrice}
+                  onChange={(e) => updateFilters({ maxPrice: e.target.value })}
+                  placeholder="e.g., 1000000"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition"
+                />
+              </div>
             </div>
           </div>
         </div>

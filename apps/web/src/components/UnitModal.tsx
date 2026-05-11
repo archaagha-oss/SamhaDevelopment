@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnitGallery from "./UnitGallery";
 import { formatArea } from "../utils/formatArea";
+import { formatDirham } from "@/lib/money";
 
 interface Unit {
   id: string;
@@ -202,7 +203,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
             <p className="text-sm font-bold text-warning-soft-foreground">{activeDeal.dealNumber}</p>
             <div className="flex items-center justify-between mt-1">
               <p className="text-xs text-warning">{activeDeal.lead.firstName} {activeDeal.lead.lastName}</p>
-              <p className="text-xs text-warning font-medium">AED {activeDeal.salePrice.toLocaleString()}</p>
+              <p className="text-xs text-warning font-medium">{formatDirham(activeDeal.salePrice)}</p>
             </div>
             <p className="text-xs text-warning mt-0.5">{activeDeal.stage.replace(/_/g, " ")} →</p>
           </div>
@@ -247,12 +248,12 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Current Price</p>
-                <p className="text-xl font-bold text-foreground">AED {currentUnit.price.toLocaleString("en-AE")}</p>
+                <p className="text-xl font-bold text-foreground">{formatDirham(currentUnit.price)}</p>
               </div>
               {currentUnit.basePrice && currentUnit.basePrice !== currentUnit.price && (
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Base price</p>
-                  <p className="text-sm text-muted-foreground line-through">AED {currentUnit.basePrice.toLocaleString("en-AE")}</p>
+                  <p className="text-sm text-muted-foreground line-through">{currentUnit.basePrice ? formatDirham(currentUnit.basePrice) : "—"}</p>
                 </div>
               )}
             </div>
@@ -263,7 +264,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
               {currentUnit.pricePerSqft && (
                 <div className="bg-info-soft rounded-lg p-2.5 text-center">
                   <p className="text-xs text-primary mb-0.5">Price / sqft</p>
-                  <p className="font-semibold text-info-soft-foreground">AED {currentUnit.pricePerSqft.toLocaleString()}</p>
+                  <p className="font-semibold text-info-soft-foreground">{formatDirham(currentUnit.pricePerSqft)}</p>
                 </div>
               )}
               {(currentUnit.inquiryCount ?? 0) > 0 && (
@@ -500,7 +501,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
                 {priceHistory.map((p) => (
                   <div key={p.id} className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span>AED {p.oldPrice.toLocaleString()} → <strong>AED {p.newPrice.toLocaleString()}</strong></span>
+                      <span className="inline-flex items-baseline gap-1">{formatDirham(p.oldPrice)} → <strong>{formatDirham(p.newPrice)}</strong></span>
                       <span className="text-muted-foreground">{new Date(p.changedAt).toLocaleDateString("en-AE")}</span>
                     </div>
                     {p.reason && <p className="text-muted-foreground mt-0.5">{p.reason}</p>}

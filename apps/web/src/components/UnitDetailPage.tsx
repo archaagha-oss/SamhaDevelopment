@@ -21,6 +21,8 @@ import { useUnitDocuments } from "../hooks/useUnitDocuments";
 import ShareUnitModal from "./ShareUnitModal";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 const DELETE_BLOCKING_STATUSES = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"] as const;
 
@@ -261,7 +263,7 @@ export default function UnitDetailPage() {
                 <div className="px-3">
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Price / sqft</p>
                   <p className="text-sm font-semibold text-foreground">
-                    {unit.pricePerSqft ? `AED ${unit.pricePerSqft.toLocaleString()}` : "—"}
+                    {unit.pricePerSqft ? formatDirham(unit.pricePerSqft) : "—"}
                   </p>
                 </div>
               </div>
@@ -320,14 +322,16 @@ export default function UnitDetailPage() {
 
               {editingPrice ? (
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground">AED</span>
-                  <input
-                    type="number"
-                    value={priceValue}
-                    onChange={(e) => setPriceValue(e.target.value)}
-                    className="flex-1 border border-primary/40 rounded-lg px-3 py-2 text-lg font-bold focus:outline-none focus:border-ring"
-                    autoFocus
-                  />
+                  <div className="relative flex-1">
+                    <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="number"
+                      value={priceValue}
+                      onChange={(e) => setPriceValue(e.target.value)}
+                      className="w-full border border-primary/40 rounded-lg pl-9 pr-3 py-2 text-lg font-bold focus:outline-none focus:border-ring"
+                      autoFocus
+                    />
+                  </div>
                   <button
                     onClick={handleSavePrice}
                     disabled={updateUnit.isPending}
@@ -342,7 +346,7 @@ export default function UnitDetailPage() {
               ) : (
                 <div className="flex items-end gap-3">
                   <p className="text-2xl font-bold text-foreground">
-                    AED {unit.price.toLocaleString("en-AE")}
+                    {formatDirham(unit.price)}
                   </p>
                   {priceTrend && (
                     <span className={`text-sm font-semibold mb-0.5 ${parseFloat(priceTrend) >= 0 ? "text-success" : "text-destructive"}`}>
@@ -354,7 +358,7 @@ export default function UnitDetailPage() {
 
               {unit.basePrice && unit.basePrice !== unit.price && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Base: <span className="line-through">AED {unit.basePrice.toLocaleString("en-AE")}</span>
+                  Base: <span className="line-through inline-flex items-baseline gap-1">{formatDirham(unit.basePrice)}</span>
                 </p>
               )}
             </div>

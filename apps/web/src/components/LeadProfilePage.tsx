@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
@@ -9,6 +10,8 @@ import UnitInterestPicker from "./UnitInterestPicker";
 import { StageBadge } from "@/components/ui/stage-badge";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -728,8 +731,13 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           : null;
         const budgetLabel = lead.budget
           ? lead.budget >= 1_000_000
-            ? `AED ${(lead.budget / 1_000_000).toFixed(1)}M`
-            : `AED ${lead.budget.toLocaleString()}`
+            ? (
+                <span className="inline-flex items-baseline gap-1">
+                  <DirhamSign aria-hidden className="size-[0.9em] shrink-0 self-center" />
+                  <span>{(lead.budget / 1_000_000).toFixed(1)}M</span>
+                </span>
+              )
+            : formatDirham(lead.budget)
           : "—";
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -860,7 +868,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                       <div key={o.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs font-semibold text-foreground">v{version} — AED {o.offeredPrice.toLocaleString()}</p>
+                            <p className="text-xs font-semibold text-foreground inline-flex items-baseline gap-1">v{version} — {formatDirham(o.offeredPrice)}</p>
                             <p className="text-xs text-muted-foreground">
                               {(o as any).unit?.unitNumber}
                               {o.paymentPlan ? ` · ${o.paymentPlan.name}` : ""}
@@ -931,7 +939,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         Unit {d.unit.unitNumber} · {d.unit.type}
                       </p>
                       <p className="text-xs font-medium text-foreground mt-0.5">
-                        AED {d.salePrice.toLocaleString()}
+                        {formatDirham(d.salePrice)}
                       </p>
                     </button>
                   ))}
@@ -961,7 +969,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                           </div>
                           <p className="text-xs text-muted-foreground">{i.unit.type.replace(/_/g, " ")} · Floor {i.unit.floor}</p>
                         </div>
-                        <p className="text-sm font-bold text-primary">AED {i.unit.price.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-primary">{formatDirham(i.unit.price)}</p>
                       </div>
                       {offer ? (
                         <div className="flex gap-1.5">
@@ -1000,12 +1008,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           <div className="bg-card rounded-xl border border-border p-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead Info</h3>
             <div className="space-y-2.5">
-              {[
+              {([
                 ["Source",      lead.source],
                 ["Nationality", lead.nationality || "—"],
-                ["Budget",      lead.budget ? `AED ${lead.budget.toLocaleString()}` : "—"],
+                ["Budget",      lead.budget ? formatDirham(lead.budget) : "—"],
                 ["Agent",       lead.assignedAgent?.name || "Unassigned"],
-              ].map(([label, value]) => (
+              ] as Array<[string, React.ReactNode]>).map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{label}</span>
                   <span className="font-medium text-foreground">{value}</span>
@@ -1271,17 +1279,26 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Sale Price (AED) *</label>
-                <input required type="number" min={0} value={dealForm.salePrice} onChange={(e) => setDealForm((p) => ({ ...p, salePrice: e.target.value }))} placeholder="e.g. 1200000" className={inputCls} />
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Sale Price *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input required type="number" min={0} value={dealForm.salePrice} onChange={(e) => setDealForm((p) => ({ ...p, salePrice: e.target.value }))} placeholder="e.g. 1200000" className={`${inputCls} pl-9`} />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount (AED)</label>
-                <input type="number" min={0} value={dealForm.discount} onChange={(e) => setDealForm((p) => ({ ...p, discount: e.target.value }))} className={inputCls} />
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input type="number" min={0} value={dealForm.discount} onChange={(e) => setDealForm((p) => ({ ...p, discount: e.target.value }))} className={`${inputCls} pl-9`} />
+                </div>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Reservation Amount (AED) *</label>
-              <input required type="number" min={0} value={dealForm.reservationAmount} onChange={(e) => setDealForm((p) => ({ ...p, reservationAmount: e.target.value }))} placeholder="e.g. 50000" className={inputCls} />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Reservation Amount *</label>
+              <div className="relative">
+                <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <input required type="number" min={0} value={dealForm.reservationAmount} onChange={(e) => setDealForm((p) => ({ ...p, reservationAmount: e.target.value }))} placeholder="e.g. 50000" className={`${inputCls} pl-9`} />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Payment Plan *</label>
@@ -1337,23 +1354,29 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Offered Price (AED) *</label>
-                <input
-                  required type="number" min={0} step="any"
-                  value={offerForm.offeredPrice}
-                  onChange={(e) => setOfferForm((p) => ({ ...p, offeredPrice: e.target.value }))}
-                  placeholder="e.g. 1200000"
-                  className={inputCls}
-                />
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Offered Price *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    required type="number" min={0} step="any"
+                    value={offerForm.offeredPrice}
+                    onChange={(e) => setOfferForm((p) => ({ ...p, offeredPrice: e.target.value }))}
+                    placeholder="e.g. 1200000"
+                    className={`${inputCls} pl-9`}
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount (AED)</label>
-                <input
-                  type="number" min={0} step="any"
-                  value={offerForm.discountAmount}
-                  onChange={(e) => setOfferForm((p) => ({ ...p, discountAmount: e.target.value }))}
-                  className={inputCls}
-                />
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Discount</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="number" min={0} step="any"
+                    value={offerForm.discountAmount}
+                    onChange={(e) => setOfferForm((p) => ({ ...p, discountAmount: e.target.value }))}
+                    className={`${inputCls} pl-9`}
+                  />
+                </div>
               </div>
             </div>
             <div>

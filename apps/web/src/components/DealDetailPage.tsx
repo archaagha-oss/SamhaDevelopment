@@ -14,6 +14,8 @@ import DealStepper from "./DealStepper";
 import DealTimeline from "./DealTimeline";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -926,7 +928,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <p className="text-sm text-muted-foreground">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-lg font-bold text-primary">AED {deal.salePrice.toLocaleString()}</p>
+                <p className="text-lg font-bold text-primary">{formatDirham(deal.salePrice)}</p>
                 <p className="text-xs text-muted-foreground">Sale Price</p>
               </div>
             </div>
@@ -1199,7 +1201,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     </div>
                     <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">AED {totalPaid.toLocaleString()} paid</span>
+                  <span className="text-xs text-muted-foreground inline-flex items-baseline gap-1">{formatDirham(totalPaid)} paid</span>
                   {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                     <>
                       <button
@@ -1263,15 +1265,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <>
                 {/* Financial summary */}
                 <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
-                  {[
-                    { label: "Total Price", value: `AED ${netPrice.toLocaleString()}`, color: "text-foreground" },
-                    { label: "Total Paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-success" },
-                    { label: "Remaining", value: `AED ${remaining.toLocaleString()}`, color: remaining > 0 ? "text-foreground" : "text-success" },
-                    { label: "Overdue", value: overdueAmt > 0 ? `AED ${overdueAmt.toLocaleString()}` : "—", color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
-                  ].map(({ label, value, color }) => (
+                  {([
+                    { label: "Total Price", value: formatDirham(netPrice), color: "text-foreground" },
+                    { label: "Total Paid", value: formatDirham(totalPaid), color: "text-success" },
+                    { label: "Remaining", value: formatDirham(remaining), color: remaining > 0 ? "text-foreground" : "text-success" },
+                    { label: "Overdue", value: overdueAmt > 0 ? formatDirham(overdueAmt) : <>—</>, color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
+                  ] as Array<{ label: string; value: JSX.Element; color: string }>).map(({ label, value, color }) => (
                     <div key={label} className="px-4 py-3 text-center">
                       <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-                      <p className={`text-sm font-semibold ${color}`}>{value}</p>
+                      <p className={`text-sm font-semibold ${color} inline-flex items-baseline gap-1 justify-center`}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -1303,7 +1305,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                               )}
                               {isOverdue && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
                               {isPartial && overdueDays > 0 && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
-                              {isPartial && <span className="text-xs text-warning">Remaining: AED {partialRemaining.toLocaleString()}</span>}
+                              {isPartial && <span className="text-xs text-warning inline-flex items-baseline gap-1">Remaining: {formatDirham(partialRemaining)}</span>}
                               {p.lastReminderSentAt && (
                                 <span className="text-xs text-muted-foreground" title={`Reminder count: ${p.reminderCount ?? 0}`}>
                                   Reminded {timeAgo(p.lastReminderSentAt)}
@@ -1318,7 +1320,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className={`text-sm font-bold ${isOverdue ? "text-destructive" : "text-foreground"}`}>AED {p.amount.toLocaleString()}</p>
+                              <p className={`text-sm font-bold ${isOverdue ? "text-destructive" : "text-foreground"}`}>{formatDirham(p.amount)}</p>
                               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAY_BADGE[p.status] || "bg-muted text-muted-foreground"}`}>
                                 {p.status.replace(/_/g, " ")}
                               </span>
@@ -1732,7 +1734,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {commission && (
             <div className="bg-card rounded-xl border border-border p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Commission</h3>
-              <p className="text-2xl font-bold text-foreground mb-0.5">AED {commission.amount.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-foreground mb-0.5">{formatDirham(commission.amount)}</p>
               <p className="text-xs text-muted-foreground mb-3">{commission.rate}% rate</p>
 
               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-4 ${
@@ -1827,7 +1829,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-bold text-primary">AED {deal?.salePrice.toLocaleString()}</span>
+                  <span className="font-bold text-primary">{deal ? formatDirham(deal.salePrice) : "—"}</span>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
@@ -1962,15 +1964,18 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={partialAmount}
-                  onChange={(e) => setPartialAmount(e.target.value)}
-                  placeholder="e.g. 50000"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="number"
+                    min="1"
+                    value={partialAmount}
+                    onChange={(e) => setPartialAmount(e.target.value)}
+                    placeholder="e.g. 50000"
+                    className="w-full border border-border rounded-lg pl-9 pr-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
@@ -2105,9 +2110,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   placeholder="e.g. Handover Balance" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (AED) *</label>
-                <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
-                  placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
+                    placeholder="e.g. 50000" className="w-full border border-border rounded-lg pl-9 pr-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
