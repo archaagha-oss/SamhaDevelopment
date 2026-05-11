@@ -510,6 +510,44 @@ export const updateEscrowTransactionSchema = z
 export type RecordEscrowTransactionInput = z.infer<typeof recordEscrowTransactionSchema>;
 export type UpdateEscrowTransactionInput = z.infer<typeof updateEscrowTransactionSchema>;
 
+// ===== CONSTRUCTION MILESTONES =====
+// Date fields accept either an ISO datetime or a YYYY-MM-DD calendar date;
+// the service layer normalizes via `new Date(...)`. completedDate accepts
+// `null` explicitly so callers can clear it.
+const isoOrDateString = z
+  .string()
+  .min(1)
+  .refine(
+    (v) => /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(v.trim()),
+    "Must be ISO datetime or YYYY-MM-DD",
+  );
+
+export const updateConstructionMilestoneSchema = z
+  .object({
+    progressPercent: z.number().int().min(0).max(100).optional(),
+    completedDate:   isoOrDateString.nullable().optional(),
+    targetDate:      isoOrDateString.optional(),
+    notes:           z.string().nullable().optional(),
+    label:           z.string().min(1).optional(),
+    description:     z.string().nullable().optional(),
+  })
+  .refine(
+    (v) => Object.keys(v).length > 0,
+    { message: "At least one field is required" },
+  );
+
+export const createConstructionMilestoneSchema = z.object({
+  label:           z.string().min(1, "Label is required"),
+  targetDate:      isoOrDateString,
+  description:     z.string().optional().nullable(),
+  progressPercent: z.number().int().min(0).max(100).optional(),
+  sortOrder:       z.number().int().nonnegative().optional(),
+  notes:           z.string().optional().nullable(),
+});
+
+export type UpdateConstructionMilestoneInput = z.infer<typeof updateConstructionMilestoneSchema>;
+export type CreateConstructionMilestoneInput = z.infer<typeof createConstructionMilestoneSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;

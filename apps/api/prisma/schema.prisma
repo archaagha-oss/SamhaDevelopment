@@ -410,20 +410,21 @@ model Project {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  units              Unit[]
-  leads              Lead[]
-  config             ProjectConfig?
-  userAccess         UserProjectAccess[]
-  lateFeeRules       LateFeeRule[]
-  pricingRules       PricingRule[]
-  images             ProjectImage[]
-  stageDocumentRules StageDocumentRule[]
-  bankAccounts       ProjectBankAccount[]
-  specifications     ProjectSpecification[]
-  documents          Document[]
-  statusHistory      ProjectStatusHistory[]
-  updates            ProjectUpdate[]
-  escrowTransactions EscrowTransaction[]
+  units                  Unit[]
+  leads                  Lead[]
+  config                 ProjectConfig?
+  userAccess             UserProjectAccess[]
+  lateFeeRules           LateFeeRule[]
+  pricingRules           PricingRule[]
+  images                 ProjectImage[]
+  stageDocumentRules     StageDocumentRule[]
+  bankAccounts           ProjectBankAccount[]
+  specifications         ProjectSpecification[]
+  documents              Document[]
+  statusHistory          ProjectStatusHistory[]
+  updates                ProjectUpdate[]
+  escrowTransactions     EscrowTransaction[]
+  constructionMilestones ConstructionMilestone[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2011,4 +2012,39 @@ model EscrowTransaction {
   @@index([projectId])
   @@index([type])
   @@index([transactionDate])
+}
+
+// ============================================================
+// SECTION: CONSTRUCTION MILESTONES
+// ============================================================
+//
+// Project-level milestone tracker — N rows per project, each with a target
+// date, optional completed date, and a 0-100 progress percentage. Distinct
+// from `Project.completionStatus` (high-level enum), `Project.handoverDate`
+// (single date), and `ProjectUpdate` (media-attached news items). The
+// frontend ConstructionProgressPage reads these via /api/construction.
+
+model ConstructionMilestone {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  label       String
+  description String? @db.Text
+
+  targetDate    DateTime
+  completedDate DateTime?
+
+  progressPercent Int @default(0) // 0-100, enforced in service layer
+
+  sortOrder Int @default(0)
+
+  notes         String? @db.Text
+  lastUpdatedBy String? // User.id of the last editor
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([targetDate])
 }

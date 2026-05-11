@@ -117,13 +117,73 @@ export const typePlansApi = {
 };
 
 // ----- Construction milestones -----
+// Backend mounts at /api/construction (see apps/api/src/routes/construction.ts).
+// `GET /:projectId` returns { overallPercent, completedCount, totalCount, milestones }
+// where each milestone has { id, projectId, label, description, targetDate,
+// completedDate, progressPercent, sortOrder, notes, lastUpdatedBy, createdAt,
+// updatedAt }. `listForProject` flattens to the page's legacy field names so
+// ConstructionProgressPage continues to compile against its existing
+// Milestone interface; `getProgress` exposes the full response for new
+// callers that want overall %.
+type RawMilestone = {
+  id: string;
+  projectId: string;
+  label: string;
+  description: string | null;
+  targetDate: string;
+  completedDate: string | null;
+  progressPercent: number;
+  sortOrder: number;
+  notes: string | null;
+  lastUpdatedBy: string | null;
+};
+
+type ProgressResponse = {
+  overallPercent: number;
+  completedCount: number;
+  totalCount: number;
+  milestones: RawMilestone[];
+};
+
+function mapMilestone(m: RawMilestone) {
+  return {
+    id:              m.id,
+    // Legacy page filtered by `stage` (EXCAVATION/FOUNDATION/...) and grouped
+    // sections by it. The new milestone model has no stage — every milestone
+    // is reported under the catch-all bucket so the page renders flat.
+    stage:           "MILESTONE",
+    label:           m.label,
+    description:     m.description,
+    percentComplete: m.progressPercent,
+    expectedDate:    m.targetDate,
+    achievedDate:    m.completedDate,
+    phaseId:         null as string | null,
+  };
+}
+
 export const constructionApi = {
   listForProject: (projectId: string) =>
-    axios.get(`/api/construction/project/${projectId}`).then((r: any) => r.data.data ?? []),
-  create: (body: Record<string, unknown>) =>
-    axios.post("/api/construction", body).then((r: any) => r.data),
+    axios.get(`/api/construction/${projectId}`).then((r: any) => {
+      const data = r.data as ProgressResponse;
+      return (data.milestones ?? []).map(mapMilestone);
+    }),
+  getProgress: (projectId: string) =>
+    axios.get(`/api/construction/${projectId}`).then((r: any) => r.data as ProgressResponse),
+  create: (projectId: string, body: Record<string, unknown>) =>
+    axios.post(`/api/construction/${projectId}/milestones`, body).then((r: any) => r.data),
+  update: (id: string, body: Record<string, unknown>) =>
+    axios.patch(`/api/construction/milestones/${id}`, body).then((r: any) => r.data),
+  remove: (id: string) =>
+    axios.delete(`/api/construction/milestones/${id}`).then((r: any) => r.data),
+  // Legacy signature retained for ConstructionProgressPage. Maps the page's
+  // `percentComplete` number into the backend's `progressPercent` patch. The
+  // backend doesn't return `paymentsTriggered` — page treats it as optional
+  // (`(result as any).paymentsTriggered?.length ?? 0`), so the toast just
+  // says "Updated to N%" without the payment-fired suffix.
   updatePercent: (id: string, percentComplete: number) =>
-    axios.patch(`/api/construction/${id}/percent`, { percentComplete }).then((r: any) => r.data),
+    axios
+      .patch(`/api/construction/milestones/${id}`, { progressPercent: percentComplete })
+      .then((r: any) => r.data),
 };
 
 // ----- Snags -----
