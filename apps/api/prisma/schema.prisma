@@ -742,6 +742,7 @@ model Lead {
   documents               Document[]
   dealPurchasers          DealPurchaser[]
   communicationPreference CommunicationPreference?
+  kyc                     LeadKyc?
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())
@@ -1906,4 +1907,63 @@ model HandoverChecklistItem {
   createdAt DateTime @default(now())
 
   @@index([checklistId])
+}
+
+// ============================================================
+// SECTION: KYC VERIFICATION
+// ============================================================
+//
+// One KYC record per lead — tracks the four verification flags
+// (Emirates ID, Passport, Address proof, Source of funds) plus
+// supporting documents uploaded to S3. KYC docs typically expire
+// after one year; `expiresAt` is set when status transitions to
+// APPROVED so a scheduled job can flip stale records to EXPIRED.
+
+model LeadKyc {
+  id     String @id @default(cuid())
+  leadId String @unique
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  status String @default("PENDING") // PENDING | IN_REVIEW | APPROVED | REJECTED | EXPIRED
+
+  emiratesIdVerified    Boolean @default(false)
+  passportVerified      Boolean @default(false)
+  addressProofVerified  Boolean @default(false)
+  sourceOfFundsVerified Boolean @default(false)
+
+  reviewedBy String? // User.id
+  reviewedAt DateTime?
+
+  notes     String?   @db.Text
+  expiresAt DateTime? // approval valid for 1 year
+
+  documents KycDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model KycDocument {
+  id    String  @id @default(cuid())
+  kycId String
+  kyc   LeadKyc @relation(fields: [kycId], references: [id], onDelete: Cascade)
+
+  type             String // EMIRATES_ID | PASSPORT | VISA | ADDRESS_PROOF | BANK_STATEMENT | SOURCE_OF_FUNDS | OTHER
+  s3Key            String
+  originalFilename String?
+
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  verifiedAt DateTime?
+  verifiedBy String?
+
+  expiryDate DateTime?
+
+  @@index([kycId])
+  @@index([type])
 }

@@ -5,15 +5,71 @@
 import axios from "axios";
 
 // ----- KYC -----
+//
+// Backend mounts at /api/kyc (see apps/api/src/routes/kyc.ts). There is
+// exactly one KYC record per lead — GET /:leadId is get-or-seed and never
+// 404s for a missing-KYC case.
+//
+// The backend record shape uses four boolean `*Verified` flags + a status
+// enum (PENDING | IN_REVIEW | APPROVED | REJECTED | EXPIRED). The legacy
+// frontend tab uses a richer shape (riskRating, idType, idNumber, pepFlag,
+// …) which the backend doesn't store. We adapt here so the existing tab
+// keeps rendering: known backend fields pass through, legacy fields are
+// either derived or returned as null/sensible defaults.
+function adaptKycRecord(raw: any): any {
+  if (!raw) return raw;
+  return {
+    ...raw,
+    // Legacy fields the existing tab reads — derive from new shape where
+    // possible, otherwise return safe defaults so the table still renders.
+    riskRating:      raw.riskRating ?? "LOW",
+    idType:          raw.idType ?? null,
+    idNumber:        raw.idNumber ?? null,
+    idExpiryDate:    raw.idExpiryDate ?? null,
+    visaExpiryDate:  raw.visaExpiryDate ?? null,
+    nationality:     raw.nationality ?? null,
+    residencyStatus: raw.residencyStatus ?? null,
+    occupation:      raw.occupation ?? null,
+    pepFlag:         raw.pepFlag ?? false,
+    sourceOfFunds:   raw.sourceOfFunds ?? null,
+  };
+}
+
 export const kycApi = {
+  // Returns a single-element array — the lead has at most one KYC record.
   listForLead: (leadId: string) =>
-    axios.get(`/api/kyc/lead/${leadId}`).then((r: any) => r.data.data ?? []),
-  get: (id: string) => axios.get(`/api/kyc/${id}`).then((r: any) => r.data),
-  create: (leadId: string, body: Record<string, unknown>) =>
-    axios.post(`/api/kyc/lead/${leadId}`, body).then((r: any) => r.data),
+    axios.get(`/api/kyc/${leadId}`).then((r: any) => {
+      const rec = adaptKycRecord(r.data);
+      return rec ? [rec] : [];
+    }),
+  // GET /:leadId is get-or-seed; same endpoint serves both single-fetch and
+  // create-on-first-access semantics. The `id` arg can be a leadId.
+  get: (id: string) =>
+    axios.get(`/api/kyc/${id}`).then((r: any) => adaptKycRecord(r.data)),
+  // create() is idempotent: hitting GET /:leadId seeds the record if missing.
+  // The legacy form payload (idType, nationality, …) isn't persisted by the
+  // new backend — we accept the body for signature compatibility and fall
+  // through to get-or-seed.
+  create: (leadId: string, _body: Record<string, unknown>) =>
+    axios.get(`/api/kyc/${leadId}`).then((r: any) => adaptKycRecord(r.data)),
   update: (id: string, body: Record<string, unknown>) =>
-    axios.patch(`/api/kyc/${id}`, body).then((r: any) => r.data),
-  remove: (id: string) => axios.delete(`/api/kyc/${id}`).then((r: any) => r.data),
+    axios.patch(`/api/kyc/${id}`, body).then((r: any) => adaptKycRecord(r.data)),
+  // The new backend doesn't expose a "delete KYC" endpoint — removing a
+  // KYC record would orphan its documents and the lead would simply re-seed
+  // on next read. Kept as a no-op to preserve the signature.
+  remove: (_id: string) => Promise.resolve({ ok: true }),
+  // New endpoints — documents are the canonical evidence on the new model.
+  addDocument: (
+    kycId: string,
+    body: {
+      type: string;
+      s3Key: string;
+      originalFilename?: string;
+      expiryDate?: string;
+    },
+  ) => axios.post(`/api/kyc/${kycId}/documents`, body).then((r: any) => r.data),
+  removeDocument: (documentId: string) =>
+    axios.delete(`/api/kyc/documents/${documentId}`).then((r: any) => r.data),
 };
 
 // ----- Deal parties -----

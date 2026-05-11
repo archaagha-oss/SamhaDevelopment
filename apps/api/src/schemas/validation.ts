@@ -441,6 +441,48 @@ export const updateChecklistItemSchema = z
 
 export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
 
+// ===== KYC VERIFICATION =====
+const KYC_STATUSES = ["PENDING", "IN_REVIEW", "APPROVED", "REJECTED", "EXPIRED"] as const;
+const KYC_DOCUMENT_TYPES = [
+  "EMIRATES_ID",
+  "PASSPORT",
+  "VISA",
+  "ADDRESS_PROOF",
+  "BANK_STATEMENT",
+  "SOURCE_OF_FUNDS",
+  "OTHER",
+] as const;
+
+export const updateKycSchema = z
+  .object({
+    status:                z.enum(KYC_STATUSES).optional(),
+    emiratesIdVerified:    z.boolean().optional(),
+    passportVerified:      z.boolean().optional(),
+    addressProofVerified:  z.boolean().optional(),
+    sourceOfFundsVerified: z.boolean().optional(),
+    notes:                 z.string().optional().nullable(),
+  })
+  .refine(
+    (v) =>
+      v.status !== undefined ||
+      v.emiratesIdVerified !== undefined ||
+      v.passportVerified !== undefined ||
+      v.addressProofVerified !== undefined ||
+      v.sourceOfFundsVerified !== undefined ||
+      v.notes !== undefined,
+    { message: "At least one field must be provided" },
+  );
+
+export const addKycDocumentSchema = z.object({
+  type:             z.enum(KYC_DOCUMENT_TYPES),
+  s3Key:            z.string().min(1, "s3Key is required"),
+  originalFilename: z.string().optional().nullable(),
+  expiryDate:       z.string().datetime("Invalid date format").optional().nullable(),
+});
+
+export type UpdateKycInput = z.infer<typeof updateKycSchema>;
+export type AddKycDocumentInput = z.infer<typeof addKycDocumentSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
