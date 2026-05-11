@@ -47,6 +47,7 @@ import streamRoutes from "./routes/stream";
 import complianceRoutes from "./routes/compliance";
 import handoverRoutes from "./routes/handover";
 import kycRoutes from "./routes/kyc";
+import escrowRoutes from "./routes/escrow";
 // Integrated CRM routes (broker dashboard + finance)
 import brokerDashboardRoutes from "./routes/brokerDashboard";
 import financeRoutes from "./routes/finance";
@@ -292,6 +293,7 @@ app.use("/api/stream", streamRoutes);
 app.use("/api/compliance", complianceRoutes);
 app.use("/api/handover", handoverRoutes);
 app.use("/api/kyc", kycRoutes);
+app.use("/api/escrow", escrowRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
 app.use("/api/my-day", myDayRoutes);

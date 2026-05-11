@@ -423,6 +423,7 @@ model Project {
   documents          Document[]
   statusHistory      ProjectStatusHistory[]
   updates            ProjectUpdate[]
+  escrowTransactions EscrowTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1120,6 +1121,8 @@ model Deal {
   purchasers DealPurchaser[]
 
   handoverChecklist HandoverChecklist?
+
+  escrowTransactions EscrowTransaction[]
 
   brokerCompanyId String?
   brokerCompany   BrokerCompany? @relation(fields: [brokerCompanyId], references: [id])
@@ -1966,4 +1969,46 @@ model KycDocument {
 
   @@index([kycId])
   @@index([type])
+}
+
+// ============================================================
+// SECTION: ESCROW TRANSACTIONS
+// ============================================================
+//
+// Per-deal credit / debit ledger against a project's escrow account.
+// The bank account itself (with IBAN, branch, etc.) lives on
+// ProjectBankAccount with purpose=ESCROW — this model captures the
+// transaction-level activity that reconciles against it.
+
+model EscrowTransaction {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Denormalized from the deal so project-wide balance queries stay fast
+  // even when the deal is soft-deleted or the join would be expensive.
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  // Optional pointer at the specific ProjectBankAccount (purpose=ESCROW)
+  // the funds moved through. Left nullable for retroactive entries where
+  // the bank-account row wasn't configured yet.
+  bankAccountId String?
+
+  type            String // "CREDIT" (money in) | "DEBIT" (release to developer)
+  amount          Float
+  transactionDate DateTime
+
+  reference String? // bank reference / cheque number
+  paymentId String? // link to the Payment that triggered this credit (nullable)
+  notes     String? @db.Text
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([projectId])
+  @@index([type])
+  @@index([transactionDate])
 }

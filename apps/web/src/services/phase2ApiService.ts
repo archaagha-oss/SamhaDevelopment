@@ -225,19 +225,50 @@ export const refundsApi = {
 };
 
 // ----- Escrow -----
+// Backend mounts at /api/escrow (apps/api/src/routes/escrow.ts).
+// The new design is project- and deal-scoped: there's no separate "ledger
+// account" abstraction — entries credit/debit a project's escrow account
+// (configured on ProjectBankAccount) per deal.
+//
+// `accountsForProject` resolves the ProjectBankAccount rows with
+// purpose=ESCROW so the UI can show the bank metadata (IBAN, name) of the
+// account the entries reconcile against. `balance` / `ledger` /
+// `postEntry` work against the transactional ledger endpoints.
 export const escrowApi = {
+  // Project-level bank accounts (purpose=ESCROW) — used for header / picker.
   accountsForProject: (projectId: string) =>
-    axios.get(`/api/escrow/project/${projectId}/accounts`).then((r: any) => r.data.data ?? []),
-  createAccount: (body: Record<string, unknown>) =>
-    axios.post("/api/escrow/accounts", body).then((r: any) => r.data),
-  balance: (accountId: string) =>
-    axios.get(`/api/escrow/accounts/${accountId}/balance`).then((r: any) => r.data),
-  ledger: (accountId: string, take = 200) =>
     axios
-      .get(`/api/escrow/accounts/${accountId}/ledger`, { params: { take } })
-      .then((r: any) => r.data.data ?? []),
-  postEntry: (accountId: string, body: Record<string, unknown>) =>
-    axios.post(`/api/escrow/accounts/${accountId}/entries`, body).then((r: any) => r.data),
+      .get(`/api/projects/${projectId}/bank-accounts`)
+      .then((r: any) => {
+        const all = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+        return all.filter((a: any) => a.purpose === "ESCROW");
+      }),
+  // Project-wide balance + recent transactions.
+  balance: (projectId: string) =>
+    axios
+      .get(`/api/escrow/project/${projectId}`)
+      .then((r: any) => r.data.balance ?? { credits: 0, debits: 0, balance: 0 }),
+  ledger: (projectId: string, take = 200) =>
+    axios
+      .get(`/api/escrow/project/${projectId}`, { params: { take } })
+      .then((r: any) => r.data.transactions ?? []),
+  // Per-deal variants (used by deal-detail views).
+  balanceForDeal: (dealId: string) =>
+    axios
+      .get(`/api/escrow/deal/${dealId}`)
+      .then((r: any) => r.data.balance ?? { credits: 0, debits: 0, balance: 0 }),
+  ledgerForDeal: (dealId: string, take = 200) =>
+    axios
+      .get(`/api/escrow/deal/${dealId}`, { params: { take } })
+      .then((r: any) => r.data.transactions ?? []),
+  // Record a new entry. Body must include { dealId, type, amount, transactionDate }
+  // plus optional reference / paymentId / notes / bankAccountId.
+  postEntry: (body: Record<string, unknown>) =>
+    axios.post(`/api/escrow/transactions`, body).then((r: any) => r.data),
+  updateEntry: (id: string, body: Record<string, unknown>) =>
+    axios.patch(`/api/escrow/transactions/${id}`, body).then((r: any) => r.data),
+  deleteEntry: (id: string) =>
+    axios.delete(`/api/escrow/transactions/${id}`).then((r: any) => r.data),
 };
 
 // ----- Tiered commission -----

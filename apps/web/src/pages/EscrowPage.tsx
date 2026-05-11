@@ -8,25 +8,22 @@ import { PageHeader, PageContainer } from "../components/layout";
 interface EscrowAccount {
   id: string;
   bankName: string;
-  branch: string | null;
   accountName: string;
-  accountNo: string;
+  accountNumber: string;
   iban: string | null;
-  currency: string;
-  isActive: boolean;
-  trusteeAccount?: { trusteeName: string } | null;
+  purpose: string;
 }
 
 interface LedgerEntry {
   id: string;
-  direction: "CREDIT" | "DEBIT";
-  reason: string;
+  type: "CREDIT" | "DEBIT";
   amount: number;
-  currency: string;
-  postedAt: string;
-  postedBy: string;
-  externalRef: string | null;
+  transactionDate: string;
+  reference: string | null;
   notes: string | null;
+  createdBy: string;
+  dealId: string;
+  paymentId: string | null;
 }
 
 export default function EscrowPage() {
@@ -35,7 +32,7 @@ export default function EscrowPage() {
   const [active, setActive] = useState<string | null>(null);
   const [balance, setBalance] = useState<{ credits: number; debits: number; balance: number } | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
-  const [entry, setEntry] = useState<Record<string, string>>({ direction: "CREDIT", reason: "CUSTOMER_PAYMENT" });
+  const [entry, setEntry] = useState<Record<string, string>>({ type: "CREDIT" });
 
   const loadAccounts = async () => {
     if (!projectId) return;
@@ -48,10 +45,10 @@ export default function EscrowPage() {
     }
   };
 
-  const loadAccount = async () => {
-    if (!active) return;
+  const loadLedger = async () => {
+    if (!projectId) return;
     try {
-      const [bal, led] = await Promise.all([escrowApi.balance(active), escrowApi.ledger(active)]);
+      const [bal, led] = await Promise.all([escrowApi.balance(projectId), escrowApi.ledger(projectId)]);
       setBalance(bal);
       setLedger(led);
     } catch (e: any) {
@@ -61,25 +58,33 @@ export default function EscrowPage() {
 
   useEffect(() => {
     void loadAccounts();
+    void loadLedger();
   }, [projectId]);
-  useEffect(() => {
-    void loadAccount();
-  }, [active]);
 
   const post = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!active) return;
+    if (!projectId) return;
+    if (!entry.dealId) {
+      toast.error("Deal ID is required");
+      return;
+    }
+    if (!entry.amount || Number(entry.amount) <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
     try {
-      await escrowApi.postEntry(active, {
-        direction: entry.direction,
-        reason: entry.reason,
+      await escrowApi.postEntry({
+        dealId: entry.dealId,
+        type: entry.type,
         amount: Number(entry.amount),
-        externalRef: entry.externalRef ?? null,
+        transactionDate: entry.transactionDate || new Date().toISOString(),
+        reference: entry.reference ?? null,
         notes: entry.notes ?? null,
+        bankAccountId: active ?? null,
       });
       toast.success("Entry posted");
-      setEntry({ direction: "CREDIT", reason: "CUSTOMER_PAYMENT" });
-      await loadAccount();
+      setEntry({ type: "CREDIT" });
+      await loadLedger();
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? err.message);
     }
@@ -103,119 +108,113 @@ export default function EscrowPage() {
           <div className="space-y-5">
 
       {accounts.length === 0 ? (
-        <p className="text-muted-foreground">No escrow accounts configured for this project.</p>
+        <p className="text-muted-foreground">
+          No escrow bank account configured for this project. Configure one in
+          Project settings before recording transactions.
+        </p>
       ) : (
-        <>
-          <div className="flex gap-2">
-            {accounts.map((a) => (
-              <button
-                key={a.id}
-                className={`text-sm px-3 py-1 rounded border ${active === a.id ? "bg-primary text-white" : "bg-card"}`}
-                onClick={() => setActive(a.id)}
-              >
-                {a.bankName} · {a.accountNo}
-              </button>
-            ))}
-          </div>
-
-          {balance && (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="border rounded p-4">
-                <div className="text-xs uppercase text-muted-foreground">Credits</div>
-                <div className="text-2xl font-semibold">{formatDirham(balance.credits)}</div>
-              </div>
-              <div className="border rounded p-4">
-                <div className="text-xs uppercase text-muted-foreground">Debits</div>
-                <div className="text-2xl font-semibold">{formatDirham(balance.debits)}</div>
-              </div>
-              <div className="border rounded p-4 bg-info-soft">
-                <div className="text-xs uppercase text-muted-foreground">Balance</div>
-                <div className="text-2xl font-semibold">{formatDirham(balance.balance)}</div>
-              </div>
-            </div>
-          )}
-
-          <form className="border rounded p-4 grid grid-cols-6 gap-2 bg-muted/50" onSubmit={post}>
-            <select
-              className="border rounded px-2 py-1 text-sm"
-              value={entry.direction}
-              onChange={(e) => setEntry({ ...entry, direction: e.target.value })}
+        <div className="flex gap-2">
+          {accounts.map((a) => (
+            <button
+              key={a.id}
+              className={`text-sm px-3 py-1 rounded border ${active === a.id ? "bg-primary text-white" : "bg-card"}`}
+              onClick={() => setActive(a.id)}
             >
-              <option value="CREDIT">CREDIT</option>
-              <option value="DEBIT">DEBIT</option>
-            </select>
-            <select
-              className="border rounded px-2 py-1 text-sm"
-              value={entry.reason}
-              onChange={(e) => setEntry({ ...entry, reason: e.target.value })}
-            >
-              {[
-                "CUSTOMER_PAYMENT",
-                "DEVELOPER_DRAWDOWN",
-                "REFUND",
-                "BANK_FEE",
-                "TRANSFER",
-                "OPENING_BALANCE",
-                "ADJUSTMENT",
-              ].map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </select>
-            <input
-              className="border rounded px-2 py-1 text-sm"
-              type="number"
-              placeholder="Amount"
-              value={entry.amount ?? ""}
-              onChange={(e) => setEntry({ ...entry, amount: e.target.value })}
-            />
-            <input
-              className="border rounded px-2 py-1 text-sm"
-              placeholder="Bank ref"
-              value={entry.externalRef ?? ""}
-              onChange={(e) => setEntry({ ...entry, externalRef: e.target.value })}
-            />
-            <input
-              className="border rounded px-2 py-1 text-sm col-span-1"
-              placeholder="Notes"
-              value={entry.notes ?? ""}
-              onChange={(e) => setEntry({ ...entry, notes: e.target.value })}
-            />
-            <button className="bg-primary text-white text-sm rounded px-3 py-1" type="submit">
-              Post
+              {a.bankName} · {a.accountNumber}
             </button>
-          </form>
-
-          <h2 className="font-medium mt-4">Ledger</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
-                <th className="py-1">Posted</th>
-                <th>Direction</th>
-                <th>Reason</th>
-                <th>Amount</th>
-                <th>Ref</th>
-                <th>Notes</th>
-                <th>By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ledger.map((e) => (
-                <tr key={e.id} className="border-b">
-                  <td className="py-1">{new Date(e.postedAt).toLocaleString()}</td>
-                  <td className={e.direction === "CREDIT" ? "text-success" : "text-destructive"}>{e.direction}</td>
-                  <td>{e.reason}</td>
-                  <td className="text-right">
-                    {e.currency} {e.amount.toLocaleString()}
-                  </td>
-                  <td>{e.externalRef ?? "—"}</td>
-                  <td className="max-w-xs truncate">{e.notes ?? ""}</td>
-                  <td>{e.postedBy}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+          ))}
+        </div>
       )}
+
+      {balance && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="border rounded p-4">
+            <div className="text-xs uppercase text-muted-foreground">Credits</div>
+            <div className="text-2xl font-semibold">{formatDirham(balance.credits)}</div>
+          </div>
+          <div className="border rounded p-4">
+            <div className="text-xs uppercase text-muted-foreground">Debits</div>
+            <div className="text-2xl font-semibold">{formatDirham(balance.debits)}</div>
+          </div>
+          <div className="border rounded p-4 bg-info-soft">
+            <div className="text-xs uppercase text-muted-foreground">Balance</div>
+            <div className="text-2xl font-semibold">{formatDirham(balance.balance)}</div>
+          </div>
+        </div>
+      )}
+
+      <form className="border rounded p-4 grid grid-cols-6 gap-2 bg-muted/50" onSubmit={post}>
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={entry.type}
+          onChange={(e) => setEntry({ ...entry, type: e.target.value })}
+        >
+          <option value="CREDIT">CREDIT</option>
+          <option value="DEBIT">DEBIT</option>
+        </select>
+        <input
+          className="border rounded px-2 py-1 text-sm"
+          placeholder="Deal ID"
+          value={entry.dealId ?? ""}
+          onChange={(e) => setEntry({ ...entry, dealId: e.target.value })}
+        />
+        <input
+          className="border rounded px-2 py-1 text-sm"
+          type="number"
+          placeholder="Amount"
+          value={entry.amount ?? ""}
+          onChange={(e) => setEntry({ ...entry, amount: e.target.value })}
+        />
+        <input
+          className="border rounded px-2 py-1 text-sm"
+          type="date"
+          value={entry.transactionDate ?? ""}
+          onChange={(e) => setEntry({ ...entry, transactionDate: e.target.value })}
+        />
+        <input
+          className="border rounded px-2 py-1 text-sm"
+          placeholder="Reference"
+          value={entry.reference ?? ""}
+          onChange={(e) => setEntry({ ...entry, reference: e.target.value })}
+        />
+        <button className="bg-primary text-white text-sm rounded px-3 py-1" type="submit">
+          Post
+        </button>
+        <input
+          className="border rounded px-2 py-1 text-sm col-span-6"
+          placeholder="Notes"
+          value={entry.notes ?? ""}
+          onChange={(e) => setEntry({ ...entry, notes: e.target.value })}
+        />
+      </form>
+
+      <h2 className="font-medium mt-4">Ledger</h2>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+            <th className="py-1">Date</th>
+            <th>Type</th>
+            <th>Deal</th>
+            <th>Amount</th>
+            <th>Ref</th>
+            <th>Notes</th>
+            <th>By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ledger.map((e) => (
+            <tr key={e.id} className="border-b">
+              <td className="py-1">{new Date(e.transactionDate).toLocaleDateString()}</td>
+              <td className={e.type === "CREDIT" ? "text-success" : "text-destructive"}>{e.type}</td>
+              <td className="font-mono text-xs">{e.dealId}</td>
+              <td className="text-right">{formatDirham(e.amount)}</td>
+              <td>{e.reference ?? "—"}</td>
+              <td className="max-w-xs truncate">{e.notes ?? ""}</td>
+              <td>{e.createdBy}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
           </div>
         </PageContainer>
       </div>

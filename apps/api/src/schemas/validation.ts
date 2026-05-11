@@ -483,6 +483,33 @@ export const addKycDocumentSchema = z.object({
 export type UpdateKycInput = z.infer<typeof updateKycSchema>;
 export type AddKycDocumentInput = z.infer<typeof addKycDocumentSchema>;
 
+// ===== ESCROW TRANSACTIONS =====
+const ESCROW_TX_TYPES = ["CREDIT", "DEBIT"] as const;
+
+export const recordEscrowTransactionSchema = z.object({
+  dealId:          z.string().min(1, "dealId is required"),
+  type:            z.enum(ESCROW_TX_TYPES),
+  amount:          z.number().positive("amount must be greater than 0"),
+  transactionDate: z.string().min(1, "transactionDate is required"),
+  bankAccountId:   z.string().optional().nullable(),
+  reference:       z.string().optional().nullable(),
+  paymentId:       z.string().optional().nullable(),
+  notes:           z.string().optional().nullable(),
+});
+
+export const updateEscrowTransactionSchema = z
+  .object({
+    reference: z.string().optional().nullable(),
+    notes:     z.string().optional().nullable(),
+  })
+  .refine(
+    (v) => v.reference !== undefined || v.notes !== undefined,
+    { message: "At least one of `reference` or `notes` is required" },
+  );
+
+export type RecordEscrowTransactionInput = z.infer<typeof recordEscrowTransactionSchema>;
+export type UpdateEscrowTransactionInput = z.infer<typeof updateEscrowTransactionSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
