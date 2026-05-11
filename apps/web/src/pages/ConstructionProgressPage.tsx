@@ -15,16 +15,11 @@ interface Milestone {
   phaseId: string | null;
 }
 
-const STAGES = [
-  "EXCAVATION",
-  "FOUNDATION",
-  "STRUCTURE",
-  "ENCLOSURE",
-  "MEP",
-  "FINISHES",
-  "HANDOVER_READY",
-  "COMPLETED",
-];
+// Legacy stage buckets — kept for backwards-compat reference. The current
+// backend (ConstructionMilestone) doesn't carry a `stage` enum; the API
+// client normalises every milestone to a single "MILESTONE" stage so the
+// section-grouping render path below collapses to one flat list.
+const STAGES = ["MILESTONE"];
 
 export default function ConstructionProgressPage() {
   const { projectId } = useParams<{ projectId: string }>();
