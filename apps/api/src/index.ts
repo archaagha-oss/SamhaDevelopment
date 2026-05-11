@@ -49,6 +49,7 @@ import handoverRoutes from "./routes/handover";
 // Integrated CRM routes (broker dashboard + finance)
 import brokerDashboardRoutes from "./routes/brokerDashboard";
 import financeRoutes from "./routes/finance";
+import myDayRoutes from "./routes/myDay";
 // Phase 4 routes — disabled pending schema migration (Phase, UnitTypePlan,
 // CommissionTier, Invoice, Receipt, Refund, Escrow, Handover, Snag, KYC, etc.)
 // Files are present under src/routes but require ~36 additional schema models.
@@ -291,6 +292,7 @@ app.use("/api/compliance", complianceRoutes);
 app.use("/api/handover", handoverRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
+app.use("/api/my-day", myDayRoutes);
 
 // ===== ERROR HANDLING =====
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

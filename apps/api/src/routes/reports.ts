@@ -418,8 +418,27 @@ router.get("/leads/by-stage", async (req, res) => {
 // Get deals by stage
 router.get("/deals/by-stage", async (req, res) => {
   try {
+    // Optional `?assignedAgent=me` — restrict the rollup to deals whose lead
+    // is assigned to the calling user. Powers the right-rail pipeline pulse on
+    // the My Day home (UX_AUDIT_2 Part B). Any other value is currently
+    // ignored — caller-side filtering happens through other report endpoints.
+    let where: any = {};
+    if (req.query.assignedAgent === "me") {
+      const { resolveCaller } = await import("../lib/pii");
+      const { userId } = await resolveCaller(req);
+      if (!userId) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          code: "UNAUTHENTICATED",
+          statusCode: 401,
+        });
+      }
+      where = { lead: { assignedAgentId: userId } };
+    }
+
     const stages = await prisma.deal.groupBy({
       by: ["stage"],
+      where,
       _count: { id: true },
       _sum: { salePrice: true },
       orderBy: { _count: { id: "desc" } },
