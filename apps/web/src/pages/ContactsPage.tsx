@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -174,6 +174,13 @@ export default function ContactsPage() {
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-4">
+            {/* Brokers is a filtered view of contacts (UX_AUDIT_3 §5). */}
+            <div className="flex items-center gap-2 text-xs flex-wrap">
+              <span className="text-muted-foreground font-medium">Related:</span>
+              <Link to="/brokers" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                Brokers
+              </Link>
+            </div>
             <FilterBar
               search={{
                 value: search,

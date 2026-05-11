@@ -6,6 +6,7 @@ import { formatDirham } from "@/lib/money";
 import PaymentActionModal, { PaymentAction, PaymentSummary } from "./PaymentActionModal";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface Payment extends PaymentSummary {
   percentage: number;
@@ -183,6 +184,20 @@ export default function PaymentReportPage() {
       />
 
       <PageContainer padding="default" className="space-y-5">
+      {/* Related-views row — Refunds was demoted from the sidebar in
+          UX_AUDIT_3 §5; it lives here because refunds are payment-adjacent. */}
+      <div className="flex items-center gap-2 text-xs flex-wrap">
+        <span className="text-muted-foreground font-medium">Related:</span>
+        <Link to="/refunds" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+          Refunds
+        </Link>
+        <Link to="/payment-plans" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+          Payment plans
+        </Link>
+        <Link to="/payments/bulk-import" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+          Bulk import
+        </Link>
+      </div>
       {/* Collections overview widgets — shown on OVERDUE tab */}
       {activeStatus === "OVERDUE" && collections && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

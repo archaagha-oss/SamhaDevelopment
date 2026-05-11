@@ -347,6 +347,17 @@ export default function SettingsPage() {
       />
 
       <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-5 space-y-5">
+        {/* Related-views row — Commission tiers was demoted from sidebar to
+            Settings in UX_AUDIT_3 §5. Shown on the Finance tab where it
+            belongs conceptually. */}
+        {tab === "finance" && (
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            <span className="text-muted-foreground font-medium">Related:</span>
+            <Link to="/commission-tiers" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+              Commission tiers
+            </Link>
+          </div>
+        )}
         {tab === "company"        && <CompanySection        form={form} set={set} saving={saving === "company"}        onSave={() => save("company",        { companyName: form.companyName, logoUrl: form.logoUrl, primaryColor: form.primaryColor, secondaryColor: form.secondaryColor, theme: form.theme })} />}
         {tab === "localization"   && <LocalizationSection   form={form} set={set} saving={saving === "localization"}   onSave={() => save("localization",   { timezone: form.timezone, currency: form.currency, dateFormat: form.dateFormat })} />}
         {tab === "communication"  && <CommunicationSection  form={form} set={set} saving={saving === "communication"}  onSave={() => save("communication",  communicationBody(form))} />}

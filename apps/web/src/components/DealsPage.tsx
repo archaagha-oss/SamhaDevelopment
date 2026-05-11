@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
@@ -266,6 +266,25 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
       />
 
       <PageContainer padding="compact" className="flex-shrink-0 space-y-3">
+        {/* Related-views row — entry points for screens that used to live in
+            the sidebar (UX_AUDIT_3 §5). Pre-deal artifacts (Reservations,
+            Offers) and post-signing artifacts (Contracts) belong in the deal
+            workspace, not as top-level destinations. */}
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          <span className="text-muted-foreground font-medium">Related:</span>
+          <Link to="/reservations" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            Reservations
+          </Link>
+          <Link to="/offers-list" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            Offers
+          </Link>
+          <Link to="/contracts" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            Contracts
+          </Link>
+          <Link to="/brokers" className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            Brokers
+          </Link>
+        </div>
         <FilterBar
           search={{
             value: search,
