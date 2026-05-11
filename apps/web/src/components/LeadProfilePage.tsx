@@ -1197,7 +1197,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                           <optgroup label="Lead's Interested Units">
                             {interested.map((u) => (
                               <option key={u.id} value={u.id}>
-                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — AED {u.price.toLocaleString()}
+                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — {formatDirham(u.price)}
                               </option>
                             ))}
                           </optgroup>
@@ -1206,7 +1206,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                           <optgroup label="Other Available Units">
                             {others.map((u) => (
                               <option key={u.id} value={u.id}>
-                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — AED {u.price.toLocaleString()}
+                                Unit {u.unitNumber} — {u.type.replace(/_/g, " ")} — {formatDirham(u.price)}
                               </option>
                             ))}
                           </optgroup>
@@ -1267,7 +1267,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         <optgroup label="Lead's Interested Units">
                           {interested.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.unitNumber} · {u.type} · AED {u.price.toLocaleString()}{u.status === "ON_HOLD" ? " (On Hold)" : ""}
+                              {u.unitNumber} · {u.type} · {formatDirham(u.price)}{u.status === "ON_HOLD" ? " (On Hold)" : ""}
                             </option>
                           ))}
                         </optgroup>
@@ -1276,7 +1276,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                         <optgroup label="Other Available Units">
                           {others.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.unitNumber} · {u.type} · AED {u.price.toLocaleString()}{u.status === "ON_HOLD" ? " (On Hold)" : ""}
+                              {u.unitNumber} · {u.type} · {formatDirham(u.price)}{u.status === "ON_HOLD" ? " (On Hold)" : ""}
                             </option>
                           ))}
                         </optgroup>

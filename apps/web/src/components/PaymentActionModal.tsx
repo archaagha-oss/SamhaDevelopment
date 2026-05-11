@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 
 export type PaymentAction =
   | "MARK_PAID"
@@ -83,7 +84,7 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
       } else if (action === "PARTIAL") {
         const amt = parseFloat(partialAmount);
         if (!amt || amt <= 0) throw new Error("Enter a valid amount");
-        if (amt > payment.amount) throw new Error(`Amount cannot exceed AED ${payment.amount.toLocaleString()}`);
+        if (amt > payment.amount) throw new Error(`Amount cannot exceed AED ${payment.amount.toLocaleString()}`); // toast text — text-only context, keep AED literal
         await axios.post(`${base}/partial`, { amount: amt, paymentMethod, notes: notes || undefined });
       } else if (action === "ADJUST_DATE") {
         if (!reason.trim()) throw new Error("Reason is required");
@@ -124,7 +125,7 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
         {/* Payment info bar */}
         <div className="px-6 py-3 bg-muted/50 border-b border-border flex items-center justify-between">
           <span className="text-xs text-muted-foreground">{payment.milestoneLabel}</span>
-          <span className="text-sm font-bold text-foreground">AED {payment.amount.toLocaleString()}</span>
+          <span className="text-sm font-bold text-foreground">{formatDirham(payment.amount)}</span>
         </div>
 
         {/* Form body */}
@@ -187,7 +188,7 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "PARTIAL" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Amount (AED) *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Amount *</label>
                 <input type="number" value={partialAmount} onChange={(e) => setPartialAmount(e.target.value)}
                   placeholder={`Max: ${payment.amount.toLocaleString()}`} min={1} max={payment.amount}
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
@@ -225,7 +226,7 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
           {action === "ADJUST_AMOUNT" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">New Amount (AED) *</label>
+                <label className="block text-xs font-medium text-foreground mb-1">New Amount *</label>
                 <input type="number" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} min={1}
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>

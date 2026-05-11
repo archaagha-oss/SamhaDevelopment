@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Check, Lightbulb } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { OverduePayment } from "../../hooks/useFinanceDashboard";
 
 interface OverdueAlertsTableProps {
@@ -128,7 +129,7 @@ export default function OverdueAlertsTable({
                 </td>
                 <td className="px-4 py-3 text-foreground">{payment.leadName}</td>
                 <td className="px-4 py-3 text-right font-semibold text-foreground">
-                  AED {payment.amount.toLocaleString()}
+                  {formatDirham(payment.amount)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{payment.milestoneLabel}</td>
                 <td className="px-4 py-3 text-center">

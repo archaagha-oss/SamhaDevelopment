@@ -1,4 +1,5 @@
 import { Check, CheckCircle2, Circle } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 
 interface CommissionUnlockStatusProps {
   amount: number;
@@ -32,7 +33,7 @@ export default function CommissionUnlockStatus({
         <div>
           <p className="text-sm font-semibold text-foreground">Broker Commission</p>
           <p className="text-2xl font-bold text-chart-7">
-            {amount.toLocaleString()} AED
+            {formatDirham(amount)}
           </p>
         </div>
         <span

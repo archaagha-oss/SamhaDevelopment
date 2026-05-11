@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AlertTriangle, Check } from "lucide-react";
+import { formatDirhamCompact } from "@/lib/money";
 import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -239,13 +240,13 @@ export default function ExecutiveDashboard(): React.ReactNode {
   const kpis = [
     {
       label: "Revenue Collected",
-      value: `AED ${fmtAED(overview.revenueCollected)}`,
+      value: formatDirhamCompact(overview.revenueCollected),
       sub: period === "ALL" ? "All time" : activePeriodLabel,
       tone: KPI_TONES.success, icon: "↑",
     },
     {
       label: "Pipeline Value",
-      value: `AED ${fmtAED(overview.pipelineValue)}`,
+      value: formatDirhamCompact(overview.pipelineValue),
       sub: `${overview.totalDeals} active deals`,
       tone: KPI_TONES.brand, icon: "◈",
     },
@@ -263,7 +264,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
     },
     {
       label: "Overdue Payments",
-      value: `AED ${fmtAED(overview.overduePayments)}`,
+      value: formatDirhamCompact(overview.overduePayments),
       sub: `${overdueAlertsCount} payment${overdueAlertsCount === 1 ? "" : "s"}`,
       tone: KPI_TONES.danger, icon: "!",
       onClick: () => navigate("/payments"),
@@ -381,7 +382,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Overdue Payments</p>
             </div>
             <p className="text-2xl font-semibold text-foreground tabular-nums">{collections.overdue.count}</p>
-            <p className="text-xs text-destructive mt-1 tabular-nums">AED {fmtAED(collections.overdue.total)} past due</p>
+            <p className="text-xs text-destructive mt-1 tabular-nums">{formatDirhamCompact(collections.overdue.total)} past due</p>
           </button>
 
           {/* Upcoming 7 days */}
@@ -394,7 +395,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Due in 7 Days</p>
             </div>
             <p className="text-2xl font-semibold text-foreground tabular-nums">{collections.upcoming.next7Days.count}</p>
-            <p className="text-xs text-warning mt-1 tabular-nums">AED {fmtAED(collections.upcoming.next7Days.total)} expected</p>
+            <p className="text-xs text-warning mt-1 tabular-nums">{formatDirhamCompact(collections.upcoming.next7Days.total)} expected</p>
           </button>
 
           {/* Pending Tasks */}
@@ -461,7 +462,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
                   color: cssVar("--popover-foreground"),
                 }}
                 labelStyle={{ color: cssVar("--foreground") }}
-                formatter={(v) => `AED ${fmtAED(Number(v) || 0)}`}
+                formatter={(v) => fmtAED(Number(v) || 0)}
               />
               <Area type="monotone" dataKey="expected"  stroke={cssVar("--chart-1")} strokeWidth={2} fill="url(#colExpected)"  />
               <Area type="monotone" dataKey="collected" stroke={cssVar("--success")} strokeWidth={2} fill="url(#colCollected)" />
@@ -606,7 +607,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-semibold text-success tabular-nums">AED {fmtAED(a.dealRevenue)}</p>
+                      <p className="text-sm font-semibold text-success tabular-nums">{formatDirhamCompact(a.dealRevenue)}</p>
                       <p className="text-xs text-muted-foreground">revenue</p>
                     </div>
                   </div>
@@ -718,7 +719,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
           <div>
             <p className="text-xs text-muted-foreground">DLD Waived</p>
             <p className="text-xl font-semibold text-primary mt-0.5 tabular-nums">
-              AED {fmtAED(overview.developerIncentives?.dldWaivedTotal ?? 0)}
+              {formatDirhamCompact(overview.developerIncentives?.dldWaivedTotal ?? 0)}
             </p>
           </div>
         </div>

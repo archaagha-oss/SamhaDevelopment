@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDirham } from "@/lib/money";
 import { ApprovedCommission } from "../../hooks/useBrokerDashboard";
 
 interface ApprovedCommissionsTableProps {
@@ -61,7 +62,7 @@ export default function ApprovedCommissionsTable({
                 <td className="px-4 py-3 font-semibold text-foreground">{commission.dealNumber}</td>
                 <td className="px-4 py-3 text-foreground">{commission.leadName}</td>
                 <td className="px-4 py-3 text-right font-semibold text-foreground">
-                  AED {commission.amount.toLocaleString()}
+                  {formatDirham(commission.amount)}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className={`px-3 py-1 rounded text-xs font-semibold ${

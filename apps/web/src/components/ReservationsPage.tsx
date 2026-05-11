@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import Modal from "./Modal";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
@@ -166,7 +167,7 @@ export default function ReservationsPage() {
                       <td className="px-5 py-3">
                         <p className="font-semibold text-foreground">{r.unit.unitNumber}</p>
                         <p className="text-xs text-muted-foreground">
-                          AED {r.unit.price?.toLocaleString("en-AE") ?? "—"}
+                          {r.unit.price != null ? formatDirham(r.unit.price) : "—"}
                         </p>
                       </td>
                       <td className="px-5 py-3">

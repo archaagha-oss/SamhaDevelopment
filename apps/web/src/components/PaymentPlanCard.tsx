@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDirham } from "@/lib/money";
 import { useUpdateUnit } from "../hooks/useUpdateUnit";
 
 interface Props {
@@ -145,7 +146,7 @@ export default function PaymentPlanCard({ unitId, paymentPlan, price }: Props) {
                 </div>
                 <div className="w-32 text-right">
                   <span className="text-xs font-semibold text-foreground">
-                    AED {t.amount.toLocaleString("en-AE")}
+                    {formatDirham(t.amount)}
                   </span>
                 </div>
               </div>

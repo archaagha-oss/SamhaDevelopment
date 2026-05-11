@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { AlertTriangle, Calendar, CheckCircle2 } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { PageHeader, PageContainer } from "./layout";
 
 interface Deal {
@@ -248,7 +249,7 @@ export default function FinanceDashboard() {
               <div className="bg-card border border-border rounded-lg p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Total Receivable</p>
                 <p className="text-2xl font-bold text-foreground">
-                  AED {(metrics.totalReceivable / 1_000_000).toFixed(1)}M
+                  {formatDirham(metrics.totalReceivable / 1_000_000, { decimals: 1 })}M
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{deals.length} deals</p>
               </div>
@@ -256,14 +257,14 @@ export default function FinanceDashboard() {
               <div className="bg-card border border-border rounded-lg p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Collected</p>
                 <p className="text-2xl font-bold text-success">
-                  AED {(metrics.totalPaid / 1_000_000).toFixed(1)}M
+                  {formatDirham(metrics.totalPaid / 1_000_000, { decimals: 1 })}M
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{metrics.paidPercentage}% collected</p>
               </div>
 
               <div className="bg-card border border-destructive/30 rounded-lg p-4 bg-destructive-soft">
                 <p className="text-xs text-destructive uppercase tracking-wide font-semibold mb-2 inline-flex items-center gap-1"><AlertTriangle className="size-3.5" /> Overdue</p>
-                <p className="text-2xl font-bold text-destructive">AED {(metrics.totalOverdue / 1_000_000).toFixed(1)}M</p>
+                <p className="text-2xl font-bold text-destructive">{formatDirham(metrics.totalOverdue / 1_000_000, { decimals: 1 })}M</p>
                 <p className="text-xs text-destructive mt-1">{metrics.overdueCount} payments</p>
               </div>
 
@@ -302,7 +303,7 @@ export default function FinanceDashboard() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      AED {(item.totalPaid / 1_000_000).toFixed(1)}M / {(item.totalValue / 1_000_000).toFixed(1)}M
+                      {formatDirham(item.totalPaid / 1_000_000, { decimals: 1 })}M / {(item.totalValue / 1_000_000).toFixed(1)}M
                     </p>
                   </div>
                 ))}
@@ -343,7 +344,7 @@ export default function FinanceDashboard() {
                         </td>
                         <td className="px-4 py-3 text-foreground">{p.milestoneLabel}</td>
                         <td className="px-4 py-3 text-right font-semibold text-foreground">
-                          AED {p.amount.toLocaleString()}
+                          {formatDirham(p.amount)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="px-2 py-1 rounded-full bg-destructive-soft text-destructive font-semibold text-xs">
@@ -394,7 +395,7 @@ export default function FinanceDashboard() {
                         </td>
                         <td className="px-4 py-3 text-foreground">{p.milestoneLabel}</td>
                         <td className="px-4 py-3 text-right font-semibold text-foreground">
-                          AED {p.amount.toLocaleString()}
+                          {formatDirham(p.amount)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="px-2 py-1 rounded-full bg-warning-soft text-warning font-semibold text-xs">
@@ -434,15 +435,15 @@ export default function FinanceDashboard() {
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Total Value</p>
-                    <p className="font-semibold text-foreground">AED {(item.totalValue / 1_000_000).toFixed(1)}M</p>
+                    <p className="font-semibold text-foreground">{formatDirham(item.totalValue / 1_000_000, { decimals: 1 })}M</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Paid</p>
-                    <p className="font-semibold text-success">AED {(item.totalPaid / 1_000_000).toFixed(1)}M</p>
+                    <p className="font-semibold text-success">{formatDirham(item.totalPaid / 1_000_000, { decimals: 1 })}M</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Outstanding</p>
-                    <p className="font-semibold text-destructive">AED {(item.outstanding / 1_000_000).toFixed(1)}M</p>
+                    <p className="font-semibold text-destructive">{formatDirham(item.outstanding / 1_000_000, { decimals: 1 })}M</p>
                   </div>
                 </div>
               </div>

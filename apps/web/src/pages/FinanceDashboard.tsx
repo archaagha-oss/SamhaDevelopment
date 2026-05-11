@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatDirhamCompact } from "@/lib/money";
 import {
   useFinanceSummary,
   usePaymentBreakdown,
@@ -92,7 +93,7 @@ export default function FinanceDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricsCard
                 label="Total Due"
-                value={`AED ${(summary.data.totalDue / 1000000).toFixed(1)}M`}
+                value={formatDirhamCompact(summary.data.totalDue)}
                 subtext={`${summary.data.collectionRate}% collected`}
                 trend="stable"
                 onClick={() => setActiveMetric("due")}
@@ -100,21 +101,21 @@ export default function FinanceDashboard() {
               />
               <MetricsCard
                 label="Collected"
-                value={`AED ${(summary.data.collected / 1000000).toFixed(1)}M`}
+                value={formatDirhamCompact(summary.data.collected)}
                 subtext="Payments received"
                 trend="up"
                 className="bg-success-soft border-success/30"
               />
               <MetricsCard
                 label="Overdue"
-                value={`AED ${(summary.data.overdue / 1000000).toFixed(1)}M`}
+                value={formatDirhamCompact(summary.data.overdue)}
                 subtext={`${overdue.data.length} payments`}
                 trend="down"
                 className="bg-destructive-soft border-destructive/30"
               />
               <MetricsCard
                 label="At Risk"
-                value={`AED ${(summary.data.atRisk / 1000000).toFixed(1)}M`}
+                value={formatDirhamCompact(summary.data.atRisk)}
                 subtext="Due in 30 days"
                 trend="down"
                 className="bg-warning-soft border-warning/30"

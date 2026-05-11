@@ -456,7 +456,7 @@ export default function LeadEditPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={lbl}>Budget (AED)</label>
+                  <label className={lbl}>Budget</label>
                   <input
                     type="number" min={0} step={1000}
                     value={form.budget}

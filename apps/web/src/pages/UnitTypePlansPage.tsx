@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import { typePlansApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 
@@ -120,7 +121,7 @@ export default function UnitTypePlansPage() {
               ["externalArea", "External area"],
               ["bathrooms", "Bathrooms"],
               ["parkingSpaces", "Parking"],
-              ["basePrice", "Base price (AED)"],
+              ["basePrice", "Base price"],
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="flex flex-col text-xs text-foreground">
@@ -175,7 +176,7 @@ export default function UnitTypePlansPage() {
                 <td>{p.type}</td>
                 <td>{p.area ?? "—"}</td>
                 <td>{p.bathrooms ?? "—"}</td>
-                <td>{p.basePrice != null ? `AED ${p.basePrice.toLocaleString()}` : "—"}</td>
+                <td>{p.basePrice != null ? formatDirham(p.basePrice) : "—"}</td>
                 <td>{p._count?.units ?? 0}</td>
                 <td>
                   <button

@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDirham } from "@/lib/money";
 import { BrokerPerformance } from "../../hooks/useFinanceDashboard";
 
 interface BrokerPerformanceTableProps {
@@ -78,12 +79,12 @@ export default function BrokerPerformanceTable({
 
                 {/* Total Sale Price */}
                 <td className="px-4 py-3 text-right font-semibold text-foreground">
-                  AED {(broker.totalSalePrice / 1000000).toFixed(1)}M
+                  {formatDirham(broker.totalSalePrice / 1000000, { decimals: 1 })}M
                 </td>
 
                 {/* Collected Amount */}
                 <td className="px-4 py-3 text-right font-semibold text-success">
-                  AED {(broker.collectionAmount / 1000000).toFixed(1)}M
+                  {formatDirham(broker.collectionAmount / 1000000, { decimals: 1 })}M
                 </td>
 
                 {/* Collection Rate with Visual Bar */}

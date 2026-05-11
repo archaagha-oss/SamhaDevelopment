@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import DealActivityPanel from "./DealActivityPanel";
 import DealDetailContent from "./DealDetailContent";
 import DealSummaryPanel from "./DealSummaryPanel";
@@ -199,7 +200,7 @@ export default function DealDetailLayout({ dealId: dealIdProp, onBack }: Props) 
             </p>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Sale Price: AED {deal.salePrice.toLocaleString()}</span>
+            <span className="inline-flex items-center gap-1">Sale Price: {formatDirham(deal.salePrice)}</span>
             <span>Unit: {deal.unit.unitNumber}</span>
           </div>
           <button

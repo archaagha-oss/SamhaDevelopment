@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { formatDirham } from "@/lib/money";
 
 interface DealSummaryPanelProps {
   deal: {
@@ -108,7 +109,7 @@ export default function DealSummaryPanel({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Sale Price:</span>
             <span className="font-bold text-foreground">
-              AED {deal.salePrice.toLocaleString()}
+              {formatDirham(deal.salePrice)}
             </span>
           </div>
           {deal.brokerCompany && (
@@ -134,7 +135,7 @@ export default function DealSummaryPanel({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                AED {paymentProgress.paid.toLocaleString()} of AED {paymentProgress.total.toLocaleString()}
+                {formatDirham(paymentProgress.paid)} of {formatDirham(paymentProgress.total)}
               </span>
               <span className="font-medium text-foreground">{paymentProgress.percentage}%</span>
             </div>
@@ -163,7 +164,7 @@ export default function DealSummaryPanel({
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-foreground font-medium">
-                      AED {payment.amount.toLocaleString()}
+                      {formatDirham(payment.amount)}
                     </span>
                     <span
                       className={`text-xs font-medium px-2 py-1 rounded ${

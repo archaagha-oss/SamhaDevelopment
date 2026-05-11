@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { formatDirham } from "@/lib/money";
 
 interface PaymentBreakdownProps {
   data: Record<string, { count: number; amount: number }>;
@@ -55,7 +56,7 @@ export default function PaymentBreakdownChart({ data }: PaymentBreakdownProps) {
                 <div className={`${colors.bar} h-full`} style={{ width: `${item.percent}%` }} />
               </div>
               <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                <span>AED {(item.amount / 1000000).toFixed(1)}M</span>
+                <span>{formatDirham(item.amount / 1000000, { decimals: 1 })}M</span>
                 <span>{item.count} payments</span>
               </div>
             </div>
@@ -74,7 +75,7 @@ export default function PaymentBreakdownChart({ data }: PaymentBreakdownProps) {
         <div>
           <p className="text-xs text-muted-foreground">Total Amount</p>
           <p className="text-lg font-bold text-foreground">
-            AED {(breakdown.reduce((sum, item) => sum + item.amount, 0) / 1000000).toFixed(1)}M
+            {formatDirham(breakdown.reduce((sum, item) => sum + item.amount, 0) / 1000000, { decimals: 1 })}M
           </p>
         </div>
         <div>

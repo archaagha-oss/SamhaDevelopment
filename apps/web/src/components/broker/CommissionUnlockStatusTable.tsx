@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDirham } from "@/lib/money";
 import { CommissionUnlockStatus } from "../../hooks/useBrokerDashboard";
 
 interface CommissionUnlockStatusTableProps {
@@ -81,7 +82,7 @@ export default function CommissionUnlockStatusTable({
           {/* Commission Info */}
           {item.commission && (
             <div className="mt-3 pt-3 border-t border-current border-opacity-20 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Commission: AED {item.commission.amount.toLocaleString()}</span>
+              <span className="text-muted-foreground inline-flex items-center gap-1">Commission: {formatDirham(item.commission.amount)}</span>
               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                 item.commission.status === "PENDING_APPROVAL" ? "bg-warning-soft text-warning" :
                 item.commission.status === "APPROVED" ? "bg-success-soft text-success" :

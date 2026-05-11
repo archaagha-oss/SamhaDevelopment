@@ -2,7 +2,12 @@ import React from "react";
 
 interface MetricsCardProps {
   label: string;
-  value: string | number;
+  /**
+   * Card value. Accepts a number, a pre-formatted string, or a ReactNode —
+   * the latter is used when the value is `formatDirham(n)` (returns JSX so
+   * the dirham symbol can render inline).
+   */
+  value: React.ReactNode;
   subtext?: string;
   trend?: "up" | "down" | "stable";
   icon?: React.ReactNode;

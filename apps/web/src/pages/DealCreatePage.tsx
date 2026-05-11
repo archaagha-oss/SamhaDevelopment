@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { formatDirham } from "@/lib/money";
+import { DirhamSign } from "@/components/ui/DirhamSign";
 import { DetailPageLayout } from "../components/layout";
 import { Button } from "@/components/ui/button";
 
@@ -315,7 +317,7 @@ export default function DealCreatePage() {
                             <p className="text-xs text-muted-foreground">{fmtArea(u.area)} · {u.view}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-bold text-foreground tabular-nums">AED {u.price.toLocaleString()}</p>
+                            <p className="text-sm font-bold text-foreground tabular-nums">{formatDirham(u.price)}</p>
                           </div>
                           {unitId === u.id && <Check className="size-4 text-primary ml-1" />}
                         </button>
@@ -328,7 +330,7 @@ export default function DealCreatePage() {
               {unitId && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className={lbl}>Sale Price (AED)</label>
+                    <label className={lbl}>Sale Price</label>
                     <input
                       required type="number" min={1} step={1}
                       value={salePrice}
@@ -336,11 +338,11 @@ export default function DealCreatePage() {
                       className={inp}
                     />
                     {selectedUnit && parseFloat(salePrice) !== selectedUnit.price && (
-                      <p className="text-xs text-muted-foreground mt-1">Listed: AED {selectedUnit.price.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Listed: {formatDirham(selectedUnit.price)}</p>
                     )}
                   </div>
                   <div>
-                    <label className={lbl}>Discount (AED)</label>
+                    <label className={lbl}>Discount</label>
                     <input
                       type="number" min={0} step={1} placeholder="0"
                       value={discount}
@@ -355,17 +357,17 @@ export default function DealCreatePage() {
                 <div className="bg-muted/50 border border-border rounded-xl px-4 py-3 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Sale Price</p>
-                    <p className="font-bold text-foreground tabular-nums">AED {(parseFloat(salePrice) || 0).toLocaleString()}</p>
+                    <p className="font-bold text-foreground tabular-nums">{formatDirham(parseFloat(salePrice) || 0)}</p>
                   </div>
                   {parseFloat(discount) > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Discount</p>
-                      <p className="font-bold text-success tabular-nums">− AED {(parseFloat(discount) || 0).toLocaleString()}</p>
+                      <p className="font-bold text-success tabular-nums">− {formatDirham(parseFloat(discount) || 0)}</p>
                     </div>
                   )}
                   <div className={parseFloat(discount) > 0 ? "" : "col-span-2"}>
                     <p className="text-xs text-muted-foreground mb-0.5">Net Price</p>
-                    <p className="font-bold text-primary text-base tabular-nums">AED {netPrice.toLocaleString()}</p>
+                    <p className="font-bold text-primary text-base tabular-nums">{formatDirham(netPrice)}</p>
                   </div>
                 </div>
               )}
@@ -429,7 +431,7 @@ export default function DealCreatePage() {
                                     <td className="px-4 py-2 text-right font-bold text-foreground tabular-nums">{m.percentage}%</td>
                                     {netPrice > 0 && (
                                       <td className="px-4 py-2 text-right font-bold text-primary tabular-nums">
-                                        {amt !== null ? `AED ${amt.toLocaleString()}` : "—"}
+                                        {amt !== null ? formatDirham(amt) : "—"}
                                       </td>
                                     )}
                                     <td className="px-4 py-2 text-muted-foreground">{m.triggerType?.replace(/_/g, " ")}</td>
@@ -440,7 +442,7 @@ export default function DealCreatePage() {
                           </table>
                           {netPrice <= 0 && (
                             <p className="px-4 py-2 text-xs text-warning bg-warning-soft border-t border-warning/30">
-                              Set sale price in step 2 to see AED amounts
+                              Set sale price in step 2 to see <DirhamSign className="inline size-3" aria-label="dirham" /> amounts
                             </p>
                           )}
                         </div>
@@ -565,7 +567,7 @@ export default function DealCreatePage() {
                     {selectedUnit ? `${selectedUnit.unitNumber} · Fl. ${selectedUnit.floor}` : "—"}
                   </div>
                   <div><span className="text-muted-foreground">Net Price</span></div>
-                  <div className="font-bold text-primary tabular-nums">AED {netPrice.toLocaleString()}</div>
+                  <div className="font-bold text-primary tabular-nums">{formatDirham(netPrice)}</div>
                   <div><span className="text-muted-foreground">Payment Plan</span></div>
                   <div className="font-semibold text-foreground">{selectedPlan?.name || "—"}</div>
                   {brokerCompanyId && (
