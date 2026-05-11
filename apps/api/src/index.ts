@@ -46,6 +46,7 @@ import communicationsRoutes from "./routes/communications";
 import streamRoutes from "./routes/stream";
 import complianceRoutes from "./routes/compliance";
 import handoverRoutes from "./routes/handover";
+import commissionTierRoutes from "./routes/commissionTiers";
 // Integrated CRM routes (broker dashboard + finance)
 import brokerDashboardRoutes from "./routes/brokerDashboard";
 import financeRoutes from "./routes/finance";
@@ -289,6 +290,7 @@ app.use("/api/communications", communicationsRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/compliance", complianceRoutes);
 app.use("/api/handover", handoverRoutes);
+app.use("/api/commission-tiers", commissionTierRoutes);
 app.use("/api/broker-dashboard", brokerDashboardRoutes);
 app.use("/api/finance", financeRoutes);
 
