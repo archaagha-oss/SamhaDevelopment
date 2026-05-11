@@ -2,6 +2,26 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Search } from "lucide-react";
+import { GOTO_MAP } from "../hooks/useKeyboardShortcuts";
+
+// Friendly labels for the g-chord destinations shown in the "Shortcuts"
+// section. Keep in sync with GOTO_MAP — anything in GOTO_MAP without a
+// label here falls back to the destination path itself.
+const GOTO_LABELS: Record<string, string> = {
+  h: "Today",
+  l: "Leads",
+  d: "Deals",
+  c: "Contacts",
+  u: "Units",
+  p: "Projects",
+  r: "Reports",
+  s: "Settings",
+  t: "Team",
+  i: "Hot inbox",
+  f: "Finance",
+  m: "Commissions",
+  a: "Tasks",
+};
 
 interface SearchResult {
   id: string;
@@ -286,8 +306,36 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
         {/* Results list */}
         <div className="max-h-[55vh] overflow-y-auto divide-y divide-border">
           {!query && (
-            <div className="px-5 py-12 text-center text-muted-foreground text-sm">
-              Start typing to search across leads, units, and deals
+            <div className="px-5 py-5 space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Start typing to search across leads, units, and deals — or jump
+                somewhere with a keyboard shortcut:
+              </p>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                  Shortcuts
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {Object.entries(GOTO_MAP).map(([key, path]) => (
+                    <button
+                      key={key}
+                      onClick={() => { navigate(path); onClose(); }}
+                      className="flex items-center justify-between gap-3 px-2 py-1 rounded-md text-xs hover:bg-muted transition-colors group"
+                    >
+                      <span className="text-foreground/90 group-hover:text-foreground">
+                        {GOTO_LABELS[key] ?? path}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
+                        g {key}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3">
+                  Press <kbd className="font-mono bg-muted px-1 rounded">g</kbd>
+                  {" "}then a letter from any page — no need to open this palette.
+                </p>
+              </div>
             </div>
           )}
 
