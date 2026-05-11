@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Mail, MessageCircle, Smartphone, Inbox, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { PageHeader, PageContainer } from "../components/layout";
 
 interface TriageRow {
@@ -28,7 +30,7 @@ interface LeadHit {
   email?: string;
 }
 
-const CHANNEL_ICON: Record<string, string> = { EMAIL: "✉️", WHATSAPP: "💬", SMS: "📱" };
+const CHANNEL_ICON: Record<string, LucideIcon> = { EMAIL: Mail, WHATSAPP: MessageCircle, SMS: Smartphone };
 const STATUS_TINT: Record<string, string> = {
   UNCLAIMED: "bg-warning-soft text-warning-soft-foreground",
   CLAIMED:   "bg-info-soft text-primary",
@@ -104,9 +106,14 @@ export default function HotInboxPage() {
         <div className="bg-card rounded-xl border border-border px-5 py-12 text-center text-muted-foreground text-sm">Loading…</div>
       ) : rows.length === 0 ? (
         <div className="bg-card rounded-xl border border-border px-5 py-12 text-center">
-          <p className="text-muted-foreground text-sm">
-            {filter === "UNCLAIMED" ? "🎉 Nothing waiting in the inbox." : "No messages match this filter."}
-          </p>
+          {filter === "UNCLAIMED" ? (
+            <>
+              <Sparkles className="mx-auto mb-3 size-12 text-muted-foreground" />
+              <p className="text-muted-foreground text-sm">Nothing waiting in the inbox.</p>
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm">No messages match this filter.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -157,7 +164,10 @@ function TriageCard({ row, onAction }: { row: TriageRow; onAction: () => void })
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="px-4 py-3 flex items-start gap-3">
-        <span className="text-xl flex-shrink-0">{CHANNEL_ICON[row.channel] ?? "📨"}</span>
+        {(() => {
+          const Icon = CHANNEL_ICON[row.channel] ?? Inbox;
+          return <Icon className="size-5 text-muted-foreground flex-shrink-0 mt-0.5" />;
+        })()}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-foreground">{row.fromAddress}</span>

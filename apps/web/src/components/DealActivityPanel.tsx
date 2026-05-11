@@ -1,5 +1,19 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
+import {
+  Phone,
+  Mail,
+  MessageCircle,
+  Handshake,
+  Building2,
+  Lock,
+  File,
+  RefreshCw,
+  CheckCircle2,
+  Home,
+  FileText,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import DealTimeline from "./DealTimeline";
 
 interface Activity {
@@ -21,19 +35,19 @@ interface DealActivityPanelProps {
   onActivityUpdate?: () => void;
 }
 
-const activityIcon = (type: string, summary: string): string => {
-  if (type === "CALL") return "📞";
-  if (type === "EMAIL") return "✉️";
-  if (type === "WHATSAPP") return "💬";
-  if (type === "MEETING") return "🤝";
-  if (type === "SITE_VISIT") return "🏢";
+const activityIcon = (type: string, summary: string): LucideIcon => {
+  if (type === "CALL") return Phone;
+  if (type === "EMAIL") return Mail;
+  if (type === "WHATSAPP") return MessageCircle;
+  if (type === "MEETING") return Handshake;
+  if (type === "SITE_VISIT") return Building2;
   const s = summary.toLowerCase();
-  if (s.includes("reserved")) return "🔒";
-  if (s.includes("generated") || s.includes("document")) return "📄";
-  if (s.includes("stage changed") || s.includes("→")) return "🔄";
-  if (s.includes("created")) return "✅";
-  if (s.includes("unit") && (s.includes("assign") || s.includes("changed"))) return "🏠";
-  return "📝";
+  if (s.includes("reserved")) return Lock;
+  if (s.includes("generated") || s.includes("document")) return File;
+  if (s.includes("stage changed") || s.includes("→")) return RefreshCw;
+  if (s.includes("created")) return CheckCircle2;
+  if (s.includes("unit") && (s.includes("assign") || s.includes("changed"))) return Home;
+  return FileText;
 };
 
 const timeAgo = (dateStr: string): string => {
@@ -132,7 +146,10 @@ export default function DealActivityPanel({
             {!activityLoading && activities.map((activity) => (
               <div key={activity.id} className="px-6 py-4 hover:bg-muted/50 transition">
                 <div className="flex items-start gap-3">
-                  <span className="text-lg flex-shrink-0 mt-0.5">{activityIcon(activity.type, activity.summary)}</span>
+                  {(() => {
+                    const Icon = activityIcon(activity.type, activity.summary);
+                    return <Icon className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />;
+                  })()}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground break-words">{activity.summary}</p>
                     <p className="text-xs text-muted-foreground mt-1">

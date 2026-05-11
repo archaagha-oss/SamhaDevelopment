@@ -3,6 +3,24 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { toast } from "sonner";
+import {
+  Pencil,
+  Check,
+  X,
+  Copy,
+  Lock,
+  FileText,
+  ClipboardList,
+  DollarSign,
+  Bell,
+  Phone,
+  Handshake,
+  Building2,
+  CreditCard,
+  Home,
+  AlertTriangle,
+  Circle,
+} from "lucide-react";
 import { formatArea } from "../utils/formatArea";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
@@ -14,6 +32,8 @@ import DealStepper from "./DealStepper";
 import DealTimeline from "./DealTimeline";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
+import { DirhamSign } from "@/components/ui/DirhamSign";
+import { formatDirham } from "@/lib/money";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -716,10 +736,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <h1 className="text-xl font-bold text-foreground">{deal.lead.firstName} {deal.lead.lastName}</h1>
               <button
                 onClick={() => navigate(`/deals/${dealId}/edit`)}
-                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors text-sm"
+                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors"
                 title="Edit deal"
               >
-                ✎
+                <Pencil className="size-3.5" />
               </button>
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -730,7 +750,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               >
                 {deal.dealNumber}
                 <span className="text-foreground/80 group-hover:text-foreground transition-colors">
-                  {copiedDealId ? "✓" : "⎘"}
+                  {copiedDealId ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                 </span>
               </button>
               <span className="text-foreground/80">·</span>
@@ -768,33 +788,33 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               >
                 {reserving
                   ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
-                  : "🔒 Reserve Unit"}
+                  : <><Lock className="size-4" /> <span>Reserve Unit</span></>}
               </button>
             )}
             {deal.stage === "RESERVATION_CONFIRMED" && salesOfferDocs.length === 0 && canGenerateSalesOffer && (
               <button
                 onClick={() => handleGenerateDocument("SALES_OFFER")}
                 disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
               >
-                {generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer"}
+                {generatingDoc === "SALES_OFFER" ? "Generating…" : <><FileText className="size-4" /> <span>Generate Sales Offer</span></>}
               </button>
             )}
             {(deal.stage === "SPA_PENDING" || deal.stage === "SPA_SENT") && (
               <button
                 onClick={() => handleGenerateDocument("SPA")}
                 disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-accent-2 text-accent-2-foreground text-sm font-bold rounded-lg hover:bg-accent-2 disabled:opacity-50 transition-colors"
+                className="px-4 py-1.5 bg-accent-2 text-accent-2-foreground text-sm font-bold rounded-lg hover:bg-accent-2 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
               >
-                {generatingDoc === "SPA" ? "Generating…" : "📝 Generate SPA"}
+                {generatingDoc === "SPA" ? "Generating…" : <><FileText className="size-4" /> <span>Generate SPA</span></>}
               </button>
             )}
             {deal.stage === "OQOOD_PENDING" && (
               <button
                 onClick={() => setShowDocumentUploadModal(true)}
-                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors"
+                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors inline-flex items-center gap-1.5"
               >
-                📋 Record Oqood
+                <ClipboardList className="size-4" /> <span>Record Oqood</span>
               </button>
             )}
             {(deal.stage === "INSTALLMENTS_ACTIVE" || deal.stage === "SPA_SIGNED") && deal.payments.length > 0 && deal.payments.some((p: any) => p.status === "PENDING" || p.status === "OVERDUE") && (
@@ -803,9 +823,9 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
                   if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
                 }}
-                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
               >
-                💰 Record Payment
+                <DollarSign className="size-4" /> <span>Record Payment</span>
               </button>
             )}
 
@@ -926,7 +946,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <p className="text-sm text-muted-foreground">{deal.unit.type.replace(/_/g, " ")} · Floor {deal.unit.floor} · {formatArea(deal.unit.area)}</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-lg font-bold text-primary">AED {deal.salePrice.toLocaleString()}</p>
+                <p className="text-lg font-bold text-primary">{formatDirham(deal.salePrice)}</p>
                 <p className="text-xs text-muted-foreground">Sale Price</p>
               </div>
             </div>
@@ -1147,7 +1167,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</h3>
-              {notesSaved && <span className="text-xs text-success font-medium">Saved ✓</span>}
+              {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
             </div>
             <textarea
               rows={3}
@@ -1199,7 +1219,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     </div>
                     <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">AED {totalPaid.toLocaleString()} paid</span>
+                  <span className="text-xs text-muted-foreground inline-flex items-baseline gap-1">{formatDirham(totalPaid)} paid</span>
                   {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                     <>
                       <button
@@ -1220,14 +1240,14 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                         disabled={pausingReminders}
                         className="ml-auto px-2 py-1 text-xs border border-warning/30 text-warning bg-warning-soft rounded-lg hover:bg-warning-soft transition-colors disabled:opacity-50 flex items-center gap-1"
                       >
-                        <span>⏸</span> Reminders Paused
+                        <Bell className="size-3" /> <span>Reminders Paused</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => setShowPauseModal(true)}
                         className="ml-auto px-2 py-1 text-xs border border-border text-muted-foreground rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-1"
                       >
-                        <span>🔔</span> Pause Reminders
+                        <Bell className="size-3" /> <span>Pause Reminders</span>
                       </button>
                     )
                   )}
@@ -1251,7 +1271,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {activeTab === "payments" && (
               deal.payments.length === 0 ? (
                 <div className="px-5 py-10 text-center">
-                  <p className="text-2xl mb-2">💳</p>
+                  <CreditCard className="mx-auto mb-2 size-12 text-muted-foreground" />
                   <p className="text-sm font-medium text-muted-foreground mb-1">No payment schedule yet</p>
                   <p className="text-xs text-muted-foreground">
                     {["RESERVATION_PENDING", "RESERVATION_CONFIRMED"].includes(deal.stage)
@@ -1263,15 +1283,15 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 <>
                 {/* Financial summary */}
                 <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
-                  {[
-                    { label: "Total Price", value: `AED ${netPrice.toLocaleString()}`, color: "text-foreground" },
-                    { label: "Total Paid", value: `AED ${totalPaid.toLocaleString()}`, color: "text-success" },
-                    { label: "Remaining", value: `AED ${remaining.toLocaleString()}`, color: remaining > 0 ? "text-foreground" : "text-success" },
-                    { label: "Overdue", value: overdueAmt > 0 ? `AED ${overdueAmt.toLocaleString()}` : "—", color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
-                  ].map(({ label, value, color }) => (
+                  {([
+                    { label: "Total Price", value: formatDirham(netPrice), color: "text-foreground" },
+                    { label: "Total Paid", value: formatDirham(totalPaid), color: "text-success" },
+                    { label: "Remaining", value: formatDirham(remaining), color: remaining > 0 ? "text-foreground" : "text-success" },
+                    { label: "Overdue", value: overdueAmt > 0 ? formatDirham(overdueAmt) : <>—</>, color: overdueAmt > 0 ? "text-destructive font-bold" : "text-muted-foreground" },
+                  ] as Array<{ label: string; value: JSX.Element; color: string }>).map(({ label, value, color }) => (
                     <div key={label} className="px-4 py-3 text-center">
                       <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-                      <p className={`text-sm font-semibold ${color}`}>{value}</p>
+                      <p className={`text-sm font-semibold ${color} inline-flex items-baseline gap-1 justify-center`}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -1303,7 +1323,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                               )}
                               {isOverdue && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
                               {isPartial && overdueDays > 0 && <span className="text-xs font-semibold text-destructive">{overdueDays}d overdue</span>}
-                              {isPartial && <span className="text-xs text-warning">Remaining: AED {partialRemaining.toLocaleString()}</span>}
+                              {isPartial && <span className="text-xs text-warning inline-flex items-baseline gap-1">Remaining: {formatDirham(partialRemaining)}</span>}
                               {p.lastReminderSentAt && (
                                 <span className="text-xs text-muted-foreground" title={`Reminder count: ${p.reminderCount ?? 0}`}>
                                   Reminded {timeAgo(p.lastReminderSentAt)}
@@ -1318,7 +1338,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className={`text-sm font-bold ${isOverdue ? "text-destructive" : "text-foreground"}`}>AED {p.amount.toLocaleString()}</p>
+                              <p className={`text-sm font-bold ${isOverdue ? "text-destructive" : "text-foreground"}`}>{formatDirham(p.amount)}</p>
                               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAY_BADGE[p.status] || "bg-muted text-muted-foreground"}`}>
                                 {p.status.replace(/_/g, " ")}
                               </span>
@@ -1460,11 +1480,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 {/* Quick-log bar */}
                 <div className="px-5 py-3 border-b border-border flex items-center gap-2 flex-wrap">
                   {([
-                    { type: "NOTE",    label: "Note",    icon: "📝" },
-                    { type: "CALL",    label: "Call",    icon: "📞" },
-                    { type: "MEETING", label: "Meeting", icon: "🤝" },
-                    { type: "SITE_VISIT", label: "Site Visit", icon: "🏢" },
-                  ] as const).map(({ type, label, icon }) => (
+                    { type: "NOTE",    label: "Note",    Icon: FileText },
+                    { type: "CALL",    label: "Call",    Icon: Phone },
+                    { type: "MEETING", label: "Meeting", Icon: Handshake },
+                    { type: "SITE_VISIT", label: "Site Visit", Icon: Building2 },
+                  ] as const).map(({ type, label, Icon }) => (
                     <button
                       key={type}
                       onClick={() => { setActivityForm((f) => ({ ...f, type })); setShowActivityForm(true); }}
@@ -1474,14 +1494,14 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                           : "border-border text-muted-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <span>{icon}</span>{label}
+                      <Icon className="size-3.5" />{label}
                     </button>
                   ))}
                   {showActivityForm && (
                     <button
                       onClick={() => setShowActivityForm(false)}
-                      className="ml-auto text-xs text-muted-foreground hover:text-foreground"
-                    >✕ Cancel</button>
+                      className="ml-auto text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                    ><X className="size-3" /> Cancel</button>
                   )}
                 </div>
 
@@ -1678,7 +1698,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             )}
             {deal.stage === "RESERVATION_CONFIRMED" && (
               <div className="flex items-center gap-2 text-success bg-success-soft border border-success/30 rounded-lg px-3 py-2.5 mb-3">
-                <span className="text-base">✓</span>
+                <Check className="size-4 text-success" />
                 <span className="text-sm font-bold">Unit Reserved</span>
               </div>
             )}
@@ -1732,7 +1752,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {commission && (
             <div className="bg-card rounded-xl border border-border p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Commission</h3>
-              <p className="text-2xl font-bold text-foreground mb-0.5">AED {commission.amount.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-foreground mb-0.5">{formatDirham(commission.amount)}</p>
               <p className="text-xs text-muted-foreground mb-3">{commission.rate}% rate</p>
 
               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-4 ${
@@ -1751,12 +1771,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   { label: "Oqood Registered", met: oqoodOk },
                 ].map(({ label, met }) => (
                   <div key={label} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${met ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
-                    <span className="font-bold">{met ? "✓" : "✗"}</span>
+                    {met ? <Check className="size-4" /> : <X className="size-4" />}
                     <span className="font-medium">{label}</span>
                   </div>
                 ))}
                 {spaOk && oqoodOk && (
-                  <p className="text-xs text-center text-success font-semibold mt-1">All conditions met ✓</p>
+                  <p className="text-xs text-center text-success font-semibold mt-1 inline-flex items-center justify-center gap-1 w-full">All conditions met <Check className="size-3" /></p>
                 )}
               </div>
             </div>
@@ -1772,13 +1792,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                     key={req.documentType}
                     className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${req.uploaded ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}
                   >
-                    <span className="font-bold text-base leading-none">{req.uploaded ? "✓" : "○"}</span>
+                    {req.uploaded ? <Check className="size-4" /> : <Circle className="size-4" />}
                     <span className="font-medium">{req.label}</span>
                   </div>
                 ))}
               </div>
               {stageRequirements.every((r) => r.uploaded) ? (
-                <p className="text-xs text-center text-success font-semibold mt-2">Ready to advance ✓</p>
+                <p className="text-xs text-center text-success font-semibold mt-2 inline-flex items-center justify-center gap-1 w-full">Ready to advance <Check className="size-3" /></p>
               ) : (
                 <p className="text-xs text-center text-warning mt-2">Upload missing documents to advance</p>
               )}
@@ -1827,7 +1847,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-bold text-primary">AED {deal?.salePrice.toLocaleString()}</span>
+                  <span className="font-bold text-primary">{deal ? formatDirham(deal.salePrice) : "—"}</span>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
@@ -1962,15 +1982,18 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received (AED) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={partialAmount}
-                  onChange={(e) => setPartialAmount(e.target.value)}
-                  placeholder="e.g. 50000"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
-                />
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Received *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="number"
+                    min="1"
+                    value={partialAmount}
+                    onChange={(e) => setPartialAmount(e.target.value)}
+                    placeholder="e.g. 50000"
+                    className="w-full border border-border rounded-lg pl-9 pr-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
@@ -2105,9 +2128,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   placeholder="e.g. Handover Balance" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (AED) *</label>
-                <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
-                  placeholder="e.g. 50000" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount *</label>
+                <div className="relative">
+                  <DirhamSign aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input type="number" min="1" value={milestoneForm.amount} onChange={(e) => setMilestoneForm((f) => ({...f, amount: e.target.value}))}
+                    placeholder="e.g. 50000" className="w-full border border-border rounded-lg pl-9 pr-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Due Date *</label>
@@ -2133,37 +2159,37 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
       {/* ── Sticky bottom primary action ──────────────────────────────────── */}
       {(() => {
-        type CTA = { label: string; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
+        type CTA = { label: string; Icon?: React.ComponentType<{ className?: string }>; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
         let cta: CTA = null;
         switch (deal.stage) {
           case "RESERVATION_PENDING":
-            cta = { label: reserving ? "Reserving…" : "🔒 Record Reservation Fee", onClick: handleReserveUnit, variant: "emerald" };
+            cta = { label: reserving ? "Reserving…" : "Record Reservation Fee", Icon: reserving ? undefined : Lock, onClick: handleReserveUnit, variant: "emerald" };
             break;
           case "RESERVATION_CONFIRMED":
             if (canGenerateSalesOffer && salesOfferDocs.length === 0) {
-              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "📄 Generate Sales Offer", onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
+              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer", Icon: generatingDoc === "SALES_OFFER" ? undefined : FileText, onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
             }
             break;
           case "SPA_PENDING":
-            cta = { label: generatingDoc === "SPA" ? "Generating…" : "📑 Generate SPA Draft", onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
+            cta = { label: generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft", Icon: generatingDoc === "SPA" ? undefined : FileText, onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
             break;
           case "SPA_SENT":
-            cta = { label: "✓ Mark SPA Signed", onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
+            cta = { label: "Mark SPA Signed", Icon: Check, onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
             break;
           case "SPA_SIGNED":
-            cta = { label: "🪪 Submit Oqood Application", onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
+            cta = { label: "Submit Oqood Application", Icon: ClipboardList, onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
             break;
           case "OQOOD_PENDING":
-            cta = { label: "✓ Mark Oqood Registered", onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
+            cta = { label: "Mark Oqood Registered", Icon: Check, onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
             break;
           case "OQOOD_REGISTERED":
-            cta = { label: "→ Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
+            cta = { label: "Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
             break;
           case "INSTALLMENTS_ACTIVE":
-            cta = { label: "💰 Record Next Payment", onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
+            cta = { label: "Record Next Payment", Icon: DollarSign, onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
             break;
           case "HANDOVER_PENDING":
-            cta = { label: "🏠 Mark Handed Over", onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
+            cta = { label: "Mark Handed Over", Icon: Home, onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
             break;
         }
         if (!cta) return null;
@@ -2176,9 +2202,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             <button
               onClick={cta.onClick}
               disabled={reserving || !!generatingDoc || updatingStage}
-              className={`px-5 py-2.5 ${tone} text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors`}
+              className={`px-5 py-2.5 ${tone} text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors inline-flex items-center gap-2`}
             >
-              {cta.label}
+              {cta.Icon && <cta.Icon className="size-4" />}
+              <span>{cta.label}</span>
             </button>
           </div>
         );
@@ -2314,7 +2341,7 @@ function ComplianceBanner({ blockers }: { blockers: Array<{
   return (
     <div className={`border rounded-xl px-4 py-3 ${tint.bg}`}>
       <div className="flex items-start gap-3">
-        <span className="text-lg">⚠️</span>
+        <AlertTriangle className="size-5 text-warning flex-shrink-0 mt-0.5" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">
             {blockers.length === 1 ? "Compliance issue on this deal" : `${blockers.length} compliance issues on this deal`}

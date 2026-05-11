@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Phone, MessageCircle, Mail, Calendar, Building2, FileText } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type ActivityType = "CALL" | "WHATSAPP" | "EMAIL" | "MEETING" | "SITE_VISIT" | "NOTE";
 
@@ -12,13 +14,13 @@ interface ActivityModalProps {
   onSuccess?: () => void;
 }
 
-const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: string }[] = [
-  { value: "CALL",       label: "Call",       icon: "📞" },
-  { value: "WHATSAPP",   label: "WhatsApp",   icon: "💬" },
-  { value: "EMAIL",      label: "Email",      icon: "📧" },
-  { value: "MEETING",    label: "Meeting",    icon: "📅" },
-  { value: "SITE_VISIT", label: "Site Visit", icon: "🏗️" },
-  { value: "NOTE",       label: "Note",       icon: "📝" },
+const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: LucideIcon }[] = [
+  { value: "CALL",       label: "Call",       icon: Phone },
+  { value: "WHATSAPP",   label: "WhatsApp",   icon: MessageCircle },
+  { value: "EMAIL",      label: "Email",      icon: Mail },
+  { value: "MEETING",    label: "Meeting",    icon: Calendar },
+  { value: "SITE_VISIT", label: "Site Visit", icon: Building2 },
+  { value: "NOTE",       label: "Note",       icon: FileText },
 ];
 
 function nowLocal(): string {
@@ -116,7 +118,7 @@ export default function ActivityModal({
               Activity Type
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {ACTIVITY_TYPES.map(({ value, label, icon }) => (
+              {ACTIVITY_TYPES.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   onClick={() => setType(value)}
@@ -126,7 +128,7 @@ export default function ActivityModal({
                       : "bg-muted border-border text-foreground/80 hover:border-border hover:text-foreground"
                   }`}
                 >
-                  <span>{icon}</span>
+                  <Icon className="size-4" />
                   <span>{label}</span>
                 </button>
               ))}
@@ -209,7 +211,6 @@ export default function ActivityModal({
           {/* Follow-up notice */}
           {followUpDate && (
             <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2.5">
-              <span className="mt-0.5 flex-shrink-0">📌</span>
               <p>
                 A follow-up task will be created for{" "}
                 {new Date(followUpDate).toLocaleDateString("en-AE", {

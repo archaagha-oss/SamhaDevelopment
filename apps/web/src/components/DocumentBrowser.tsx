@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { FileText, ClipboardList, Image as ImageIcon, Paperclip, Eye, Download, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Document } from "../types";
 
 interface Props {
@@ -32,11 +34,11 @@ const TYPE_COLORS: Record<string, string> = {
   OTHER: "bg-muted text-foreground",
 };
 
-const getMimeTypeIcon = (mimeType: string) => {
-  if (mimeType.includes("pdf")) return "📄";
-  if (mimeType.includes("word")) return "📋";
-  if (mimeType.includes("image")) return "🖼️";
-  return "📎";
+const getMimeTypeIcon = (mimeType: string): LucideIcon => {
+  if (mimeType.includes("pdf")) return FileText;
+  if (mimeType.includes("word")) return ClipboardList;
+  if (mimeType.includes("image")) return ImageIcon;
+  return Paperclip;
 };
 
 const formatFileSize = (bytes: number) => {
@@ -155,7 +157,10 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
                 className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-2xl flex-shrink-0">{getMimeTypeIcon(doc.mimeType)}</span>
+                  {(() => {
+                    const Icon = getMimeTypeIcon(doc.mimeType);
+                    return <Icon className="size-5 text-muted-foreground flex-shrink-0" />;
+                  })()}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
                     <div className="flex items-center gap-2 mt-1">
@@ -175,14 +180,14 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
                     className="p-2 text-muted-foreground hover:text-foreground hover:bg-card rounded-lg"
                     title="Preview"
                   >
-                    👁️
+                    <Eye className="size-4" />
                   </button>
                   <button
                     onClick={() => handleDownload(doc)}
                     className="p-2 text-muted-foreground hover:text-foreground hover:bg-card rounded-lg"
                     title="Download"
                   >
-                    ⬇️
+                    <Download className="size-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(doc.id)}
@@ -190,7 +195,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
                     className="p-2 text-destructive hover:text-destructive hover:bg-card rounded-lg disabled:opacity-50"
                     title="Delete"
                   >
-                    {deleting === doc.id ? "..." : "🗑️"}
+                    {deleting === doc.id ? "..." : <Trash2 className="size-4" />}
                   </button>
                 </div>
               </div>

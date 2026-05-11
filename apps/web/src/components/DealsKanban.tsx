@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 
 interface Deal {
   id: string;
@@ -237,7 +238,7 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                         {/* Price & discount */}
                         <div className="mb-2">
                           <p className="text-xs text-muted-foreground">
-                            <span className="font-semibold">AED {deal.salePrice.toLocaleString()}</span>
+                            <span className="font-semibold">{formatDirham(deal.salePrice)}</span>
                             {deal.discount > 0 && (
                               <span className="text-success ml-1">-{deal.discount.toLocaleString()}</span>
                             )}
