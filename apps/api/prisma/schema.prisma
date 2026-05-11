@@ -651,6 +651,7 @@ model Unit {
   activities   Activity[]         @relation("UnitActivities")
   images       UnitImage[]
   shareTokens  UnitShareToken[]
+  snagLists    SnagList[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2053,4 +2054,71 @@ model ConstructionMilestone {
 
   @@index([projectId])
   @@index([targetDate])
+}
+
+// ============================================================
+// SECTION: SNAG LIST
+// ============================================================
+//
+// Per-unit walk-through snag tracking. A unit can have multiple
+// snag lists (e.g. initial walk-through, post-rectification revisit).
+// Each list holds individual items with severity, contractor, due
+// date, and lifecycle status. Items carry before/after photos.
+
+model SnagList {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  label    String // e.g. "Snag list 2026-05-11", "Walk-through"
+  raisedBy String // User.id who created the list
+
+  raisedAt DateTime  @default(now())
+  closedAt DateTime? // set when all items reach a terminal state
+
+  items SnagItem[]
+
+  @@index([unitId])
+}
+
+model SnagItem {
+  id         String   @id @default(cuid())
+  snagListId String
+  snagList   SnagList @relation(fields: [snagListId], references: [id], onDelete: Cascade)
+
+  room        String?
+  category    String?
+  description String  @db.Text
+
+  severity String // COSMETIC | MINOR | MAJOR | CRITICAL
+  status   String @default("RAISED") // RAISED | ACKNOWLEDGED | IN_PROGRESS | FIXED | REJECTED | CLOSED
+
+  contractorName  String?
+  dueDate         DateTime?
+  fixedDate       DateTime?
+  closedDate      DateTime?
+  rejectionReason String?   @db.Text
+
+  photos SnagPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([snagListId])
+  @@index([status])
+}
+
+model SnagPhoto {
+  id         String   @id @default(cuid())
+  snagItemId String
+  snagItem   SnagItem @relation(fields: [snagItemId], references: [id], onDelete: Cascade)
+
+  s3Key   String
+  caption String?
+  kind    String  @default("BEFORE") // BEFORE | AFTER
+
+  uploadedBy String // User.id
+  uploadedAt DateTime @default(now())
+
+  @@index([snagItemId])
 }
