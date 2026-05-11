@@ -28,6 +28,9 @@ import DealPurchasersModal from "./DealPurchasersModal";
 import DealSpaCompliancePanel from "./DealSpaCompliancePanel";
 import ConfirmDialog from "./ConfirmDialog";
 import Breadcrumbs from "./Breadcrumbs";
+import NextStepCard from "@/components/ui/NextStepCard";
+import SlimHeader, { SlimHeaderSentinel } from "@/components/ui/SlimHeader";
+import { optimisticAction } from "@/lib/optimisticToast";
 import DealStepper from "./DealStepper";
 import DealTimeline from "./DealTimeline";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
@@ -387,9 +390,37 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       .catch(() => setStageRequirements([]));
   }, [deal]);
 
+  // Stage moves are reversible (the API accepts any newStage), so per
+  // UX_AUDIT_2 §R5 we use the optimistic-undo pattern instead of a confirm
+  // dialog — except for CANCELLED, which is destructive enough that the
+  // explicit confirmation still earns its modal.
   const handleStageChange = async (newStage: string) => {
     if (!deal || newStage === deal.stage) { setShowStageSelect(false); return; }
-    setPendingStage(newStage);
+    if (newStage === "CANCELLED") {
+      setPendingStage(newStage);
+      return;
+    }
+    const previousStage = deal.stage;
+    setShowStageSelect(false);
+    setUpdatingStage(true);
+    try {
+      await optimisticAction({
+        do: async () => {
+          await axios.patch(`/api/deals/${deal.id}/stage`, { newStage });
+          loadDeal();
+        },
+        undo: async () => {
+          await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: previousStage });
+          loadDeal();
+        },
+        message: `Stage updated to ${newStage.replace(/_/g, " ")}`,
+        description: `Reverts to ${previousStage.replace(/_/g, " ")} if undone.`,
+      });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update stage");
+    } finally {
+      setUpdatingStage(false);
+    }
   };
 
   const confirmStageChange = async () => {
@@ -693,7 +724,23 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const oqoodOk       = commission?.conditions?.oqoodRegisteredMet ?? (commission as any)?.oqoodMet ?? false;
 
   return (
+    <>
+    <SlimHeader
+      primary={
+        <>
+          <span className="truncate">{deal.lead.firstName} {deal.lead.lastName}</span>
+          <span className="text-muted-foreground hidden md:inline">· {deal.dealNumber}</span>
+        </>
+      }
+      badges={
+        <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-medium uppercase tracking-wide">
+          {deal.stage.replace(/_/g, " ")}
+        </span>
+      }
+      onBack={() => navigate("/deals")}
+    />
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <SlimHeaderSentinel />
       <Breadcrumbs crumbs={[
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
@@ -2247,10 +2294,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
 
       <ConfirmDialog
         open={!!pendingStage}
-        title="Change Deal Stage"
-        message={`Move deal to "${pendingStage?.replace(/_/g, " ")}"? This will trigger all associated side effects.`}
-        confirmLabel="Move Stage"
-        variant="warning"
+        title="Cancel Deal"
+        message="Cancelling a deal releases the unit and stops automated payment reminders. Continue?"
+        confirmLabel="Cancel Deal"
+        variant="danger"
         onConfirm={confirmStageChange}
         onCancel={() => setPendingStage(null)}
       />
@@ -2303,6 +2350,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         </div>
       )}
     </div>
+    </>
   );
 }
 
