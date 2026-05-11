@@ -65,9 +65,48 @@ const HotInboxPage                  = lazy(() => import("./pages/HotInboxPage"))
 const CompliancePage                = lazy(() => import("./pages/CompliancePage"));
 const NotificationPreferencesPage   = lazy(() => import("./pages/NotificationPreferencesPage"));
 const BulkPaymentImportPage         = lazy(() => import("./pages/BulkPaymentImportPage"));
+const MyDayPage                     = lazy(() => import("./pages/MyDayPage"));
 
 // FeatureFlagGate stays eager — it's tiny and used inline below.
 import FeatureFlagGate from "./components/FeatureFlagGate";
+import { useCurrentUser } from "./hooks/useCurrentUser";
+
+/**
+ * Role-aware home dispatcher (UX_AUDIT_2 Part B).
+ *
+ * `/` renders the personal `<MyDayPage />` for MEMBER and VIEWER agents — their
+ * day-to-day work lives there. ADMIN and MANAGER continue to see
+ * `<ExecutiveDashboard />` because the org-wide rollup is what they actually
+ * use. While the role lookup is in flight we show the dashboard's loading
+ * shell (via Suspense above) — flicker is acceptable here because the page
+ * always re-renders on auth resolve.
+ *
+ * `/dashboard` always renders ExecutiveDashboard (so managers can reach it
+ * even when their default landing changes), and `/my-day` always renders
+ * MyDayPage (so a manager can use it as their own queue).
+ */
+function RoleAwareHome() {
+  const { data: user, isLoading } = useCurrentUser();
+  if (isLoading) {
+    // Same minimal loader the Suspense wrapper uses — keeps the visual
+    // continuity when auth resolves and we swap to the real page.
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading"
+        className="flex min-h-[60vh] items-center justify-center"
+      >
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+      </div>
+    );
+  }
+  const role = user?.role;
+  if (role === "MEMBER" || role === "VIEWER") {
+    return <MyDayPage />;
+  }
+  return <ExecutiveDashboard />;
+}
 
 // Suspense wrapper for routes that don't render inside AppShell (print pages,
 // public share, broker onboarding). AppShell already wraps its <Outlet />.
@@ -107,7 +146,9 @@ export const router = createBrowserRouter([
     path: "/",
     element: <AppShell />,
     children: [
-      { index: true,                                      element: <ExecutiveDashboard /> },
+      { index: true,                                      element: <RoleAwareHome /> },
+      { path: "dashboard",                                element: <ExecutiveDashboard /> },
+      { path: "my-day",                                   element: <MyDayPage /> },
       { path: "projects",                                 element: <ProjectsPage /> },
       { path: "projects/:projectId",                      element: <ProjectDetailPage /> },
       { path: "projects/:projectId/settings",             element: <ProjectSettingsPage /> },
