@@ -367,7 +367,7 @@ export async function updateDealStage(
     // ── Update deal ────────────────────────────────────────────────────────
     const updated = await tx.deal.update({
       where: { id: dealId },
-      data:  { stage: newStage, ...stageData },
+      data:  { stage: newStage, stageEnteredAt: new Date(), ...stageData },
       include: { lead: true, unit: true },
     });
 

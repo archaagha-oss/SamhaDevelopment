@@ -112,27 +112,26 @@ router.get("/summary", async (req, res) => {
         select: { amount: true },
       }),
 
-      // Deals where I'm the lead's agent, in a stalled-candidate stage. We
-      // compute "stalled" by joining stageHistory below to find the date the
-      // current stage was entered.
+      // Deals where I'm the lead's agent, in a stalled-candidate stage.
+      // Use the deal's `stageEnteredAt` (refreshed by dealService on every
+      // transition) so unrelated field edits (discount, broker change, etc.)
+      // don't reset the stall clock.
       prisma.deal.findMany({
         where: {
           isActive: true,
           stage: { in: [...STALLED_DEAL_STAGES] },
           lead: { assignedAgentId: userId },
         },
-        select: { id: true, stage: true, createdAt: true, updatedAt: true },
+        select: { id: true, stage: true, stageEnteredAt: true },
       }),
     ]);
 
     const paymentsDueWeekTotal = paymentsDueWeek.reduce((s, p) => s + p.amount, 0);
 
-    // Count deals whose current stage has been held longer than the policy
-    // max. Without a per-deal "stage entered at" timestamp we use updatedAt
-    // (set whenever the stage flips) as a proxy.
+    // Count deals whose current stage has been held longer than the policy max.
     const dealsStalled = stalledCandidates.reduce((count, deal) => {
       const cap = STAGE_MAX_DAYS[deal.stage] ?? 14;
-      const ageDays = daysBetween(now, deal.updatedAt);
+      const ageDays = daysBetween(now, deal.stageEnteredAt);
       return ageDays > cap ? count + 1 : count;
     }, 0);
 

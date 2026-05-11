@@ -1091,6 +1091,12 @@ model Deal {
   isActive Boolean   @default(true) // only ONE active deal per unit at a time (enforced in app layer)
   stage    DealStage @default(RESERVATION_PENDING)
 
+  // Timestamp the deal entered its current stage. Set on create (now()) and
+  // refreshed on every successful transition in dealService.updateDealStage —
+  // used by My Day's "deals stalled in stage" rollup so it doesn't have to
+  // proxy off updatedAt (which moves on every field write).
+  stageEnteredAt DateTime @default(now())
+
   stageHistory DealStageHistory[]
 
   salePrice         Float
