@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { Upload } from "lucide-react";
 import { Document, DocumentType } from "../types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -191,19 +192,7 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
             />
             <label htmlFor="file-input" className="cursor-pointer block">
-              <svg
-                className="w-12 h-12 mx-auto text-muted-foreground mb-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
+              <Upload className="mx-auto mb-3 size-12 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">
                 {isDragActive ? "Drop files here" : "Drag files here or click to browse"}
               </p>

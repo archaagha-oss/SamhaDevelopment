@@ -12,6 +12,8 @@ import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
 import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
+import { Phone, Mail, MessageCircle, Handshake, Building2, FileText } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,9 +74,9 @@ interface UnitOption   { id: string; unitNumber: string; type: string; price: nu
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ACTIVITY_ICON: Record<string, string> = {
-  CALL: "📞", EMAIL: "✉️", WHATSAPP: "💬", MEETING: "🤝",
-  SITE_VISIT: "🏢", NOTE: "📝",
+const ACTIVITY_ICON: Record<string, LucideIcon> = {
+  CALL: Phone, EMAIL: Mail, WHATSAPP: MessageCircle, MEETING: Handshake,
+  SITE_VISIT: Building2, NOTE: FileText,
 };
 
 const SOURCE_OPTIONS = ["DIRECT", "BROKER", "WEBSITE", "REFERRAL"] as const;
@@ -592,17 +594,19 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 {lead.phone && (
                   <a
                     href={`tel:${lead.phone}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    📞 Call
+                    <Phone className="size-3.5" />
+                    <span>Call</span>
                   </a>
                 )}
                 {lead.email && (
                   <a
                     href={`mailto:${lead.email}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    ✉ Email
+                    <Mail className="size-3.5" />
+                    <span>Email</span>
                   </a>
                 )}
                 {lead.phone && (
@@ -610,9 +614,10 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                     href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
                   >
-                    💬 WhatsApp
+                    <MessageCircle className="size-3.5" />
+                    <span>WhatsApp</span>
                   </a>
                 )}
                 <button
@@ -786,16 +791,20 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               {showActForm && (
                 <form onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
                   <div className="flex flex-wrap gap-2">
-                    {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => (
-                      <button
-                        key={t} type="button" onClick={() => setActType(t)}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
-                          actType === t ? "bg-primary text-white" : "bg-card text-muted-foreground border border-border hover:border-primary/40"
-                        }`}
-                      >
-                        {ACTIVITY_ICON[t]} {t.replace("_", " ")}
-                      </button>
-                    ))}
+                    {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => {
+                      const Icon = ACTIVITY_ICON[t] ?? FileText;
+                      return (
+                        <button
+                          key={t} type="button" onClick={() => setActType(t)}
+                          className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
+                            actType === t ? "bg-primary text-white" : "bg-card text-muted-foreground border border-border hover:border-primary/40"
+                          }`}
+                        >
+                          <Icon className="size-3.5" />
+                          <span>{t.replace("_", " ")}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                   <textarea
                     required placeholder="Summary *" value={summary}

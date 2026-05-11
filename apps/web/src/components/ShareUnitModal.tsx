@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Mail, MessageCircle, Smartphone } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface UnitInfo {
   unitNumber: string;
@@ -26,7 +28,7 @@ interface Props {
 }
 
 const CHANNEL_LABEL: Record<string, string> = { EMAIL: "Email", WHATSAPP: "WhatsApp", SMS: "SMS" };
-const CHANNEL_ICON: Record<string, string>  = { EMAIL: "✉️", WHATSAPP: "💬", SMS: "📱" };
+const CHANNEL_ICON: Record<string, LucideIcon> = { EMAIL: Mail, WHATSAPP: MessageCircle, SMS: Smartphone };
 
 function fmtAED(n: number) {
   return `AED ${n.toLocaleString("en-AE")}`;
@@ -195,13 +197,17 @@ export default function ShareUnitModal({ unit, onClose }: Props) {
                   <button
                     key={c}
                     onClick={() => setChannel(c)}
-                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
                       channel === c
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground border border-border hover:border-border"
                     }`}
                   >
-                    {CHANNEL_ICON[c]} {CHANNEL_LABEL[c]}
+                    {(() => {
+                      const Icon = CHANNEL_ICON[c] ?? Mail;
+                      return <Icon className="size-3.5" />;
+                    })()}
+                    <span>{CHANNEL_LABEL[c]}</span>
                   </button>
                 ))}
                 {availableChannels.length === 0 && (

@@ -2,6 +2,18 @@ import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import {
+  Phone,
+  Home,
+  FileText,
+  Mail,
+  MessageCircle,
+  Handshake,
+  Search,
+  Wrench,
+  Video,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { UnitInterestContext } from "../types";
 
 interface Activity {
@@ -21,21 +33,21 @@ interface Props {
 interface ActivityTypeMeta {
   value: string;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   primary?: boolean;          // shown as a quick-log button
   promptHelper: string;
 }
 
 const ACTIVITY_TYPES: ActivityTypeMeta[] = [
-  { value: "CALL",        label: "Call",         emoji: "📞", primary: true,  promptHelper: "Called client, discussed pricing and payment plan…" },
-  { value: "SITE_VISIT",  label: "Site visit",   emoji: "🏠", primary: true,  promptHelper: "Client visited the unit on site, positive feedback on the view…" },
-  { value: "NOTE",        label: "Note",         emoji: "📝", primary: true,  promptHelper: "Internal note about this unit — pricing, timing, blockers…" },
-  { value: "EMAIL",       label: "Email",        emoji: "✉️",                 promptHelper: "Sent SPA draft and payment-plan summary by email…" },
-  { value: "WHATSAPP",    label: "WhatsApp",     emoji: "💬",                 promptHelper: "Replied on WhatsApp — confirmed unit availability…" },
-  { value: "MEETING",     label: "Meeting",      emoji: "🤝",                 promptHelper: "Met client at the office, walked through payment plan…" },
-  { value: "INSPECTION",  label: "Inspection",   emoji: "🔎",                 promptHelper: "Pre-handover inspection — items found and outcome…" },
-  { value: "SNAG_REPORT", label: "Snag report",  emoji: "🛠",                 promptHelper: "Snag observed — list items, severity, room, photos to follow…" },
-  { value: "VIDEO_TOUR",  label: "Video tour",   emoji: "🎥",                 promptHelper: "Sent the unit walkthrough video, recorded reaction…" },
+  { value: "CALL",        label: "Call",         icon: Phone,         primary: true,  promptHelper: "Called client, discussed pricing and payment plan…" },
+  { value: "SITE_VISIT",  label: "Site visit",   icon: Home,          primary: true,  promptHelper: "Client visited the unit on site, positive feedback on the view…" },
+  { value: "NOTE",        label: "Note",         icon: FileText,      primary: true,  promptHelper: "Internal note about this unit — pricing, timing, blockers…" },
+  { value: "EMAIL",       label: "Email",        icon: Mail,                          promptHelper: "Sent SPA draft and payment-plan summary by email…" },
+  { value: "WHATSAPP",    label: "WhatsApp",     icon: MessageCircle,                 promptHelper: "Replied on WhatsApp — confirmed unit availability…" },
+  { value: "MEETING",     label: "Meeting",      icon: Handshake,                     promptHelper: "Met client at the office, walked through payment plan…" },
+  { value: "INSPECTION",  label: "Inspection",   icon: Search,                        promptHelper: "Pre-handover inspection — items found and outcome…" },
+  { value: "SNAG_REPORT", label: "Snag report",  icon: Wrench,                        promptHelper: "Snag observed — list items, severity, room, photos to follow…" },
+  { value: "VIDEO_TOUR",  label: "Video tour",   icon: Video,                         promptHelper: "Sent the unit walkthrough video, recorded reaction…" },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -144,21 +156,24 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
 
       {/* Quick-log primary buttons (Call / Site visit / Note) */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {ACTIVITY_TYPES.filter((t) => t.primary).map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => { setType(t.value); focusSummary(); }}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg border-2 transition-colors ${
-              type === t.value
-                ? "border-primary/40 bg-info-soft text-primary"
-                : "border-border bg-card text-foreground hover:border-border hover:bg-muted/50"
-            }`}
-          >
-            <span className="text-base">{t.emoji}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
+        {ACTIVITY_TYPES.filter((t) => t.primary).map((t) => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => { setType(t.value); focusSummary(); }}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg border-2 transition-colors ${
+                type === t.value
+                  ? "border-primary/40 bg-info-soft text-primary"
+                  : "border-border bg-card text-foreground hover:border-border hover:bg-muted/50"
+              }`}
+            >
+              <Icon className="size-4" />
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Always-visible logger form */}
@@ -168,26 +183,34 @@ export default function UnitActivityLogger({ unitId, interests }: Props) {
           <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground font-medium hover:text-foreground list-none">
             <span className="select-none">More types ▾</span>
             {currentMeta && !currentMeta.primary && (
-              <span className="ml-auto text-[11px] text-primary font-semibold">
-                {currentMeta.emoji} {currentMeta.label} selected
+              <span className="ml-auto text-[11px] text-primary font-semibold inline-flex items-center gap-1">
+                {(() => {
+                  const Icon = currentMeta.icon;
+                  return <Icon className="size-3" />;
+                })()}
+                <span>{currentMeta.label} selected</span>
               </span>
             )}
           </summary>
           <div className="grid grid-cols-3 gap-1.5 mt-2">
-            {ACTIVITY_TYPES.filter((t) => !t.primary).map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => { setType(t.value); focusSummary(); }}
-                className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  type === t.value
-                    ? "border-primary/40 bg-info-soft text-primary"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted/50"
-                }`}
-              >
-                {t.emoji} {t.label}
-              </button>
-            ))}
+            {ACTIVITY_TYPES.filter((t) => !t.primary).map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => { setType(t.value); focusSummary(); }}
+                  className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-colors inline-flex items-center justify-center gap-1.5 ${
+                    type === t.value
+                      ? "border-primary/40 bg-info-soft text-primary"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <Icon className="size-3.5" />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
           </div>
         </details>
 

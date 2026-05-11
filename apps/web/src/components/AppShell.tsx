@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, CreditCard, Clock, DollarSign, ClipboardList, RefreshCw, User, Bell } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import Sidebar from "./Sidebar";
 import GlobalSearchModal from "./GlobalSearchModal";
@@ -42,14 +43,24 @@ function pathToPage(pathname: string): Page {
   return "dashboard";
 }
 
-const NOTIF_ICONS: Record<string, string> = {
-  PAYMENT_OVERDUE: "💳",
-  RESERVATION_EXPIRING: "⏰",
-  COMMISSION_PENDING: "💰",
-  OQOOD_DEADLINE: "📋",
-  DEAL_STAGE_CHANGED: "🔄",
-  NEW_LEAD_ASSIGNED: "👤",
-  GENERAL: "🔔",
+const NOTIF_ICONS: Record<string, LucideIcon> = {
+  PAYMENT_OVERDUE: CreditCard,
+  RESERVATION_EXPIRING: Clock,
+  COMMISSION_PENDING: DollarSign,
+  OQOOD_DEADLINE: ClipboardList,
+  DEAL_STAGE_CHANGED: RefreshCw,
+  NEW_LEAD_ASSIGNED: User,
+  GENERAL: Bell,
+};
+
+const NOTIF_TOKENS: Record<string, string> = {
+  PAYMENT_OVERDUE: "text-destructive",
+  RESERVATION_EXPIRING: "text-warning",
+  COMMISSION_PENDING: "text-success",
+  OQOOD_DEADLINE: "text-info",
+  DEAL_STAGE_CHANGED: "text-primary",
+  NEW_LEAD_ASSIGNED: "text-accent-2",
+  GENERAL: "text-muted-foreground",
 };
 
 function timeAgo(dateStr: string) {
@@ -263,14 +274,20 @@ export default function AppShell() {
                         className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors ${!n.read ? "bg-info-soft/40" : ""}`}
                       >
                         <span
-                          className="text-base mt-0.5 flex-shrink-0 cursor-pointer"
+                          className="mt-0.5 flex-shrink-0 cursor-pointer"
                           onClick={() => {
                             if (!n.read) axios.patch(`/api/users/dev-user-1/notifications/${n.id}`, { read: true }).catch(() => {});
                             setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x));
                             setUnreadCount((c) => Math.max(0, c - (n.read ? 0 : 1)));
                             if (n.entityType === "DEAL" && n.entityId) { navigate(`/deals/${n.entityId}`); setShowNotifPanel(false); }
                           }}
-                        >{NOTIF_ICONS[n.type] || "🔔"}</span>
+                        >
+                          {(() => {
+                            const Icon = NOTIF_ICONS[n.type] ?? Bell;
+                            const token = NOTIF_TOKENS[n.type] ?? "text-muted-foreground";
+                            return <Icon className={`size-4 ${token}`} />;
+                          })()}
+                        </span>
                         <div
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => {

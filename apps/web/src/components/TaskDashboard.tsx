@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Phone, Handshake, RefreshCw, File, CreditCard, Pin } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface Task {
   id: string;
@@ -17,8 +19,8 @@ interface Task {
   assignedTo?: { id: string; name: string } | null;
 }
 
-const TYPE_ICON: Record<string, string> = {
-  CALL: "📞", MEETING: "🤝", FOLLOW_UP: "🔁", DOCUMENT: "📄", PAYMENT: "💳",
+const TYPE_ICON: Record<string, LucideIcon> = {
+  CALL: Phone, MEETING: Handshake, FOLLOW_UP: RefreshCw, DOCUMENT: File, PAYMENT: CreditCard,
 };
 const PRIORITY_BADGE: Record<string, string> = {
   LOW: "bg-muted text-muted-foreground",
@@ -141,7 +143,10 @@ export default function TaskDashboard() {
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-2 flex-wrap">
-          <span className="text-base leading-none">{TYPE_ICON[t.type] || "📌"}</span>
+          {(() => {
+            const Icon = TYPE_ICON[t.type] ?? Pin;
+            return <Icon className="size-4 text-muted-foreground" />;
+          })()}
           <p className="text-sm font-medium text-foreground leading-snug flex-1">{t.title}</p>
           <span className={`text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${PRIORITY_BADGE[t.priority]}`}>
             {t.priority}
