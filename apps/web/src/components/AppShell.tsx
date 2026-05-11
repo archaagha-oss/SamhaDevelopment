@@ -11,6 +11,7 @@ import { IconSearch, IconBell } from "./Icons";
 import { useEventStream } from "../hooks/useEventStream";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { formatRelative } from "../utils/format";
 
 type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
 
@@ -63,14 +64,12 @@ const NOTIF_TOKENS: Record<string, string> = {
   GENERAL: "text-muted-foreground",
 };
 
+// Notification panel uses the shared `formatRelative` helper (UX_AUDIT_2 §R4
+// — list context, keep relative). Bell items render in a dropdown so the
+// short relative form is the right choice; for older items (≥30d) the helper
+// switches to absolute date automatically.
 function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  return formatRelative(dateStr);
 }
 
 export default function AppShell() {

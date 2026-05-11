@@ -14,6 +14,7 @@ import {
   FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { formatTimestamp } from "../utils/format";
 import DealTimeline from "./DealTimeline";
 
 interface Activity {
@@ -50,14 +51,8 @@ const activityIcon = (type: string, summary: string): LucideIcon => {
   return FileText;
 };
 
-const timeAgo = (dateStr: string): string => {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-};
+// Activity timestamps use the shared `formatTimestamp` helper —
+// relative for ≤60min, absolute beyond (UX_AUDIT_2 §R4).
 
 export default function DealActivityPanel({
   dealId,
@@ -153,7 +148,7 @@ export default function DealActivityPanel({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground break-words">{activity.summary}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {timeAgo(activity.activityDate)}
+                      {formatTimestamp(activity.activityDate)}
                       {activity.createdBy && <span> · {activity.createdBy}</span>}
                     </p>
                   </div>

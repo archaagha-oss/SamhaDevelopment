@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { formatTimestamp } from "../utils/format";
 
 export interface ConversationActivity {
   id: string;
@@ -67,14 +68,8 @@ const STATUS_BADGE: Record<string, string> = {
   received:  "text-muted-foreground",
 };
 
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)     return "Just now";
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 172800) return "Yesterday";
-  return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short" });
-}
+// Timestamp formatting uses the shared `formatTimestamp` helper —
+// relative for ≤60min, absolute beyond (UX_AUDIT_2 §R4).
 
 function fmtTimestamp(dateStr: string): string {
   const d = new Date(dateStr);
@@ -138,7 +133,7 @@ function Bubble({ act }: { act: ConversationActivity }) {
         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{act.summary}</p>
         <div className="flex items-center justify-between gap-2 mt-1.5 text-[10px]">
           <span className="opacity-60" title={fmtTimestamp(act.activityDate ?? act.createdAt)}>
-            {timeAgo(act.activityDate ?? act.createdAt)}
+            {formatTimestamp(act.activityDate ?? act.createdAt)}
           </span>
           <span className={statusClass}>{status}</span>
         </div>
@@ -162,7 +157,7 @@ function SystemEvent({ act }: { act: ConversationActivity }) {
         <span className="opacity-60">·</span>
         <span className="max-w-[400px] truncate">{act.summary}</span>
         <span className="opacity-50">·</span>
-        <span className="opacity-60">{timeAgo(act.activityDate ?? act.createdAt)}</span>
+        <span className="opacity-60">{formatTimestamp(act.activityDate ?? act.createdAt)}</span>
       </div>
       <div className="flex-1 h-px bg-muted" />
     </div>
