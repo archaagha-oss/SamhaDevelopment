@@ -425,6 +425,7 @@ model Project {
   updates                ProjectUpdate[]
   escrowTransactions     EscrowTransaction[]
   constructionMilestones ConstructionMilestone[]
+  commissionTierRules    CommissionTierRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -578,6 +579,7 @@ model User {
   tasks             Task[]              @relation("AssignedTasks")
   settingsAuditLogs SettingsAuditLog[]  @relation("SettingsAuditUser")
   apiKeysCreated    ApiKey[]            @relation("ApiKeyCreator")
+  commissionSplits  CommissionSplit[]
 
   // Per-user notification preferences — overrides org defaults.
   notificationPrefs Json?
@@ -1127,6 +1129,7 @@ model Deal {
   activities Activity[]
   tasks      Task[]          @relation("DealTasks")
   purchasers DealPurchaser[]
+  commissionSplits CommissionSplit[]
 
   handoverChecklist HandoverChecklist?
 
@@ -2121,4 +2124,79 @@ model SnagPhoto {
   uploadedAt DateTime @default(now())
 
   @@index([snagItemId])
+}
+
+// ============================================================
+// SECTION: COMMISSION TIER RULES & SPLITS
+// ============================================================
+//
+// Configuration that drives how new Commission rows are computed. Each rule
+// holds an ordered set of sale-price brackets (CommissionTier). When a deal
+// resolves, the highest-priority active rule that matches the deal's project
+// (or a global rule with projectId=null) is used; the tier whose
+// [minSalePrice, maxSalePrice] band contains deal.salePrice determines the
+// rate + flat bonus. CommissionSplit then captures the per-agent split for
+// audit, denormalising the ruleId that was in effect at split-creation time.
+
+model CommissionTierRule {
+  id          String  @id @default(cuid())
+  name        String
+  description String? @db.Text
+
+  isActive Boolean @default(true)
+  priority Int     @default(0)
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  tiers            CommissionTier[]
+  commissionSplits CommissionSplit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([isActive, priority])
+}
+
+model CommissionTier {
+  id     String             @id @default(cuid())
+  ruleId String
+  rule   CommissionTierRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  minSalePrice Float?
+  maxSalePrice Float?
+  ratePercent  Float
+  flatBonus    Float @default(0)
+  sortOrder    Int   @default(0)
+
+  @@index([ruleId])
+  @@index([ruleId, sortOrder])
+}
+
+model CommissionSplit {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Snapshot of the rule that was used at the time the split was created.
+  // SetNull so deleting a rule doesn't break the audit trail on historical
+  // splits — the percent + dealId remain intact.
+  ruleId String?
+  rule   CommissionTierRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  percent Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dealId, userId])
+  @@index([dealId])
+  @@index([userId])
 }

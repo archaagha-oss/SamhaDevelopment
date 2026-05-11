@@ -590,6 +590,59 @@ export type AddSnagItemInput      = z.infer<typeof addSnagItemSchema>;
 export type UpdateSnagStatusInput = z.infer<typeof updateSnagStatusSchema>;
 export type AddSnagPhotoInput     = z.infer<typeof addSnagPhotoSchema>;
 
+// ===== COMMISSION TIERS =====
+//
+// Tiered commission rules + per-deal commission splits. See
+// services/commissionTierService.ts. minSalePrice / maxSalePrice are
+// nullable so callers can express unbounded ends of a bracket
+// (null = no lower / no upper bound).
+
+const commissionTierSchema = z.object({
+  id: z.string().optional(),
+  minSalePrice: z.number().nonnegative().nullable().optional(),
+  maxSalePrice: z.number().nonnegative().nullable().optional(),
+  ratePercent: z.number().nonnegative().max(100),
+  flatBonus: z.number().nonnegative().optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+});
+
+export const createCommissionTierRuleSchema = z.object({
+  name: z.string().min(1, "Rule name is required"),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  priority: z.number().int().optional(),
+  projectId: z.string().optional().nullable(),
+  validFrom: z.string().optional().nullable(),
+  validUntil: z.string().optional().nullable(),
+  tiers: z.array(commissionTierSchema).optional(),
+});
+
+export const updateCommissionTierRuleSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  priority: z.number().int().optional(),
+  projectId: z.string().optional().nullable(),
+  validFrom: z.string().optional().nullable(),
+  validUntil: z.string().optional().nullable(),
+  tiers: z.array(commissionTierSchema).optional(),
+});
+
+export const setCommissionSplitsSchema = z.object({
+  splits: z
+    .array(
+      z.object({
+        userId: z.string().min(1, "userId is required"),
+        percent: z.number().min(0).max(100),
+      }),
+    )
+    .min(1, "At least one split is required"),
+});
+
+export type CreateCommissionTierRuleInput = z.infer<typeof createCommissionTierRuleSchema>;
+export type UpdateCommissionTierRuleInput = z.infer<typeof updateCommissionTierRuleSchema>;
+export type SetCommissionSplitsInput = z.infer<typeof setCommissionSplitsSchema>;
+
 // Type exports for use in route handlers
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
