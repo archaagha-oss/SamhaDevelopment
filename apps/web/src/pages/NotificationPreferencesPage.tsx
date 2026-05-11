@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useSettings, type NotificationPrefs } from "../contexts/SettingsContext";
+import { optimisticAction } from "../lib/optimisticToast";
 
 /**
  * Per-user notification preferences. Layered on top of the org-wide defaults
@@ -76,8 +77,15 @@ export default function NotificationPreferencesPage() {
   }
 
   function reset() {
-    if (!confirm("Clear all overrides and follow the organization defaults?")) return;
-    setPrefs({});
+    // Optimistic clear with Undo (UX_AUDIT_2 §R5): snapshot the current
+    // overrides, clear immediately, restore them if the user clicks Undo.
+    const snapshot = prefs;
+    optimisticAction({
+      do: async () => { setPrefs({}); },
+      undo: async () => { setPrefs(snapshot); },
+      message: "Overrides cleared",
+      description: "Now using organization defaults. Undo within 5 seconds.",
+    });
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   useRevokeUnitShareToken,
   useUnitShareTokens,
 } from "../hooks/useUnitShareTokens";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface Props {
   unitId: string;
@@ -25,6 +26,7 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
   const create = useCreateUnitShareToken(unitId);
   const revoke = useRevokeUnitShareToken(unitId);
   const remove = useDeleteUnitShareToken(unitId);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showPrice, setShowPrice] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -133,9 +135,7 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm("Delete this share link permanently?")) remove.mutate(t.id);
-                      }}
+                      onClick={() => setConfirmDeleteId(t.id)}
                       disabled={remove.isPending}
                       style={{ ...btnSecondary, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.3)" }}
                     >
@@ -154,6 +154,19 @@ export default function UnitShareLinkPanel({ unitId }: Props) {
           })}
         </ul>
       )}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete share link?"
+        message="Anyone with this link will immediately stop being able to view the unit. This can't be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          if (id) remove.mutate(id);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </section>
   );
 }

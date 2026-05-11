@@ -6,6 +6,7 @@ import {
   useUploadProjectDocument,
   type DocumentVisibility,
 } from "../hooks/useProjectDocuments";
+import ConfirmDialog from "./ConfirmDialog";
 
 const DOC_TYPES = [
   "OTHER",
@@ -26,6 +27,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
   const update = useUpdateProjectDocument(projectId);
   const remove = useDeleteProjectDocument(projectId);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [pendingType, setPendingType] = useState<string>("OTHER");
   const [pendingVisibility, setPendingVisibility] = useState<DocumentVisibility>("PUBLIC");
   const [pendingName, setPendingName] = useState("");
@@ -127,9 +129,7 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
                   <td style={td}>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm("Delete this document permanently?")) remove.mutate(d.id);
-                      }}
+                      onClick={() => setConfirmDeleteId(d.id)}
                       style={{
                         padding: "4px 10px",
                         border: "1px solid #f3c4c4",
@@ -148,6 +148,19 @@ export default function ProjectDocumentsTab({ projectId }: Props) {
           </table>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete document?"
+        message="This document will be permanently removed from the project."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          if (id) remove.mutate(id);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </section>
   );
 }

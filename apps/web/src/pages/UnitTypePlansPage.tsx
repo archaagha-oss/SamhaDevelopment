@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { formatDirham } from "@/lib/money";
 import { typePlansApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 interface Plan {
   id: string;
@@ -34,6 +35,7 @@ const EMPTY: Partial<Plan> = {
 export default function UnitTypePlansPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Partial<Plan>>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -69,12 +71,15 @@ export default function UnitTypePlansPage() {
     }
   };
 
-  const remove = async (id: string, units: number) => {
+  const remove = (id: string, units: number) => {
     if (units > 0) {
       toast.error(`Cannot delete: ${units} units still use this plan.`);
       return;
     }
-    if (!confirm("Delete this type plan?")) return;
+    setConfirmDelete({ id });
+  };
+
+  const performDelete = async (id: string) => {
     try {
       await typePlansApi.remove(id);
       toast.success("Deleted");
@@ -194,6 +199,19 @@ export default function UnitTypePlansPage() {
           </div>
         </PageContainer>
       </div>
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Delete type plan?"
+        message="This unit type plan will be permanently removed. Units already linked to other plans aren't affected."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          const target = confirmDelete;
+          setConfirmDelete(null);
+          if (target) performDelete(target.id);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { optimisticAction } from "../lib/optimisticToast";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
@@ -48,12 +49,22 @@ export default function MemberDetailPage() {
 
   async function deactivate() {
     if (!member) return;
-    if (!confirm(`Deactivate ${member.name}? They will lose access but their data is preserved.`)) return;
     setActing(true);
     try {
-      await axios.delete(`/api/users/${member.id}`);
-      toast.success(`${member.name} deactivated`);
-      load();
+      // Optimistic deactivate with Undo (UX_AUDIT_2 §R5): data is preserved
+      // by the server (soft-delete), so the action is fully reversible.
+      await optimisticAction({
+        do: async () => {
+          await axios.delete(`/api/users/${member.id}`);
+          await load();
+        },
+        undo: async () => {
+          await axios.patch(`/api/users/${member.id}`, { status: "ACTIVE" });
+          await load();
+        },
+        message: `${member.name} deactivated`,
+        description: "Their data is preserved — Undo within 5 seconds.",
+      });
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to deactivate member");
     } finally {
