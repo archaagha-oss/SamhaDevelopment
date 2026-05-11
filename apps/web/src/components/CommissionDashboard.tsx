@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -152,7 +153,7 @@ export default function CommissionDashboard() {
             <div key={key} className={`${bg} rounded-xl p-4 border border-border`}>
               <p className="text-xs text-muted-foreground mb-1">{label}</p>
               <p className={`text-2xl font-bold tabular-nums ${color}`}>{s?.count ?? 0}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">AED {fmtM(s?.total ?? 0)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{formatDirham(s?.total ?? 0)}</p>
             </div>
           );
         })}
@@ -195,9 +196,9 @@ export default function CommissionDashboard() {
                     <td className="px-4 py-3 text-foreground">{c.deal.unit.unitNumber}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.brokerCompany?.name || "—"}</td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-foreground">AED {c.amount.toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">{formatDirham(c.amount)}</p>
                       {tab === "PAID" && c.paidAmount && c.paidAmount !== c.amount && (
-                        <p className="text-xs text-muted-foreground">Paid: AED {c.paidAmount.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Paid: {formatDirham(c.paidAmount)}</p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{c.rate}%</td>
@@ -268,7 +269,7 @@ export default function CommissionDashboard() {
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Paid (AED)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount Paid</label>
                 <input
                   type="number"
                   value={payForm.paidAmount}

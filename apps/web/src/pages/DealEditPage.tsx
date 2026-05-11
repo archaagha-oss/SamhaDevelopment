@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
@@ -218,7 +219,7 @@ export default function DealEditPage() {
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Pricing</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>Sale Price (AED)</label>
+                <label className={lbl}>Sale Price</label>
                 <input
                   required
                   type="number"
@@ -231,7 +232,7 @@ export default function DealEditPage() {
                 />
               </div>
               <div>
-                <label className={lbl}>Discount (AED)</label>
+                <label className={lbl}>Discount</label>
                 <input
                   type="number"
                   min={0}
@@ -246,7 +247,7 @@ export default function DealEditPage() {
             {!isLocked && form.salePrice && (
               <div className="bg-info-soft border border-primary/40 rounded-lg px-4 py-2.5 text-sm flex justify-between">
                 <span className="text-muted-foreground">Net Price</span>
-                <span className="font-bold text-foreground tabular-nums">AED {netPrice.toLocaleString()}</span>
+                <span className="font-bold text-foreground tabular-nums">{formatDirham(netPrice)}</span>
               </div>
             )}
           </div>

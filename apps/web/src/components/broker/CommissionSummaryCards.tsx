@@ -1,6 +1,7 @@
 import React from "react";
 import { CommissionSummary } from "../../hooks/useBrokerDashboard";
 import MetricsCard from "../finance/MetricsCard";
+import { formatDirhamCompact } from "@/lib/money";
 
 interface CommissionSummaryCardsProps {
   data: CommissionSummary;
@@ -16,7 +17,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
       {/* Total Earned */}
       <MetricsCard
         label="Total Earned"
-        value={`AED ${(data.totalEarned / 1000000).toFixed(1)}M`}
+        value={formatDirhamCompact(data.totalEarned)}
         subtext={`${data.totalDeals} deals`}
         trend="stable"
       />
@@ -24,7 +25,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
       {/* Approved */}
       <MetricsCard
         label="Approved"
-        value={`AED ${(data.approved / 1000000).toFixed(1)}M`}
+        value={formatDirhamCompact(data.approved)}
         subtext={`${data.approvedDeals} deals`}
         trend="up"
         className="bg-success-soft border-success/30"
@@ -33,7 +34,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
       {/* Pending Approval */}
       <MetricsCard
         label="Pending Approval"
-        value={`AED ${(data.pending / 1000000).toFixed(1)}M`}
+        value={formatDirhamCompact(data.pending)}
         subtext={`${data.pendingDeals} deals`}
         trend="stable"
         className="bg-warning-soft border-warning/30"
@@ -42,7 +43,7 @@ export default function CommissionSummaryCards({ data }: CommissionSummaryCardsP
       {/* Paid */}
       <MetricsCard
         label="Paid"
-        value={`AED ${(data.paid / 1000000).toFixed(1)}M`}
+        value={formatDirhamCompact(data.paid)}
         subtext={`${data.paidDeals} deals`}
         trend="up"
         className="bg-info-soft border-primary/40"

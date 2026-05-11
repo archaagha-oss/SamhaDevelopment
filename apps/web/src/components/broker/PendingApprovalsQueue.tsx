@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Check, X } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { PendingApproval } from "../../hooks/useBrokerDashboard";
 import { useApproveCommission, useRejectCommission } from "../../hooks/useBrokerDashboard";
 import { toast } from "sonner";
@@ -86,7 +87,7 @@ export default function PendingApprovalsQueue({
                 <p className="text-xs text-muted-foreground mt-1">{item.reason}</p>
               </div>
               <span className="font-bold text-foreground whitespace-nowrap ml-3">
-                AED {item.amount.toLocaleString()}
+                {formatDirham(item.amount)}
               </span>
             </div>
 

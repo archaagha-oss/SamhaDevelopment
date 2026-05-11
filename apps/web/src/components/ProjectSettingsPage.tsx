@@ -406,7 +406,7 @@ export default function ProjectSettingsPage() {
                   <p className="text-xs text-muted-foreground mt-1">Dubai Land Dept fee on net price</p>
                 </div>
                 <div>
-                  <label className={lbl}>Admin Fee (AED)</label>
+                  <label className={lbl}>Admin Fee</label>
                   <input type="number" min="0" className={inp} value={config.adminFee} onChange={(e) => setConfig({ ...config, adminFee: e.target.value })} />
                   <p className="text-xs text-muted-foreground mt-1">Fixed fee per deal</p>
                 </div>
@@ -481,7 +481,7 @@ export default function ProjectSettingsPage() {
                   <input type="number" min="1" step="0.1" className={inp} value={config.defaultArea} onChange={(e) => setConfig({ ...config, defaultArea: e.target.value })} placeholder="e.g. 85" />
                 </div>
                 <div>
-                  <label className={lbl}>Default Price (AED)</label>
+                  <label className={lbl}>Default Price</label>
                   <input type="number" min="1" className={inp} value={config.defaultPrice} onChange={(e) => setConfig({ ...config, defaultPrice: e.target.value })} placeholder="e.g. 1200000" />
                 </div>
               </div>

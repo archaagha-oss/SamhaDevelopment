@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 
 interface DataPoint {
   month: string;
@@ -55,7 +56,7 @@ export default function ExpectedVsReceivedChart({ data }: ExpectedVsReceivedChar
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-semibold text-foreground">{formatMonth(item.month)}</h4>
                 <span className="text-xs text-muted-foreground">
-                  Gap: <span className={gap > 0 ? "text-destructive font-semibold" : "text-success"}> AED {(gap / 1000000).toFixed(1)}M</span>
+                  Gap: <span className={gap > 0 ? "text-destructive font-semibold" : "text-success"}> {formatDirham(gap / 1000000, { decimals: 1 })}M</span>
                 </span>
               </div>
 
@@ -68,7 +69,7 @@ export default function ExpectedVsReceivedChart({ data }: ExpectedVsReceivedChar
                       {expectedPercent > 15 && <span className="text-xs font-semibold text-white">Expected</span>}
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">AED {(item.expected / 1000000).toFixed(1)}M</p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDirham(item.expected / 1000000, { decimals: 1 })}M</p>
                 </div>
 
                 {/* Received Bar */}
@@ -78,7 +79,7 @@ export default function ExpectedVsReceivedChart({ data }: ExpectedVsReceivedChar
                       {receivedPercent > 15 && <span className="text-xs font-semibold text-white">Received</span>}
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">AED {(item.received / 1000000).toFixed(1)}M</p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDirham(item.received / 1000000, { decimals: 1 })}M</p>
                 </div>
               </div>
 
@@ -98,19 +99,19 @@ export default function ExpectedVsReceivedChart({ data }: ExpectedVsReceivedChar
         <div className="bg-muted/50 rounded p-3">
           <p className="text-xs text-muted-foreground">Total Expected</p>
           <p className="text-lg font-bold text-foreground">
-            AED {(metrics.totalExpected / 1000000).toFixed(1)}M
+            {formatDirham(metrics.totalExpected / 1000000, { decimals: 1 })}M
           </p>
         </div>
         <div className="bg-success-soft rounded p-3">
           <p className="text-xs text-muted-foreground">Total Received</p>
           <p className="text-lg font-bold text-success">
-            AED {(metrics.totalReceived / 1000000).toFixed(1)}M
+            {formatDirham(metrics.totalReceived / 1000000, { decimals: 1 })}M
           </p>
         </div>
         <div className={`rounded p-3 ${metrics.totalGap > 0 ? "bg-destructive-soft" : "bg-success-soft"}`}>
           <p className="text-xs text-muted-foreground">Total Gap</p>
           <p className={`text-lg font-bold ${metrics.totalGap > 0 ? "text-destructive" : "text-success"}`}>
-            AED {(metrics.totalGap / 1000000).toFixed(1)}M
+            {formatDirham(metrics.totalGap / 1000000, { decimals: 1 })}M
           </p>
         </div>
       </div>

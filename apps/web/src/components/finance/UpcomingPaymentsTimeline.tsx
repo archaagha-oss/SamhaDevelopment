@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Check } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { UpcomingPayment } from "../../hooks/useFinanceDashboard";
 
 interface UpcomingPaymentsTimelineProps {
@@ -102,7 +103,7 @@ export default function UpcomingPaymentsTimeline({
               <div className="flex-1">
                 <h4 className="font-semibold text-foreground">{formatDate(item.date)}</h4>
                 <p className="text-xs text-muted-foreground">
-                  {item.count} payments · AED {(item.totalAmount / 1000000).toFixed(1)}M
+                  {item.count} payments · {formatDirham(item.totalAmount / 1000000, { decimals: 1 })}M
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -130,7 +131,7 @@ export default function UpcomingPaymentsTimeline({
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                       <span className="font-semibold text-foreground text-right whitespace-nowrap">
-                        AED {payment.amount.toLocaleString()}
+                        {formatDirham(payment.amount)}
                       </span>
                       <button
                         onClick={(e) => {
@@ -166,7 +167,7 @@ export default function UpcomingPaymentsTimeline({
           <div className="bg-muted/50 rounded p-3">
             <p className="text-xs text-muted-foreground">Total Due</p>
             <p className="text-lg font-bold text-foreground">
-              AED {(data.reduce((sum, item) => sum + item.totalAmount, 0) / 1000000).toFixed(1)}M
+              {formatDirham(data.reduce((sum, item) => sum + item.totalAmount, 0) / 1000000, { decimals: 1 })}M
             </p>
           </div>
         </div>

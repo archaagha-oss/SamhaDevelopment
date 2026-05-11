@@ -225,7 +225,7 @@ export default function CreateOfferModal({
               <option value="">Select a unit...</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.unitNumber} ({unit.type}) - AED {unit.price.toLocaleString()}
+                  {unit.unitNumber} ({unit.type}) - {formatDirham(unit.price)}
                 </option>
               ))}
             </select>
@@ -249,7 +249,7 @@ export default function CreateOfferModal({
               {unitArea > 0 && (
                 <div className="flex justify-between text-sm border-t border-border pt-2">
                   <span className="text-muted-foreground">Price/sqft:</span>
-                  <span className="font-medium text-foreground">AED {Math.round(unitPrice / unitArea).toLocaleString()}</span>
+                  <span className="font-medium text-foreground">{formatDirham(Math.round(unitPrice / unitArea))}</span>
                 </div>
               )}
             </div>
@@ -258,7 +258,7 @@ export default function CreateOfferModal({
           {/* Offered Price */}
           <div>
             <label htmlFor="offeredPrice" className="block text-sm font-medium text-foreground mb-2">
-              Offered Price (AED) *
+              Offered Price *
             </label>
             <input
               id="offeredPrice"
@@ -270,12 +270,12 @@ export default function CreateOfferModal({
             />
             {discount > 0 && (
               <p className="text-xs text-success mt-1 font-medium">
-                Discount: AED {discount.toLocaleString()}
+                Discount: {formatDirham(discount)}
               </p>
             )}
             {unitArea > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                AED {pricePerSqft.toLocaleString()} per sqft
+                {formatDirham(pricePerSqft)} per sqft
               </p>
             )}
           </div>
@@ -304,12 +304,12 @@ export default function CreateOfferModal({
               <p className="text-sm font-medium text-info-soft-foreground">Offer Summary</p>
               <div className="flex justify-between text-sm">
                 <span className="text-primary">Sale Price:</span>
-                <span className="font-bold text-info-soft-foreground">AED {offeredPrice.toLocaleString()}</span>
+                <span className="font-bold text-info-soft-foreground">{formatDirham(offeredPrice)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-primary">Your Discount:</span>
-                  <span className="font-bold text-success">-AED {discount.toLocaleString()}</span>
+                  <span className="font-bold text-success">-{formatDirham(discount)}</span>
                 </div>
               )}
             </div>

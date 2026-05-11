@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { formatAreaShort } from "../utils/formatArea";
+import { formatDirham } from "@/lib/money";
 
 interface SimilarUnit {
   id: string;
@@ -86,7 +87,7 @@ export default function UnitSimilarUnits({ currentUnitId, projectId, type }: Pro
             <span className="text-[10px] text-muted-foreground flex-shrink-0">Fl.{u.floor}</span>
             <span className="text-[10px] text-muted-foreground flex-1">{formatAreaShort(u.area)}</span>
             <span className="text-[10px] font-semibold text-foreground">
-              AED {u.price.toLocaleString("en-AE")}
+              {formatDirham(u.price)}
             </span>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLORS[u.status] || "bg-muted text-muted-foreground"}`}>
               {u.status.replace(/_/g, " ")}

@@ -1,5 +1,6 @@
 import React from "react";
 import { Crown } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { BrokerPerformanceData } from "../../hooks/useBrokerDashboard";
 
 interface BrokerPerformanceSummaryProps {
@@ -75,17 +76,17 @@ export default function BrokerPerformanceSummary({
 
                 {/* Total Earned */}
                 <td className="px-4 py-3 text-right font-semibold text-foreground">
-                  AED {(broker.totalEarned / 1000000).toFixed(1)}M
+                  {formatDirham(broker.totalEarned / 1000000, { decimals: 1 })}M
                 </td>
 
                 {/* Approved */}
                 <td className="px-4 py-3 text-right font-semibold text-success">
-                  AED {(broker.approved / 1000000).toFixed(1)}M
+                  {formatDirham(broker.approved / 1000000, { decimals: 1 })}M
                 </td>
 
                 {/* Pending */}
                 <td className="px-4 py-3 text-right font-semibold text-warning">
-                  AED {(broker.pending / 1000000).toFixed(1)}M
+                  {formatDirham(broker.pending / 1000000, { decimals: 1 })}M
                 </td>
 
                 {/* Approval Rate */}
@@ -125,7 +126,7 @@ export default function BrokerPerformanceSummary({
         <div className="bg-muted/50 rounded p-3">
           <p className="text-xs text-muted-foreground">Total Earned</p>
           <p className="text-lg font-bold text-foreground">
-            AED {(data.reduce((sum, b) => sum + b.totalEarned, 0) / 1000000).toFixed(1)}M
+            {formatDirham(data.reduce((sum, b) => sum + b.totalEarned, 0) / 1000000, { decimals: 1 })}M
           </p>
         </div>
         <div className="bg-warning-soft rounded p-3">

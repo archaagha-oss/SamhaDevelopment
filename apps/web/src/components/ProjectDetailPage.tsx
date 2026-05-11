@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
 import { Pencil } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import UnitsTable from "./UnitsTable";
 import ProjectUpdatesTab from "./ProjectUpdatesTab";
 import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
@@ -383,7 +384,7 @@ export default function ProjectDetailPage() {
                         <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
                         <td className="px-4 py-3 text-muted-foreground">{lead.email || "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                          {lead.budget ? `AED ${lead.budget.toLocaleString()}` : "—"}
+                          {lead.budget ? formatDirham(lead.budget) : "—"}
                         </td>
                         <td className="px-4 py-3">
                           <StageBadge kind="lead" stage={lead.stage} />
@@ -427,7 +428,7 @@ export default function ProjectDetailPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{deal.unit.unitNumber}</td>
                         <td className="px-4 py-3 font-medium text-foreground tabular-nums">
-                          AED {deal.salePrice.toLocaleString()}
+                          {formatDirham(deal.salePrice)}
                         </td>
                         <td className="px-4 py-3">
                           <StageBadge kind="deal" stage={deal.stage} />

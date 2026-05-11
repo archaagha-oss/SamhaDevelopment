@@ -986,7 +986,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                         </option>
                         {changeUnitList.map((u) => (
                           <option key={u.id} value={u.id}>
-                            Unit {u.unitNumber} · {u.type.replace(/_/g, " ")} · Floor {u.floor} · AED {u.price.toLocaleString()}
+                            Unit {u.unitNumber} · {u.type.replace(/_/g, " ")} · Floor {u.floor} · {formatDirham(u.price)}
                           </option>
                         ))}
                       </select>

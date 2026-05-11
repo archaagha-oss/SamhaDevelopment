@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import { useAgents } from "../hooks/useAgents";
 import QuickLeadModal from "./QuickLeadModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -502,7 +503,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                             {lead.budget && (
                               <p className="text-xs text-muted-foreground mb-1.5">
                                 <span>Budget </span>
-                                <span className="font-medium text-foreground tabular-nums">AED {lead.budget.toLocaleString()}</span>
+                                <span className="font-medium text-foreground tabular-nums">{formatDirham(lead.budget)}</span>
                               </p>
                             )}
 

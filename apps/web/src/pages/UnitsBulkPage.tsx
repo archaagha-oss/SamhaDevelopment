@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
 
 // UnitsBulkPage — 4-step wizard for bulk-creating a floor of units at
@@ -374,7 +375,7 @@ export default function UnitsBulkPage() {
                     />
                   </div>
                   <div>
-                    <label className={lbl}>Default Price (AED) *</label>
+                    <label className={lbl}>Default Price *</label>
                     <input
                       required type="number" min={1}
                       value={defaultPrice}
@@ -452,7 +453,7 @@ export default function UnitsBulkPage() {
                         <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
                         <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">View</th>
                         <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-28">Area (sqm)</th>
-                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-32">Price (AED)</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-32">Price</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -512,7 +513,7 @@ export default function UnitsBulkPage() {
                 </div>
                 <div className="bg-success-soft rounded-xl p-4">
                   <p className="text-2xl font-bold text-success tabular-nums">
-                    AED {(previewSummary.totalPrice / 1_000_000).toLocaleString("en-AE", { maximumFractionDigits: 2 })}M
+                    {formatDirham(previewSummary.totalPrice / 1_000_000, { decimals: 2 })}M
                   </p>
                   <p className="text-xs text-success font-medium mt-1">Combined list price</p>
                 </div>
@@ -555,7 +556,7 @@ export default function UnitsBulkPage() {
                         <th className="px-3 py-1.5 text-left font-semibold">Type</th>
                         <th className="px-3 py-1.5 text-left font-semibold">View</th>
                         <th className="px-3 py-1.5 text-right font-semibold">Area</th>
-                        <th className="px-3 py-1.5 text-right font-semibold">Price (AED)</th>
+                        <th className="px-3 py-1.5 text-right font-semibold">Price</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">

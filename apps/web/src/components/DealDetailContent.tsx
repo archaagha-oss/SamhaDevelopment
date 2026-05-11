@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 
 interface DealDetailContentProps {
   dealId: string;
@@ -152,7 +153,7 @@ export default function DealDetailContent({
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      AED {payment.amount.toLocaleString()}
+                      {formatDirham(payment.amount)}
                     </span>
                     <span className="text-muted-foreground">{fmtDate(payment.dueDate)}</span>
                   </div>
@@ -281,7 +282,7 @@ export default function DealDetailContent({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
-                  Amount (AED)
+                  Amount
                 </label>
                 <input
                   type="number"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import { escrowApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
 
@@ -121,15 +122,15 @@ export default function EscrowPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="border rounded p-4">
                 <div className="text-xs uppercase text-muted-foreground">Credits</div>
-                <div className="text-2xl font-semibold">AED {balance.credits.toLocaleString()}</div>
+                <div className="text-2xl font-semibold">{formatDirham(balance.credits)}</div>
               </div>
               <div className="border rounded p-4">
                 <div className="text-xs uppercase text-muted-foreground">Debits</div>
-                <div className="text-2xl font-semibold">AED {balance.debits.toLocaleString()}</div>
+                <div className="text-2xl font-semibold">{formatDirham(balance.debits)}</div>
               </div>
               <div className="border rounded p-4 bg-info-soft">
                 <div className="text-xs uppercase text-muted-foreground">Balance</div>
-                <div className="text-2xl font-semibold">AED {balance.balance.toLocaleString()}</div>
+                <div className="text-2xl font-semibold">{formatDirham(balance.balance)}</div>
               </div>
             </div>
           )}

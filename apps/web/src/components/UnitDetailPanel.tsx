@@ -3,6 +3,7 @@ import { Unit, UnitStatusHistory } from "../types";
 import { getStatusColor } from "../utils/statusColors";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import CreateOfferModal from "./CreateOfferModal";
 
 interface UnitDetailPanelProps {
@@ -173,12 +174,12 @@ export default function UnitDetailPanel({
             <div className="flex justify-between border-t border-border pt-3">
               <span className="text-sm text-muted-foreground">Price:</span>
               <span className="text-sm font-bold text-foreground">
-                AED {unit.price.toLocaleString()}
+                {formatDirham(unit.price)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Price/sqft:</span>
-              <span className="text-sm font-medium text-foreground">AED {pricePerSqft.toLocaleString()}</span>
+              <span className="text-sm font-medium text-foreground">{formatDirham(pricePerSqft)}</span>
             </div>
             {unit.parkingSpaces !== undefined && (
               <div className="flex justify-between">

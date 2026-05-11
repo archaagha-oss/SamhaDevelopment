@@ -516,7 +516,7 @@ export default function UnitsTable({ projectId }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price (AED)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price</label>
             <input
               type="number"
               value={filterPriceMin}
@@ -526,7 +526,7 @@ export default function UnitsTable({ projectId }: Props) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price (AED)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price</label>
             <input
               type="number"
               value={filterPriceMax}
@@ -659,7 +659,7 @@ export default function UnitsTable({ projectId }: Props) {
                 {isVisible("type")       && <Th label="Type"        sk="type" />}
                 {isVisible("area")       && <Th label="Area (sqft)" sk="area" />}
                 {isVisible("view")       && <Th label="View"        sk="view" />}
-                {isVisible("price")      && <Th label="Price (AED)" sk="price" align="right" />}
+                {isVisible("price")      && <Th label="Price" sk="price" align="right" />}
                 {isVisible("status")     && <Th label="Status"      sk="status" />}
                 {isVisible("agent")      && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground" style={{ minWidth: 140 }}>Agent</th>}
                 {!selectionMode && <th className="px-4 py-2.5 w-16" />}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Star } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 
 interface UnitOption {
   id: string;
@@ -117,7 +118,7 @@ export default function UnitInterestPicker({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price (AED)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Min Price</label>
               <input
                 type="number"
                 placeholder="e.g. 500000"
@@ -127,7 +128,7 @@ export default function UnitInterestPicker({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price (AED)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Max Price</label>
               <input
                 type="number"
                 placeholder="e.g. 5000000"
@@ -199,7 +200,7 @@ export default function UnitInterestPicker({
                       </p>
                     </div>
                     <span className="text-sm font-bold text-primary flex-shrink-0">
-                      AED {u.price.toLocaleString()}
+                      {formatDirham(u.price)}
                     </span>
                   </label>
                 );

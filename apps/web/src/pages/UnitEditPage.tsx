@@ -309,7 +309,7 @@ export default function UnitEditPage() {
                 )}
               </div>
               <div>
-                <label className={lbl}>Price (AED) *</label>
+                <label className={lbl}>Price *</label>
                 <input
                   required type="number" min={1}
                   value={form.price}
@@ -382,7 +382,7 @@ export default function UnitEditPage() {
                   />
                 </div>
                 <div>
-                  <label className={lbl}>Rate per sqft (AED)</label>
+                  <label className={lbl}>Rate per sqft</label>
                   <input
                     type="number" min={0} step={0.01}
                     value={form.ratePerSqft}

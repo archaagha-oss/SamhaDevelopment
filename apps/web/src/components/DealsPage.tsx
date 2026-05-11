@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
 import { useDeals } from "../hooks/useDeals";
 import EmptyState from "./EmptyState";
 import { StageBadge } from "@/components/ui/stage-badge";
@@ -373,7 +374,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">{deal.unit.unitNumber} · {deal.unit.type.replace(/_/g, " ")}</p>
-                              <p className="text-xs font-semibold text-foreground mb-2">AED {deal.salePrice.toLocaleString()}</p>
+                              <p className="text-xs font-semibold text-foreground mb-2">{formatDirham(deal.salePrice)}</p>
                               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                                 <span>{days}d in pipeline</span>
                                 <span className="font-mono">{deal.dealNumber}</span>
@@ -446,7 +447,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
                       <StageBadge kind="deal" stage={deal.stage} />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-foreground">AED {deal.salePrice.toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">{formatDirham(deal.salePrice)}</p>
                       {deal.discount > 0 && <p className="text-xs text-success">-{deal.discount.toLocaleString()}</p>}
                     </td>
                     <td className="px-4 py-3">

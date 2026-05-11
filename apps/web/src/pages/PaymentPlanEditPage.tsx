@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDirham } from "@/lib/money";
+import { DirhamSign } from "@/components/ui/DirhamSign";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
@@ -266,7 +268,7 @@ export default function PaymentPlanEditPage() {
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Preview</h3>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
-                At sale price AED
+                At sale price <DirhamSign className="inline size-3" aria-label="dirham" />
               </span>
               <input
                 type="number" step={1000} min={0}
@@ -333,7 +335,7 @@ export default function PaymentPlanEditPage() {
                       />
                       {estimatedAmt !== null && (
                         <span className="text-xs text-muted-foreground font-medium whitespace-nowrap tabular-nums">
-                          ≈ AED {estimatedAmt.toLocaleString("en-AE", { maximumFractionDigits: 0 })}
+                          ≈ {formatDirham(estimatedAmt)}
                         </span>
                       )}
                       {!isEdit && (

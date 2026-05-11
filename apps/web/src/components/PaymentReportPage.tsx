@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import PaymentActionModal, { PaymentAction, PaymentSummary } from "./PaymentActionModal";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -196,7 +197,7 @@ export default function PaymentReportPage() {
               <div key={range} className={`rounded-xl border p-4 ${colors[range] || "bg-muted/50 border-border text-muted-foreground"}`}>
                 <p className="text-xs font-bold uppercase tracking-wide mb-1">{range} days overdue</p>
                 <p className="text-2xl font-bold">{count}</p>
-                <p className="text-xs mt-0.5 opacity-80">AED {amount.toLocaleString()}</p>
+                <p className="text-xs mt-0.5 opacity-80">{formatDirham(amount)}</p>
               </div>
             );
           })}
@@ -226,7 +227,7 @@ export default function PaymentReportPage() {
                 <span className={`text-[10px] font-semibold uppercase tracking-wide ${cfg.kpi}`}>{cfg.label}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${cfg.badge}`}>{payments.length}</span>
               </div>
-              <p className={`text-base font-bold ${cfg.kpi}`}>AED {fmtK(total)}</p>
+              <p className={`text-base font-bold ${cfg.kpi}`}>{formatDirham(total)}</p>
             </button>
           );
         })}
@@ -250,8 +251,8 @@ export default function PaymentReportPage() {
           {collections && (
             <span className="ml-2 text-xs text-muted-foreground">
               {upcomingView === "7"
-                ? `${collections.upcoming.next7Days.count} payments · AED ${collections.upcoming.next7Days.total.toLocaleString()}`
-                : `${collections.upcoming.next30Days.count} payments · AED ${collections.upcoming.next30Days.total.toLocaleString()}`}
+                ? <>{collections.upcoming.next7Days.count} payments · {formatDirham(collections.upcoming.next7Days.total)}</>
+                : <>{collections.upcoming.next30Days.count} payments · {formatDirham(collections.upcoming.next30Days.total)}</>}
             </span>
           )}
         </div>
@@ -268,7 +269,7 @@ export default function PaymentReportPage() {
           </div>
           <div className="flex items-center gap-3">
             <p className="text-sm font-bold text-muted-foreground">
-              AED {activePayments.reduce((s, p) => s + p.amount, 0).toLocaleString()}
+              {formatDirham(activePayments.reduce((s, p) => s + p.amount, 0))}
             </p>
             {activePayments.length > 0 && (
               <button
@@ -318,7 +319,7 @@ export default function PaymentReportPage() {
                         {p.paidDate && <p className="text-xs text-success">Paid {fmtDate(p.paidDate)}</p>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <p className="font-semibold text-foreground">AED {p.amount.toLocaleString()}</p>
+                        <p className="font-semibold text-foreground">{formatDirham(p.amount)}</p>
                         <p className="text-xs text-muted-foreground">{p.percentage}%</p>
                       </td>
                       <td className="px-4 py-3">

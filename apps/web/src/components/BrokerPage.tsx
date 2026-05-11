@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Building2, MapPin, Users } from "lucide-react";
+import { formatDirham } from "@/lib/money";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
 import { getBrokerStatusColor } from "../utils/statusColors";
@@ -559,7 +560,7 @@ export default function BrokerPage() {
                 {location && <p className="text-[11px] text-muted-foreground truncate mt-0.5 inline-flex items-center gap-1"><MapPin className="size-3" /> {location}</p>}
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                   <span className="text-xs text-muted-foreground">{company.agents.length} agents</span>
-                  <span className="text-xs font-semibold text-success">AED {getPaidCommission(company).toLocaleString()} paid</span>
+                  <span className="text-xs font-semibold text-success inline-flex items-center gap-1">{formatDirham(getPaidCommission(company))} paid</span>
                 </div>
               </button>
               );
@@ -648,7 +649,7 @@ export default function BrokerPage() {
                     {[
                       { label: "Agents",     value: selected.agents.length,   color: "text-primary" },
                       { label: "Deals",      value: selected.deals.length,    color: "text-accent-2" },
-                      { label: "Commission", value: `AED ${(getTotalCommission(selected)/1000).toFixed(0)}K`, color: "text-success" },
+                      { label: "Commission", value: formatDirham(getTotalCommission(selected) / 1000), color: "text-success" },
                     ].map((s) => (
                       <div key={s.label} className="bg-card rounded-lg p-3 border border-border text-center">
                         <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -724,7 +725,7 @@ export default function BrokerPage() {
                     ].map((item) => (
                       <div key={item.label} className="bg-muted/50 rounded-lg p-3 border border-border">
                         <p className="text-xs text-muted-foreground">{item.label}</p>
-                        <p className={`font-bold ${item.color}`}>AED {item.amount.toLocaleString()}</p>
+                        <p className={`font-bold ${item.color}`}>{formatDirham(item.amount)}</p>
                       </div>
                     ))}
                   </div>
