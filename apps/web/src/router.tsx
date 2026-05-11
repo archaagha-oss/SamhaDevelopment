@@ -200,7 +200,7 @@ export const router = createBrowserRouter([
       { path: "projects/:projectId/type-plans",            element: <UnitTypePlansPage /> },
       { path: "projects/:projectId/construction",          element: <FeatureFlagGate flag="constructionProgress"><ConstructionProgressPage /></FeatureFlagGate> },
       { path: "projects/:projectId/escrow",                element: <FeatureFlagGate flag="escrowModule"><EscrowPage /></FeatureFlagGate> },
-      { path: "units/:unitId/snags",                       element: <FeatureFlagGate flag="snagList"><SnagListPage /></FeatureFlagGate> },
+      { path: "projects/:projectId/units/:unitId/snags",    element: <FeatureFlagGate flag="snagList"><SnagListPage /></FeatureFlagGate> },
       { path: "deals/:dealId/handover",                    element: <FeatureFlagGate flag="handoverChecklist"><HandoverChecklistPage /></FeatureFlagGate> },
       { path: "deals/:dealId/parties",                     element: <DealJointOwnersPage /> },
       { path: "leads/:leadId/kyc",                         element: <FeatureFlagGate flag="kycVerification"><LeadKycPage /></FeatureFlagGate> },

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { snagsApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import UnitSubTabs from "../components/unit/UnitSubTabs";
 
 interface SnagItem {
   id: string;
@@ -35,7 +36,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 const STATUS_OPTIONS = ["RAISED", "ACKNOWLEDGED", "IN_PROGRESS", "FIXED", "REJECTED", "CLOSED"];
 
 export default function SnagListPage() {
-  const { unitId } = useParams<{ unitId: string }>();
+  const { unitId, projectId } = useParams<{ unitId: string; projectId: string }>();
   const [lists, setLists] = useState<SnagList[]>([]);
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
@@ -108,8 +109,10 @@ export default function SnagListPage() {
       <PageHeader
         crumbs={[
           { label: "Home", path: "/" },
-          { label: "Units", path: "/units" },
-          { label: "Snag list" },
+          { label: "Projects", path: "/projects" },
+          ...(projectId ? [{ label: "Project", path: `/projects/${projectId}` }] : []),
+          ...(projectId && unitId ? [{ label: "Unit", path: `/projects/${projectId}/units/${unitId}` }] : []),
+          { label: "Snags" },
         ]}
         title="Snag list"
         subtitle="Walk-through items, severity, contractor, and resolution status."
@@ -122,6 +125,9 @@ export default function SnagListPage() {
           </button>
         }
       />
+      {unitId && projectId && (
+        <UnitSubTabs unitId={unitId} projectId={projectId} currentKey="snags" />
+      )}
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-5">

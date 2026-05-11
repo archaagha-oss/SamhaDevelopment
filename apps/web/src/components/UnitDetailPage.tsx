@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useFeatureFlag } from "../hooks/useFeatureFlag";
+import { useParams, useNavigate } from "react-router-dom";
+import UnitSubTabs from "./unit/UnitSubTabs";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
 import { formatArea } from "../utils/formatArea";
@@ -32,7 +32,6 @@ const DELETE_BLOCKING_STATUSES = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HAND
 export default function UnitDetailPage() {
   const { projectId, unitId } = useParams<{ projectId: string; unitId: string }>();
   const navigate = useNavigate();
-  const snagListEnabled = useFeatureFlag("snagList");
   const { data: unit, isLoading, error: queryError, refetch } = useUnit(unitId!);
   const { data: agents = [] } = useAgents();
   const updateUnit = useUpdateUnit(unitId!);
@@ -176,19 +175,13 @@ export default function UnitDetailPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-5">
-        {snagListEnabled && unitId && (
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">More sections</span>
-            <Link
-              to={`/units/${unitId}/snags`}
-              className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              Snags →
-            </Link>
-          </div>
-        )}
+      {unitId && projectId && (
+        <div className="max-w-7xl mx-auto px-6 pt-3">
+          <UnitSubTabs unitId={unitId} projectId={projectId} currentKey="unit" />
+        </div>
+      )}
 
+      <div className="max-w-7xl mx-auto px-6 py-5">
         <div className="grid grid-cols-3 gap-5">
 
           {/* ── LEFT COLUMN (2/3) ── */}

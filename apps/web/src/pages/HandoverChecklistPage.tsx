@@ -5,6 +5,7 @@ import { handoverApi } from "../services/phase2ApiService";
 import {
   DetailPageLayout, DetailPageLoading,
 } from "../components/layout";
+import DealSubTabs from "../components/deal/DealSubTabs";
 
 interface ChecklistItem {
   id: string;
@@ -111,6 +112,7 @@ export default function HandoverChecklistPage() {
           {checklist.completedAt && ` Completed ${new Date(checklist.completedAt).toLocaleDateString()}.`}
         </>
       }
+      tabs={dealId ? <DealSubTabs dealId={dealId} currentKey="handover" /> : undefined}
       main={<>
 
       <div className="space-y-4">

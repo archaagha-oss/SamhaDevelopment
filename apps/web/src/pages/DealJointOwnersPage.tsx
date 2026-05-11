@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import JointOwnerEditor from "../components/JointOwnerEditor";
 import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
+import DealSubTabs from "../components/deal/DealSubTabs";
 
 export default function DealJointOwnersPage() {
   const { dealId } = useParams<{ dealId: string }>();
@@ -28,6 +29,7 @@ export default function DealJointOwnersPage() {
       ]}
       title="Joint owners"
       subtitle="Co-owners on this deal — names, ownership splits, signatory authority."
+      tabs={<DealSubTabs dealId={dealId} currentKey="parties" />}
       main={<JointOwnerEditor dealId={dealId} />}
     />
   );
