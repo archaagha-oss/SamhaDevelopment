@@ -15,6 +15,8 @@ import { formatDirham } from "@/lib/money";
 import { Phone, Mail, MessageCircle, Handshake, Building2, FileText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDateTime, formatTimestamp } from "../utils/format";
+import NextStepCard from "@/components/ui/NextStepCard";
+import SlimHeader, { SlimHeaderSentinel } from "@/components/ui/SlimHeader";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -568,6 +570,31 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Slim sticky header appears once the profile card scrolls off-screen
+          (UX_AUDIT_2 §R7). Sentinel is placed right after the profile card. */}
+      {lead && (
+        <SlimHeader
+          primary={
+            <>
+              <span className="truncate">{lead.firstName} {lead.lastName}</span>
+              <span className="text-muted-foreground hidden md:inline">· {lead.phone}</span>
+            </>
+          }
+          badges={<StageBadge stage={lead.stage as any} />}
+          actions={
+            validTransitions.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => handleStageChange(validTransitions[0])}
+                disabled={changingStage}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                Move to {validTransitions[0].replace(/_/g, " ")}
+              </button>
+            ) : null
+          }
+        />
+      )}
       <Breadcrumbs crumbs={[
         { label: "Leads", path: "/leads" },
         { label: lead ? `${lead.firstName} ${lead.lastName}` : "Lead" },
@@ -684,6 +711,9 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </div>
         </div>
       </div>
+      {/* SlimHeader sentinel — when this scrolls out of view, the slim
+          header at the top of the page slides in (UX_AUDIT_2 §R7). */}
+      <SlimHeaderSentinel />
 
       {/* Tabs: Offers / Deals / Activity (+ KYC sub-route when flag enabled) */}
       <div className="border-b border-border flex items-center gap-1">
@@ -1008,8 +1038,32 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </div>
         </div>
 
-        {/* Right sidebar — metadata */}
-        <div className="space-y-4">
+        {/* Right sidebar — sticky on lg+ (UX_AUDIT_2 §R6). NextStepCard sits
+            at the top of the rail so the primary action is always visible. */}
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+          {validTransitions.length > 0 && (
+            <NextStepCard
+              label={`Move to ${validTransitions[0].replace(/_/g, " ")}`}
+              description={
+                lead.stage === "NEW"
+                  ? "Confirm first contact happened, then advance."
+                  : lead.stage === "CONTACTED"
+                  ? "If they qualify, move them forward."
+                  : "Pick the next stage to advance the lead."
+              }
+              onClick={() => handleStageChange(validTransitions[0])}
+              disabled={changingStage}
+              secondary={
+                validTransitions.length > 1
+                  ? {
+                      label: `Other stages (${validTransitions.length - 1})`,
+                      onClick: () => setShowStagePopover(true),
+                    }
+                  : undefined
+              }
+            />
+          )}
+
           {/* Lead info */}
           <div className="bg-card rounded-xl border border-border p-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead Info</h3>
