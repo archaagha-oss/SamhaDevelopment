@@ -132,12 +132,23 @@ export type UpdateMilestonePatch = {
  * 100 and no completedDate was supplied, completedDate auto-sets to now;
  * when it drops below 100 and the caller didn't explicitly set completedDate,
  * it clears.
+ *
+ * After the update commits, if the project's overall construction-progress
+ * percent has changed, any ON_CONSTRUCTION_PCT payments whose threshold is
+ * now <= overallPercent get their dueDate set to today (matching the
+ * ON_SPA_SIGNING / ON_OQOOD pattern in dealService.transitionStage).
+ *
+ * Returns the updated milestone along with the list of payments that fired
+ * so the route can surface a "N payments marked due" toast.
  */
 export async function updateMilestone(
   id: string,
   patch: UpdateMilestonePatch,
   userId: string,
-) {
+): Promise<{
+  milestone: Awaited<ReturnType<typeof prisma.constructionMilestone.update>>;
+  paymentsTriggered: TriggeredPayment[];
+}> {
   const existing = await prisma.constructionMilestone.findUnique({ where: { id } });
   if (!existing) {
     throw new ConstructionError("Milestone not found", 404, "MILESTONE_NOT_FOUND");
@@ -174,7 +185,88 @@ export async function updateMilestone(
   if (patch.label !== undefined) data.label = patch.label;
   if (patch.description !== undefined) data.description = patch.description;
 
-  return prisma.constructionMilestone.update({ where: { id }, data });
+  const milestone = await prisma.constructionMilestone.update({ where: { id }, data });
+
+  // Only re-evaluate ON_CONSTRUCTION_PCT triggers when the progress changed —
+  // edits to label / dates / notes don't move the overall %.
+  const paymentsTriggered = patch.progressPercent !== undefined
+    ? await fireConstructionPctTriggers(milestone.projectId)
+    : [];
+
+  return { milestone, paymentsTriggered };
+}
+
+// ---------------------------------------------------------------------------
+// fireConstructionPctTriggers
+// ---------------------------------------------------------------------------
+
+export type TriggeredPayment = {
+  paymentId: string;
+  dealId:    string;
+  amount:    number;
+  threshold: number;
+};
+
+/**
+ * Auto-due any ON_CONSTRUCTION_PCT payment whose threshold has been reached.
+ *
+ * Matches the dealService.transitionStage pattern: payments materialized
+ * from an ON_CONSTRUCTION_PCT plan-milestone start life as PENDING with a
+ * placeholder dueDate. When the project's overall construction % crosses
+ * the payment's `constructionPercent` threshold, we set dueDate = today so
+ * the finance team sees it on collection dashboards.
+ *
+ * Idempotency: we only flip rows whose dueDate is still in the future (the
+ * placeholder). Once a row has been auto-dued, its dueDate is "today or
+ * earlier" and the WHERE clause won't pick it up again — so re-running
+ * after subsequent % changes is safe.
+ */
+export async function fireConstructionPctTriggers(
+  projectId: string,
+): Promise<TriggeredPayment[]> {
+  // Recompute overall % from current milestone state.
+  const milestones = await prisma.constructionMilestone.findMany({
+    where:  { projectId },
+    select: { progressPercent: true },
+  });
+  if (milestones.length === 0) return [];
+  const overallPercent = Math.round(
+    milestones.reduce((sum, m) => sum + m.progressPercent, 0) / milestones.length,
+  );
+
+  // Find candidates: payments on this project's deals, ON_CONSTRUCTION_PCT,
+  // threshold met, status still PENDING (or OVERDUE — defensive), dueDate
+  // still in the future (i.e. not yet auto-dued).
+  const now = new Date();
+  const candidates = await prisma.payment.findMany({
+    where: {
+      scheduleTrigger:     "ON_CONSTRUCTION_PCT" as any,
+      constructionPercent: { not: null, lte: overallPercent },
+      status:              { in: ["PENDING", "OVERDUE"] },
+      dueDate:             { gt: now },
+      deal:                { unitId: { not: undefined }, unit: { projectId } },
+    },
+    select: {
+      id:                  true,
+      dealId:              true,
+      amount:              true,
+      constructionPercent: true,
+    },
+  });
+
+  if (candidates.length === 0) return [];
+
+  await prisma.payment.updateMany({
+    where: { id: { in: candidates.map((p) => p.id) } },
+    data:  { dueDate: now },
+  });
+
+  return candidates.map((p) => ({
+    paymentId: p.id,
+    dealId:    p.dealId,
+    amount:    p.amount,
+    threshold: p.constructionPercent ?? 0,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +358,13 @@ export async function deleteMilestone(id: string) {
  *
  * overallPercent is the mean of all milestone progressPercent values, weighted
  * equally and rounded to the nearest integer. Empty milestone list → 0.
+ *
+ * nextMilestone is the first not-yet-complete (progressPercent < 100)
+ * milestone in sort order — i.e. what's "up next" for the project team.
+ *
+ * paymentTriggers lists the ON_CONSTRUCTION_PCT payment thresholds that
+ * have been configured for this project so the page can show "next
+ * payment fires at X%" hints.
  */
 export async function getProjectProgress(projectId: string) {
   const milestones = await getOrSeedMilestones(projectId);
@@ -278,5 +377,30 @@ export async function getProjectProgress(projectId: string) {
         milestones.reduce((sum, m) => sum + m.progressPercent, 0) / totalCount,
       );
 
-  return { overallPercent, completedCount, totalCount, milestones };
+  const nextMilestone = milestones.find((m) => m.progressPercent < 100) ?? null;
+
+  // Distinct construction-pct thresholds across all payments on this project's
+  // deals. Used by the page to surface "payments fire at X / Y / Z %" hints.
+  const triggerRows = await prisma.payment.findMany({
+    where: {
+      scheduleTrigger:     "ON_CONSTRUCTION_PCT" as any,
+      constructionPercent: { not: null },
+      deal:                { unit: { projectId } },
+    },
+    select: { constructionPercent: true },
+    distinct: ["constructionPercent"],
+    orderBy:  { constructionPercent: "asc" },
+  });
+  const paymentTriggers = triggerRows
+    .map((r) => r.constructionPercent)
+    .filter((p): p is number => p !== null);
+
+  return {
+    overallPercent,
+    completedCount,
+    totalCount,
+    milestones,
+    nextMilestone,
+    paymentTriggers,
+  };
 }

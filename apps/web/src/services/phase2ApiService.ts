@@ -143,6 +143,15 @@ type ProgressResponse = {
   completedCount: number;
   totalCount: number;
   milestones: RawMilestone[];
+  nextMilestone: RawMilestone | null;
+  paymentTriggers: number[];
+};
+
+export type TriggeredPayment = {
+  paymentId: string;
+  dealId:    string;
+  amount:    number;
+  threshold: number;
 };
 
 function mapMilestone(m: RawMilestone) {
@@ -175,15 +184,18 @@ export const constructionApi = {
     axios.patch(`/api/construction/milestones/${id}`, body).then((r: any) => r.data),
   remove: (id: string) =>
     axios.delete(`/api/construction/milestones/${id}`).then((r: any) => r.data),
-  // Legacy signature retained for ConstructionProgressPage. Maps the page's
-  // `percentComplete` number into the backend's `progressPercent` patch. The
-  // backend doesn't return `paymentsTriggered` — page treats it as optional
-  // (`(result as any).paymentsTriggered?.length ?? 0`), so the toast just
-  // says "Updated to N%" without the payment-fired suffix.
+  // Maps the page's `percentComplete` number into the backend's
+  // `progressPercent` patch. The backend now returns `{ ...milestone,
+  // paymentsTriggered: TriggeredPayment[] }` — the page surfaces a
+  // "Updated to X% — N payment(s) marked due" toast when the array is
+  // non-empty (see ConstructionProgressPage).
   updatePercent: (id: string, percentComplete: number) =>
     axios
       .patch(`/api/construction/milestones/${id}`, { progressPercent: percentComplete })
-      .then((r: any) => r.data),
+      .then(
+        (r: any) =>
+          r.data as RawMilestone & { paymentsTriggered: TriggeredPayment[] },
+      ),
 };
 
 // ----- Snags -----
