@@ -1,3 +1,6 @@
+import { CheckCircle2, AlertTriangle, Circle, XCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 interface OqoodCountdownProps {
   deadline: string;
   daysRemaining: number;
@@ -18,11 +21,18 @@ export default function OqoodCountdown({
     overdue: "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
   };
 
-  const statusIcons = {
-    green: "✅",
-    yellow: "⚠️",
-    red: "🔴",
-    overdue: "❌",
+  const statusIcons: Record<string, LucideIcon> = {
+    green: CheckCircle2,
+    yellow: AlertTriangle,
+    red: Circle,
+    overdue: XCircle,
+  };
+
+  const statusIconTokens: Record<string, string> = {
+    green: "text-success",
+    yellow: "text-warning",
+    red: "text-destructive",
+    overdue: "text-destructive",
   };
 
   const statusLabels = {
@@ -35,7 +45,11 @@ export default function OqoodCountdown({
   return (
     <div className={`p-4 rounded border-2 ${statusColors[status]}`}>
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl">{statusIcons[status]}</span>
+        {(() => {
+          const Icon = statusIcons[status] ?? Circle;
+          const token = statusIconTokens[status] ?? "text-muted-foreground";
+          return <Icon className={`size-6 ${token}`} />;
+        })()}
         <div>
           <p className="text-sm font-semibold">Oqood Registration Deadline</p>
           <p className="text-xs opacity-75">UAE legal requirement</p>
@@ -81,8 +95,9 @@ export default function OqoodCountdown({
       </div>
 
       {isOverdue && (
-        <p className="text-xs mt-3 font-semibold">
-          ⚠️ This deal requires immediate attention! Oqood registration deadline has passed.
+        <p className="text-xs mt-3 font-semibold inline-flex items-center gap-1.5">
+          <AlertTriangle className="size-3.5 text-warning" />
+          <span>This deal requires immediate attention! Oqood registration deadline has passed.</span>
         </p>
       )}
     </div>

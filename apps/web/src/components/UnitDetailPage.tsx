@@ -19,6 +19,7 @@ import PaymentPlanCard from "./PaymentPlanCard";
 import UnitShareLinkPanel from "./UnitShareLinkPanel";
 import { useUnitDocuments } from "../hooks/useUnitDocuments";
 import ShareUnitModal from "./ShareUnitModal";
+import { Camera, Ruler, MessageCircle, AlertTriangle, MapPin, X } from "lucide-react";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 
@@ -190,8 +191,8 @@ export default function UnitDetailPage() {
                     className="w-full h-[420px] object-contain bg-muted/50"
                     loading="lazy"
                   />
-                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-900/75 text-white">
-                    {heroIsPlan ? "📐 Floor plan" : "📷 Photo"}
+                  <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-900/75 text-white inline-flex items-center gap-1">
+                    {heroIsPlan ? <><Ruler className="size-3" /> <span>Floor plan</span></> : <><Camera className="size-3" /> <span>Photo</span></>}
                   </span>
                   <span className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/85 text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     Click to enlarge
@@ -212,7 +213,7 @@ export default function UnitDetailPage() {
                   onClick={() => setShowUploadModal(true)}
                   className="w-full h-[280px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/40 hover:bg-info-soft/40 transition-colors"
                 >
-                  <span className="text-4xl">📐</span>
+                  <Ruler className="size-10 text-muted-foreground" />
                   <span className="text-sm font-semibold text-foreground">Add floor plan</span>
                   <span className="text-xs text-muted-foreground">Floor plan helps clients picture the unit fastest</span>
                 </button>
@@ -235,7 +236,7 @@ export default function UnitDetailPage() {
                 className="px-3 py-1.5 bg-success text-white text-xs font-semibold rounded-lg hover:bg-success/90 flex items-center gap-1.5"
                 title="Pre-fill a WhatsApp/Email/SMS to a lead with this unit's details"
               >
-                💬 Share with lead
+                <MessageCircle className="size-3.5" /> <span>Share with lead</span>
               </button>
             </div>
 
@@ -458,7 +459,7 @@ export default function UnitDetailPage() {
             {/* 11. Danger Zone — delete moved out of the table per UX call */}
             <div className="bg-card rounded-lg border border-destructive/30 p-5">
               <div className="flex items-start gap-3">
-                <span className="text-destructive text-lg leading-none mt-0.5">⚠</span>
+                <AlertTriangle className="size-5 text-destructive flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-destructive uppercase tracking-wide">Danger zone</p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -619,8 +620,12 @@ export default function UnitDetailPage() {
                 alt={viewingImage.caption || "Unit image"}
                 className="w-full h-auto max-h-[85vh] object-contain"
               />
-              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
-                {viewingImage.type === "PHOTO" ? "📷 Photo" : viewingImage.type === "FLOOR_PLAN" ? "📐 Floor plan" : "📍 Floor map"}
+              <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white inline-flex items-center gap-1">
+                {viewingImage.type === "PHOTO"
+                  ? <><Camera className="size-3" /> <span>Photo</span></>
+                  : viewingImage.type === "FLOOR_PLAN"
+                    ? <><Ruler className="size-3" /> <span>Floor plan</span></>
+                    : <><MapPin className="size-3" /> <span>Floor map</span></>}
               </span>
               <button
                 type="button"
@@ -628,7 +633,7 @@ export default function UnitDetailPage() {
                 className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
                 aria-label="Close"
               >
-                ✕
+                <X className="size-4" />
               </button>
               {viewingImage.caption && (
                 <div className="bg-card px-4 py-3 text-sm text-foreground">{viewingImage.caption}</div>

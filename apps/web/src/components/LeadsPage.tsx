@@ -14,6 +14,8 @@ import {
   type ActiveFilterChip,
 } from "./data";
 import { Button } from "@/components/ui/button";
+import { Smartphone, Handshake, Globe, Users, MessageCircle, Footprints, Circle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface Lead {
   id: string;
@@ -59,13 +61,13 @@ const SOURCE_COLORS: Record<string, string> = {
   WHATSAPP: "bg-success-soft text-success-soft-foreground",
   WALK_IN:  "bg-chart-3/15 text-chart-3",
 };
-const SOURCE_ICON: Record<string, string> = {
-  DIRECT:   "📱",
-  BROKER:   "🤝",
-  WEBSITE:  "🌐",
-  REFERRAL: "👥",
-  WHATSAPP: "💬",
-  WALK_IN:  "🚶",
+const SOURCE_ICON: Record<string, LucideIcon> = {
+  DIRECT:   Smartphone,
+  BROKER:   Handshake,
+  WEBSITE:  Globe,
+  REFERRAL: Users,
+  WHATSAPP: MessageCircle,
+  WALK_IN:  Footprints,
 };
 
 
@@ -452,7 +454,10 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
                                     title={lead.source}
                                     className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium ${SOURCE_COLORS[lead.source] || "bg-muted text-muted-foreground"}`}
                                   >
-                                    <span aria-hidden>{SOURCE_ICON[lead.source] || "•"}</span>
+                                    {(() => {
+                                      const Icon = SOURCE_ICON[lead.source] ?? Circle;
+                                      return <Icon aria-hidden className="size-3" />;
+                                    })()}
                                     <span className="hidden sm:inline">{lead.source}</span>
                                   </span>
                                 )}

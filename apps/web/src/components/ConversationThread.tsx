@@ -1,4 +1,15 @@
 import { useState, useMemo } from "react";
+import {
+  Mail,
+  MessageCircle,
+  Smartphone,
+  Phone,
+  Handshake,
+  Building2,
+  FileText,
+  RefreshCw,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export interface ConversationActivity {
   id: string;
@@ -24,15 +35,15 @@ const CHANNEL_LABEL: Record<string, string> = {
   SMS:      "SMS",
 };
 
-const CHANNEL_ICON: Record<string, string> = {
-  EMAIL:       "✉️",
-  WHATSAPP:    "💬",
-  SMS:         "📱",
-  CALL:        "📞",
-  MEETING:     "🤝",
-  SITE_VISIT:  "🏢",
-  NOTE:        "📝",
-  STAGE_CHANGE:"🔄",
+const CHANNEL_ICON: Record<string, LucideIcon> = {
+  EMAIL:        Mail,
+  WHATSAPP:     MessageCircle,
+  SMS:          Smartphone,
+  CALL:         Phone,
+  MEETING:      Handshake,
+  SITE_VISIT:   Building2,
+  NOTE:         FileText,
+  STAGE_CHANGE: RefreshCw,
 };
 
 const CHANNEL_TINT_OUT: Record<string, string> = {
@@ -116,7 +127,10 @@ function Bubble({ act }: { act: ConversationActivity }) {
     <div className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] rounded-2xl border px-3.5 py-2 ${tint}`}>
         <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold tracking-wide uppercase">
-          <span>{CHANNEL_ICON[act.type] ?? "📋"}</span>
+          {(() => {
+            const Icon = CHANNEL_ICON[act.type] ?? FileText;
+            return <Icon className="size-3" />;
+          })()}
           <span>{CHANNEL_LABEL[act.type] ?? act.type}</span>
           <span className="opacity-50">·</span>
           <span className="opacity-60 normal-case font-medium">{isOutbound ? "Outbound" : "Inbound"}</span>
@@ -140,7 +154,10 @@ function SystemEvent({ act }: { act: ConversationActivity }) {
     <div className="flex items-center gap-2 my-1">
       <div className="flex-1 h-px bg-muted" />
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <span>{CHANNEL_ICON[act.type] ?? "📋"}</span>
+        {(() => {
+          const Icon = CHANNEL_ICON[act.type] ?? FileText;
+          return <Icon className="size-3" />;
+        })()}
         <span className="font-medium uppercase tracking-wide">{act.type.replace("_", " ")}</span>
         <span className="opacity-60">·</span>
         <span className="max-w-[400px] truncate">{act.summary}</span>
@@ -213,13 +230,17 @@ export function ConversationReplyBox({
             type="button"
             disabled={!!forcedChannel && forcedChannel !== c}
             onClick={() => setChannel(c)}
-            className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+            className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
               channel === c
                 ? "bg-primary text-primary-foreground"
                 : "bg-card text-muted-foreground border border-border hover:border-border"
             } disabled:opacity-40`}
           >
-            {CHANNEL_ICON[c]} {CHANNEL_LABEL[c]}
+            {(() => {
+              const Icon = CHANNEL_ICON[c] ?? FileText;
+              return <Icon className="size-3.5" />;
+            })()}
+            <span>{CHANNEL_LABEL[c]}</span>
           </button>
         ))}
       </div>

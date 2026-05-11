@@ -1,4 +1,6 @@
 import React from "react";
+import { Lock, ClipboardList, Sparkles, CheckCircle2, FileText, Clock } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface TimelineProps {
   stage: string;
@@ -9,12 +11,12 @@ interface TimelineProps {
   completedDate?: string;
 }
 
-const MILESTONE_ORDER = [
-  { key: "reservation", label: "Reservation Confirmed", icon: "🔒", stages: ["RESERVATION_CONFIRMED", "SPA_PENDING", "SPA_SENT", "SPA_SIGNED", "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
-  { key: "spa", label: "SPA Signed", icon: "✍️", stages: ["SPA_SIGNED", "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
-  { key: "oqood", label: "Oqood Registered", icon: "📋", stages: ["OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
-  { key: "handover", label: "Handover", icon: "🎉", stages: ["HANDOVER_PENDING", "COMPLETED"] },
-  { key: "completed", label: "Deal Completed", icon: "✅", stages: ["COMPLETED"] },
+const MILESTONE_ORDER: { key: string; label: string; icon: LucideIcon; stages: string[] }[] = [
+  { key: "reservation", label: "Reservation Confirmed", icon: Lock, stages: ["RESERVATION_CONFIRMED", "SPA_PENDING", "SPA_SENT", "SPA_SIGNED", "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
+  { key: "spa", label: "SPA Signed", icon: FileText, stages: ["SPA_SIGNED", "OQOOD_PENDING", "OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
+  { key: "oqood", label: "Oqood Registered", icon: ClipboardList, stages: ["OQOOD_REGISTERED", "INSTALLMENTS_ACTIVE", "HANDOVER_PENDING", "COMPLETED"] },
+  { key: "handover", label: "Handover", icon: Sparkles, stages: ["HANDOVER_PENDING", "COMPLETED"] },
+  { key: "completed", label: "Deal Completed", icon: CheckCircle2, stages: ["COMPLETED"] },
 ];
 
 export default function DealTimeline({ stage, reservationDate, spaSignedDate, oqoodRegisteredDate, oqoodDeadline, completedDate }: TimelineProps) {
@@ -122,8 +124,9 @@ export default function DealTimeline({ stage, reservationDate, spaSignedDate, oq
       {/* Oqood deadline alert */}
       {isOqoodUrgent && stage !== "COMPLETED" && stage !== "CANCELLED" && (
         <div className="mt-6 px-4 py-3 bg-warning-soft border border-warning/30 rounded-lg">
-          <p className="text-sm text-warning-soft-foreground font-medium">
-            ⏰ {daysRemaining} days until Oqood registration deadline
+          <p className="text-sm text-warning-soft-foreground font-medium inline-flex items-center gap-2">
+            <Clock className="size-4 text-warning" />
+            <span>{daysRemaining} days until Oqood registration deadline</span>
           </p>
         </div>
       )}
