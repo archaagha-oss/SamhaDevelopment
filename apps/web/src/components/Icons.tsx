@@ -56,6 +56,16 @@ export function IconBookmark(p: IconProps = {}) {
     <svg {...base(p)}><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
   );
 }
+export function IconCalendar(p: IconProps = {}) {
+  return (
+    <svg {...base(p)}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+  );
+}
+export function IconInbox(p: IconProps = {}) {
+  return (
+    <svg {...base(p)}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+  );
+}
 export function IconTag(p: IconProps = {}) {
   return (
     <svg {...base(p)}><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>

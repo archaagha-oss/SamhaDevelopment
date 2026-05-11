@@ -2,14 +2,18 @@ import { useState, useEffect, ComponentType } from "react";
 import axios from "axios";
 import {
   IconDashboard, IconBuilding, IconGrid, IconUsers, IconUser, IconHandshake,
-  IconCheck, IconBookmark, IconTag, IconFile, IconBriefcase, IconCard, IconList,
-  IconCoin, IconChart, IconSettings, IconChevronLeft, IconChevronRight,
+  IconCheck, IconInbox, IconFile, IconCard,
+  IconChart, IconSettings, IconChevronLeft, IconChevronRight,
 } from "./Icons";
 import { useSettings } from "../contexts/SettingsContext";
 import { useEventStream } from "../hooks/useEventStream";
 import { FEATURE_DEFAULTS } from "../hooks/useFeatureFlag";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
+// Page IDs the sidebar can navigate to. The sidebar shows ~12 destinations
+// after UX_AUDIT_3 nav cleanup: secondary screens (Reservations, Offers,
+// Contracts, Brokers, Refunds, Commission tiers) are reached from their
+// parent workspace, not the sidebar — see UX_AUDIT_3 for the rationale.
+type Page = "today" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "tasks" | "payment-plans" | "team" | "reports" | "contacts" | "settings" | "inbox" | "compliance";
 
 type Role = "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
 
@@ -26,31 +30,27 @@ type IconType = ComponentType<{ size?: number; className?: string }>;
 // explicitly toggled it AND its default is `true`).
 type NavItemDef = { page: Page; label: string; Icon: IconType; flag?: keyof typeof FEATURE_DEFAULTS };
 
-// Order follows the funnel: capture (Leads) → qualify (Contacts) → close (Deals),
-// then inventory (Projects, Units), then daily action stack (Activities, Hot Inbox),
-// then commercial artifacts (Reservations, Offers, Contracts), partner channel last.
+// Workspace order: personal "Today" first, then funnel (Leads → Deals →
+// Contacts), inventory (Projects, Units), daily action stack (Tasks, Hot Inbox).
+// Secondary surfaces — Reservations, Offers, Contracts, Brokers — are reached
+// from inside Deals / Contacts; they're not first-class sidebar destinations.
 const salesItems: NavItemDef[] = [
-  { page: "dashboard",     label: "Dashboard",    Icon: IconDashboard },
+  { page: "today",         label: "Today",        Icon: IconDashboard },
   { page: "leads",         label: "Leads",        Icon: IconUser },
-  { page: "contacts",      label: "Contacts",     Icon: IconUsers },
   { page: "deals",         label: "Deals",        Icon: IconHandshake },
+  { page: "contacts",      label: "Contacts",     Icon: IconUsers },
   { page: "projects",      label: "Projects",     Icon: IconBuilding },
   { page: "units",         label: "Units",        Icon: IconGrid },
-  { page: "tasks",         label: "Activities",   Icon: IconCheck },
-  { page: "inbox",         label: "Hot Inbox",    Icon: IconBookmark },
-  { page: "reservations",  label: "Reservations", Icon: IconBookmark },
-  { page: "offers-list",   label: "Offers",       Icon: IconTag },
-  { page: "contracts",     label: "Contracts",    Icon: IconFile },
-  { page: "brokers",       label: "Brokers",      Icon: IconBriefcase },
+  { page: "tasks",         label: "Tasks",        Icon: IconCheck },
+  { page: "inbox",         label: "Hot Inbox",    Icon: IconInbox },
 ];
 
+// Refunds is reached from inside Payments; Commission tiers from Settings.
 const financeItems: NavItemDef[] = [
   { page: "finance",           label: "Finance",          Icon: IconChart },
   { page: "payments",          label: "Payments",         Icon: IconCard },
-  { page: "payment-plans",     label: "Payment plans",    Icon: IconList },
-  { page: "commissions",       label: "Commissions",      Icon: IconCoin },
-  { page: "commission-tiers",  label: "Commission tiers", Icon: IconCoin, flag: "commissionTiers" },
-  { page: "refunds",           label: "Refunds",          Icon: IconCard },
+  { page: "payment-plans",     label: "Payment plans",    Icon: IconFile },
+  { page: "commissions",       label: "Commissions",      Icon: IconCard },
   { page: "reports",           label: "Reports",          Icon: IconChart },
 ];
 

@@ -21,9 +21,16 @@ const CREATE_BY_LIST: Array<[RegExp, string]> = [
   // Project-scoped unit create requires a projectId — skip from generic.
 ];
 
-// `g` + key → destination
-const GOTO_MAP: Record<string, string> = {
-  h: "/",                 // Home / Dashboard
+// `g` + key → destination.
+// Trimmed in UX_AUDIT_3 to match the slimmed sidebar — Reservations / Offers /
+// Contracts / Brokers / Commission tiers / Refunds no longer have first-class
+// shortcuts because they're sub-sections of Deals / Contacts / Settings /
+// Payments. Power users can still reach them via Cmd+K or direct URL.
+//
+// Exported so the global search palette can render a "Shortcuts" section that
+// shows users what's available (UX_AUDIT_3 §6).
+export const GOTO_MAP: Record<string, string> = {
+  h: "/",            // Today (role-aware home)
   l: "/leads",
   d: "/deals",
   c: "/contacts",
@@ -32,14 +39,10 @@ const GOTO_MAP: Record<string, string> = {
   r: "/reports",
   s: "/settings",
   t: "/team",
-  i: "/inbox",            // Hot inbox
-  o: "/offers-list",
-  v: "/reservations",     // "v" for reserVations (r is taken by reports)
-  k: "/contracts",        // "k" for kontracts (c is taken)
-  b: "/brokers",
+  i: "/inbox",       // Hot inbox
   f: "/finance",
   m: "/commissions",
-  a: "/tasks",            // Activities
+  a: "/tasks",
 };
 
 function isEditableTarget(target: EventTarget | null): boolean {

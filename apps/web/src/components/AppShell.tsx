@@ -13,35 +13,44 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { formatRelative } from "../utils/format";
 
-type Page = "dashboard" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "brokers" | "tasks" | "contracts" | "payment-plans" | "reservations" | "offers-list" | "team" | "reports" | "contacts" | "settings" | "refunds" | "commission-tiers" | "inbox" | "compliance";
+// Keep in sync with the Page union in Sidebar.tsx — both narrowed in UX_AUDIT_3
+// to drop sub-pages that no longer have their own sidebar entry.
+type Page = "today" | "projects" | "units" | "leads" | "deals" | "finance" | "payments" | "commissions" | "tasks" | "payment-plans" | "team" | "reports" | "contacts" | "settings" | "inbox" | "compliance";
 
 type Role = "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
 
+// Map the current pathname to the sidebar's active page. Routes that no longer
+// have their own sidebar entry (reservations, offers-list, contracts, brokers,
+// refunds, commission-tiers, dashboard) are grouped under their parent
+// workspace so the matching sidebar tab still highlights.
 function pathToPage(pathname: string): Page {
-  if (pathname === "/" || pathname === "") return "dashboard";
+  if (pathname === "/" || pathname === "" || pathname === "/dashboard" || pathname.startsWith("/my-day")) return "today";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/units")) return "units";
   if (pathname.startsWith("/leads")) return "leads";
+  // Reservations / Offers / Contracts / Brokers are reached from inside Deals;
+  // keep "Deals" highlighted when on those screens too.
   if (pathname.startsWith("/deals")) return "deals";
+  if (pathname.startsWith("/reservations")) return "deals";
+  if (pathname.startsWith("/offers-list")) return "deals";
+  if (pathname.startsWith("/contracts")) return "deals";
+  if (pathname.startsWith("/brokers")) return "contacts";
   if (pathname.startsWith("/finance")) return "finance";
+  // Refunds is a sub-section of Payments now — keep Payments highlighted.
   if (pathname.startsWith("/payments")) return "payments";
-  // Match the more specific commission-tiers before commissions to avoid collision.
-  if (pathname.startsWith("/commission-tiers")) return "commission-tiers";
+  if (pathname.startsWith("/refunds")) return "payments";
+  // Commission tiers is a Settings sub-page — keep Settings highlighted.
+  if (pathname.startsWith("/commission-tiers")) return "settings";
   if (pathname.startsWith("/commissions")) return "commissions";
-  if (pathname.startsWith("/brokers")) return "brokers";
   if (pathname.startsWith("/tasks")) return "tasks";
   if (pathname.startsWith("/inbox")) return "inbox";
   if (pathname.startsWith("/compliance")) return "compliance";
-  if (pathname.startsWith("/contracts")) return "contracts";
   if (pathname.startsWith("/team")) return "team";
   if (pathname.startsWith("/reports")) return "reports";
   if (pathname.startsWith("/payment-plans")) return "payment-plans";
-  if (pathname.startsWith("/reservations")) return "reservations";
-  if (pathname.startsWith("/offers-list")) return "offers-list";
   if (pathname.startsWith("/contacts")) return "contacts";
   if (pathname.startsWith("/settings")) return "settings";
-  if (pathname.startsWith("/refunds")) return "refunds";
-  return "dashboard";
+  return "today";
 }
 
 const NOTIF_ICONS: Record<string, LucideIcon> = {
@@ -187,16 +196,18 @@ export default function AppShell() {
   }, [showProfileMenu]);
 
   const handleNavigate = useCallback((page: Page) => {
+    // `today` resolves to the role-aware home dispatcher at "/". MEMBER/VIEWER
+    // land on MyDayPage; ADMIN/MANAGER land on ExecutiveDashboard.
     const map: Record<Page, string> = {
-      dashboard: "/", projects: "/projects", units: "/units",
-      leads: "/leads", deals: "/deals", finance: "/finance", payments: "/payments",
-      commissions: "/commissions", brokers: "/brokers", tasks: "/tasks", contracts: "/contracts",
-      "payment-plans": "/payment-plans", reservations: "/reservations", "offers-list": "/offers-list",
+      today: "/",
+      projects: "/projects", units: "/units",
+      leads: "/leads", deals: "/deals",
+      finance: "/finance", payments: "/payments",
+      commissions: "/commissions",
+      tasks: "/tasks",
+      "payment-plans": "/payment-plans",
       team: "/team", reports: "/reports",
       contacts: "/contacts", settings: "/settings",
-      // Phase 4 additions
-      refunds: "/refunds",
-      "commission-tiers": "/commission-tiers",
       inbox: "/inbox",
       compliance: "/compliance",
     };
