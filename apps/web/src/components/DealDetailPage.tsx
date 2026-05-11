@@ -34,6 +34,7 @@ import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
 import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
+import { formatDate } from "../utils/format";
 
 interface StageHistoryEntry {
   id: string; oldStage: string; newStage: string; changedBy: string;
@@ -102,15 +103,8 @@ const OQOOD_COLOR: Record<string, string> = {
   overdue: "text-destructive bg-destructive-soft border-destructive/30",
 };
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)     return "Just now";
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  return new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
-}
+// Local timeAgo() removed in favour of `formatRelative` / `formatTimestamp`
+// from utils/format.ts (UX_AUDIT_2 §R4).
 
 export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const params = useParams<{ dealId: string }>();
@@ -1326,7 +1320,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                               {isPartial && <span className="text-xs text-warning inline-flex items-baseline gap-1">Remaining: {formatDirham(partialRemaining)}</span>}
                               {p.lastReminderSentAt && (
                                 <span className="text-xs text-muted-foreground" title={`Reminder count: ${p.reminderCount ?? 0}`}>
-                                  Reminded {timeAgo(p.lastReminderSentAt)}
+                                  Reminded on {formatDate(p.lastReminderSentAt)}
                                 </span>
                               )}
                               {(p.auditLog?.length > 0) && (

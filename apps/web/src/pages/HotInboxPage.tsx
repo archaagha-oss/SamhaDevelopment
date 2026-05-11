@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Mail, MessageCircle, Smartphone, Inbox, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { formatRelative as timeAgo } from "../utils/format";
 import { PageHeader, PageContainer } from "../components/layout";
 
 interface TriageRow {
@@ -38,13 +39,7 @@ const STATUS_TINT: Record<string, string> = {
   DISCARDED: "bg-muted text-muted-foreground",
 };
 
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)    return "just now";
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
+// List context — `timeAgo` is the `formatRelative` shared helper (UX_AUDIT_2 §R4).
 
 export default function HotInboxPage() {
   const [rows, setRows]       = useState<TriageRow[]>([]);

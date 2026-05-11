@@ -14,6 +14,7 @@ import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
 import { Phone, Mail, MessageCircle, Handshake, Building2, FileText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { formatDateTime, formatTimestamp } from "../utils/format";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,14 +89,8 @@ const cancelBtn  = "px-4 py-2 bg-muted text-foreground font-medium rounded-lg ho
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
 
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)     return "Just now";
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)  return `Today ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Yesterday ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-  return `${new Date(dateStr).toLocaleDateString("en-AE", { day: "2-digit", month: "short" })} ${new Date(dateStr).toLocaleTimeString("en-AE", { hour: "2-digit", minute: "2-digit" })}`;
-}
+// Activity-feed timestamps inside the detail page use the hybrid helper from
+// utils/format.ts per UX_AUDIT_2 §R4: relative for ≤60min, absolute beyond.
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -754,7 +749,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             <div className="bg-card rounded-xl border border-border p-4">
               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Last Contact</div>
               <div className="text-2xl font-bold text-foreground">
-                {latest ? timeAgo(latest.activityDate ?? latest.createdAt) : "Never"}
+                {latest ? formatDateTime(latest.activityDate ?? latest.createdAt) : "Never"}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
                 {latest?.type ? `via ${latest.type.replace(/_/g, " ").toLowerCase()}` : "No activity yet"}
