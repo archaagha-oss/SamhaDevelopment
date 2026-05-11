@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 import { PageHeader, PageContainer } from "../components/layout";
 
 type Severity = "EXPIRED" | "CRITICAL" | "WARNING" | "ATTENTION" | "OK";
@@ -160,7 +161,7 @@ export default function CompliancePage() {
         <div className="bg-card rounded-xl border border-border px-5 py-10 text-center text-muted-foreground text-sm">Loading…</div>
       ) : rows.length === 0 ? (
         <div className="bg-card rounded-xl border border-border px-5 py-10 text-center">
-          <p className="text-success text-sm font-medium">🎉 Nothing expiring within {horizon === 365 ? "a year" : `${horizon} days`}.</p>
+          <p className="text-success text-sm font-medium inline-flex items-center gap-1.5"><Sparkles className="size-4" /> Nothing expiring within {horizon === 365 ? "a year" : `${horizon} days`}.</p>
         </div>
       ) : (
         <div className="space-y-5">

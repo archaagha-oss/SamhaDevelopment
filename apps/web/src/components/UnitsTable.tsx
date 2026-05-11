@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { CheckSquare, X, ArrowUp, Ban, Check, DollarSign, Ruler } from "lucide-react";
 import { getStatusColor } from "../utils/statusColors";
 import { formatAreaShort } from "../utils/formatArea";
 import UnitModal from "./UnitModal";
@@ -358,7 +359,7 @@ export default function UnitsTable({ projectId }: Props) {
               onClick={() => setSelectionMode(true)}
               className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
             >
-              ☑ Select
+              <span className="inline-flex items-center gap-1.5"><CheckSquare className="size-3.5" /> Select</span>
             </button>
 
             {/* Column picker */}
@@ -468,8 +469,8 @@ export default function UnitsTable({ projectId }: Props) {
         ) : (
           /* Selection mode bar */
           <>
-            <button onClick={exitSelection} className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted">
-              ✕ Cancel
+            <button onClick={exitSelection} className="px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted inline-flex items-center gap-1.5">
+              <X className="size-3.5" /> Cancel
             </button>
             <span className="text-sm text-muted-foreground font-medium">{selectedIds.size} selected</span>
             <div className="h-5 w-px bg-neutral-200 mx-1" />
@@ -480,10 +481,17 @@ export default function UnitsTable({ projectId }: Props) {
                 UNBLOCK:      bulkOp === op ? "bg-primary text-white"    : "bg-info-soft text-primary hover:bg-info-soft",
                 PRICE_UPDATE: bulkOp === op ? "bg-accent-2 text-accent-2-foreground"  : "bg-stage-active text-stage-active-foreground hover:bg-stage-active",
               };
-              const labels: Record<string, string> = { RELEASE: "↑ Release", BLOCK: "⊘ Block", UNBLOCK: "✓ Unblock", PRICE_UPDATE: "$ Price" };
+              const labels: Record<string, { icon: any; text: string }> = {
+                RELEASE:      { icon: ArrowUp,    text: "Release" },
+                BLOCK:        { icon: Ban,        text: "Block" },
+                UNBLOCK:      { icon: Check,      text: "Unblock" },
+                PRICE_UPDATE: { icon: DollarSign, text: "Price" },
+              };
+              const L = labels[op];
+              const Icon = L.icon;
               return (
-                <button key={op} onClick={() => setBulkOp(op)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${styles[op]}`}>
-                  {labels[op]}
+                <button key={op} onClick={() => setBulkOp(op)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1.5 ${styles[op]}`}>
+                  <Icon className="size-3.5" /> {L.text}
                 </button>
               );
             })}
@@ -590,8 +598,8 @@ export default function UnitsTable({ projectId }: Props) {
             {bulkSubmitting ? "Running…" : `Apply to ${selectedIds.size}`}
           </button>
           {bulkResult && (
-            <span className="text-sm text-muted-foreground">
-              ✓ {bulkResult.succeeded} done{bulkResult.failed > 0 ? `, ${bulkResult.failed} skipped` : ""}
+            <span className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
+              <Check className="size-3.5 text-success" /> {bulkResult.succeeded} done{bulkResult.failed > 0 ? `, ${bulkResult.failed} skipped` : ""}
             </span>
           )}
         </div>
@@ -703,7 +711,7 @@ export default function UnitsTable({ projectId }: Props) {
                             className="inline-flex items-center justify-center w-10 h-10 rounded-md border border-dashed border-border text-muted-foreground text-base"
                             title="No floor plan uploaded"
                           >
-                            📐
+                            <Ruler className="size-3.5" />
                           </span>
                         )}
                       </td>

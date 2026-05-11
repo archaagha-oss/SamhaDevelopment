@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 import EmptyState from "./EmptyState";
 import Modal from "./Modal";
 import { SkeletonCard } from "./Skeleton";
@@ -448,7 +449,7 @@ function ProjectCard({
             title="Edit project"
             aria-label={`Edit ${p.name}`}
           >
-            ✎
+<Pencil className="size-3.5" />
           </button>
         </div>
 
@@ -552,7 +553,7 @@ function ProjectTable({
                       title="Edit project"
                       aria-label={`Edit ${p.name}`}
                     >
-                      ✎
+          <Pencil className="size-3.5" />
                     </button>
                   </td>
                 </tr>

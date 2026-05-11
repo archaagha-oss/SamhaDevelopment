@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Building2 } from "lucide-react";
 import ProjectDocumentsTab from "./ProjectDocumentsTab";
 
 interface ProjectImage { id: string; url: string; caption?: string; sortOrder: number; }
@@ -522,7 +523,7 @@ export default function ProjectSettingsPage() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-3xl mb-2">🏢</p>
+                    <Building2 className="size-8 mb-2 mx-auto text-muted-foreground" />
                     <p className="text-sm font-medium text-foreground mb-1">Drop image here or click to select</p>
                     <p className="text-xs text-muted-foreground">JPEG, PNG, or WebP up to 15MB</p>
                   </>
@@ -550,7 +551,7 @@ export default function ProjectSettingsPage() {
             {/* Gallery */}
             {images.length === 0 ? (
               <div className="bg-card rounded-lg border border-border p-10 text-center">
-                <p className="text-2xl mb-2">🏢</p>
+                <Building2 className="size-6 mb-2 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">No tower images uploaded yet</p>
               </div>
             ) : (

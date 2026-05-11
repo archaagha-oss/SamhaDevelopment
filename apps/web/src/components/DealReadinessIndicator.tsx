@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Check, AlertCircle, Circle } from "lucide-react";
 
 interface Requirement {
   dealStage: string;
@@ -53,7 +54,7 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
       <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
         allMet ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
       }`}>
-        <span>{allMet ? "✓" : "!"}</span>
+        {allMet ? <Check className="size-4" /> : <AlertCircle className="size-4" />}
         <span>{allMet ? "Docs complete" : `${missing.length} doc${missing.length !== 1 ? "s" : ""} missing`}</span>
       </div>
     );
@@ -75,7 +76,7 @@ export default function DealReadinessIndicator({ dealId, targetStage, compact = 
         {requirements.map((req) => (
           <div key={req.documentType} className="flex items-center gap-2">
             <span className={`text-sm ${req.uploaded ? "text-success" : "text-warning"}`}>
-              {req.uploaded ? "✓" : "○"}
+              {req.uploaded ? <Check className="size-3.5 text-success" /> : <Circle className="size-3.5 text-muted-foreground" />}
             </span>
             <span className={`text-sm ${req.uploaded ? "text-muted-foreground" : "text-foreground font-medium"}`}>
               {req.label || TYPE_LABELS[req.documentType] || req.documentType}

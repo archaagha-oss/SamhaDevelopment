@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -247,7 +248,7 @@ export default function CommissionDashboard() {
                           {payingId === c.id ? "…" : "Mark Paid"}
                         </button>
                       ) : (
-                        <span className="text-xs text-success font-semibold">✓ Paid</span>
+                        <span className="text-xs text-success font-semibold inline-flex items-center gap-1"><Check className="size-3" /> Paid</span>
                       )}
                     </td>
                   </tr>

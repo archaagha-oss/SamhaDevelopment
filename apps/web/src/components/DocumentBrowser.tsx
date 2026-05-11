@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { FileText, ClipboardList, Image as ImageIcon, Paperclip, Eye, Download, Trash2 } from "lucide-react";
+import { FileText, ClipboardList, Image as ImageIcon, Paperclip, Eye, Download, Trash2, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Document } from "../types";
 
@@ -215,7 +215,7 @@ export default function DocumentBrowser({ dealId, onUpload }: Props) {
               onClick={() => setPreviewUrl(null)}
               className="absolute top-4 right-4 bg-white/90 hover:bg-card rounded-lg p-2 z-10"
             >
-              ✕
+              <X className="size-4" />
             </button>
             <img
               src={previewUrl.url}

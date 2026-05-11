@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Search } from "lucide-react";
 
 interface SearchResult {
   id: string;
@@ -237,7 +238,7 @@ export default function GlobalSearchModal({ open, onClose }: GlobalSearchModalPr
       >
         {/* Search bar */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-          <span className="text-muted-foreground text-lg flex-shrink-0">🔍</span>
+          <Search className="text-muted-foreground size-5 flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"

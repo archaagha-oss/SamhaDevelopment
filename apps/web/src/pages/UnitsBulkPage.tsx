@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
 
 // UnitsBulkPage — 4-step wizard for bulk-creating a floor of units at
@@ -298,7 +299,7 @@ export default function UnitsBulkPage() {
                       current ? "bg-background border-primary text-primary" :
                                 "bg-muted border-border text-muted-foreground"
                     }`}>
-                      {done ? "✓" : i + 1}
+                      {done ? <Check className="size-4" /> : i + 1}
                     </div>
                     <span className={`text-[10px] font-semibold whitespace-nowrap ${
                       current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"

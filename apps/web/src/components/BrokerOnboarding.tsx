@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check, CheckCircle2 } from "lucide-react";
 
 interface CompanyForm {
   name: string;
@@ -94,7 +95,11 @@ function FileUploadField({
         disabled={uploading}
         className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card hover:bg-muted/50 transition-colors disabled:opacity-50"
       >
-        {value ? "✓ Uploaded" : uploading ? "Uploading…" : "Choose File"}
+        {value ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="size-3.5 text-success" /> Uploaded
+          </span>
+        ) : uploading ? "Uploading…" : "Choose File"}
       </button>
     </div>
   );
@@ -197,7 +202,7 @@ export default function BrokerOnboarding() {
                     : "bg-neutral-200 text-muted-foreground"
                 }`}
               >
-                {step > s ? "✓" : s}
+                {step > s ? <Check className="size-4" /> : s}
               </div>
               <span className={`text-sm font-medium ${step >= s ? "text-foreground" : "text-muted-foreground"}`}>
                 {s === 1 && "Company"}
@@ -536,8 +541,8 @@ export default function BrokerOnboarding() {
         {/* Step 3: Complete */}
         {step === 3 && (
           <div className="bg-card rounded-xl border border-border p-8 shadow-sm text-center">
-            <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-              ✓
+            <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="size-8 text-success" />
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding Complete!</h2>
             <p className="text-muted-foreground mb-8">Your broker company and agents have been successfully registered.</p>
@@ -545,9 +550,9 @@ export default function BrokerOnboarding() {
             <div className="bg-muted/50 rounded-lg p-4 mb-8 text-left">
               <h3 className="font-semibold text-foreground mb-2">What's Next?</h3>
               <ul className="text-sm text-foreground space-y-1">
-                <li>✓ Company and {agents.length} agent(s) registered</li>
-                <li>✓ RERA and compliance documents stored</li>
-                <li>✓ Bank details configured for commission payouts</li>
+                <li className="flex items-start gap-2"><Check className="size-4 text-success mt-0.5 shrink-0" /> Company and {agents.length} agent(s) registered</li>
+                <li className="flex items-start gap-2"><Check className="size-4 text-success mt-0.5 shrink-0" /> RERA and compliance documents stored</li>
+                <li className="flex items-start gap-2"><Check className="size-4 text-success mt-0.5 shrink-0" /> Bank details configured for commission payouts</li>
                 <li>→ Start assigning agents to leads</li>
                 <li>→ Monitor commission approvals in dashboard</li>
               </ul>

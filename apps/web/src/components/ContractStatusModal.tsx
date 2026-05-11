@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { X } from "lucide-react";
 
 export type ContractStatus = "DRAFT" | "SENT" | "SIGNED" | "ARCHIVED";
 
@@ -69,7 +70,7 @@ export default function ContractStatusModal({ document, onClose, onSuccess }: Pr
               {document.deal.dealNumber} · {document.deal.lead.firstName} {document.deal.lead.lastName} · {document.deal.unit.unitNumber}
             </p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground leading-none"><X className="size-4" /></button>
         </div>
 
         <div className="px-6 py-3 bg-muted/50 border-b border-border">

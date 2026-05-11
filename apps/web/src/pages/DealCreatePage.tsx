@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { DetailPageLayout } from "../components/layout";
 import { Button } from "@/components/ui/button";
 
@@ -182,7 +183,7 @@ export default function DealCreatePage() {
                       current ? "bg-background border-primary text-primary" :
                                 "bg-muted border-border text-muted-foreground"
                     }`}>
-                      {done ? "✓" : i + 1}
+                      {done ? <Check className="size-4" /> : i + 1}
                     </div>
                     <span className={`text-[10px] font-semibold whitespace-nowrap ${
                       current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"
@@ -241,7 +242,7 @@ export default function DealCreatePage() {
                       <p className="text-sm font-semibold text-foreground">{l.firstName} {l.lastName}</p>
                       <p className="text-xs text-muted-foreground">{l.phone}</p>
                     </div>
-                    {leadId === l.id && <span className="ml-auto text-primary text-sm">✓</span>}
+                    {leadId === l.id && <Check className="ml-auto size-4 text-primary" />}
                   </button>
                 ))}
               </div>
@@ -316,7 +317,7 @@ export default function DealCreatePage() {
                           <div className="text-right flex-shrink-0">
                             <p className="text-sm font-bold text-foreground tabular-nums">AED {u.price.toLocaleString()}</p>
                           </div>
-                          {unitId === u.id && <span className="text-primary text-sm ml-1">✓</span>}
+                          {unitId === u.id && <Check className="size-4 text-primary ml-1" />}
                         </button>
                       ))}
                     </div>
@@ -393,7 +394,7 @@ export default function DealCreatePage() {
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                           isSelected ? "border-primary/40 bg-primary" : "border-border"
                         }`}>
-                          {isSelected && <span className="text-primary-foreground text-[10px] font-bold">✓</span>}
+                          {isSelected && <Check className="size-3 text-primary-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground">{plan.name}</p>

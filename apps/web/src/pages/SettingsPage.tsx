@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check, Minus } from "lucide-react";
 import {
   useSettings,
   applyBrandFromHex,
@@ -1094,7 +1095,7 @@ function PermissionsMatrix() {
                 <td className="py-2.5 pr-4 text-sm text-foreground">{action}</td>
                 {perms.map((allowed, i) => (
                   <td key={i} className="py-2.5 px-3 text-center">
-                    <span className={allowed ? "text-success font-bold" : "text-foreground/30"}>{allowed ? "✓" : "–"}</span>
+                    <span className={`inline-flex justify-center ${allowed ? "text-success" : "text-foreground/30"}`}>{allowed ? <Check className="size-4" /> : <Minus className="size-4" />}</span>
                   </td>
                 ))}
               </tr>
@@ -1712,7 +1713,7 @@ function CreateApiKeyModal({ open, scopes, onClose, onCreated }: {
                   onClick={() => toggleScope(s)}
                   className={`px-3 py-2 text-xs font-mono rounded-lg border-2 text-left transition-colors ${on ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-foreground/30 text-foreground"}`}
                 >
-                  {on ? "✓ " : ""}{s}
+                  {on && <Check className="inline size-3 mr-1" />}{s}
                 </button>
               );
             })}
@@ -1772,7 +1773,7 @@ function RevealKeyModal({ open, keyName, plaintext, onClose }: {
           <div className="flex gap-2">
             <input className={inp + " font-mono text-xs"} readOnly value={plaintext} onFocus={(e) => e.currentTarget.select()} />
             <button onClick={copy} className="px-4 py-2 text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground rounded-lg whitespace-nowrap">
-              {copied ? "Copied ✓" : "Copy"}
+              {copied ? <span className="inline-flex items-center gap-1"><Check className="size-3" /> Copied</span> : "Copy"}
             </button>
           </div>
         </div>

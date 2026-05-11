@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Camera, Ruler, X } from "lucide-react";
 
 interface UnitImage {
   id: string;
@@ -104,7 +105,11 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
 
               {/* Type badge */}
               <span className="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-900/70 text-white">
-                {currentImage.type === "PHOTO" ? "📷 Photo" : "📐 Floor Plan"}
+                <span className="inline-flex items-center gap-1.5">
+                  {currentImage.type === "PHOTO"
+                    ? <><Camera className="size-3.5" /> Photo</>
+                    : <><Ruler className="size-3.5" /> Floor Plan</>}
+                </span>
               </span>
 
               {/* Navigation buttons */}
@@ -126,7 +131,7 @@ export default function UnitGallery({ images, onDelete, onUpload }: Props) {
                 onClick={() => setLightboxIndex(null)}
                 className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
               >
-                ✕
+                <X className="size-4" />
               </button>
 
               {/* Counter */}

@@ -1,3 +1,5 @@
+import { Check, CheckCircle2, Circle } from "lucide-react";
+
 interface CommissionUnlockStatusProps {
   amount: number;
   status: string;
@@ -51,7 +53,7 @@ export default function CommissionUnlockStatus({
                 : "bg-neutral-200 border-border"
             }`}
           >
-            {spaSignedMet && <span className="text-white text-xs">✓</span>}
+            {spaSignedMet && <Check className="size-3 text-white" />}
           </div>
           <span className="text-sm">
             SPA Signed <span className="text-muted-foreground">(Sales Purchase Agreement)</span>
@@ -66,7 +68,7 @@ export default function CommissionUnlockStatus({
                 : "bg-neutral-200 border-border"
             }`}
           >
-            {oqoodRegisteredMet && <span className="text-white text-xs">✓</span>}
+            {oqoodRegisteredMet && <Check className="size-3 text-white" />}
           </div>
           <span className="text-sm">
             Oqood Registered <span className="text-muted-foreground">(UAE Property Registration)</span>
@@ -80,11 +82,17 @@ export default function CommissionUnlockStatus({
             Commission will unlock when both conditions are met:
           </p>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>
-              {spaSignedMet ? "✅" : "⭕"} SPA (Sales Purchase Agreement) is signed
+            <li className="flex items-center gap-2">
+              {spaSignedMet
+                ? <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                : <Circle className="size-3.5 text-muted-foreground shrink-0" />}
+              SPA (Sales Purchase Agreement) is signed
             </li>
-            <li>
-              {oqoodRegisteredMet ? "✅" : "⭕"} Oqood is registered with UAE authorities
+            <li className="flex items-center gap-2">
+              {oqoodRegisteredMet
+                ? <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                : <Circle className="size-3.5 text-muted-foreground shrink-0" />}
+              Oqood is registered with UAE authorities
             </li>
           </ul>
         </div>
@@ -92,8 +100,8 @@ export default function CommissionUnlockStatus({
 
       {isUnlocked && (
         <div className="bg-success-soft border border-success/30 rounded p-3">
-          <p className="text-xs font-semibold text-success-soft-foreground">
-            ✅ All conditions met! Commission is unlocked.
+          <p className="text-xs font-semibold text-success-soft-foreground inline-flex items-center gap-1.5">
+            <CheckCircle2 className="size-4" /> All conditions met! Commission is unlocked.
           </p>
           {isApproved && (
             <p className="text-xs text-success mt-1">

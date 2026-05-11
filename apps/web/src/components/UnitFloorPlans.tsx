@@ -1,3 +1,4 @@
+import { Eye } from "lucide-react";
 import { UnitImage } from "../types";
 
 interface Props {
@@ -25,7 +26,7 @@ export default function UnitFloorPlans({ images, onOpenFloorPlan }: Props) {
             className="w-full h-32 object-cover group-hover:brightness-110 transition-all"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-            <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">👁️</span>
+            <Eye className="text-white size-7 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           {plan.caption && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -6,8 +7,8 @@ export default function NotFoundPage() {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[70vh] px-6 text-center">
       {/* Icon */}
-      <div className="w-24 h-24 rounded-3xl bg-muted border border-border flex items-center justify-center text-5xl mb-8 select-none">
-        🏚️
+      <div className="w-24 h-24 rounded-3xl bg-muted border border-border flex items-center justify-center mb-8 select-none">
+        <AlertCircle className="size-12 text-muted-foreground" aria-hidden />
       </div>
 
       {/* Heading */}

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import axios from "axios";
+import { Camera } from "lucide-react";
 
 interface Props {
   unitId: string;
@@ -151,7 +152,7 @@ export default function ImageUploadModal({ unitId, onClose, onUploadSuccess }: P
               </div>
             ) : (
               <div>
-                <p className="text-2xl mb-2">📸</p>
+                <Camera className="size-6 mb-2 mx-auto text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground mb-1">
                   Drop image here or click to select
                 </p>

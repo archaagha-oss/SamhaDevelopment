@@ -1,3 +1,4 @@
+import { BarChart3, DollarSign, Sparkles } from "lucide-react";
 import { useUnitHistory } from "../hooks/useUnit";
 
 interface Props {
@@ -82,13 +83,14 @@ export default function UnitHistory({ unitId, createdAt }: Props) {
             const isCreated = event.type === "created";
 
             const bgColor = isStatus ? "bg-info-soft" : isPrice ? "bg-success-soft" : "bg-muted";
-            const dotLabel = isStatus ? "📊" : isPrice ? "💰" : "✨";
+            const DotIcon = isStatus ? BarChart3 : isPrice ? DollarSign : Sparkles;
+            const dotColor = isStatus ? "text-info" : isPrice ? "text-success" : "text-muted-foreground";
 
             return (
               <div key={event.id} className="flex gap-4 pb-4 relative">
                 {/* Dot */}
-                <div className={`w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-sm flex-shrink-0 relative z-10 border-4 border-white`}>
-                  {dotLabel}
+                <div className={`w-10 h-10 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 relative z-10 border-4 border-white`}>
+                  <DotIcon className={`size-4 ${dotColor}`} />
                 </div>
 
                 {/* Content */}

@@ -1,4 +1,5 @@
 import React from "react";
+import { Crown } from "lucide-react";
 import { BrokerPerformanceData } from "../../hooks/useBrokerDashboard";
 
 interface BrokerPerformanceSummaryProps {
@@ -58,7 +59,7 @@ export default function BrokerPerformanceSummary({
                 {/* Broker Name */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    {isTopPerformer && <span className="text-xl">👑</span>}
+                    {isTopPerformer && <Crown className="size-5 text-warning fill-current" />}
                     <div>
                       <p className="font-semibold text-foreground">#{index + 1} {broker.agentName}</p>
                     </div>
