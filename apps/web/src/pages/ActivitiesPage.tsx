@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check, X, List, LayoutGrid } from "lucide-react";
 import Modal from "../components/Modal";
 import { PageContainer, PageHeader } from "../components/layout";
 import { Button } from "@/components/ui/button";
@@ -119,7 +120,7 @@ function TaskCard({ task, users, onComplete, onDelete, onReassign }: {
           task.status === "COMPLETED" ? "bg-success border-success/30 text-white" : "border-border hover:border-success/30"
         }`}
       >
-        {task.status === "COMPLETED" && <span className="text-[10px]">✓</span>}
+        {task.status === "COMPLETED" && <Check className="size-3" />}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -175,9 +176,9 @@ function TaskCard({ task, users, onComplete, onDelete, onReassign }: {
 
       <button
         onClick={() => onDelete(task.id)}
-        className="opacity-0 group-hover:opacity-100 text-foreground/80 hover:text-destructive transition-all text-xs"
+        className="opacity-0 group-hover:opacity-100 text-foreground/80 hover:text-destructive transition-all"
       >
-        ✕
+        <X className="size-3.5" />
       </button>
     </div>
   );
@@ -565,7 +566,9 @@ export default function ActivitiesPage() {
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
                 view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {v === "list" ? "☰ List" : "▦ Calendar"}
+              <span className="inline-flex items-center gap-1.5">
+                {v === "list" ? <><List className="size-3.5" /> List</> : <><LayoutGrid className="size-3.5" /> Calendar</>}
+              </span>
             </button>
           ))}
         </div>

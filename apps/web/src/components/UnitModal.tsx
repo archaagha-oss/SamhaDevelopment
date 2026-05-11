@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Camera } from "lucide-react";
 import UnitGallery from "./UnitGallery";
 import { formatArea } from "../utils/formatArea";
 import { formatDirham } from "@/lib/money";
@@ -223,7 +224,7 @@ export default function UnitModal({ unit, statusLabels, agents = [], onClose, on
           <UnitGallery images={fullUnit.images} />
         ) : (
           <div className="mx-6 mt-4 bg-muted/50 border border-border rounded-lg p-8 text-center">
-            <p className="text-sm text-muted-foreground">📸 No images added yet</p>
+            <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5"><Camera className="size-4" /> No images added yet</p>
             <p className="text-xs text-muted-foreground mt-1">Images will appear here</p>
           </div>
         )}

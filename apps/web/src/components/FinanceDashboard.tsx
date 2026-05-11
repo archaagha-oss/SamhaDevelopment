@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { AlertTriangle, Calendar, CheckCircle2 } from "lucide-react";
 import { PageHeader, PageContainer } from "./layout";
 
 interface Deal {
@@ -261,13 +262,13 @@ export default function FinanceDashboard() {
               </div>
 
               <div className="bg-card border border-destructive/30 rounded-lg p-4 bg-destructive-soft">
-                <p className="text-xs text-destructive uppercase tracking-wide font-semibold mb-2">🚨 Overdue</p>
+                <p className="text-xs text-destructive uppercase tracking-wide font-semibold mb-2 inline-flex items-center gap-1"><AlertTriangle className="size-3.5" /> Overdue</p>
                 <p className="text-2xl font-bold text-destructive">AED {(metrics.totalOverdue / 1_000_000).toFixed(1)}M</p>
                 <p className="text-xs text-destructive mt-1">{metrics.overdueCount} payments</p>
               </div>
 
               <div className="bg-card border border-warning/30 rounded-lg p-4 bg-warning-soft">
-                <p className="text-xs text-warning uppercase tracking-wide font-semibold mb-2">📅 This Month</p>
+                <p className="text-xs text-warning uppercase tracking-wide font-semibold mb-2 inline-flex items-center gap-1"><Calendar className="size-3.5" /> This Month</p>
                 <p className="text-2xl font-bold text-warning">{metrics.upcomingCount}</p>
                 <p className="text-xs text-warning mt-1">payments due</p>
               </div>
@@ -315,7 +316,7 @@ export default function FinanceDashboard() {
           <div>
             {overduePayments.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-3xl mb-2">✅</p>
+                <CheckCircle2 className="size-8 mb-2 mx-auto text-success" />
                 <p className="font-semibold text-foreground">No overdue payments</p>
                 <p className="text-sm text-muted-foreground">All payments are current or paid</p>
               </div>
@@ -366,7 +367,7 @@ export default function FinanceDashboard() {
           <div>
             {upcomingPayments.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-3xl mb-2">📅</p>
+                <Calendar className="size-8 mb-2 mx-auto text-muted-foreground" />
                 <p className="font-semibold text-foreground">No upcoming payments this month</p>
                 <p className="text-sm text-muted-foreground">Expand date range to see more</p>
               </div>

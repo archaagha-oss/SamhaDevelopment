@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Send } from "lucide-react";
 import PaymentActionModal, { PaymentAction, PaymentSummary } from "./PaymentActionModal";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
@@ -341,7 +342,7 @@ export default function PaymentReportPage() {
                                 title="Send a reminder to the buyer"
                                 className="text-[10px] font-semibold px-2 py-1 rounded-md border bg-warning-soft text-warning hover:bg-warning-soft border-warning/30 transition-colors disabled:opacity-50 whitespace-nowrap"
                               >
-                                {sendingReminder === p.id ? "Sending…" : "📨 Send Reminder"}
+                                {sendingReminder === p.id ? "Sending…" : <span className="inline-flex items-center gap-1.5"><Send className="size-3.5" /> Send Reminder</span>}
                               </button>
                             )}
                             {availableActions.map((act) => (

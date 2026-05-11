@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { X } from "lucide-react";
 
 export type PaymentAction =
   | "MARK_PAID"
@@ -117,7 +118,7 @@ export default function PaymentActionModal({ payment, action, onClose, onSuccess
               {payment.deal.dealNumber} · {payment.deal.lead.firstName} {payment.deal.lead.lastName} · {payment.deal.unit.unitNumber}
             </p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground leading-none"><X className="size-4" /></button>
         </div>
 
         {/* Payment info bar */}

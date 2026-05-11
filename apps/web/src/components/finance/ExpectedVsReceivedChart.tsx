@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { AlertTriangle } from "lucide-react";
 
 interface DataPoint {
   month: string;
@@ -84,7 +85,7 @@ export default function ExpectedVsReceivedChart({ data }: ExpectedVsReceivedChar
               {/* Shortfall indicator */}
               {gap > 0 && (
                 <div className="mt-1 text-xs text-destructive">
-                  ⚠️ Shortfall: {gapPercent.toFixed(0)}%
+                  <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" /> Shortfall: {gapPercent.toFixed(0)}%</span>
                 </div>
               )}
             </div>

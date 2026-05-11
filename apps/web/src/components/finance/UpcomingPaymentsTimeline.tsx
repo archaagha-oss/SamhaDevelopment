@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Check } from "lucide-react";
 import { UpcomingPayment } from "../../hooks/useFinanceDashboard";
 
 interface UpcomingPaymentsTimelineProps {
@@ -77,7 +78,7 @@ export default function UpcomingPaymentsTimeline({
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-muted-foreground">✓ No upcoming payments due in the next 30 days</p>
+        <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5"><Check className="size-4 text-success" /> No upcoming payments due in the next 30 days</p>
       </div>
     );
   }

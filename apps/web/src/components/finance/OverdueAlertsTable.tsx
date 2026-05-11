@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Check, Lightbulb } from "lucide-react";
 import { OverduePayment } from "../../hooks/useFinanceDashboard";
 
 interface OverdueAlertsTableProps {
@@ -83,7 +84,7 @@ export default function OverdueAlertsTable({
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-muted-foreground">✓ No overdue payments - All on track!</p>
+        <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5"><Check className="size-4 text-success" /> No overdue payments - All on track!</p>
       </div>
     );
   }
@@ -174,7 +175,7 @@ export default function OverdueAlertsTable({
 
       {/* Mobile Responsive Note */}
       <p className="text-xs text-muted-foreground mt-4 md:hidden">
-        💡 Swipe left/right to see more columns
+        <span className="inline-flex items-center gap-1.5"><Lightbulb className="size-3.5" /> Swipe left/right to see more columns</span>
       </p>
     </div>
   );

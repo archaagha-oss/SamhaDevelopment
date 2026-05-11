@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Check, X } from "lucide-react";
 import { PendingApproval } from "../../hooks/useBrokerDashboard";
 import { useApproveCommission, useRejectCommission } from "../../hooks/useBrokerDashboard";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ export default function PendingApprovalsQueue({
   if (data.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>✓ No pending approvals</p>
+        <p className="inline-flex items-center gap-1.5"><Check className="size-4 text-success" /> No pending approvals</p>
       </div>
     );
   }
@@ -96,14 +97,14 @@ export default function PendingApprovalsQueue({
                 onClick={() => handleApprove(item.id)}
                 className="px-4 py-2 text-sm font-medium bg-success text-white rounded hover:bg-success/90 transition disabled:opacity-50"
               >
-                {approvingId === item.id ? "Approving..." : "✓ Approve"}
+                {approvingId === item.id ? "Approving..." : <span className="inline-flex items-center gap-1.5"><Check className="size-3.5" /> Approve</span>}
               </button>
               <button
                 disabled={rejectingId !== null}
                 onClick={() => setRejectingId(item.id === rejectingId ? null : item.id)}
                 className="px-4 py-2 text-sm font-medium border border-destructive/30 text-destructive rounded hover:bg-destructive-soft transition disabled:opacity-50"
               >
-                {rejectingId === item.id ? "Cancel" : "✗ Reject"}
+                {rejectingId === item.id ? "Cancel" : <span className="inline-flex items-center gap-1.5"><X className="size-3.5" /> Reject</span>}
               </button>
             </div>
 

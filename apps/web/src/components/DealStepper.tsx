@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 interface Props {
   current: string;
   cancelled?: boolean;
@@ -57,7 +59,7 @@ export default function DealStepper({ current, cancelled = false }: Props) {
               )}
 
               <div className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${dot}`}>
-                {done ? "✓" : i + 1}
+                {done ? <Check className="size-4" /> : i + 1}
               </div>
 
               <div className={`flex-1 pb-3 text-sm ${labelCls}`}>

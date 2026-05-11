@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
+import { Pencil } from "lucide-react";
 import UnitsTable from "./UnitsTable";
 import ProjectUpdatesTab from "./ProjectUpdatesTab";
 import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
@@ -185,7 +186,7 @@ export default function ProjectDetailPage() {
               onClick={() => navigate(`/projects/${projectId}/settings`)}
               className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm font-medium rounded-lg hover:bg-primary/15 transition-colors whitespace-nowrap"
             >
-              ✎ Edit
+              <span className="inline-flex items-center gap-1.5"><Pencil className="size-3.5" /> Edit</span>
             </button>
           </div>
         </div>

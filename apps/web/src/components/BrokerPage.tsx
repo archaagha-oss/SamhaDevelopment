@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Building2, MapPin, Users } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
 import { getBrokerStatusColor } from "../utils/statusColors";
@@ -526,7 +527,7 @@ export default function BrokerPage() {
             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Broker Companies</h3>
             {filtered.length === 0 ? (
               <EmptyState
-                icon="🏢"
+                icon={<Building2 className="size-12 text-muted-foreground" aria-hidden />}
                 title={search ? "No companies match your search" : "No broker companies yet"}
                 description={search ? "Try a different keyword." : "Add your first broker company to start managing agents."}
                 action={!search ? { label: "Create broker", onClick: () => setShowForm(true) } : undefined}
@@ -555,7 +556,7 @@ export default function BrokerPage() {
                   })()}
                 </div>
                 {company.email && <p className="text-xs text-muted-foreground truncate">{company.email}</p>}
-                {location && <p className="text-[11px] text-muted-foreground truncate mt-0.5">📍 {location}</p>}
+                {location && <p className="text-[11px] text-muted-foreground truncate mt-0.5 inline-flex items-center gap-1"><MapPin className="size-3" /> {location}</p>}
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                   <span className="text-xs text-muted-foreground">{company.agents.length} agents</span>
                   <span className="text-xs font-semibold text-success">AED {getPaidCommission(company).toLocaleString()} paid</span>
@@ -669,7 +670,7 @@ export default function BrokerPage() {
                   </div>
                   {selected.agents.length === 0 ? (
                     <EmptyState
-                      icon="👥"
+                      icon={<Users className="size-12 text-muted-foreground" aria-hidden />}
                       title="No agents registered"
                       description="Add agents to this company so deals can be linked to a broker contact."
                       action={{ label: "Create agent", onClick: () => { setShowAgentForm(true); setAgentForm(emptyAgentForm()); } }}

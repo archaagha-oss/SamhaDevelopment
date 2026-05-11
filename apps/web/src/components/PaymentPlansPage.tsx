@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import { PageContainer, PageHeader } from "./layout";
 import { FilterBar } from "./data";
@@ -236,7 +237,7 @@ export default function PaymentPlansPage() {
                           className="text-muted-foreground hover:text-primary text-sm px-2 py-1 rounded hover:bg-info-soft transition-colors"
                           title="Edit plan"
                         >
-                          ✎
+                          <Pencil className="size-3.5" />
                         </button>
                         <button
                           onClick={(e) => handleClone(plan, e)}

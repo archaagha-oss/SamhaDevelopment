@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check, DollarSign } from "lucide-react";
 import { formatDirham } from "@/lib/money";
 
 interface Deal {
@@ -265,10 +266,10 @@ export default function DealsKanban({ deals, isLoading, selectedStage, onViewDea
                               <span className="text-warning font-semibold">⏳ Approval Pending</span>
                             )}
                             {deal.commission.status === "APPROVED" && (
-                              <span className="text-primary font-semibold">✓ Approved</span>
+                              <span className="text-primary font-semibold inline-flex items-center gap-1"><Check className="size-3" /> Approved</span>
                             )}
                             {deal.commission.status === "PAID" && (
-                              <span className="text-success font-semibold">💰 Paid</span>
+                              <span className="text-success font-semibold inline-flex items-center gap-1"><DollarSign className="size-3" /> Paid</span>
                             )}
                             {deal.commission.status === "NOT_DUE" && (
                               <span className="text-muted-foreground">— Not due</span>

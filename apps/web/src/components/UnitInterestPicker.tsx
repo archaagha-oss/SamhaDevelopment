@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Star } from "lucide-react";
 
 interface UnitOption {
   id: string;
@@ -183,7 +184,7 @@ export default function UnitInterestPicker({
                         <span className="text-sm font-semibold text-foreground">{u.unitNumber}</span>
                         {localPrimary === u.id && (
                           <span className="text-xs bg-info-soft text-primary px-2 py-0.5 rounded-full font-medium">
-                            Primary ★
+                            <span className="inline-flex items-center gap-1">Primary <Star className="size-3 fill-current" /></span>
                           </span>
                         )}
                         {isOnHold && (
@@ -211,7 +212,7 @@ export default function UnitInterestPicker({
         {localSelected.size > 0 && (
           <div className="px-6 py-3 border-t border-border bg-info-soft text-xs text-primary flex-shrink-0">
             <p className="font-medium mb-2">Selected: {localSelected.size} unit(s)</p>
-            <p>Click a unit to mark it as primary interest (★)</p>
+            <p className="inline-flex items-center gap-1">Click a unit to mark it as primary interest (<Star className="size-3.5 fill-current" />)</p>
           </div>
         )}
 

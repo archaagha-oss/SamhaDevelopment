@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { Star } from "lucide-react";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
@@ -623,7 +624,7 @@ export default function LeadEditPage() {
                             : "bg-card text-foreground border border-border"
                         }`}
                       >
-                        {isPrimary && "★ "}{label}
+                        {isPrimary && <Star className="inline size-3.5 fill-current mr-1" />}{label}
                       </span>
                     );
                   })}

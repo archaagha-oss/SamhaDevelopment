@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { AlertTriangle, Check } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -358,7 +359,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="text-warning">⚠</span>
+            <AlertTriangle className="size-4 text-warning" />
             <h2 className="text-sm font-semibold text-foreground">Action Items</h2>
             {actionItemsCount > 0 && (
               <span className="px-2 py-0.5 bg-warning-soft text-warning-soft-foreground text-xs font-bold rounded-full">
@@ -678,7 +679,7 @@ export default function ExecutiveDashboard(): React.ReactNode {
             { label: "Send Offer",   desc: "Generate offer PDF",  icon: "◁", to: "/offers-list",  tone: QUICK_ACTION_TONE.cyan },
             { label: "Record Pay.",  desc: "Log a payment",       icon: "⊟", to: "/payments",     tone: QUICK_ACTION_TONE.amber },
             { label: "Commissions",  desc: "Approve & pay",       icon: "◇", to: "/commissions",  tone: QUICK_ACTION_TONE.pink },
-            { label: "Add Activity", desc: "Log a touchpoint",    icon: "✓", to: "/tasks",        tone: QUICK_ACTION_TONE.secondary },
+            { label: "Add Activity", desc: "Log a touchpoint",    icon: <Check className="size-4" />, to: "/tasks",        tone: QUICK_ACTION_TONE.secondary },
             { label: "Browse Units", desc: "Inventory grid",      icon: "⊞", to: "/units",        tone: QUICK_ACTION_TONE.neutral },
           ].map((a) => (
             <button
