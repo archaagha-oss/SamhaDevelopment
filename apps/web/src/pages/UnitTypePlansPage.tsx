@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { formatDirham } from "@/lib/money";
 import { typePlansApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import ProjectSubTabs from "../components/project/ProjectSubTabs";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 interface Plan {
@@ -97,6 +98,7 @@ export default function UnitTypePlansPage() {
         crumbs={[
           { label: "Home", path: "/" },
           { label: "Projects", path: "/projects" },
+          { label: "Project", path: `/projects/${projectId}` },
           { label: "Type plans" },
         ]}
         title="Unit type plans"
@@ -110,6 +112,7 @@ export default function UnitTypePlansPage() {
           </button>
         }
       />
+      <ProjectSubTabs projectId={projectId} currentKey="type-plans" showOverview />
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-5">

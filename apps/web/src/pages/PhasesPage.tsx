@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { phasesApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import ProjectSubTabs from "../components/project/ProjectSubTabs";
 
 interface Phase {
   id: string;
@@ -73,11 +74,13 @@ export default function PhasesPage() {
         crumbs={[
           { label: "Home", path: "/" },
           { label: "Projects", path: "/projects" },
+          { label: "Project", path: `/projects/${projectId}` },
           { label: "Phases" },
         ]}
         title="Phases"
         subtitle={`${phases.length} phase${phases.length === 1 ? "" : "s"} · floor ranges, release stages, public launch dates`}
       />
+      <ProjectSubTabs projectId={projectId} currentKey="phases" showOverview />
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-5">

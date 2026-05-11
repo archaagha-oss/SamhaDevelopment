@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { constructionApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import ProjectSubTabs from "../components/project/ProjectSubTabs";
 import { optimisticAction } from "../lib/optimisticToast";
 import { formatDate } from "../utils/format";
 import { useSettings } from "../contexts/SettingsContext";
@@ -223,11 +224,13 @@ export default function ConstructionProgressPage() {
         crumbs={[
           { label: "Home", path: "/" },
           { label: "Projects", path: "/projects" },
+          { label: "Project", path: `/projects/${projectId}` },
           { label: "Construction" },
         ]}
         title="Construction progress"
         subtitle="Track each construction milestone and trigger any payments tied to overall progress."
       />
+      {projectId && <ProjectSubTabs projectId={projectId} currentKey="construction" showOverview />}
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-6">

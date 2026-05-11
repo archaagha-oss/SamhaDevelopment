@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { formatDirham } from "@/lib/money";
 import { escrowApi } from "../services/phase2ApiService";
 import { PageHeader, PageContainer } from "../components/layout";
+import ProjectSubTabs from "../components/project/ProjectSubTabs";
 
 interface EscrowAccount {
   id: string;
@@ -98,11 +99,13 @@ export default function EscrowPage() {
         crumbs={[
           { label: "Home", path: "/" },
           { label: "Projects", path: "/projects" },
+          { label: "Project", path: `/projects/${projectId}` },
           { label: "Escrow" },
         ]}
         title="Escrow ledger"
         subtitle="Customer-payment ledger entries per escrow account."
       />
+      <ProjectSubTabs projectId={projectId} currentKey="escrow" showOverview />
       <div className="flex-1 overflow-auto">
         <PageContainer>
           <div className="space-y-5">

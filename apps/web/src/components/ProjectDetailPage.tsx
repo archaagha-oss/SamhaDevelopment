@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useFeatureFlag } from "../hooks/useFeatureFlag";
+import ProjectSubTabs from "./project/ProjectSubTabs";
 import axios from "axios";
 import { Pencil } from "lucide-react";
 import { formatDirham } from "@/lib/money";
@@ -77,8 +77,6 @@ const daysUntil = (d: string) => Math.ceil((new Date(d).getTime() - Date.now()) 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const constructionEnabled = useFeatureFlag("constructionProgress");
-  const escrowEnabled = useFeatureFlag("escrowModule");
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
@@ -174,7 +172,9 @@ export default function ProjectDetailPage() {
         }
         onBack={() => navigate("/projects")}
       />
-      {/* Sticky header — compact title row + meta line + KPI strip + tabs */}
+      {/* Sticky header — compact title row + meta line + KPI strip + tabs.
+          Back button stays at-top because <SlimHeader /> is invisible until
+          the sentinel scrolls out of view (UX_AUDIT_3 §4). */}
       <div className="bg-card border-b border-border flex-shrink-0">
         <SlimHeaderSentinel />
         <div className="px-4 sm:px-6 pt-4 pb-3">
@@ -253,42 +253,11 @@ export default function ProjectDetailPage() {
               </button>
             );
           })}
-          {/* Sub-page links — navigate to dedicated routes (Phase 4 modules,
-              flag-gated). Render as link-tabs so they sit alongside the
-              real tabs but don't try to fake an active state. */}
-          {projectId && (
-            <>
-              <Link
-                to={`/projects/${projectId}/phases`}
-                className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-              >
-                Phases →
-              </Link>
-              <Link
-                to={`/projects/${projectId}/type-plans`}
-                className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-              >
-                Type plans →
-              </Link>
-              {constructionEnabled && (
-                <Link
-                  to={`/projects/${projectId}/construction`}
-                  className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-                >
-                  Construction →
-                </Link>
-              )}
-              {escrowEnabled && (
-                <Link
-                  to={`/projects/${projectId}/escrow`}
-                  className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-                >
-                  Escrow →
-                </Link>
-              )}
-            </>
-          )}
         </div>
+        {/* Sub-page tab strip (Phases / Type plans / Construction / Escrow).
+            Same component is rendered on each sub-page so users can pivot
+            between them without bouncing back to the project root. */}
+        {projectId && <ProjectSubTabs projectId={projectId} currentKey="overview" showOverview={false} />}
       </div>
 
       {/* Content */}
