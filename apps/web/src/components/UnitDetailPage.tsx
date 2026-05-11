@@ -13,6 +13,8 @@ import UnitHistory from "./UnitHistory";
 import UnitGallery from "./UnitGallery";
 import UnitActivityLogger from "./UnitActivityLogger";
 import UnitSimilarUnits from "./UnitSimilarUnits";
+import NextStepCard from "@/components/ui/NextStepCard";
+import SlimHeader, { SlimHeaderSentinel } from "@/components/ui/SlimHeader";
 import ImageUploadModal from "./ImageUploadModal";
 import ActiveDealSummaryCard from "./ActiveDealSummaryCard";
 import PaymentPlanCard from "./PaymentPlanCard";
@@ -138,14 +140,31 @@ export default function UnitDetailPage() {
                      || (unit.deals?.length ?? 0) > 0
                      || (unit.reservations?.length ?? 0) > 0;
 
+  const activeDeal = (unit.deals ?? []).find((d: any) => d?.isActive);
+
   return (
     <div className="flex flex-col min-h-full bg-background">
+      <SlimHeader
+        primary={
+          <>
+            <span className="truncate">Unit {unit.unitNumber}</span>
+            <span className="text-muted-foreground hidden md:inline">· {unit.project?.name}</span>
+          </>
+        }
+        badges={
+          <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-medium uppercase tracking-wide">
+            {unit.status.replace(/_/g, " ")}
+          </span>
+        }
+        onBack={() => navigate(`/projects/${projectId}`)}
+      />
       <UnitHeader
         unitNumber={unit.unitNumber}
         status={unit.status}
         projectId={projectId!}
         projectName={unit.project?.name}
       />
+      <SlimHeaderSentinel />
 
       {/* Error Banner */}
       {apiError && (
@@ -487,8 +506,16 @@ export default function UnitDetailPage() {
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN (1/3) ── */}
-          <div className="space-y-4">
+          {/* ── RIGHT COLUMN (1/3), sticky on lg+ per UX_AUDIT_2 §R6 ── */}
+          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+            {activeDeal && (
+              <NextStepCard
+                label="Open active deal"
+                description={`Deal ${activeDeal.dealNumber} is in progress for this unit.`}
+                onClick={() => navigate(`/deals/${activeDeal.id}`)}
+                variant="primary"
+              />
+            )}
 
             {/* 0. Share with client */}
             <div className="bg-card rounded-lg border border-border p-4">
