@@ -65,8 +65,12 @@ router.patch(
   validate(updateConstructionMilestoneSchema),
   async (req, res) => {
     try {
-      const milestone = await updateMilestone(req.params.id, req.body, callerId(req));
-      res.json(milestone);
+      const result = await updateMilestone(req.params.id, req.body, callerId(req));
+      // Response shape: { ...milestone, paymentsTriggered: [...] }. The
+      // milestone fields are spread onto the top level so legacy callers that
+      // read e.g. `res.data.progressPercent` keep working; `paymentsTriggered`
+      // is a sibling array of { paymentId, dealId, amount, threshold }.
+      res.json({ ...result.milestone, paymentsTriggered: result.paymentsTriggered });
     } catch (err: any) {
       sendError(res, err);
     }
