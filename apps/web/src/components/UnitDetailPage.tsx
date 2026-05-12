@@ -26,12 +26,17 @@ import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
+import { useSmartBack } from "../hooks/useSmartBack";
 
 const DELETE_BLOCKING_STATUSES = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"] as const;
 
 export default function UnitDetailPage() {
   const { projectId, unitId } = useParams<{ projectId: string; unitId: string }>();
   const navigate = useNavigate();
+  // Back goes wherever the user came from (the cross-project /units list,
+  // their project page, a lead profile, etc.). Falls back to the project
+  // only when the URL was opened directly.
+  const handleBack = useSmartBack(`/projects/${projectId}`);
   const { data: unit, isLoading, error: queryError, refetch } = useUnit(unitId!);
   const { data: agents = [] } = useAgents();
   const updateUnit = useUpdateUnit(unitId!);
@@ -66,8 +71,8 @@ export default function UnitDetailPage() {
   if (queryError || !unit) {
     return (
       <div className="p-6">
-        <button onClick={() => navigate(`/projects/${projectId}`)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-          ← Back to Project
+        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
+          ← Back
         </button>
         <div className="bg-destructive-soft border border-destructive/30 rounded-xl p-6 text-center">
           <p className="text-destructive font-medium">{queryError instanceof Error ? queryError.message : "Unit not found"}</p>
@@ -155,7 +160,7 @@ export default function UnitDetailPage() {
             {unit.status.replace(/_/g, " ")}
           </span>
         }
-        onBack={() => navigate(`/projects/${projectId}`)}
+        onBack={handleBack}
       />
       <UnitHeader
         unitNumber={unit.unitNumber}
