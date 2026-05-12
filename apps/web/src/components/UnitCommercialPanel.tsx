@@ -141,7 +141,7 @@ export default function UnitCommercialPanel({ unit }: Props) {
           {unit.status === "AVAILABLE" && (
             <div className="mt-3 pt-3 border-t border-border">
               <button
-                onClick={() => navigate(`/deals?unitId=${unit.id}`)}
+                onClick={() => navigate(`/deals/new?unitId=${unit.id}`)}
                 className="w-full px-3 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-lg transition-colors"
               >
                 + Create Deal
@@ -156,7 +156,7 @@ export default function UnitCommercialPanel({ unit }: Props) {
         <div className="bg-card rounded-lg border border-dashed border-border p-5 text-center">
           <p className="text-xs text-muted-foreground mb-2">No active deal or leads yet</p>
           <button
-            onClick={() => navigate(`/deals?unitId=${unit.id}`)}
+            onClick={() => navigate(`/deals/new?unitId=${unit.id}`)}
             className="px-4 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-lg transition-colors"
           >
             + Create Deal

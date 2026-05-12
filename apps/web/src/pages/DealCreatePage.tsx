@@ -11,8 +11,11 @@ import { Button } from "@/components/ui/button";
 // DealCreatePage — 4-step wizard for creating a deal at /deals/new.
 // Replaces DealFormModal. Same logic, same step gating, just on a real route.
 //
-// Pre-select a lead via ?leadId=... — preserves the defaultLeadId behavior the
-// modal had via its prop, but works as a deep link from anywhere in the app.
+// Pre-select via URL params — works as a deep link from anywhere in the app:
+//   ?leadId=...   pre-selects the lead (e.g. from a lead profile).
+//   ?unitId=...   pre-selects the unit, derives the project, and auto-fills
+//                 the sale price from unit.price. Skips lead step when paired
+//                 with leadId so the operator lands on step 1 ready to go.
 
 interface Lead    { id: string; firstName: string; lastName: string; phone: string }
 interface Project { id: string; name: string }
@@ -34,8 +37,11 @@ export default function DealCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultLeadId = searchParams.get("leadId") ?? "";
+  const defaultUnitId = searchParams.get("unitId") ?? "";
 
-  const [step, setStep] = useState(0);
+  // Land on step 1 (Unit & Price) when both a lead and a unit are supplied —
+  // the operator already knows who's buying what, so skip the lead picker.
+  const [step, setStep] = useState(defaultLeadId && defaultUnitId ? 1 : 0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +75,26 @@ export default function DealCreatePage() {
     axios.get("/api/payment-plans").then((r) => setPaymentPlans(r.data || [])).catch(() => {});
     axios.get("/api/brokers/companies").then((r) => setBrokerCompanies(r.data || [])).catch(() => {});
   }, []);
+
+  // Prefill from ?unitId= — fetch the unit, derive the project, set the
+  // sale price. The units list effect below picks up the projectId change
+  // and loads the project's available units (which will include this one),
+  // so the unit picker shows it selected.
+  useEffect(() => {
+    if (!defaultUnitId) return;
+    axios.get(`/api/units/${defaultUnitId}`)
+      .then((r) => {
+        const u = r.data?.data ?? r.data;
+        if (!u) return;
+        if (u.projectId) setProjectId(u.projectId);
+        setUnitId(defaultUnitId);
+        if (u.price) setSalePrice(String(u.price));
+      })
+      .catch(() => {
+        // Unit not found / not available — leave defaults so the user
+        // can pick another. No toast: this is a soft prefill.
+      });
+  }, [defaultUnitId]);
 
   useEffect(() => {
     if (!projectId) { setUnits([]); setUnitId(""); return; }
