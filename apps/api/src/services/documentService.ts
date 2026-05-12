@@ -30,6 +30,7 @@ async function ensureDir(dir: string) {
 
 export type UploadScope =
   | { scope: "deal"; id: string }
+  | { scope: "lead"; id: string }
   | { scope: "project"; id: string };
 
 export class DocumentService {
@@ -46,7 +47,7 @@ export class DocumentService {
 
       const ext = path.extname(file.originalname);
       const timestamp = Date.now();
-      const prefix = scoped.scope === "deal" ? "deals" : "projects";
+      const prefix = scoped.scope === "deal" ? "deals" : scoped.scope === "lead" ? "leads" : "projects";
 
       // Key uses POSIX separators so it's portable in URLs and DB.
       const key = `${prefix}/${scoped.id}/${timestamp}${ext}`;

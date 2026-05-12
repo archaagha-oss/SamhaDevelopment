@@ -37,6 +37,8 @@ const KIND_LABEL: Record<string, string> = {
   AGENT_RERA_CARD:      "Agent RERA Card",
   AGENT_EID:            "Agent Emirates ID",
   BUYER_EID:            "Buyer Emirates ID",
+  BUYER_PASSPORT:       "Buyer Passport",
+  BUYER_VISA:           "Buyer Visa",
 };
 
 function fmtDate(iso: string): string {

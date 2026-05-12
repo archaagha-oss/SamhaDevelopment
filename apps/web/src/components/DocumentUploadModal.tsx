@@ -2,16 +2,29 @@ import { useState } from "react";
 import axios from "axios";
 import { Upload } from "lucide-react";
 import { Document, DocumentType } from "../types";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface Props {
-  dealId: string;
+  /** Exactly one of dealId or leadId must be set. */
+  dealId?: string;
+  leadId?: string;
   onClose: () => void;
   onSaved: (document: Document) => void;
+  /**
+   * Restrict the picker to a subset of types (e.g. KYC = passport/EID/visa).
+   * If omitted, the full deal-side type set is shown.
+   */
+  allowedTypes?: DocumentType[];
+  /** Initial selected type. Defaults to first allowed type or OTHER. */
+  defaultType?: DocumentType;
+  /** Override modal title. */
+  title?: string;
+  /** Show an optional expiry-date input (KYC docs need this). */
+  showExpiry?: boolean;
 }
 
-const DOCUMENT_TYPES: DocumentType[] = ["SPA", "OQOOD_CERTIFICATE", "MORTGAGE_APPROVAL", "RESERVATION_FORM", "PAYMENT_RECEIPT", "PASSPORT", "EMIRATES_ID", "VISA", "OTHER"];
+const DEAL_TYPES: DocumentType[] = ["SPA", "OQOOD_CERTIFICATE", "MORTGAGE_APPROVAL", "RESERVATION_FORM", "PAYMENT_RECEIPT", "PASSPORT", "EMIRATES_ID", "VISA", "OTHER"];
 const TYPE_LABELS: Record<string, string> = {
   SPA: "Sales Purchase Agreement",
   OQOOD_CERTIFICATE: "RERA Registration",
@@ -24,13 +37,21 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props) {
-  const [selectedType, setSelectedType] = useState<DocumentType>("OTHER");
+export default function DocumentUploadModal({
+  dealId, leadId, onClose, onSaved, allowedTypes, defaultType, title, showExpiry,
+}: Props) {
+  const DOCUMENT_TYPES = allowedTypes ?? DEAL_TYPES;
+  const [selectedType, setSelectedType] = useState<DocumentType>(defaultType ?? DOCUMENT_TYPES[0] ?? "OTHER");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  // Tier-1 KYC metadata (only shown when showExpiry — the KYC mode).
+  const [documentNumber, setDocumentNumber] = useState<string>("");
+  const [issueDate, setIssueDate] = useState<string>("");
+  const [issuingCountry, setIssuingCountry] = useState<string>("");
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -103,13 +124,19 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
 
     setUploading(true);
     setError(null);
+    let hadError = false; // local — closure-captured `error` is stale, see prior bug
 
     for (const file of files) {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("dealId", dealId);
+        if (dealId) formData.append("dealId", dealId);
+        if (leadId) formData.append("leadId", leadId);
         formData.append("type", selectedType);
+        if (showExpiry && expiryDate) formData.append("expiryDate", expiryDate);
+        if (showExpiry && documentNumber) formData.append("documentNumber", documentNumber);
+        if (showExpiry && issueDate)     formData.append("issueDate", issueDate);
+        if (showExpiry && issuingCountry) formData.append("issuingCountry", issuingCountry);
 
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
@@ -130,12 +157,13 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
 
         onSaved(response.data);
       } catch (err: any) {
+        hadError = true;
         setError(err.response?.data?.error || `Failed to upload ${file.name}`);
       }
     }
 
     setUploading(false);
-    if (error === null) {
+    if (!hadError) {
       setFiles([]);
       onClose();
     }
@@ -143,10 +171,13 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl p-0 gap-0">
+      <DialogContent className="max-w-2xl p-0 gap-0" aria-describedby="doc-upload-desc">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="font-bold text-foreground">Upload Documents</h2>
+          <DialogTitle className="text-base font-bold text-foreground">{title ?? "Upload Documents"}</DialogTitle>
         </div>
+        <DialogDescription id="doc-upload-desc" className="sr-only">
+          Pick a document type and drop files (PDF, DOC, DOCX, JPEG, PNG, max 50MB each) to attach to this deal.
+        </DialogDescription>
 
         <div className="px-6 py-6 space-y-6">
           {/* Document Type Selector */}
@@ -171,36 +202,101 @@ export default function DocumentUploadModal({ dealId, onClose, onSaved }: Props)
             </div>
           </div>
 
-          {/* Drag & Drop Zone */}
-          <div
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? "border-primary/40 bg-info-soft"
-                : "border-border bg-muted/50 hover:border-border"
-            }`}
-          >
-            <input
-              type="file"
-              multiple
-              onChange={handleFileInput}
-              className="hidden"
-              id="file-input"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            />
-            <label htmlFor="file-input" className="cursor-pointer block">
-              <Upload className="mx-auto mb-3 size-12 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">
-                {isDragActive ? "Drop files here" : "Drag files here or click to browse"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                PDF, DOC, DOCX, JPEG, PNG • Max 50MB each
-              </p>
+          {/* Drag & Drop Zone — collapses to a small "Add more" link once
+              files have been selected, so the modal doesn't show a giant
+              empty dropzone next to a populated file list. */}
+          <input
+            type="file"
+            multiple
+            onChange={handleFileInput}
+            className="hidden"
+            id="file-input"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          />
+          {files.length === 0 ? (
+            <div
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragActive
+                  ? "border-primary/40 bg-info-soft"
+                  : "border-border bg-muted/50 hover:border-border"
+              }`}
+            >
+              <label htmlFor="file-input" className="cursor-pointer block">
+                <Upload className="mx-auto mb-3 size-12 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">
+                  {isDragActive ? "Drop files here" : "Drag files here or click to browse"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PDF, DOC, DOCX, JPEG, PNG • Max 50MB each
+                </p>
+              </label>
+            </div>
+          ) : (
+            <label
+              htmlFor="file-input"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer"
+            >
+              <Upload className="size-3.5" />
+              Add more files
             </label>
-          </div>
+          )}
+
+          {/* KYC-specific fields (only in KYC mode). dataSnapshot persists
+              documentNumber / issueDate / issuingCountry per-document; expiry
+              drives the compliance radar. */}
+          {showExpiry && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">
+                  Document number <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  placeholder="e.g. 784-1234-5678901-2"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Issue date</label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Expiry date</label>
+                <input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">
+                  Issuing country <span className="text-muted-foreground font-normal">(optional, ISO code or name)</span>
+                </label>
+                <input
+                  type="text"
+                  value={issuingCountry}
+                  onChange={(e) => setIssuingCountry(e.target.value)}
+                  placeholder="e.g. AE, IN, UK"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+                />
+              </div>
+              <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
+                Expiry drives the compliance / expiry radar.
+              </p>
+            </div>
+          )}
 
           {/* File List with Progress */}
           {files.length > 0 && (

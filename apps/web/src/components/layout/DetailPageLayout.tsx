@@ -37,6 +37,18 @@ export interface DetailPageLayoutProps {
   /** Optional tab bar inside PageHeader (e.g. Overview / Activity / Documents). */
   tabs?: React.ReactNode;
 
+  /**
+   * Mobile-only slot rendered above the hero. Use for the primary next-step
+   * affordance so it stays above the fold on small screens (the sticky right
+   * rail collapses below the main column on mobile, hiding NextStepCard).
+   */
+  mobileTop?: React.ReactNode;
+  /**
+   * Mobile-only fixed bottom-bar slot. Renders on `lg:hidden` only; the
+   * scroll area gets matching bottom padding so content isn't hidden
+   * underneath. Pipedrive-style placement for the primary next-step.
+   */
+  mobileBottomBar?: React.ReactNode;
   /** Optional hero card above the two-column grid (avatar + status, etc.). */
   hero?: React.ReactNode;
   /** Optional KPI strip between hero and the two-column grid. */
@@ -59,6 +71,8 @@ export function DetailPageLayout({
   subtitle,
   actions,
   tabs,
+  mobileTop,
+  mobileBottomBar,
   hero,
   kpis,
   main,
@@ -77,7 +91,12 @@ export function DetailPageLayout({
         width="detail"
       />
       <div className="flex-1 overflow-auto">
-        <PageContainer width="detail" padding="default" className="space-y-5">
+        <PageContainer
+          width="detail"
+          padding="default"
+          className={cn("space-y-5", mobileBottomBar && "pb-24 lg:pb-0")}
+        >
+          {mobileTop && <div className="lg:hidden">{mobileTop}</div>}
           {hero}
           {kpis}
           {aside ? (
@@ -93,6 +112,11 @@ export function DetailPageLayout({
           {children}
         </PageContainer>
       </div>
+      {mobileBottomBar && (
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] px-4 py-3">
+          {mobileBottomBar}
+        </div>
+      )}
     </div>
   );
 }

@@ -27,8 +27,14 @@ import DocumentBrowser from "./DocumentBrowser";
 import DealPurchasersModal from "./DealPurchasersModal";
 import DealSpaCompliancePanel from "./DealSpaCompliancePanel";
 import ConfirmDialog from "./ConfirmDialog";
-import Breadcrumbs from "./Breadcrumbs";
-import DealStepper from "./DealStepper";
+import { DetailPageLayout } from "./layout";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { MoreHorizontal, Trash2, StickyNote, FileSignature, Users } from "lucide-react";
+import NextStepCard from "@/components/ui/NextStepCard";
+import { StageBadge } from "@/components/ui/stage-badge";
 import DealTimeline from "./DealTimeline";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
@@ -122,6 +128,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [updatingStage, setUpdatingStage] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showStageSelect, setShowStageSelect] = useState(false);
+  const [stageReason, setStageReason] = useState("");
+  // Collapsed-by-default note inputs (UX_AUDIT_2 M6 / S3).
+  const [showQuickNote, setShowQuickNote] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -692,223 +702,257 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const spaOk         = commission?.conditions?.spaSignedMet ?? commission?.spaSignedMet ?? false;
   const oqoodOk       = commission?.conditions?.oqoodRegisteredMet ?? (commission as any)?.oqoodMet ?? false;
 
+  // ── UX_AUDIT_2 (deal-detail) helpers ───────────────────────────────────────
+  // Stages where Oqood / Commission / etc. are operationally relevant.
+  // Aside cards render only when their stage applies → cuts the 7-card sidebar
+  // down to 2-3 most days.
+  const oqoodRelevant      = ["SPA_SIGNED", "OQOOD_PENDING", "INSTALLMENTS_ACTIVE", "COMPLETED"].includes(deal.stage);
+  const commissionRelevant = ["SPA_SIGNED", "OQOOD_PENDING", "INSTALLMENTS_ACTIVE", "COMPLETED"].includes(deal.stage) && !!commission;
+
+  const validNext = (VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED");
+  const terminal  = deal.stage === "CANCELLED" || deal.stage === "COMPLETED";
+
+  // Dynamic primary CTA — one button per stage. Drives both PageHeader actions
+  // and the mobileBottomBar. Returns null when the stage has no obvious next
+  // operational click (NextStepCard's "Move to STAGE" covers that case).
+  const renderPrimaryCTA = (className: string) => {
+    if (deal.stage === "RESERVATION_PENDING") {
+      return (
+        <button
+          onClick={handleReserveUnit}
+          disabled={reserving}
+          className={`${className} bg-success text-white hover:bg-success/90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5`}
+        >
+          {reserving ? "Reserving…" : (<><Lock className="size-4" /> Reserve Unit</>)}
+        </button>
+      );
+    }
+    if (deal.stage === "RESERVATION_CONFIRMED" && salesOfferDocs.length === 0 && canGenerateSalesOffer) {
+      return (
+        <button
+          onClick={() => handleGenerateDocument("SALES_OFFER")}
+          disabled={!!generatingDoc}
+          className={`${className} bg-primary text-white hover:bg-primary/90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5`}
+        >
+          {generatingDoc === "SALES_OFFER" ? "Generating…" : (<><FileText className="size-4" /> Generate Sales Offer</>)}
+        </button>
+      );
+    }
+    if (deal.stage === "SPA_PENDING" || deal.stage === "SPA_SENT") {
+      return (
+        <button
+          onClick={() => handleGenerateDocument("SPA")}
+          disabled={!!generatingDoc}
+          className={`${className} bg-accent-2 text-accent-2-foreground hover:bg-accent-2/90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5`}
+        >
+          {generatingDoc === "SPA" ? "Generating…" : (<><FileSignature className="size-4" /> Generate SPA</>)}
+        </button>
+      );
+    }
+    if (deal.stage === "OQOOD_PENDING") {
+      return (
+        <button
+          onClick={() => setShowDocumentUploadModal(true)}
+          className={`${className} bg-warning text-white hover:bg-warning/90 inline-flex items-center justify-center gap-1.5`}
+        >
+          <ClipboardList className="size-4" /> Record Oqood
+        </button>
+      );
+    }
+    if ((deal.stage === "INSTALLMENTS_ACTIVE" || deal.stage === "SPA_SIGNED") && deal.payments.some((p: any) => p.status === "PENDING" || p.status === "OVERDUE")) {
+      return (
+        <button
+          onClick={() => {
+            const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
+            if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
+          }}
+          className={`${className} bg-primary text-white hover:bg-primary/90 inline-flex items-center justify-center gap-1.5`}
+        >
+          <DollarSign className="size-4" /> Record Payment
+        </button>
+      );
+    }
+    return null;
+  };
+
+  // KPI strip values (N4).
+  const kpiPaidPct      = paidPct;
+  const kpiOqoodLabel   = oqood.isOverdue
+    ? `${Math.abs(oqood.daysRemaining)}d overdue`
+    : `${oqood.daysRemaining}d`;
+  const commissionPill  = commission
+    ? commission.status === "PAID"             ? "Paid"
+    : commission.status === "APPROVED"         ? "Approved"
+    : commission.status === "PENDING_APPROVAL" ? "Pending approval"
+    : "Pending"
+    : "—";
+
+  // Notes/Quick-note collapse state.
+
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <Breadcrumbs crumbs={[
+    <DetailPageLayout
+      crumbs={[
         { label: "Deals", path: "/deals" },
         { label: deal.dealNumber },
-      ]} />
-
-      {dealId && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">More sections</span>
-          <Link
-            to={`/deals/${dealId}/parties`}
-            className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+      ]}
+      title={`${deal.lead.firstName} ${deal.lead.lastName}`}
+      subtitle={(
+        <span className="inline-flex items-center gap-2 flex-wrap text-xs">
+          <button
+            onClick={copyDealId}
+            className="inline-flex items-center gap-1 font-mono text-muted-foreground hover:text-foreground"
+            title="Copy deal ID"
           >
-            Joint owners →
-          </Link>
-          {handoverEnabled && (
-            <Link
-              to={`/deals/${dealId}/handover`}
-              className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              Handover →
-            </Link>
+            {deal.dealNumber}
+            {copiedDealId ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+          </button>
+          <span className="text-muted-foreground/50">·</span>
+          <span className="tabular-nums text-muted-foreground">{deal.lead.phone}</span>
+          <StageBadge kind="deal" stage={deal.stage} />
+          {deal.reservationDate && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span className="text-muted-foreground">Reserved {fmtDate(deal.reservationDate)}</span>
+            </>
           )}
-        </div>
+          {deal.paymentPlan && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span className="text-muted-foreground">Plan: <span className="font-medium text-foreground">{deal.paymentPlan.name}</span></span>
+            </>
+          )}
+        </span>
       )}
-
-      {blockers.length > 0 && (
-        <ComplianceBanner blockers={blockers} />
-      )}
-      {/* Header */}
-      <div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-foreground">{deal.lead.firstName} {deal.lead.lastName}</h1>
+      actions={(
+        <>
+          {renderPrimaryCTA("px-4 py-1.5 text-sm font-bold rounded-lg shadow-sm")}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
-                onClick={() => navigate(`/deals/${dealId}/edit`)}
-                className="text-muted-foreground hover:text-primary hover:bg-info-soft p-1.5 rounded-lg transition-colors"
-                title="Edit deal"
+                aria-label="More actions"
+                className="p-1.5 text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted/50"
               >
-                <Pencil className="size-3.5" />
+                <MoreHorizontal className="size-4" />
               </button>
-            </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <button
-                onClick={copyDealId}
-                className="flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors group"
-                title="Copy deal ID"
-              >
-                {deal.dealNumber}
-                <span className="text-foreground/80 group-hover:text-foreground transition-colors">
-                  {copiedDealId ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-                </span>
-              </button>
-              <span className="text-foreground/80">·</span>
-              <span className="text-sm text-muted-foreground">{deal.lead.phone}</span>
-              {deal.lead.email && <span className="text-sm text-muted-foreground">{deal.lead.email}</span>}
-              {deal.brokerCompany && (
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => navigate(`/deals/${dealId}/edit`)}>
+                <Pencil className="size-3.5 mr-2" /> Edit deal
+              </DropdownMenuItem>
+              {dealId && (
+                <DropdownMenuItem onClick={() => navigate(`/deals/${dealId}/parties`)}>
+                  <Users className="size-3.5 mr-2" /> Joint owners…
+                </DropdownMenuItem>
+              )}
+              {handoverEnabled && dealId && (
+                <DropdownMenuItem onClick={() => navigate(`/deals/${dealId}/handover`)}>
+                  <ClipboardList className="size-3.5 mr-2" /> Handover…
+                </DropdownMenuItem>
+              )}
+              {validNext.length > 0 && (
+                <DropdownMenuItem onClick={() => setShowStageSelect(true)}>
+                  <FileSignature className="size-3.5 mr-2" /> Change stage…
+                </DropdownMenuItem>
+              )}
+              {!terminal && (
                 <>
-                  <span className="text-foreground/80">·</span>
-                  <span className="text-xs bg-chart-7/15 text-chart-7 px-2 py-0.5 rounded-full font-medium">
-                    {deal.brokerCompany.name}{deal.brokerAgent ? ` / ${deal.brokerAgent.name}` : ""}
-                  </span>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowCancelModal(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="size-3.5 mr-2" /> Cancel deal
+                  </DropdownMenuItem>
                 </>
               )}
-              {deal.paymentPlan && (
-                <>
-                  <span className="text-foreground/80">·</span>
-                  <span className="text-xs text-muted-foreground">Plan: <span className="font-medium text-foreground">{deal.paymentPlan.name}</span></span>
-                </>
-              )}
-            </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+      mobileBottomBar={renderPrimaryCTA("w-full py-2.5 rounded-lg text-sm font-bold")}
+      tabs={(
+        <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-thin" role="tablist">
+          {(["timeline", "payments", "activity", "history"] as const).map((tab) => (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={activeTab === tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab
+                  ? "border-primary/40 text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : "History"}
+            </button>
+          ))}
+        </div>
+      )}
+      kpis={(
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-card rounded-xl border border-border p-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Sale price</div>
+            <div className="text-lg font-bold text-foreground tabular-nums">{formatDirham(deal.salePrice)}</div>
+            <div className="text-[11px] text-muted-foreground">{deal.unit.unitNumber}</div>
           </div>
-
-          {/* Stage badge + dynamic primary CTA + secondary actions */}
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_BADGE[deal.stage] || "bg-muted text-muted-foreground"}`}>
-              {deal.stage.replace(/_/g, " ")}
-            </span>
-
-            {/* Dynamic primary action — one clear next step per stage */}
-            {deal.stage === "RESERVATION_PENDING" && (
-              <button
-                onClick={handleReserveUnit}
-                disabled={reserving}
-                className="px-4 py-1.5 bg-success text-white text-sm font-bold rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-              >
-                {reserving
-                  ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
-                  : <><Lock className="size-4" /> <span>Reserve Unit</span></>}
-              </button>
-            )}
-            {deal.stage === "RESERVATION_CONFIRMED" && salesOfferDocs.length === 0 && canGenerateSalesOffer && (
-              <button
-                onClick={() => handleGenerateDocument("SALES_OFFER")}
-                disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
-              >
-                {generatingDoc === "SALES_OFFER" ? "Generating…" : <><FileText className="size-4" /> <span>Generate Sales Offer</span></>}
-              </button>
-            )}
-            {(deal.stage === "SPA_PENDING" || deal.stage === "SPA_SENT") && (
-              <button
-                onClick={() => handleGenerateDocument("SPA")}
-                disabled={!!generatingDoc}
-                className="px-4 py-1.5 bg-accent-2 text-accent-2-foreground text-sm font-bold rounded-lg hover:bg-accent-2 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
-              >
-                {generatingDoc === "SPA" ? "Generating…" : <><FileText className="size-4" /> <span>Generate SPA</span></>}
-              </button>
-            )}
-            {deal.stage === "OQOOD_PENDING" && (
-              <button
-                onClick={() => setShowDocumentUploadModal(true)}
-                className="px-4 py-1.5 bg-warning text-white text-sm font-bold rounded-lg hover:bg-warning/90 transition-colors inline-flex items-center gap-1.5"
-              >
-                <ClipboardList className="size-4" /> <span>Record Oqood</span>
-              </button>
-            )}
-            {(deal.stage === "INSTALLMENTS_ACTIVE" || deal.stage === "SPA_SIGNED") && deal.payments.length > 0 && deal.payments.some((p: any) => p.status === "PENDING" || p.status === "OVERDUE") && (
-              <button
-                onClick={() => {
-                  const nextPayment = deal.payments.find((p: any) => p.status === "PENDING" || p.status === "OVERDUE");
-                  if (nextPayment) { setShowMarkPaidModal(nextPayment.id); setPaidDate(new Date().toISOString().slice(0,10)); }
-                }}
-                className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
-              >
-                <DollarSign className="size-4" /> <span>Record Payment</span>
-              </button>
-            )}
-
-            <div className="relative flex items-center gap-2">
-              {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="px-3 py-1 text-xs border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft transition-colors"
-                >
-                  Cancel Deal
-                </button>
-              )}
-              <button
-                onClick={() => setShowStageSelect(!showStageSelect)}
-                disabled={updatingStage}
-                className="px-3 py-1 text-xs border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                {updatingStage ? "Updating…" : "Change Stage ▾"}
-              </button>
-              {showStageSelect && (
-                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-20 py-1 w-56">
-                  {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED").map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleStageChange(s)}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors text-foreground"
-                    >
-                      → {s.replace(/_/g, " ")}
-                    </button>
-                  ))}
-                  {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).length === 0 && (
-                    <p className="px-4 py-2 text-xs text-muted-foreground">No further transitions</p>
-                  )}
-                </div>
-              )}
+          <div className="bg-card rounded-xl border border-border p-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Paid</div>
+            <div className="text-lg font-bold text-foreground tabular-nums">{kpiPaidPct}%</div>
+            <div className="text-[11px] text-muted-foreground">{formatDirham(totalPaid)}{overdueAmt > 0 ? ` · ${formatDirham(overdueAmt)} overdue` : ""}</div>
+          </div>
+          <div className={`bg-card rounded-xl border border-border p-3 ${oqood.isOverdue ? "border-destructive/40" : ""}`}>
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Oqood</div>
+            <div className={`text-lg font-bold tabular-nums ${oqood.isOverdue ? "text-destructive" : oqood.daysRemaining <= 14 ? "text-warning" : "text-foreground"}`}>
+              {kpiOqoodLabel}
             </div>
+            <div className="text-[11px] text-muted-foreground">{fmtDate(oqood.deadline)}</div>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Commission</div>
+            <div className="text-lg font-bold text-foreground tabular-nums">{commission ? formatDirham(commission.amount) : "—"}</div>
+            <div className="text-[11px] text-muted-foreground">{commissionPill}</div>
           </div>
         </div>
-      </div>
-
-      {/* Click-outside overlay for stage dropdown */}
-      {showStageSelect && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowStageSelect(false)} />
       )}
+      hero={blockers.length > 0 ? <ComplianceBanner blockers={blockers} /> : undefined}
+      main={(
+        <>
 
-      {/* Quick note input */}
-      <div className="bg-info-soft rounded-lg border border-primary/40 p-3 flex items-center gap-2">
-        <input
-          type="text"
-          value={quickNote}
-          onChange={(e) => setQuickNote(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submitQuickNote();
-          }}
-          placeholder="Add a quick note and press Enter…"
-          className="flex-1 bg-card border border-primary/40 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <button
-          onClick={submitQuickNote}
-          disabled={!quickNote.trim() || addingQuickNote}
-          className="px-3 py-2 bg-primary text-white text-sm font-semibold rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
-        >
-          {addingQuickNote ? "…" : "Add"}
-        </button>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main: control sections + unit + financials + payments */}
-        <div className="lg:col-span-2 space-y-4">
+          {/* Buyer Info card removed (UX_AUDIT_2 M3) — identity is in PageHeader. */}
 
-          {/* ── Buyer Info ──────────────────────────────────────────────────── */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Buyer</h3>
-            <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
-              {[
-                ["Name",  `${deal.lead.firstName} ${deal.lead.lastName}`],
-                ["Phone", deal.lead.phone],
-                ["Email", deal.lead.email ?? "—"],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-                  <p className="font-medium text-foreground">{value}</p>
-                </div>
-              ))}
+          {/* Quick note — collapsed by default. M6. */}
+          {showQuickNote ? (
+            <div className="bg-info-soft rounded-lg border border-primary/40 p-3 flex items-center gap-2">
+              <input
+                type="text"
+                value={quickNote}
+                onChange={(e) => setQuickNote(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") submitQuickNote(); }}
+                placeholder="Add a quick note and press Enter…"
+                autoFocus
+                className="flex-1 bg-card border border-primary/40 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button onClick={submitQuickNote} disabled={!quickNote.trim() || addingQuickNote}
+                className="px-3 py-2 bg-primary text-white text-sm font-semibold rounded hover:bg-primary/90 disabled:opacity-50">
+                {addingQuickNote ? "…" : "Add"}
+              </button>
+              <button onClick={() => setShowQuickNote(false)}
+                className="px-2 py-2 text-xs text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
             </div>
-          </div>
+          ) : (
+            <button onClick={() => setShowQuickNote(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+              <StickyNote className="size-3.5" /> Add quick note
+            </button>
+          )}
 
           {/* ── Unit Selection ──────────────────────────────────────────────── */}
-          <div className="bg-card rounded-xl border border-border p-4">
+          {/* S5 — promoted with accent border */}
+          <div className="bg-card rounded-xl border-l-4 border-l-primary border-r border-y border-border p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</h3>
               {deal.stage === "RESERVATION_PENDING" ? (
@@ -1157,27 +1201,39 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* ── Notes ───────────────────────────────────────────────────────── */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</h3>
-              {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
+          {/* ── Internal notes — collapsed by default (S3) ───────────────────── */}
+          {showNotes || (notesValue && notesValue.trim().length > 0) ? (
+            <div className="bg-card rounded-xl border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal notes</h3>
+                <div className="flex items-center gap-2">
+                  {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
+                  <button onClick={() => setShowNotes(false)} className="text-xs text-muted-foreground hover:text-foreground">Hide</button>
+                </div>
+              </div>
+              <textarea
+                rows={3}
+                value={notesValue ?? ""}
+                onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
+                placeholder="Internal deal notes…"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
+              />
+              <button
+                onClick={handleSaveNotes}
+                disabled={savingNotes}
+                className="mt-2 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              >
+                {savingNotes ? "Saving…" : "Save notes"}
+              </button>
             </div>
-            <textarea
-              rows={3}
-              value={notesValue ?? ""}
-              onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
-              placeholder="Internal deal notes…"
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
-            />
+          ) : (
             <button
-              onClick={handleSaveNotes}
-              disabled={savingNotes}
-              className="mt-2 px-4 py-1.5 bg-neutral-700 text-white text-sm font-semibold rounded-lg hover:bg-muted disabled:opacity-50"
+              onClick={() => setShowNotes(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
             >
-              {savingNotes ? "Saving…" : "Save Notes"}
+              <Pencil className="size-3.5" /> Add internal notes
             </button>
-          </div>
+          )}
 
           {/* Uploaded documents browser */}
           <DocumentBrowser
@@ -1189,31 +1245,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {/* SPA compliance — late fees, disposal, delay compensation, LD */}
           {dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
-          {/* Payment schedule + Stage history tabs */}
+          {/* Tab content panel — tab bar lives in PageHeader now (S6) */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-                {(["timeline", "payments", "activity", "tasks", "history"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                      activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : tab === "tasks" ? "Tasks" : "Stage History"}
-                  </button>
-                ))}
-              </div>
-              {activeTab === "payments" && (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${paidPct}%` }} />
-                    </div>
-                    <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
+            {activeTab === "payments" && (
+              <div className="flex items-center justify-end px-5 py-3 border-b border-border gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${paidPct}%` }} />
                   </div>
-                  <span className="text-xs text-muted-foreground inline-flex items-baseline gap-1">{formatDirham(totalPaid)} paid</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
+                </div>
+                <span className="text-xs text-muted-foreground inline-flex items-baseline gap-1">{formatDirham(totalPaid)} paid</span>
                   {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
                     <>
                       <button
@@ -1245,9 +1287,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                       </button>
                     )
                   )}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Timeline tab */}
             {activeTab === "timeline" && deal && (
@@ -1659,163 +1700,90 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               )
             )}
           </div>
-        </div>
+        </>
+      )}
+      aside={(
+        <>
+          {/* NextStepCard — single source of truth for stage transitions.
+              Merges what was previously "Deal Status" + "Next Stage Checklist"
+              + "Change Stage popover" (UX_AUDIT_2 M1+S2+S4). */}
+          {!terminal && validNext.length > 0 && (
+            <NextStepCard
+              className="hidden lg:block"
+              label={`Move to ${validNext[0].replace(/_/g, " ")}`}
+              description={
+                stageRequirements.length > 0 && stageRequirements.some((r) => !r.uploaded)
+                  ? `Needs: ${stageRequirements.filter((r) => !r.uploaded).map((r) => r.label).join(" · ")}`
+                  : "Confirm prerequisites are met, then advance."
+              }
+              onClick={() => handleStageChange(validNext[0])}
+              disabled={updatingStage}
+              secondary={
+                validNext.length > 1
+                  ? { label: `Other stages (${validNext.length - 1})`, onClick: () => setShowStageSelect(true) }
+                  : undefined
+              }
+            />
+          )}
 
-        {/* Sidebar: Deal Status + Oqood + Commission */}
-        <div className="space-y-4">
-
-          {/* 10-stage progress stepper */}
-          <DealStepper current={deal.stage} cancelled={deal.stage === "CANCELLED"} />
-
-          {/* ── Deal Status ─────────────────────────────────────────────────── */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Deal Status</h3>
-
-            {/* Current stage */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${STAGE_BADGE[deal.stage] || "bg-muted text-muted-foreground"}`}>
-                {deal.stage.replace(/_/g, " ")}
-              </span>
-            </div>
-
-            {/* Reserve Unit primary action */}
-            {deal.stage === "RESERVATION_PENDING" && (
-              <button
-                onClick={handleReserveUnit}
-                disabled={reserving}
-                className="w-full py-2.5 bg-success text-white text-sm font-bold rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors mb-3 flex items-center justify-center gap-2"
-              >
-                {reserving ? (
-                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Reserving…</>
-                ) : "Reserve Unit"}
-              </button>
-            )}
-            {deal.stage === "RESERVATION_CONFIRMED" && (
-              <div className="flex items-center gap-2 text-success bg-success-soft border border-success/30 rounded-lg px-3 py-2.5 mb-3">
-                <Check className="size-4 text-success" />
-                <span className="text-sm font-bold">Unit Reserved</span>
-              </div>
-            )}
-
-            {/* Valid next stages */}
-            {deal.stage !== "CANCELLED" && deal.stage !== "COMPLETED" && (
-              <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground font-medium mb-2">Next stage:</p>
-                {(VALID_DEAL_TRANSITIONS[deal.stage] ?? []).filter((s) => s !== "CANCELLED").map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStageChange(s)}
-                    disabled={updatingStage}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm border border-border text-muted-foreground hover:border-primary/40 hover:bg-info-soft hover:text-primary disabled:opacity-50 transition-all"
-                  >
-                    → {s.replace(/_/g, " ")}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Stage requirements checklist */}
-          </div>
-
-          {/* Oqood countdown */}
-          <div className={`rounded-xl border p-4 ${oqoodStyle}`}>
-            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3 opacity-70">Oqood Deadline</h3>
-            {oqood.isOverdue ? (
-              <div>
-                <p className="text-2xl font-bold">Overdue</p>
-                <p className="text-sm mt-1">{Math.abs(oqood.daysRemaining)} days past deadline</p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-4xl font-bold">{oqood.daysRemaining}</p>
-                <p className="text-sm mt-1">days remaining</p>
-              </div>
-            )}
-            <p className="text-xs mt-3 opacity-70">Deadline: {fmtDate(oqood.deadline)}</p>
-            <div className="mt-3">
-              <div className="h-1.5 bg-black/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-current rounded-full opacity-60"
-                  style={{ width: `${Math.min(100, Math.max(0, 100 - (oqood.daysRemaining / 90) * 100))}%` }}
-                />
+          {/* Oqood countdown — only render when stage cares about it (S1). */}
+          {oqoodRelevant && (
+            <div className={`rounded-xl border p-4 ${oqoodStyle}`}>
+              <h3 className="text-xs font-semibold uppercase tracking-wide mb-2 opacity-70">Oqood Deadline</h3>
+              {oqood.isOverdue ? (
+                <p className="text-xl font-bold">Overdue · {Math.abs(oqood.daysRemaining)}d</p>
+              ) : (
+                <p className="text-2xl font-bold">{oqood.daysRemaining}<span className="text-sm font-medium opacity-70"> days left</span></p>
+              )}
+              <p className="text-xs mt-1 opacity-70">{fmtDate(oqood.deadline)}</p>
+              <div className="mt-2 h-1.5 bg-black/10 rounded-full overflow-hidden">
+                <div className="h-full bg-current rounded-full opacity-60"
+                  style={{ width: `${Math.min(100, Math.max(0, 100 - (oqood.daysRemaining / 90) * 100))}%` }} />
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Commission */}
-          {commission && (
+          {/* Commission — only when stage ≥ SPA_SIGNED (S1). */}
+          {commissionRelevant && commission && (
             <div className="bg-card rounded-xl border border-border p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Commission</h3>
-              <p className="text-2xl font-bold text-foreground mb-0.5">{formatDirham(commission.amount)}</p>
-              <p className="text-xs text-muted-foreground mb-3">{commission.rate}% rate</p>
-
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-4 ${
-                commission.status === "PAID"             ? "bg-success-soft text-success" :
-                commission.status === "APPROVED"         ? "bg-info-soft text-primary" :
-                commission.status === "PENDING_APPROVAL" ? "bg-warning-soft text-warning" :
-                "bg-muted text-muted-foreground"
-              }`}>
-                {commission.status.replace(/_/g, " ")}
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Commission</h3>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                  commission.status === "PAID"             ? "bg-success-soft text-success" :
+                  commission.status === "APPROVED"         ? "bg-info-soft text-primary" :
+                  commission.status === "PENDING_APPROVAL" ? "bg-warning-soft text-warning" :
+                  "bg-muted text-muted-foreground"
+                }`}>{commission.status.replace(/_/g, " ")}</span>
               </div>
-
-              <div className="space-y-2 border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Unlock Conditions</p>
+              <p className="text-xl font-bold text-foreground tabular-nums">{formatDirham(commission.amount)}</p>
+              <p className="text-xs text-muted-foreground mb-3">{commission.rate}% rate</p>
+              <div className="space-y-1.5 border-t border-border pt-2">
                 {[
                   { label: "SPA Signed",       met: spaOk },
                   { label: "Oqood Registered", met: oqoodOk },
                 ].map(({ label, met }) => (
-                  <div key={label} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${met ? "bg-success-soft text-success" : "bg-destructive-soft text-destructive"}`}>
-                    {met ? <Check className="size-4" /> : <X className="size-4" />}
-                    <span className="font-medium">{label}</span>
+                  <div key={label} className="flex items-center gap-1.5 text-xs">
+                    {met
+                      ? <Check className="size-3.5 text-success" />
+                      : <X className="size-3.5 text-muted-foreground" />}
+                    <span className={met ? "text-foreground" : "text-muted-foreground"}>{label}</span>
                   </div>
                 ))}
-                {spaOk && oqoodOk && (
-                  <p className="text-xs text-center text-success font-semibold mt-1 inline-flex items-center justify-center gap-1 w-full">All conditions met <Check className="size-3" /></p>
-                )}
               </div>
             </div>
           )}
 
-          {/* Next Stage Requirements */}
-          {stageRequirements.length > 0 && (
-            <div className="bg-card rounded-xl border border-border p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Next Stage Checklist</h3>
-              <div className="space-y-2">
-                {stageRequirements.map((req) => (
-                  <div
-                    key={req.documentType}
-                    className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${req.uploaded ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}
-                  >
-                    {req.uploaded ? <Check className="size-4" /> : <Circle className="size-4" />}
-                    <span className="font-medium">{req.label}</span>
-                  </div>
-                ))}
-              </div>
-              {stageRequirements.every((r) => r.uploaded) ? (
-                <p className="text-xs text-center text-success font-semibold mt-2 inline-flex items-center justify-center gap-1 w-full">Ready to advance <Check className="size-3" /></p>
-              ) : (
-                <p className="text-xs text-center text-warning mt-2">Upload missing documents to advance</p>
-              )}
-            </div>
-          )}
-
-          {/* Broker */}
+          {/* Broker — only when set. */}
           {deal.brokerCompany && (
             <div className="bg-card rounded-xl border border-border p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Broker</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Broker</h3>
               <p className="text-sm font-semibold text-foreground">{deal.brokerCompany.name}</p>
               {deal.brokerAgent && <p className="text-xs text-muted-foreground mt-0.5">{deal.brokerAgent.name}</p>}
             </div>
           )}
-
-          {/* Reservation date */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Reserved On</h3>
-            <p className="text-base font-semibold text-foreground">{fmtDate(deal.reservationDate)}</p>
-          </div>
-        </div>
-      </div>
-
+        </>
+      )}
+    >
       {/* ── Reserve Unit Confirmation Modal ───────────────────────────────────── */}
       {showReserveConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -2245,6 +2213,37 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         />
       )}
 
+      {/* Change-stage Dialog — replaces the legacy popover that lived in the
+          old in-page header. Triggered from NextStepCard "Other stages" and
+          the overflow menu. */}
+      <Dialog open={showStageSelect} onOpenChange={(o) => { if (!o) { setShowStageSelect(false); setStageReason(""); } }}>
+        <DialogContent className="max-w-md p-0 gap-0" aria-describedby="stage-dialog-desc">
+          <div className="px-6 py-4 border-b border-border">
+            <DialogTitle className="text-base font-bold text-foreground">Change stage</DialogTitle>
+            <DialogDescription id="stage-dialog-desc" className="text-xs text-muted-foreground mt-0.5">
+              Move {deal.dealNumber} to a different pipeline stage.
+            </DialogDescription>
+          </div>
+          <div className="px-6 py-5 space-y-3">
+            <div className="grid grid-cols-1 gap-2">
+              {validNext.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStageChange(s)}
+                  disabled={updatingStage}
+                  className="w-full text-left px-3 py-2 rounded-lg border border-border bg-card hover:bg-muted/50 text-sm font-medium text-foreground disabled:opacity-50"
+                >
+                  Move to {s.replace(/_/g, " ")}
+                </button>
+              ))}
+              {validNext.length === 0 && (
+                <p className="text-sm text-muted-foreground">No further transitions from this stage.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={!!pendingStage}
         title="Change Deal Stage"
@@ -2302,7 +2301,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </DetailPageLayout>
   );
 }
 

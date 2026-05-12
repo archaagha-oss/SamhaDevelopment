@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -345,7 +345,10 @@ export default function LeadEditPage() {
     ? "Update profile, source, KYC, broker, and unit interests."
     : "Capture a new prospect. Fields marked * are required.";
 
-  const selectedUnitArray = useMemo(() => Array.from(selectedUnitIds), [selectedUnitIds]);
+  // NOTE: hooks must not be placed below the early returns above. This used
+  // to be `useMemo(...)` here and crashed with "Rendered more hooks than
+  // during the previous render". Plain Array.from is cheap enough inline.
+  const selectedUnitArray = Array.from(selectedUnitIds);
 
   return (
     <>

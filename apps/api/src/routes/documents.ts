@@ -51,11 +51,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    // Validate dealId
-    if (!req.body.dealId || typeof req.body.dealId !== "string") {
+    // Validate owner: exactly one of dealId / leadId must be provided.
+    const dealId = typeof req.body.dealId === "string" && req.body.dealId ? req.body.dealId : null;
+    const leadId = typeof req.body.leadId === "string" && req.body.leadId ? req.body.leadId : null;
+    if ((!dealId && !leadId) || (dealId && leadId)) {
       return res.status(400).json({
-        error: "Valid dealId required",
-        code: "INVALID_DEAL_ID",
+        error: "Exactly one of dealId or leadId is required",
+        code: "INVALID_OWNER",
         statusCode: 400,
       });
     }
@@ -71,26 +73,26 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    // Verify deal exists
-    const deal = await prisma.deal.findUnique({
-      where: { id: req.body.dealId },
-      select: { id: true, stage: true },
-    });
-    if (!deal) {
-      return res.status(404).json({
-        error: "Deal not found",
-        code: "NOT_FOUND",
-        statusCode: 404,
-      });
+    // Verify owner exists
+    if (dealId) {
+      const deal = await prisma.deal.findUnique({ where: { id: dealId }, select: { id: true } });
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+      }
+    } else if (leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { id: true } });
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
+      }
     }
 
-    // Check file count limit for deal
+    // Check file count limit for the owning entity (same cap for leads).
     const existingCount = await prisma.document.count({
-      where: { dealId: req.body.dealId },
+      where: dealId ? { dealId } : { leadId: leadId! },
     });
     if (existingCount >= MAX_FILES_PER_DEAL) {
       return res.status(400).json({
-        error: `Maximum ${MAX_FILES_PER_DEAL} documents per deal exceeded`,
+        error: `Maximum ${MAX_FILES_PER_DEAL} documents exceeded`,
         code: "DOC_LIMIT_EXCEEDED",
         statusCode: 400,
       });
@@ -108,25 +110,43 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     }
 
-    // Upload to S3
-    const { key } = await documentService.uploadFile(req.file, req.body.dealId);
+    // Upload to S3 / local
+    const { key } = await documentService.uploadFile(
+      req.file,
+      dealId ? { scope: "deal", id: dealId } : { scope: "lead", id: leadId! },
+    );
+
+    // Tier-1 KYC metadata travels in `dataSnapshot` (Json) so we don't need
+    // dedicated columns. Read by the KYC tab to display per-doc context.
+    const kycMeta: Record<string, string> = {};
+    if (typeof req.body.documentNumber === "string" && req.body.documentNumber.trim()) {
+      kycMeta.documentNumber = req.body.documentNumber.trim();
+    }
+    if (typeof req.body.issueDate === "string" && req.body.issueDate.trim()) {
+      kycMeta.issueDate = req.body.issueDate;
+    }
+    if (typeof req.body.issuingCountry === "string" && req.body.issuingCountry.trim()) {
+      kycMeta.issuingCountry = req.body.issuingCountry.trim();
+    }
 
     // Create database record
     const document = await prisma.document.create({
       data: {
-        dealId: req.body.dealId,
+        dealId: dealId ?? undefined,
+        leadId: leadId ?? undefined,
         name: req.file.originalname,
         type: docType,
         mimeType: req.file.mimetype,
         key,
         uploadedBy: userId,
         expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : null,
-      },
+        dataSnapshot: Object.keys(kycMeta).length > 0 ? kycMeta : undefined,
+      } as any,
     });
 
     const duration = Date.now() - startTime;
     console.log(
-      `[Document Upload Completed] dealId=${req.body.dealId}, docId=${document.id}, size=${req.file.size}B, duration=${duration}ms, user=${userId}`
+      `[Document Upload Completed] owner=${dealId ? `deal:${dealId}` : `lead:${leadId}`}, docId=${document.id}, size=${req.file.size}B, duration=${duration}ms, user=${userId}`
     );
 
     res.status(201).json(document);
@@ -134,6 +154,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const duration = Date.now() - startTime;
     console.error("[Document Upload Failed]", {
       dealId: req.body?.dealId,
+      leadId: req.body?.leadId,
       userId,
       fileName: req.file?.originalname,
       error: error.message,
@@ -266,6 +287,33 @@ router.get("/deal/:dealId", async (req, res) => {
       code: "FETCH_DOCUMENTS_ERROR",
       statusCode: 500,
     });
+  }
+});
+
+// GET /api/documents/lead/:leadId - All documents attached to a lead
+router.get("/lead/:leadId", async (req, res) => {
+  try {
+    if (!req.params.leadId || req.params.leadId.length < 5) {
+      return res.status(400).json({ error: "Invalid leadId", code: "INVALID_LEAD_ID", statusCode: 400 });
+    }
+    const exists = await prisma.lead.findUnique({ where: { id: req.params.leadId }, select: { id: true } });
+    if (!exists) {
+      return res.status(404).json({ error: "Lead not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+
+    const documents = await (prisma.document as any).findMany({
+      where: { leadId: req.params.leadId, softDeleted: false },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, leadId: true, name: true, type: true,
+        contractStatus: true, mimeType: true, uploadedBy: true,
+        expiryDate: true, createdAt: true, dataSnapshot: true,
+      },
+    });
+    res.json({ data: documents });
+  } catch (error: any) {
+    console.error("[Fetch Lead Documents Error]", { leadId: req.params.leadId, error: error.message });
+    res.status(500).json({ error: "Failed to fetch documents", code: "FETCH_DOCUMENTS_ERROR", statusCode: 500 });
   }
 });
 

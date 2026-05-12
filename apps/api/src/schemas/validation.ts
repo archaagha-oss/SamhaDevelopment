@@ -68,6 +68,12 @@ const leadKycFields = {
   companyRegistrationNumber: z.string().optional().nullable(),
   authorizedSignatory: z.string().optional().nullable(),
   sourceOfFunds: z.string().optional().nullable(),
+  // AML profile (Tier 2)
+  dateOfBirth: z.string().optional().nullable(),
+  pepFlag: z.boolean().optional().nullable(),
+  riskRating: z.enum(["LOW", "MEDIUM", "HIGH"]).optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  residencyStatus: z.enum(["CITIZEN", "RESIDENT", "NON_RESIDENT"]).optional().nullable(),
 };
 
 export const createLeadSchema = z.object({

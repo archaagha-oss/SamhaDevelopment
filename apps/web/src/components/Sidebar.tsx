@@ -155,7 +155,7 @@ export default function Sidebar({ currentPage, onNavigate, role }: SidebarProps)
       aria-label="Primary navigation"
     >
       {/* Brand */}
-      <div className={`px-3 py-4 border-b border-border flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
+      <div className={`h-14 px-3 border-b border-border flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
         {settings.logoUrl ? (
           <img
             src={settings.logoUrl}

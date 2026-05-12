@@ -217,8 +217,13 @@ export default function AppShell() {
       </a>
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} role={role} />
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-card border-b border-border flex-shrink-0 gap-3">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+        {/* Per-page <SlimHeader /> portals into this slot. Sits above the
+            AppShell top bar and only covers the main column (never the
+            sidebar). pointer-events controlled by SlimHeader so empty slot
+            stays transparent. */}
+        <div id="slim-header-portal" className="absolute inset-x-0 top-0 z-40 pointer-events-none" />
+        <header className="flex items-center justify-between h-14 px-4 sm:px-6 bg-card border-b border-border flex-shrink-0 gap-3">
           <button
             onClick={() => setShowSearch(true)}
             aria-label="Open global search (⌘K)"

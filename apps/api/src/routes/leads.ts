@@ -407,6 +407,8 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
       // SPA / KYC fields
       address, emiratesId, passportNumber, companyRegistrationNumber,
       authorizedSignatory, sourceOfFunds,
+      // KYC / AML profile fields (per-person)
+      dateOfBirth, pepFlag, riskRating, occupation, residencyStatus,
       // stage is intentionally excluded — use PATCH /:id/stage
     } = req.body;
 
@@ -438,6 +440,11 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
     if (companyRegistrationNumber !== undefined) data.companyRegistrationNumber = companyRegistrationNumber || null;
     if (authorizedSignatory       !== undefined) data.authorizedSignatory       = authorizedSignatory || null;
     if (sourceOfFunds             !== undefined) data.sourceOfFunds             = sourceOfFunds || null;
+    if (dateOfBirth     !== undefined) data.dateOfBirth     = dateOfBirth ? new Date(dateOfBirth) : null;
+    if (pepFlag         !== undefined) data.pepFlag         = !!pepFlag;
+    if (riskRating      !== undefined) data.riskRating      = riskRating || null;
+    if (occupation      !== undefined) data.occupation      = occupation || null;
+    if (residencyStatus !== undefined) data.residencyStatus = residencyStatus || null;
 
     const lead = await prisma.lead.update({
       where: { id: req.params.id },

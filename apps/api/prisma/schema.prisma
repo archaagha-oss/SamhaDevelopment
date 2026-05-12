@@ -154,6 +154,20 @@ enum LeadStage {
   CLOSED_LOST
 }
 
+// ----- KYC / AML profile (per-Lead) -----
+
+enum RiskRating {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ResidencyStatus {
+  CITIZEN
+  RESIDENT
+  NON_RESIDENT
+}
+
 // ----- Reservation -----
 
 enum ReservationStatus {
@@ -716,6 +730,13 @@ model Lead {
   companyRegistrationNumber String?
   authorizedSignatory       String? // for corporate purchasers
   sourceOfFunds             String? // AML clause + reservation form (e.g. "Husband Savings", "Salary")
+
+  // ----- AML / KYC profile (per-person) -----
+  dateOfBirth     DateTime?
+  pepFlag         Boolean          @default(false)
+  riskRating      RiskRating?
+  occupation      String?
+  residencyStatus ResidencyStatus?
 
   source          String
   brokerCompanyId String?

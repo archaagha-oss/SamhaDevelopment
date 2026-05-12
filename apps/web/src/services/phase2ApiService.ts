@@ -4,17 +4,9 @@
  */
 import axios from "axios";
 
-// ----- KYC -----
-export const kycApi = {
-  listForLead: (leadId: string) =>
-    axios.get(`/api/kyc/lead/${leadId}`).then((r: any) => r.data.data ?? []),
-  get: (id: string) => axios.get(`/api/kyc/${id}`).then((r: any) => r.data),
-  create: (leadId: string, body: Record<string, unknown>) =>
-    axios.post(`/api/kyc/lead/${leadId}`, body).then((r: any) => r.data),
-  update: (id: string, body: Record<string, unknown>) =>
-    axios.patch(`/api/kyc/${id}`, body).then((r: any) => r.data),
-  remove: (id: string) => axios.delete(`/api/kyc/${id}`).then((r: any) => r.data),
-};
+// KYC formerly had a standalone endpoint here. It now lives in the Document
+// model — see LeadKycTab.tsx (documents of type EMIRATES_ID / PASSPORT / VISA
+// attached to a Lead, with expiryDate driving the compliance radar).
 
 // ----- Deal parties -----
 export const dealPartiesApi = {

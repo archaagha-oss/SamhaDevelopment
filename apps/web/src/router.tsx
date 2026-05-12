@@ -58,7 +58,6 @@ const HandoverChecklistPage         = lazy(() => import("./pages/HandoverCheckli
 const RefundsPage                   = lazy(() => import("./pages/RefundsPage"));
 const EscrowPage                    = lazy(() => import("./pages/EscrowPage"));
 const CommissionTiersPage           = lazy(() => import("./pages/CommissionTiersPage"));
-const LeadKycPage                   = lazy(() => import("./pages/LeadKycPage"));
 const DealJointOwnersPage           = lazy(() => import("./pages/DealJointOwnersPage"));
 const PublicUnitView                = lazy(() => import("./components/PublicUnitView"));
 const HotInboxPage                  = lazy(() => import("./pages/HotInboxPage"));
@@ -162,7 +161,6 @@ export const router = createBrowserRouter([
       { path: "units/:unitId/snags",                       element: <FeatureFlagGate flag="snagList"><SnagListPage /></FeatureFlagGate> },
       { path: "deals/:dealId/handover",                    element: <FeatureFlagGate flag="handoverChecklist"><HandoverChecklistPage /></FeatureFlagGate> },
       { path: "deals/:dealId/parties",                     element: <DealJointOwnersPage /> },
-      { path: "leads/:leadId/kyc",                         element: <FeatureFlagGate flag="kycVerification"><LeadKycPage /></FeatureFlagGate> },
       { path: "refunds",                                   element: <RefundsPage /> },
       { path: "commission-tiers",                          element: <FeatureFlagGate flag="commissionTiers"><CommissionTiersPage /></FeatureFlagGate> },
       { path: "*",                                        element: <NotFoundPage /> },

@@ -1,22 +1,30 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
+import LeadKycTab from "./LeadKycTab";
 import axios from "axios";
 import { toast } from "sonner";
 import ConfirmDialog from "./ConfirmDialog";
-import Breadcrumbs from "./Breadcrumbs";
+import { DetailPageLayout } from "./layout";
 import UnitInterestPicker from "./UnitInterestPicker";
 import { StageBadge } from "@/components/ui/stage-badge";
 import ConversationThread, { ConversationReplyBox } from "./ConversationThread";
 import { useEventStream } from "../hooks/useEventStream";
 import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
-import { Phone, Mail, MessageCircle, Handshake, Building2, FileText } from "lucide-react";
+import { Phone, Mail, MessageCircle, Handshake, Building2, FileText, MoreHorizontal, Pencil, SlidersHorizontal, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
 import { formatDateTime, formatTimestamp } from "../utils/format";
 import NextStepCard from "@/components/ui/NextStepCard";
-import SlimHeader, { SlimHeaderSentinel } from "@/components/ui/SlimHeader";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +72,12 @@ interface Lead {
   companyRegistrationNumber?: string | null;
   authorizedSignatory?: string | null;
   sourceOfFunds?: string | null;
+  // AML profile
+  dateOfBirth?: string | null;
+  pepFlag?: boolean;
+  riskRating?: "LOW" | "MEDIUM" | "HIGH" | null;
+  occupation?: string | null;
+  residencyStatus?: "CITIZEN" | "RESIDENT" | "NON_RESIDENT" | null;
   interests: { id: string; unitId: string; isPrimary: boolean; unit: { unitNumber: string; type: string; price: number; floor: number } }[];
   deals?: DealSummary[];
   communicationPreference?: CommunicationPreference | null;
@@ -123,7 +137,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
 
   // Core data
   const [lead,       setLead]       = useState<Lead | null>(null);
-  const [activeTab,  setActiveTab]  = useState<"offers" | "deals" | "activity">("offers");
+  const [activeTab,  setActiveTab]  = useState<"offers" | "deals" | "activity" | "kyc">("offers");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [tasks,      setTasks]      = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -142,7 +156,18 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const [validTransitions, setValidTransitions] = useState<string[]>([]);
   const [changingStage,    setChangingStage]     = useState(false);
   const [stageReason,      setStageReason]       = useState("");
-  const [showStagePopover, setShowStagePopover]  = useState(false);
+  // `showStagePopover` opens the Change-stage Dialog (rendered with the
+  // other modals). Triggered by NextStepCard's "Other stages" secondary.
+  const [showStagePopover, setShowStagePopover] = useState(false);
+  const activityFormRef = useRef<HTMLFormElement | null>(null);
+
+  const openLogActivity = () => {
+    setActiveTab("activity");
+    setShowActForm(true);
+    requestAnimationFrame(() => {
+      activityFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
 
   // Activity log
   const [showActForm, setShowActForm] = useState(false);
@@ -175,6 +200,9 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   });
   const [revisingOffer, setRevisingOffer] = useState<string | null>(null); // offerId being revised
   const [submittingOffer, setSubmittingOffer] = useState(false);
+
+  // KYC record count (for tab badge)
+  const [kycCount, setKycCount] = useState<number | null>(null);
 
   // Delete
   const [deleting, setDeleting] = useState(false);
@@ -243,8 +271,9 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       });
       setTasks((prev) => [...prev, res.data]);
       setQuickTask({ title: "", type: "FOLLOW_UP", dueDate: "" });
-    } finally {
       setAddingTask(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to create task");
     }
   };
 
@@ -272,6 +301,19 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
       setBrokerCompanies(bcRes.data?.data ?? bcRes.data ?? []);
     }).catch(console.error).finally(() => setLoading(false));
   }, [leadId]);
+
+  // Fetch KYC document count for the tab badge.
+  // KYC = lead-attached documents of type EMIRATES_ID / PASSPORT / VISA.
+  useEffect(() => {
+    if (!leadId || !kycEnabled) return;
+    axios.get(`/api/documents/lead/${leadId}`)
+      .then((r) => {
+        const rows: any[] = r.data?.data ?? [];
+        const kyc = rows.filter((d) => ["EMIRATES_ID", "PASSPORT", "VISA"].includes(d.type));
+        setKycCount(kyc.length);
+      })
+      .catch(() => setKycCount(0));
+  }, [leadId, kycEnabled]);
 
   useEffect(() => {
     if (!lead) return;
@@ -569,153 +611,76 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
   const inactiveDeals = lead.deals?.filter((d) => !d.isActive) ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      {/* Slim sticky header appears once the profile card scrolls off-screen
-          (UX_AUDIT_2 §R7). Sentinel is placed right after the profile card. */}
-      {lead && (
-        <SlimHeader
-          primary={
-            <>
-              <span className="truncate">{lead.firstName} {lead.lastName}</span>
-              <span className="text-muted-foreground hidden md:inline">· {lead.phone}</span>
-            </>
-          }
-          badges={<StageBadge stage={lead.stage as any} />}
-          actions={
-            validTransitions.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => handleStageChange(validTransitions[0])}
-                disabled={changingStage}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                Move to {validTransitions[0].replace(/_/g, " ")}
-              </button>
-            ) : null
-          }
-        />
-      )}
-      <Breadcrumbs crumbs={[
+    <DetailPageLayout
+      crumbs={[
         { label: "Leads", path: "/leads" },
-        { label: lead ? `${lead.firstName} ${lead.lastName}` : "Lead" },
-      ]} />
-
-      {/* Profile header */}
-      <div className="bg-card rounded-xl border border-border p-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-info-soft rounded-2xl flex items-center justify-center text-primary font-bold text-xl flex-shrink-0">
-              {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">{lead.firstName} {lead.lastName}</h1>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className="text-sm text-muted-foreground">{lead.phone}</span>
-                {lead.email && <span className="text-sm text-muted-foreground">{lead.email}</span>}
-              </div>
-              {/* Quick actions — Call / Email / WhatsApp / Log Activity */}
-              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                {lead.phone && (
-                  <a
-                    href={`tel:${lead.phone}`}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
-                  >
-                    <Phone className="size-3.5" />
-                    <span>Call</span>
-                  </a>
-                )}
-                {lead.email && (
-                  <a
-                    href={`mailto:${lead.email}`}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
-                  >
-                    <Mail className="size-3.5" />
-                    <span>Email</span>
-                  </a>
-                )}
-                {lead.phone && (
-                  <a
-                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground border border-border rounded-lg hover:bg-muted/50"
-                  >
-                    <MessageCircle className="size-3.5" />
-                    <span>WhatsApp</span>
-                  </a>
-                )}
-                <button
-                  onClick={() => { setActiveTab("activity"); setShowActForm(true); }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90"
-                >
-                  + Log Activity
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Stage badge + change popover */}
-            <div className="relative">
+        { label: `${lead.firstName} ${lead.lastName}` },
+      ]}
+      title={`${lead.firstName} ${lead.lastName}`}
+      subtitle={(
+        <span className="inline-flex items-center gap-2 flex-wrap">
+          <span className="tabular-nums">{lead.phone}</span>
+          <StageBadge kind="lead" stage={lead.stage} />
+        </span>
+      )}
+      actions={(
+        <>
+          <button
+            onClick={openCreateDealModal}
+            className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90"
+          >
+            Create Deal
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
-                onClick={() => setShowStagePopover(!showStagePopover)}
-                className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+                aria-label="More actions"
+                className="p-1.5 text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted/50"
               >
-                <StageBadge kind="lead" stage={lead.stage} className="text-sm px-3 py-1" />
-                {validTransitions.length > 0 && <span className="text-xs text-muted-foreground">▾</span>}
+                <MoreHorizontal className="size-4" />
               </button>
-              {showStagePopover && validTransitions.length > 0 && (
-                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-20 w-56 p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Move to:</p>
-                  {validTransitions.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleStageChange(s)}
-                      disabled={changingStage}
-                      className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50 text-foreground disabled:opacity-50"
-                    >
-                      {s.replace(/_/g, " ")}
-                    </button>
-                  ))}
-                  <input
-                    placeholder="Reason (optional)"
-                    value={stageReason}
-                    onChange={(e) => setStageReason(e.target.value)}
-                    className="w-full border border-border rounded-lg px-2.5 py-1.5 text-xs bg-muted/50 focus:outline-none focus:border-ring mt-1"
-                  />
-                  <button
-                    onClick={() => setShowStagePopover(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground mt-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button onClick={() => navigate(`/leads/${lead.id}/edit`)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
-              Edit
-            </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}/edit`)}>
+                <Pencil className="size-3.5 mr-2" /> Edit lead
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowDealForm(true)}>
+                <SlidersHorizontal className="size-3.5 mr-2" /> New reservation…
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={deleting}
+                onClick={handleDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-3.5 mr-2" /> {deleting ? "Deleting…" : "Delete lead"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+      mobileBottomBar={validTransitions.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleStageChange(validTransitions[0])}
+            disabled={changingStage}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-sm disabled:opacity-50"
+          >
+            Move to {validTransitions[0].replace(/_/g, " ")}
+          </button>
+          {validTransitions.length > 1 && (
             <button
-              onClick={openCreateDealModal}
-              className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 flex items-center gap-1.5"
+              type="button"
+              onClick={() => setShowStagePopover(true)}
+              className="px-3 py-2.5 rounded-lg border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground"
             >
-              Create Deal
+              Other ({validTransitions.length - 1})
             </button>
-            <button onClick={() => setShowDealForm(true)} className="px-3 py-1.5 text-sm text-muted-foreground font-medium border border-border rounded-lg hover:bg-muted/50">
-              Advanced
-            </button>
-            <button onClick={handleDelete} disabled={deleting} className="px-3 py-1.5 text-sm text-destructive font-medium border border-destructive/30 rounded-lg hover:bg-destructive-soft disabled:opacity-50">
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          </div>
+          )}
         </div>
-      </div>
-      {/* SlimHeader sentinel — when this scrolls out of view, the slim
-          header at the top of the page slides in (UX_AUDIT_2 §R7). */}
-      <SlimHeaderSentinel />
-
-      {/* Tabs: Offers / Deals / Activity (+ KYC sub-route when flag enabled) */}
+      ) : null}
+      tabs={(
       <div className="border-b border-border flex items-center gap-1">
         {([
           { key: "offers",   label: "Offers",   count: offers.length },
@@ -738,17 +703,23 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </button>
         ))}
         {kycEnabled && (
-          <Link
-            to={`/leads/${leadId}/kyc`}
-            className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+          <button
+            onClick={() => setActiveTab("kyc")}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "kyc"
+                ? "border-primary/40 text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
           >
-            KYC <span className="ml-1.5 text-[11px] text-muted-foreground">→</span>
-          </Link>
+            KYC
+            <span className={`ml-1.5 text-[11px] ${activeTab === "kyc" ? "text-primary" : "text-muted-foreground"}`}>
+              ({kycCount ?? "—"})
+            </span>
+          </button>
         )}
       </div>
-
-      {/* KPI strip — engagement, recency, budget */}
-      {(() => {
+      )}
+      kpis={(() => {
         const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
         const touchpoints30d = activities.filter((a) => {
           const t = new Date(a.activityDate ?? a.createdAt).getTime();
@@ -780,8 +751,11 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
             <div className="bg-card rounded-xl border border-border p-4">
               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Last Contact</div>
-              <div className="text-2xl font-bold text-foreground">
-                {latest ? formatDateTime(latest.activityDate ?? latest.createdAt) : "Never"}
+              <div
+                className="text-xl font-bold text-foreground truncate"
+                title={latest ? formatDateTime(latest.activityDate ?? latest.createdAt) : undefined}
+              >
+                {latest ? formatTimestamp(latest.activityDate ?? latest.createdAt) : "Never"}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
                 {latest?.type ? `via ${latest.type.replace(/_/g, " ").toLowerCase()}` : "No activity yet"}
@@ -795,10 +769,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           </div>
         );
       })()}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main column (left, span 2) — tab content + interested units */}
-        <div className="lg:col-span-2 space-y-4">
+      main={(
+        <div className="space-y-4">
           {/* Tab content: Activity timeline */}
           {activeTab === "activity" && (
             <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -816,7 +788,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </div>
 
               {showActForm && (
-                <form onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
+                <form ref={activityFormRef} onSubmit={handleLogActivity} className="px-5 py-4 bg-info-soft border-b border-primary/40 space-y-3">
                   <div className="flex flex-wrap gap-2">
                     {(["CALL", "EMAIL", "WHATSAPP", "MEETING", "SITE_VISIT", "NOTE"] as const).map((t) => {
                       const Icon = ACTIVITY_ICON[t] ?? FileText;
@@ -888,9 +860,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 Offers <span className="text-muted-foreground font-normal">({offers.length})</span>
               </h3>
               {offers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No offers generated yet</p>
+                <div className="text-sm text-muted-foreground">
+                  <p>No offers generated yet.</p>
+                  <p className="text-xs mt-1">Generate one from an interested unit below ↓</p>
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="divide-y divide-border -mx-1">
                   {offers.map((o, idx) => {
                     const version = offers.length - idx;
                     const statusColor: Record<string, string> = {
@@ -901,7 +876,7 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                       WITHDRAWN: "bg-warning-soft text-warning",
                     };
                     return (
-                      <div key={o.id} className="p-2.5 bg-muted/50 rounded-lg border border-border space-y-1.5">
+                      <div key={o.id} className="px-1 py-2.5 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xs font-semibold text-foreground inline-flex items-baseline gap-1">v{version} — {formatDirham(o.offeredPrice)}</p>
@@ -958,7 +933,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
                 Deals <span className="text-muted-foreground font-normal">({lead.deals?.length ?? 0})</span>
               </h3>
               {(!lead.deals || lead.deals.length === 0) ? (
-                <p className="text-sm text-muted-foreground">No deals yet</p>
+                <div className="text-sm text-muted-foreground">
+                  <p>No deals yet.</p>
+                  <button onClick={openCreateDealModal} className="text-xs text-primary hover:underline mt-1 font-medium">
+                    Create the first deal →
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {[...activeDeals, ...inactiveDeals].map((d) => (
@@ -984,11 +964,28 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             </div>
           )}
 
+          {/* Tab content: KYC */}
+          {activeTab === "kyc" && (
+            <LeadKycTab
+              leadId={leadId}
+              lead={lead}
+              onLeadUpdated={(patch) => setLead((prev) => prev ? ({ ...prev, ...patch } as Lead) : prev)}
+              onCountChange={setKycCount}
+            />
+          )}
+
           {/* Interested units (always visible) */}
           <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interested Units</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Interested Units <span className="text-muted-foreground font-normal">({lead.interests.length})</span>
+            </h3>
             {lead.interests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No units linked</p>
+              <div className="text-sm text-muted-foreground">
+                <p>No units linked yet.</p>
+                <button onClick={() => navigate(`/leads/${lead.id}/edit`)} className="text-xs text-primary hover:underline mt-1 font-medium">
+                  Add interested units →
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {lead.interests.map((i) => {
@@ -1037,12 +1034,13 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             )}
           </div>
         </div>
-
-        {/* Right sidebar — sticky on lg+ (UX_AUDIT_2 §R6). NextStepCard sits
-            at the top of the rail so the primary action is always visible. */}
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+      )}
+      aside={(
+        <div className="space-y-4">
           {validTransitions.length > 0 && (
             <NextStepCard
+              // Hidden on mobile — surfaced above tabs there instead.
+              className="hidden lg:block"
               label={`Move to ${validTransitions[0].replace(/_/g, " ")}`}
               description={
                 lead.stage === "NEW"
@@ -1068,10 +1066,11 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
           <div className="bg-card rounded-xl border border-border p-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Lead Info</h3>
             <div className="space-y-2.5">
+              {/* Source + Budget intentionally omitted — both live in the
+                  KPI strip above so we don't duplicate the same number twice
+                  on the page. */}
               {([
-                ["Source",      lead.source],
                 ["Nationality", lead.nationality || "—"],
-                ["Budget",      lead.budget ? formatDirham(lead.budget) : "—"],
                 ["Agent",       lead.assignedAgent?.name || "Unassigned"],
               ] as Array<[string, React.ReactNode]>).map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
@@ -1082,7 +1081,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               {lead.brokerCompany && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Broker</span>
-                  <span className="font-medium text-foreground">{lead.brokerCompany.name}</span>
+                  <span className="font-medium text-foreground text-right">
+                    {lead.brokerCompany.name}
+                    {lead.brokerAgent && (
+                      <span className="block text-xs text-muted-foreground">{lead.brokerAgent.name}</span>
+                    )}
+                  </span>
                 </div>
               )}
               {lead.notes && (
@@ -1185,7 +1189,12 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
               </div>
             )}
             {tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No open tasks</p>
+              <div className="text-sm text-muted-foreground">
+                <p>No open tasks.</p>
+                <button onClick={() => setAddingTask(true)} className="text-xs text-primary hover:underline mt-1 font-medium">
+                  Schedule a follow-up →
+                </button>
+              </div>
             ) : (
               <div className="space-y-2">
                 {tasks.map((t) => {
@@ -1210,8 +1219,8 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
             )}
           </div>
         </div>
-      </div>
-
+      )}
+    >
       {/* The inline Edit Lead modal was removed in Phase C.2.
           Edit flow now lives at /leads/:leadId/edit (LeadEditPage). The Edit
           button at the top of this page navigates there. */}
@@ -1490,6 +1499,43 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         </Modal>
       )}
 
+      {/* ── Change-stage Dialog ─────────────────────────────────────────────── */}
+      <Dialog open={showStagePopover} onOpenChange={(o) => { if (!o) { setShowStagePopover(false); setStageReason(""); } }}>
+        <DialogContent className="max-w-md p-0 gap-0" aria-describedby="stage-dialog-desc">
+          <div className="px-6 py-4 border-b border-border">
+            <DialogTitle className="text-base font-bold text-foreground">Change stage</DialogTitle>
+            <DialogDescription id="stage-dialog-desc" className="text-xs text-muted-foreground mt-0.5">
+              Move {lead.firstName} {lead.lastName} to a different pipeline stage.
+            </DialogDescription>
+          </div>
+          <div className="px-6 py-5 space-y-3">
+            <div className="grid grid-cols-1 gap-2">
+              {validTransitions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStageChange(s)}
+                  disabled={changingStage}
+                  className="w-full text-left px-3 py-2 rounded-lg border border-border bg-card hover:bg-muted/50 text-sm font-medium text-foreground disabled:opacity-50"
+                >
+                  Move to {s.replace(/_/g, " ")}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                Reason <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <input
+                placeholder="e.g. Budget confirmed in last call"
+                value={stageReason}
+                onChange={(e) => setStageReason(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={confirmDelete}
         title="Delete Lead"
@@ -1499,6 +1545,6 @@ export default function LeadProfilePage({ leadId: leadIdProp, onBack }: Props) {
         onConfirm={doDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-    </div>
+    </DetailPageLayout>
   );
 }

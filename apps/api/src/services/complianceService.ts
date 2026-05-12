@@ -30,7 +30,9 @@ export type CredentialKind =
   | "BROKER_VAT_CERT"
   | "AGENT_RERA_CARD"
   | "AGENT_EID"
-  | "BUYER_EID";
+  | "BUYER_EID"
+  | "BUYER_PASSPORT"
+  | "BUYER_VISA";
 
 export interface ExpiryRow {
   kind: CredentialKind;
@@ -218,11 +220,19 @@ export async function collectExpiries(opts: CollectExpiriesOptions = {}): Promis
     }
   }
 
-  // ─── Buyer Emirates ID copies on file (Documents of type EMIRATES_ID) ───
+  // ─── Buyer KYC documents on file (EMIRATES_ID / PASSPORT / VISA) ───
+  // Each is scanned independently so we can emit the right CredentialKind
+  // and the compliance UI can label them distinctly. documentNumber/
+  // issuingCountry travel in Document.dataSnapshot (Tier-1 KYC metadata).
   if (!wantsCategory || wantsCategory === "BUYER") {
-    const eidDocs = await prisma.document.findMany({
+    const KYC_TYPE_TO_KIND: Record<string, CredentialKind> = {
+      EMIRATES_ID: "BUYER_EID",
+      PASSPORT:    "BUYER_PASSPORT",
+      VISA:        "BUYER_VISA",
+    };
+    const kycDocs = await prisma.document.findMany({
       where: {
-        type: "EMIRATES_ID",
+        type: { in: ["EMIRATES_ID", "PASSPORT", "VISA"] as any },
         softDeleted: false,
         expiryDate: { lte: horizon },
         leadId: { not: null },
@@ -230,16 +240,21 @@ export async function collectExpiries(opts: CollectExpiriesOptions = {}): Promis
       select: {
         id: true,
         name: true,
+        type: true,
         expiryDate: true,
         leadId: true,
+        dataSnapshot: true,
         lead: { select: { id: true, firstName: true, lastName: true, phone: true } },
       },
     });
-    for (const d of eidDocs) {
+    for (const d of kycDocs) {
       if (!d.expiryDate || !d.lead) continue;
+      const meta = (d.dataSnapshot ?? null) as
+        | { documentNumber?: string; issuingCountry?: string }
+        | null;
       const days = daysBetween(d.expiryDate, now);
       rows.push({
-        kind: "BUYER_EID",
+        kind: KYC_TYPE_TO_KIND[d.type] ?? "BUYER_EID",
         category: "BUYER",
         severity: severityFor(days),
         daysToExpiry: days,
@@ -247,7 +262,10 @@ export async function collectExpiries(opts: CollectExpiriesOptions = {}): Promis
         ownerId: d.lead.id,
         ownerType: "LEAD",
         ownerName: `${d.lead.firstName} ${d.lead.lastName}`.trim(),
-        ownerSubLabel: d.lead.phone,
+        ownerSubLabel: meta?.documentNumber
+          ? `№ ${meta.documentNumber}${meta.issuingCountry ? ` · ${meta.issuingCountry}` : ""}`
+          : d.lead.phone,
+        documentNumber: meta?.documentNumber ?? null,
         documentId: d.id,
       });
     }
