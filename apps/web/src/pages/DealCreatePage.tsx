@@ -14,8 +14,18 @@ import { Button } from "@/components/ui/button";
 // Pre-select via URL params — works as a deep link from anywhere in the app:
 //   ?leadId=...   pre-selects the lead (e.g. from a lead profile).
 //   ?unitId=...   pre-selects the unit, derives the project, and auto-fills
-//                 the sale price from unit.price. Skips lead step when paired
-//                 with leadId so the operator lands on step 1 ready to go.
+//                 the sale price from unit.price.
+//
+// Workflow shortcuts (Option A "smart wizard"):
+//   - Smart initial step: when prefill makes earlier steps complete, the
+//     wizard opens on the first INCOMPLETE step. ?leadId+?unitId lands on
+//     step 2 (Payment Plan).
+//   - Smart Next: clicking Next skips steps whose canAdvance gate is
+//     already satisfied, so a user picking a lead with unit prefilled
+//     jumps from step 0 -> step 2 in one click.
+//   - localStorage drafts: every state change writes to a single draft
+//     key; reload / accidental nav restores the in-progress wizard.
+//     Submit clears the draft.
 
 interface Lead    { id: string; firstName: string; lastName: string; phone: string }
 interface Project { id: string; name: string }
@@ -33,32 +43,83 @@ const fmtArea = (a: number) => `${a.toLocaleString()} sqft`;
 
 const dealsCrumbs = [{ label: "Home", path: "/" }, { label: "Deals", path: "/deals" }];
 
+// localStorage key for in-progress wizard state. Bump the version suffix if
+// the shape of WizardDraft changes so old drafts get discarded cleanly.
+const DRAFT_KEY = "samha.dealCreate.draft.v1";
+
+interface WizardDraft {
+  leadId: string;
+  projectId: string;
+  unitId: string;
+  salePrice: string;
+  discount: string;
+  paymentPlanId: string;
+  brokerCompanyId: string;
+  brokerAgentId: string;
+  commissionRateOverride: string;
+  adminFeeWaived: boolean;
+  adminFeeWaivedReason: string;
+  dldPaidBy: "BUYER" | "DEVELOPER";
+  dldWaivedReason: string;
+}
+
+function loadDraft(): Partial<WizardDraft> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearDraft() {
+  try { window.localStorage.removeItem(DRAFT_KEY); } catch {/* ignore */}
+}
+
 export default function DealCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultLeadId = searchParams.get("leadId") ?? "";
   const defaultUnitId = searchParams.get("unitId") ?? "";
 
-  // Land on step 1 (Unit & Price) when both a lead and a unit are supplied —
-  // the operator already knows who's buying what, so skip the lead picker.
-  const [step, setStep] = useState(defaultLeadId && defaultUnitId ? 1 : 0);
+  // URL params take priority over saved drafts so a fresh "Create deal from
+  // unit X" deep-link always starts fresh on that unit.
+  const initial = (() => {
+    const draft = (defaultLeadId || defaultUnitId) ? null : loadDraft();
+    return draft ?? {};
+  })();
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [leadId,                 setLeadId]                 = useState(defaultLeadId);
+  const [leadId,                 setLeadId]                 = useState<string>(defaultLeadId || initial.leadId || "");
   const [leadSearch,             setLeadSearch]             = useState("");
-  const [projectId,              setProjectId]              = useState("");
-  const [unitId,                 setUnitId]                 = useState("");
-  const [salePrice,              setSalePrice]              = useState("");
-  const [discount,               setDiscount]               = useState("");
-  const [paymentPlanId,          setPaymentPlanId]          = useState("");
-  const [brokerCompanyId,        setBrokerCompanyId]        = useState("");
-  const [brokerAgentId,          setBrokerAgentId]          = useState("");
-  const [commissionRateOverride, setCommissionRateOverride] = useState("");
-  const [adminFeeWaived,         setAdminFeeWaived]         = useState(false);
-  const [adminFeeWaivedReason,   setAdminFeeWaivedReason]   = useState("");
-  const [dldPaidBy,              setDldPaidBy]              = useState<"BUYER" | "DEVELOPER">("BUYER");
-  const [dldWaivedReason,        setDldWaivedReason]        = useState("");
+  const [projectId,              setProjectId]              = useState<string>(initial.projectId || "");
+  const [unitId,                 setUnitId]                 = useState<string>(initial.unitId || "");
+  const [salePrice,              setSalePrice]              = useState<string>(initial.salePrice || "");
+  const [discount,               setDiscount]               = useState<string>(initial.discount || "");
+  const [paymentPlanId,          setPaymentPlanId]          = useState<string>(initial.paymentPlanId || "");
+  const [brokerCompanyId,        setBrokerCompanyId]        = useState<string>(initial.brokerCompanyId || "");
+  const [brokerAgentId,          setBrokerAgentId]          = useState<string>(initial.brokerAgentId || "");
+  const [commissionRateOverride, setCommissionRateOverride] = useState<string>(initial.commissionRateOverride || "");
+  const [adminFeeWaived,         setAdminFeeWaived]         = useState<boolean>(initial.adminFeeWaived ?? false);
+  const [adminFeeWaivedReason,   setAdminFeeWaivedReason]   = useState<string>(initial.adminFeeWaivedReason || "");
+  const [dldPaidBy,              setDldPaidBy]              = useState<"BUYER" | "DEVELOPER">((initial.dldPaidBy as "BUYER" | "DEVELOPER") || "BUYER");
+  const [dldWaivedReason,        setDldWaivedReason]        = useState<string>(initial.dldWaivedReason || "");
+
+  const restoredFromDraft = !!(initial && Object.keys(initial).length > 0);
+  const [draftBannerOpen, setDraftBannerOpen] = useState<boolean>(restoredFromDraft);
+
+  // Smart initial step — open on the first step whose data isn't yet valid.
+  // ?leadId+?unitId -> step 2 (Payment Plan). Draft with everything filled
+  // through step 2 -> step 3 (Broker review).
+  const [step, setStep] = useState<number>(() => {
+    const hasLead = !!(defaultLeadId || initial.leadId);
+    const hasUnit = !!(defaultUnitId || initial.unitId) && parseFloat(initial.salePrice || "0") > 0;
+    const hasPlan = !!initial.paymentPlanId;
+    if (hasLead && hasUnit && hasPlan) return 3;
+    if (hasLead && hasUnit)            return 2;
+    if (hasLead)                       return 1;
+    return 0;
+  });
 
   const [leads,           setLeads]           = useState<Lead[]>([]);
   const [projects,        setProjects]        = useState<Project[]>([]);
@@ -150,6 +211,51 @@ export default function DealCreatePage() {
     true,
   ];
 
+  // Persist every state change as a draft. Reload / accidental nav restores.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const draft: WizardDraft = {
+      leadId, projectId, unitId, salePrice, discount,
+      paymentPlanId, brokerCompanyId, brokerAgentId,
+      commissionRateOverride, adminFeeWaived, adminFeeWaivedReason,
+      dldPaidBy, dldWaivedReason,
+    };
+    try { window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {/* ignore */}
+  }, [
+    leadId, projectId, unitId, salePrice, discount,
+    paymentPlanId, brokerCompanyId, brokerAgentId,
+    commissionRateOverride, adminFeeWaived, adminFeeWaivedReason,
+    dldPaidBy, dldWaivedReason,
+  ]);
+
+  // Smart "Next →" — skip over steps whose canAdvance gate is already
+  // satisfied. Lets a user with ?leadId+?unitId prefilled jump from the
+  // Lead step straight to Payment Plan in a single click.
+  const smartNext = () => {
+    let next = step + 1;
+    while (next < STEPS.length - 1 && canAdvance[next]) next++;
+    setStep(Math.min(next, STEPS.length - 1));
+  };
+
+  const discardDraft = () => {
+    clearDraft();
+    setDraftBannerOpen(false);
+    setLeadId(defaultLeadId);
+    setProjectId("");
+    setUnitId(defaultUnitId);
+    setSalePrice("");
+    setDiscount("");
+    setPaymentPlanId("");
+    setBrokerCompanyId("");
+    setBrokerAgentId("");
+    setCommissionRateOverride("");
+    setAdminFeeWaived(false);
+    setAdminFeeWaivedReason("");
+    setDldPaidBy("BUYER");
+    setDldWaivedReason("");
+    setStep(defaultLeadId && defaultUnitId ? 2 : defaultLeadId ? 1 : 0);
+  };
+
   async function submit() {
     setError(null);
     setSubmitting(true);
@@ -169,6 +275,7 @@ export default function DealCreatePage() {
         dldWaivedReason:        dldPaidBy === "DEVELOPER" ? dldWaivedReason || undefined : undefined,
       });
       const newId = r.data?.id;
+      clearDraft();
       toast.success("Deal created");
       navigate(newId ? `/deals/${newId}` : "/deals");
     } catch (err: any) {
@@ -196,7 +303,7 @@ export default function DealCreatePage() {
           {step < STEPS.length - 1 ? (
             <Button
               type="button"
-              onClick={() => setStep((s) => s + 1)}
+              onClick={smartNext}
               disabled={!canAdvance[step]}
             >
               Next →
@@ -261,6 +368,31 @@ export default function DealCreatePage() {
       }
       main={
         <>
+          {/* Draft-restored banner — only shown when the wizard mounted with
+              state restored from localStorage (no URL-supplied IDs). Lets
+              the operator discard mid-flow work if they want a clean slate. */}
+          {draftBannerOpen && (
+            <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
+              <span className="text-info-soft-foreground">
+                Restored your draft from earlier. Pick up where you left off, or start fresh.
+              </span>
+              <button
+                type="button"
+                onClick={() => setDraftBannerOpen(false)}
+                className="ml-auto text-xs text-primary hover:underline"
+              >
+                Keep draft
+              </button>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-xs text-destructive hover:underline"
+              >
+                Start fresh
+              </button>
+            </div>
+          )}
+
           {/* Step 0 — Lead */}
           {step === 0 && (
             <div className="bg-card rounded-xl border border-border p-5 space-y-4">
