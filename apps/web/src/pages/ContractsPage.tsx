@@ -16,11 +16,11 @@ interface Document extends ContractDoc {
   createdAt: string;
 }
 
-const CONTRACT_STATUS_CONFIG: Record<ContractStatus, { label: string; badge: string }> = {
-  DRAFT:    { label: "Draft",    badge: "bg-muted text-muted-foreground" },
-  SENT:     { label: "Sent",     badge: "bg-info-soft text-primary"   },
-  SIGNED:   { label: "Signed",   badge: "bg-success-soft text-success" },
-  ARCHIVED: { label: "Archived", badge: "bg-neutral-200 text-muted-foreground" },
+const CONTRACT_STATUS_CONFIG: Record<ContractStatus, { label: string; badge: string; header: string; dot: string }> = {
+  DRAFT:    { label: "Draft",    badge: "bg-muted text-muted-foreground",                      header: "bg-stage-neutral text-stage-neutral-foreground",     dot: "bg-neutral-400"   },
+  SENT:     { label: "Sent",     badge: "bg-info-soft text-primary",                           header: "bg-stage-info text-stage-info-foreground",           dot: "bg-info"          },
+  SIGNED:   { label: "Signed",   badge: "bg-success-soft text-success",                        header: "bg-stage-success text-stage-success-foreground",     dot: "bg-success"       },
+  ARCHIVED: { label: "Archived", badge: "bg-neutral-200 text-muted-foreground",                header: "bg-stage-neutral text-stage-neutral-foreground",     dot: "bg-neutral-400"   },
 };
 
 const DOC_TYPE_CONFIG: Record<string, { label: string; badge: string }> = {
@@ -87,34 +87,34 @@ export default function ContractsPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Contracts" }]}
         title="Contracts"
-        subtitle="Manage contract lifecycle and supporting documents across all deals"
+        subtitle={`${documents.length} contracts total`}
         actions={<Button variant="outline" onClick={load}>Refresh</Button>}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter by status">
+            {CONTRACT_STATUS_ORDER.map((s) => {
+              const active = filterStatus === s;
+              const cfg = CONTRACT_STATUS_CONFIG[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(active ? "ALL" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${cfg.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+                  {cfg.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{counts[s] ?? 0}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <PageContainer padding="default" className="space-y-5">
-      {/* Status KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {CONTRACT_STATUS_ORDER.map((status) => {
-          const cfg = CONTRACT_STATUS_CONFIG[status];
-          const isActive = filterStatus === status;
-          return (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(isActive ? "ALL" : status)}
-              className={`rounded-xl p-4 text-left border-2 transition-all bg-card ${
-                isActive ? "border-border shadow-sm" : "border-transparent hover:border-border"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cfg.label}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.badge}`}>{counts[status] ?? 0}</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{counts[status] ?? 0}</p>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <input

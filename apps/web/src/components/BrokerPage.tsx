@@ -495,6 +495,30 @@ export default function BrokerPage() {
             <Button onClick={() => setShowForm(true)}>Add company</Button>
           </>
         }
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter brokers by status">
+            {(["ACTIVE", "PENDING_APPROVAL", "INACTIVE"] as const).map((s) => {
+              const active = statusFilter === s;
+              const c = getBrokerStatusColor(s);
+              const count = companies.filter((co) => (co.status || "PENDING_APPROVAL") === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(active ? "ALL" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${c.badge} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} aria-hidden="true" />
+                  {BROKER_STATUS_LABELS[s]}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <PageContainer padding="default" className="space-y-5">
@@ -504,17 +528,6 @@ export default function BrokerPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="text-sm border border-border rounded-lg px-3 py-1.5 w-60 focus:outline-none focus:border-ring bg-card"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:border-ring"
-          aria-label="Filter by status"
-        >
-          <option value="ALL">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="PENDING_APPROVAL">Pending Approval</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
       </div>
 
       {loading ? (

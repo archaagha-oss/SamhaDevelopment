@@ -20,22 +20,15 @@ interface Refund {
   processedReference?: string;
 }
 
-const STATUS_CONFIG: Record<Refund["status"], { label: string; chip: string }> = {
-  REQUESTED: { label: "Requested", chip: "bg-warning-soft text-warning" },
-  APPROVED:  { label: "Approved",  chip: "bg-info-soft text-primary" },
-  PROCESSED: { label: "Processed", chip: "bg-success-soft text-success" },
-  REJECTED:  { label: "Rejected",  chip: "bg-destructive-soft text-destructive" },
-  CANCELLED: { label: "Cancelled", chip: "bg-muted text-muted-foreground" },
+const STATUS_CONFIG: Record<Refund["status"], { label: string; chip: string; header: string; dot: string }> = {
+  REQUESTED: { label: "Requested", chip: "bg-warning-soft text-warning",         header: "bg-stage-attention text-stage-attention-foreground", dot: "bg-warning"      },
+  APPROVED:  { label: "Approved",  chip: "bg-info-soft text-primary",            header: "bg-stage-info text-stage-info-foreground",           dot: "bg-info"          },
+  PROCESSED: { label: "Processed", chip: "bg-success-soft text-success",         header: "bg-stage-success text-stage-success-foreground",     dot: "bg-success"       },
+  REJECTED:  { label: "Rejected",  chip: "bg-destructive-soft text-destructive", header: "bg-stage-danger text-stage-danger-foreground",       dot: "bg-destructive"   },
+  CANCELLED: { label: "Cancelled", chip: "bg-muted text-muted-foreground",       header: "bg-stage-neutral text-stage-neutral-foreground",     dot: "bg-neutral-400"   },
 };
 
-const STATUS_OPTIONS = [
-  { value: "",          label: "All statuses" },
-  { value: "REQUESTED", label: "Requested" },
-  { value: "APPROVED",  label: "Approved" },
-  { value: "PROCESSED", label: "Processed" },
-  { value: "REJECTED",  label: "Rejected" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
+const STATUS_ORDER: Refund["status"][] = ["REQUESTED", "APPROVED", "PROCESSED", "REJECTED", "CANCELLED"];
 
 export default function RefundsPage() {
   const [refunds, setRefunds] = useState<Refund[]>([]);
@@ -109,6 +102,30 @@ export default function RefundsPage() {
         crumbs={[{ label: "Home", path: "/" }, { label: "Refunds" }]}
         title="Refunds"
         subtitle={`${refunds.length} refunds total`}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter refunds by status">
+            {STATUS_ORDER.map((s) => {
+              const active = status === s;
+              const cfg = STATUS_CONFIG[s];
+              const count = refunds.filter((r) => r.status === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatus(active ? "" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${cfg.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+                  {cfg.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
       <div className="flex-1 overflow-auto">
         <PageContainer>
@@ -120,9 +137,6 @@ export default function RefundsPage() {
                 placeholder: "Search deal, reason, requester…",
                 ariaLabel: "Search refunds",
               }}
-              filters={[
-                { key: "status", label: "Status", value: status, onChange: setStatus, options: STATUS_OPTIONS },
-              ]}
             />
 
             <div className="bg-card rounded-xl border border-border overflow-hidden">

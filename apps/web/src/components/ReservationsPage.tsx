@@ -38,6 +38,14 @@ const STATUS_COLORS: Record<string, string> = {
   CONVERTED: "bg-info-soft text-primary",
 };
 
+const STATUS_STYLE: Record<string, { label: string; header: string; dot: string }> = {
+  ACTIVE:    { label: "Active",    header: "bg-stage-success text-stage-success-foreground", dot: "bg-success"      },
+  EXPIRED:   { label: "Expired",   header: "bg-stage-danger text-stage-danger-foreground",   dot: "bg-destructive"  },
+  CANCELLED: { label: "Cancelled", header: "bg-stage-neutral text-stage-neutral-foreground", dot: "bg-neutral-400"  },
+  CONVERTED: { label: "Converted", header: "bg-stage-info text-stage-info-foreground",       dot: "bg-info"          },
+};
+const RESERVATION_STATUS_ORDER = ["ACTIVE", "EXPIRED", "CANCELLED", "CONVERTED"] as const;
+
 function expiryCountdown(expiresAt: string) {
   const diff = new Date(expiresAt).getTime() - Date.now();
   if (diff <= 0) return { label: "Expired", color: "text-destructive font-semibold" };
@@ -100,6 +108,30 @@ export default function ReservationsPage() {
         crumbs={[{ label: "Home", path: "/" }, { label: "Reservations" }]}
         title="Reservations"
         subtitle={`${reservations.length} reservations total`}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter reservations by status">
+            {RESERVATION_STATUS_ORDER.map((s) => {
+              const active = filter === s;
+              const cfg = STATUS_STYLE[s];
+              const count = reservations.filter((r) => r.status === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilter(active ? "ALL" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${cfg.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+                  {cfg.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <PageContainer padding="compact" className="flex-shrink-0">
@@ -111,17 +143,6 @@ export default function ReservationsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="text-sm border border-border rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:border-ring bg-card"
           />
-          <div className="flex gap-1">
-            {(["ALL", "ACTIVE", "EXPIRED", "CANCELLED", "CONVERTED"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
-                  filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"
-                }`}
-              >{s.toLowerCase()}</button>
-            ))}
-          </div>
         </div>
       </PageContainer>
 
