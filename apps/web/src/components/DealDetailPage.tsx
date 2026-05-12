@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import DealSubTabs from "./deal/DealSubTabs";
+import { useSmartBack } from "../hooks/useSmartBack";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -113,7 +114,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const params = useParams<{ dealId: string }>();
   const navigate = useNavigate();
   const dealId = dealIdProp ?? params.dealId ?? "";
-  const handleBack = onBack ?? (() => navigate("/deals"));
+  // External `onBack` (used when this page is embedded inside a modal/drawer)
+  // wins. Otherwise smart-back: history if we have it, else the /deals list.
+  const smartBack = useSmartBack("/deals");
+  const handleBack = onBack ?? smartBack;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -736,7 +740,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           {deal.stage.replace(/_/g, " ")}
         </span>
       }
-      onBack={() => navigate("/deals")}
+      onBack={handleBack}
     />
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <SlimHeaderSentinel />

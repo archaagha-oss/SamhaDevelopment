@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import ProjectSubTabs from "./project/ProjectSubTabs";
+import { useSmartBack } from "../hooks/useSmartBack";
 import axios from "axios";
 import { Pencil } from "lucide-react";
 import { formatDirham } from "@/lib/money";
@@ -77,6 +78,9 @@ const daysUntil = (d: string) => Math.ceil((new Date(d).getTime() - Date.now()) 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  // Smart-back falls back to the project list only when the URL was opened
+  // directly; in-app navigation respects the user's actual referrer.
+  const handleBack = useSmartBack("/projects");
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
@@ -133,8 +137,8 @@ export default function ProjectDetailPage() {
   if (error || !project)
     return (
       <div className="p-6">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-          ← Back to Projects
+        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
+          ← Back
         </button>
         <div className="bg-destructive-soft border border-destructive/20 rounded-lg p-6 text-center">
           <p className="text-destructive-soft-foreground font-medium">{error || "Project not found"}</p>
@@ -170,7 +174,7 @@ export default function ProjectDetailPage() {
             {statusCfg.label}
           </span>
         }
-        onBack={() => navigate("/projects")}
+        onBack={handleBack}
       />
       {/* Sticky header — compact title row + meta line + KPI strip + tabs.
           Back button stays at-top because <SlimHeader /> is invisible until
@@ -179,10 +183,10 @@ export default function ProjectDetailPage() {
         <SlimHeaderSentinel />
         <div className="px-4 sm:px-6 pt-4 pb-3">
           <button
-            onClick={() => navigate("/projects")}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2"
           >
-            ← Projects
+            ← Back
           </button>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
