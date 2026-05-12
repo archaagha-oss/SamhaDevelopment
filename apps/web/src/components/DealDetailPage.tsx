@@ -803,7 +803,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       ]}
       title={`${deal.lead.firstName} ${deal.lead.lastName}`}
       subtitle={(
-        <span className="inline-flex items-center gap-2 flex-wrap text-xs">
+        <span className="inline-flex items-center gap-2 flex-wrap">
           <button
             onClick={copyDealId}
             className="inline-flex items-center gap-1 font-mono text-muted-foreground hover:text-foreground"
@@ -812,21 +812,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {deal.dealNumber}
             {copiedDealId ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
           </button>
-          <span className="text-muted-foreground/50">·</span>
-          <span className="tabular-nums text-muted-foreground">{deal.lead.phone}</span>
           <StageBadge kind="deal" stage={deal.stage} />
-          {deal.reservationDate && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span className="text-muted-foreground">Reserved {fmtDate(deal.reservationDate)}</span>
-            </>
-          )}
-          {deal.paymentPlan && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span className="text-muted-foreground">Plan: <span className="font-medium text-foreground">{deal.paymentPlan.name}</span></span>
-            </>
-          )}
         </span>
       )}
       actions={(
@@ -872,7 +858,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       mobileBottomBar={renderPrimaryCTA("w-full py-2.5 rounded-lg text-sm font-bold")}
       tabs={(
-        <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-thin" role="tablist">
+        <div className="border-b border-border flex items-center gap-1 overflow-x-auto scrollbar-thin" role="tablist">
           {(["timeline", "payments", "documents", "activity", "tasks", "history"] as const).map((tab) => (
             <button
               key={tab}
