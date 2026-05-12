@@ -2,12 +2,18 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, MoreHorizontal, Plus } from "lucide-react";
 import { formatDirham } from "@/lib/money";
 import UnitsTable from "./UnitsTable";
 import ProjectUpdatesTab from "./ProjectUpdatesTab";
 import ProjectStatusHistoryPanel from "./ProjectStatusHistoryPanel";
 import { StageBadge } from "./ui/stage-badge";
+import { DetailPageLayout, DetailPageLoading, DetailPageNotFound } from "./layout";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface Project {
   id: string;
@@ -124,23 +130,20 @@ export default function ProjectDetailPage() {
       .finally(() => setLoading(false));
   }, [projectId, navigate]);
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  const baseCrumbs = [{ label: "Projects", path: "/projects" }];
+
+  if (loading) return <DetailPageLoading crumbs={baseCrumbs} title="Loading project…" />;
 
   if (error || !project)
     return (
-      <div className="p-6">
-        <button onClick={() => navigate("/projects")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-          ← Back to Projects
-        </button>
-        <div className="bg-destructive-soft border border-destructive/20 rounded-lg p-6 text-center">
-          <p className="text-destructive-soft-foreground font-medium">{error || "Project not found"}</p>
-        </div>
-      </div>
+      <DetailPageNotFound
+        crumbs={baseCrumbs}
+        title="Project not found"
+        message={error || "This project could not be loaded."}
+        backHref="/projects"
+        backLabel="Back to projects"
+        onBack={() => navigate("/projects")}
+      />
     );
 
   const days = daysUntil(project.handoverDate);
@@ -157,126 +160,143 @@ export default function ProjectDetailPage() {
   const handoverFmt = fmtDate(project.handoverDate);
   const daysLabel   = days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`;
 
-  return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Sticky header — compact title row + meta line + KPI strip + tabs */}
-      <div className="bg-card border-b border-border flex-shrink-0">
-        <div className="px-4 sm:px-6 pt-4 pb-3">
+  const tabStrip = (
+    <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Project sections">
+      {([
+        { key: "overview", label: "Overview" },
+        { key: "units",    label: "Units" },
+        { key: "leads",    label: `Leads (${leadCount})` },
+        { key: "deals",    label: `Deals (${dealCount})` },
+        { key: "brokers",  label: `Brokers (${brokerCount})` },
+        { key: "updates",  label: "Updates" },
+        { key: "history",  label: "History" },
+      ] as const).map((t) => {
+        const active = tab === t.key;
+        return (
           <button
-            onClick={() => navigate("/projects")}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2"
+            key={t.key}
+            onClick={() => setTab(t.key as Tab)}
+            role="tab"
+            aria-selected={active}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              active ? "border-primary/40 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
           >
-            ← Projects
+            {t.label}
           </button>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">{project.name}</h1>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap ${statusCfg.cls}`}>
-                  {statusCfg.label}
-                </span>
-              </div>
-              {/* One-line meta — replaces 3 stacked rows of location/desc */}
-              <p className="text-sm text-muted-foreground mt-1">
-                <span>{project.location}</span>
-                {completionLabel && <> <span className="opacity-50">·</span> {completionLabel}</>}
-                <> <span className="opacity-50">·</span> Handover {handoverFmt} <span className={handoverTone}>({daysLabel})</span></>
-              </p>
-            </div>
-            <button
-              onClick={() => navigate(`/projects/${projectId}/settings`)}
-              className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm font-medium rounded-lg hover:bg-primary/15 transition-colors whitespace-nowrap"
+        );
+      })}
+      {projectId && (
+        <>
+          <Link
+            to={`/projects/${projectId}/phases`}
+            className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+          >
+            Phases →
+          </Link>
+          <Link
+            to={`/projects/${projectId}/type-plans`}
+            className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+          >
+            Type plans →
+          </Link>
+          {constructionEnabled && (
+            <Link
+              to={`/projects/${projectId}/construction`}
+              className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
-              <span className="inline-flex items-center gap-1.5"><Pencil className="size-3.5" /> Edit</span>
-            </button>
-          </div>
-        </div>
+              Construction →
+            </Link>
+          )}
+          {escrowEnabled && (
+            <Link
+              to={`/projects/${projectId}/escrow`}
+              className="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Escrow →
+            </Link>
+          )}
+        </>
+      )}
+    </div>
+  );
 
-        {/* KPI strip — 4 actionable metrics */}
-        <div className="px-4 sm:px-6 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Kpi label="Total Units" value={project.totalUnits} />
-          <Kpi
-            label="Handover"
-            value={handoverFmt}
-            sub={daysLabel}
-            valueClass={handoverTone}
-          />
-          <Kpi label="Active Leads" value={activeLeads} accent="text-chart-1" />
-          <Kpi label="Open Deals"   value={openDeals}   accent="text-accent-2" />
-        </div>
+  const kpiStrip = (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <Kpi label="Total Units" value={project.totalUnits} />
+      <Kpi
+        label="Handover"
+        value={handoverFmt}
+        sub={daysLabel}
+        valueClass={handoverTone}
+      />
+      <Kpi label="Active Leads" value={activeLeads} accent="text-chart-1" />
+      <Kpi label="Open Deals"   value={openDeals}   accent="text-accent-2" />
+    </div>
+  );
 
-        {/* Tab nav — underline style, matches Settings page */}
-        <div
-          className="px-4 sm:px-6 flex gap-1 overflow-x-auto border-t border-border"
-          role="tablist"
-          aria-label="Project sections"
-        >
-          {([
-            { key: "overview", label: "Overview" },
-            { key: "units",    label: "Units" },
-            { key: "leads",    label: `Leads (${leadCount})` },
-            { key: "deals",    label: `Deals (${dealCount})` },
-            { key: "brokers",  label: `Brokers (${brokerCount})` },
-            { key: "updates",  label: "Updates" },
-            { key: "history",  label: "History" },
-          ] as const).map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key as Tab)}
-                role="tab"
-                aria-selected={active}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-          {/* Sub-page links — navigate to dedicated routes (Phase 4 modules,
-              flag-gated). Render as link-tabs so they sit alongside the
-              real tabs but don't try to fake an active state. */}
-          {projectId && (
+  return (
+    <DetailPageLayout
+      crumbs={[
+        { label: "Projects", path: "/projects" },
+        { label: project.name },
+      ]}
+      title={project.name}
+      subtitle={(
+        <span className="inline-flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-semibold ${statusCfg.cls}`}>
+            {statusCfg.label}
+          </span>
+          <span className="text-muted-foreground">{project.location}</span>
+          {completionLabel && (
             <>
-              <Link
-                to={`/projects/${projectId}/phases`}
-                className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-              >
-                Phases →
-              </Link>
-              <Link
-                to={`/projects/${projectId}/type-plans`}
-                className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-              >
-                Type plans →
-              </Link>
-              {constructionEnabled && (
-                <Link
-                  to={`/projects/${projectId}/construction`}
-                  className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-                >
-                  Construction →
-                </Link>
-              )}
-              {escrowEnabled && (
-                <Link
-                  to={`/projects/${projectId}/escrow`}
-                  className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-                >
-                  Escrow →
-                </Link>
-              )}
+              <span className="text-muted-foreground/50">·</span>
+              <span className="text-muted-foreground">{completionLabel}</span>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
+          <span className="text-muted-foreground/50">·</span>
+          <span className="text-muted-foreground">Handover {handoverFmt}</span>
+          <span className={handoverTone}>({daysLabel})</span>
+        </span>
+      )}
+      actions={(
+        <>
+          <Button onClick={() => navigate(`/projects/${projectId}/settings`)}>
+            <Pencil className="size-3.5 mr-1.5" /> Edit
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                aria-label="More actions"
+                className="p-1.5 text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted/50"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/units/new`)}>
+                <Plus className="size-3.5 mr-2" /> Add unit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/units/bulk`)}>
+                <Plus className="size-3.5 mr-2" /> Bulk add floor
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/phases`)}>Phases</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/type-plans`)}>Type plans</DropdownMenuItem>
+              {constructionEnabled && (
+                <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/construction`)}>Construction</DropdownMenuItem>
+              )}
+              {escrowEnabled && (
+                <DropdownMenuItem onClick={() => projectId && navigate(`/projects/${projectId}/escrow`)}>Escrow</DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+      kpis={kpiStrip}
+      tabs={tabStrip}
+      main={(
+        <>
         {/* Overview Tab — slim: handover countdown + lead/deal snapshot */}
         {tab === "overview" && (
           <div className="p-4 sm:p-6 space-y-6">
@@ -480,9 +500,9 @@ export default function ProjectDetailPage() {
         {tab === "updates" && projectId && (
           <ProjectUpdatesTab projectId={projectId} />
         )}
-      </div>
-
-    </div>
+        </>
+      )}
+    />
   );
 }
 
