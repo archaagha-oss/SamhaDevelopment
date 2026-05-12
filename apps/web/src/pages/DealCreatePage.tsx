@@ -67,6 +67,12 @@ export default function DealCreatePage() {
   const [brokerCompanies, setBrokerCompanies] = useState<BrokerCompany[]>([]);
   const [loadingUnits,    setLoadingUnits]    = useState(false);
 
+  // When ?unitId= points at a unit that isn't in the AVAILABLE list (the
+  // /api/units fetch is filtered to AVAILABLE), the unit picker will never
+  // show it as selected. Stash the prefetched data so step 1 can still
+  // confirm "you came in with this unit selected".
+  const [prefilledUnit, setPrefilledUnit] = useState<Unit | null>(null);
+
   const firstFieldRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
   useEffect(() => {
@@ -78,21 +84,24 @@ export default function DealCreatePage() {
 
   // Prefill from ?unitId= — fetch the unit, derive the project, set the
   // sale price. The units list effect below picks up the projectId change
-  // and loads the project's available units (which will include this one),
-  // so the unit picker shows it selected.
+  // and loads the project's available units (which will include this one
+  // when AVAILABLE), so the unit picker shows it selected. If the unit
+  // isn't AVAILABLE, we still stash it in prefilledUnit so step 1 can
+  // confirm the selection without depending on the picker.
   useEffect(() => {
     if (!defaultUnitId) return;
     axios.get(`/api/units/${defaultUnitId}`)
       .then((r) => {
         const u = r.data?.data ?? r.data;
         if (!u) return;
+        setPrefilledUnit(u as Unit);
         if (u.projectId) setProjectId(u.projectId);
         setUnitId(defaultUnitId);
         if (u.price) setSalePrice(String(u.price));
       })
       .catch(() => {
-        // Unit not found / not available — leave defaults so the user
-        // can pick another. No toast: this is a soft prefill.
+        // Unit not found — leave defaults so the user can pick another.
+        // No toast: this is a soft prefill.
       });
   }, [defaultUnitId]);
 
@@ -105,7 +114,12 @@ export default function DealCreatePage() {
       .finally(() => setLoadingUnits(false));
   }, [projectId]);
 
-  const selectedUnit = units.find((u) => u.id === unitId);
+  // selectedUnit prefers the AVAILABLE list (fresh data), falls back to the
+  // prefilledUnit so the summary keeps working even when the unit isn't
+  // AVAILABLE anymore (e.g. URL points at a now-RESERVED unit).
+  const selectedUnit =
+    units.find((u) => u.id === unitId) ||
+    (prefilledUnit?.id === unitId ? prefilledUnit : null);
   useEffect(() => {
     if (selectedUnit && !salePrice) setSalePrice(String(selectedUnit.price));
   }, [selectedUnit]);
@@ -114,7 +128,14 @@ export default function DealCreatePage() {
   const selectedPlan    = paymentPlans.find((p) => p.id === paymentPlanId);
   const selectedCompany = brokerCompanies.find((c) => c.id === brokerCompanyId);
   const brokerAgents    = selectedCompany?.agents ?? [];
-  const netPrice        = (parseFloat(salePrice) || 0) - (parseFloat(discount) || 0);
+
+  // Clamp discount to salePrice so net never goes negative — the input
+  // accepts any number, but downstream calculations and the summary use
+  // the clamped value.
+  const salePriceNum  = parseFloat(salePrice) || 0;
+  const discountNum   = Math.max(0, Math.min(parseFloat(discount) || 0, salePriceNum));
+  const discountOver  = (parseFloat(discount) || 0) > salePriceNum && salePriceNum > 0;
+  const netPrice      = salePriceNum - discountNum;
 
   const filteredLeads = leads.filter((l) => {
     if (!leadSearch) return true;
@@ -136,8 +157,8 @@ export default function DealCreatePage() {
       const r = await axios.post("/api/deals", {
         leadId,
         unitId,
-        salePrice:              parseFloat(salePrice),
-        discount:               parseFloat(discount) || 0,
+        salePrice:              salePriceNum,
+        discount:               discountNum,
         paymentPlanId,
         brokerCompanyId:        brokerCompanyId || undefined,
         brokerAgentId:          brokerAgentId || undefined,
@@ -198,23 +219,33 @@ export default function DealCreatePage() {
             {STEPS.map((label, i) => {
               const done    = i < step;
               const current = i === step;
+              // Forward jumps are allowed as long as every step before the
+              // target one is valid (canAdvance gates). Backward jumps to
+              // any completed step always work. Disabled otherwise.
+              const reachable = i === step
+                ? true
+                : i < step
+                  ? true
+                  : canAdvance.slice(0, i).every(Boolean);
               return (
                 <div key={i} className="flex items-center flex-1 last:flex-none">
                   <button
                     type="button"
-                    onClick={() => done && setStep(i)}
-                    disabled={!done}
+                    onClick={() => reachable && setStep(i)}
+                    disabled={!reachable}
+                    aria-current={current ? "step" : undefined}
                     className="flex flex-col items-center gap-1 group disabled:cursor-default"
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border-2 ${
                       done    ? "bg-primary border-primary text-primary-foreground" :
                       current ? "bg-background border-primary text-primary" :
-                                "bg-muted border-border text-muted-foreground"
+                      reachable ? "bg-background border-primary/40 text-primary group-hover:border-primary" :
+                                  "bg-muted border-border text-muted-foreground"
                     }`}>
                       {done ? <Check className="size-4" /> : i + 1}
                     </div>
                     <span className={`text-[10px] font-semibold whitespace-nowrap ${
-                      current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"
+                      current ? "text-primary" : done ? "text-primary/70" : reachable ? "text-primary/60" : "text-muted-foreground"
                     }`}>
                       {label}
                     </span>
@@ -251,7 +282,16 @@ export default function DealCreatePage() {
               </div>
               <div className="border border-border rounded-xl overflow-hidden max-h-72 overflow-y-auto">
                 {filteredLeads.length === 0 ? (
-                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">No leads found</p>
+                  <div className="px-4 py-8 text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {leads.length === 0 ? "No leads in the system yet" : "No leads match your search"}
+                    </p>
+                    {leads.length === 0 && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => navigate("/leads")}>
+                        Go to Leads → create one
+                      </Button>
+                    )}
+                  </div>
                 ) : filteredLeads.map((l) => (
                   <button
                     key={l.id}
@@ -296,6 +336,35 @@ export default function DealCreatePage() {
                 <p className="text-sm font-semibold text-foreground mb-1">Which unit?</p>
                 <p className="text-xs text-muted-foreground">Select a project, then pick an available unit.</p>
               </div>
+
+              {/* If we arrived via ?unitId=X and the unit isn't AVAILABLE,
+                  the picker would render empty without confirming the
+                  selection. Show a compact "pre-selected" card so the
+                  operator can see what they came in with. */}
+              {prefilledUnit && unitId === prefilledUnit.id && !units.some((u) => u.id === prefilledUnit.id) && (
+                <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {prefilledUnit.unitNumber}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-info-soft-foreground">
+                      Pre-selected: Unit {prefilledUnit.unitNumber}
+                      <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-soft text-warning">
+                        Not in AVAILABLE list
+                      </span>
+                    </p>
+                    <p className="text-xs text-primary">
+                      {prefilledUnit.type.replace(/_/g, " ")} · Floor {prefilledUnit.floor} · {formatDirham(prefilledUnit.price)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setUnitId(""); setSalePrice(""); }}
+                    className="text-primary hover:text-primary/80 text-lg leading-none flex-shrink-0"
+                    aria-label="Clear pre-selected unit"
+                  >×</button>
+                </div>
+              )}
               <div>
                 <label className={lbl}>Project</label>
                 <select
@@ -375,23 +444,28 @@ export default function DealCreatePage() {
                       onChange={(e) => setDiscount(e.target.value)}
                       className={inp}
                     />
+                    {discountOver && (
+                      <p className="text-xs text-destructive mt-1">
+                        Discount can't exceed the sale price. Capped at {formatDirham(salePriceNum)}.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {unitId && parseFloat(salePrice) > 0 && (
+              {unitId && salePriceNum > 0 && (
                 <div className="bg-muted/50 border border-border rounded-xl px-4 py-3 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Sale Price</p>
-                    <p className="font-bold text-foreground tabular-nums">{formatDirham(parseFloat(salePrice) || 0)}</p>
+                    <p className="font-bold text-foreground tabular-nums">{formatDirham(salePriceNum)}</p>
                   </div>
-                  {parseFloat(discount) > 0 && (
+                  {discountNum > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Discount</p>
-                      <p className="font-bold text-success tabular-nums">− {formatDirham(parseFloat(discount) || 0)}</p>
+                      <p className="font-bold text-success tabular-nums">− {formatDirham(discountNum)}</p>
                     </div>
                   )}
-                  <div className={parseFloat(discount) > 0 ? "" : "col-span-2"}>
+                  <div className={discountNum > 0 ? "" : "col-span-2"}>
                     <p className="text-xs text-muted-foreground mb-0.5">Net Price</p>
                     <p className="font-bold text-primary text-base tabular-nums">{formatDirham(netPrice)}</p>
                   </div>
