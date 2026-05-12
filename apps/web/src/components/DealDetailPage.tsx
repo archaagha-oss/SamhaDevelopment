@@ -482,13 +482,19 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     if (!deal || !cancelReason.trim()) return;
     setCancelling(true);
     try {
-      await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: "CANCELLED", reason: cancelReason });
+      // API only allows DELETE on RESERVATION_PENDING or CANCELLED; cancel
+      // first if we're past that, so the reason is captured in stage history
+      // before the deal is removed. Lead is on a separate table — preserved.
+      if (deal.stage !== "RESERVATION_PENDING" && deal.stage !== "CANCELLED") {
+        await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: "CANCELLED", reason: cancelReason });
+      }
+      await axios.delete(`/api/deals/${deal.id}`);
+      toast.success("Deal deleted. Lead preserved.");
       setShowCancelModal(false);
       setCancelReason("");
-      loadDeal();
+      navigate(`/leads/${deal.lead.id}`);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to cancel deal");
-    } finally {
+      toast.error(err.response?.data?.error || "Failed to delete deal");
       setCancelling(false);
     }
   };
@@ -853,17 +859,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <FileSignature className="size-3.5 mr-2" /> Change stage…
                 </DropdownMenuItem>
               )}
-              {!terminal && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setShowCancelModal(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="size-3.5 mr-2" /> Cancel deal
-                  </DropdownMenuItem>
-                </>
-              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowCancelModal(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-3.5 mr-2" /> Delete deal
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </>
@@ -1720,21 +1722,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       aside={(
         <>
-          {/* Primary action — operational CTA for current stage. */}
-          {(() => {
-            const cta = renderPrimaryCTA("w-full px-4 py-2.5 text-sm font-bold rounded-lg shadow-sm");
-            if (!cta) return null;
-            return (
-              <div className="bg-card rounded-xl border border-primary/40 p-4 space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Primary action</h3>
-                {cta}
-              </div>
-            );
-          })()}
-
           {/* Stage advance — single source of truth for stage transitions
-              (UX_AUDIT_2 M1+S2+S4). Rendered below the operational CTA so
-              the two complement each other rather than compete. */}
+              (UX_AUDIT_2 M1+S2+S4). */}
           {!terminal && validNext.length > 0 && (
             <NextStepCard
               label={`Move to ${validNext[0].replace(/_/g, " ")}`}
@@ -1921,18 +1910,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* Danger zone — cancel deal. */}
-          {!terminal && (
-            <div className="bg-card rounded-xl border border-destructive/30 p-4">
-              <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide mb-2">Danger zone</h3>
-              <button
-                onClick={() => setShowCancelModal(true)}
-                className="w-full px-3 py-2 text-xs font-semibold border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft inline-flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="size-3.5" /><span>Cancel deal</span>
-              </button>
-            </div>
-          )}
+          {/* Danger zone — delete deal (lead is preserved). */}
+          <div className="bg-card rounded-xl border border-destructive/30 p-4">
+            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide mb-1">Danger zone</h3>
+            <p className="text-xs text-muted-foreground mb-2">Removes the deal record. The lead is preserved.</p>
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="w-full px-3 py-2 text-xs font-semibold border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft inline-flex items-center justify-center gap-1.5"
+            >
+              <Trash2 className="size-3.5" /><span>Delete deal</span>
+            </button>
+          </div>
         </>
       )}
     >
@@ -1984,13 +1972,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         </div>
       )}
 
-      {/* Cancel Deal Modal */}
+      {/* Delete Deal Modal — removes the deal record. Lead is preserved. */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Cancel Deal</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
+              <h3 className="font-bold text-foreground">Delete Deal</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Removes the deal record and releases the unit. The lead is kept.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
@@ -2013,7 +2001,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 disabled={!cancelReason.trim() || cancelling}
                 className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
               >
-                {cancelling ? "Cancelling…" : "Cancel Deal"}
+                {cancelling ? "Deleting…" : "Delete Deal"}
               </button>
             </div>
           </div>
