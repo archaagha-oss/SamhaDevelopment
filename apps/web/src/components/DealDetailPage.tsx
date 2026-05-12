@@ -32,7 +32,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MoreHorizontal, Trash2, StickyNote, FileSignature, Users } from "lucide-react";
+import { MoreHorizontal, Trash2, StickyNote, FileSignature, Users, Mail, MessageCircle } from "lucide-react";
 import NextStepCard from "@/components/ui/NextStepCard";
 import { StageBadge } from "@/components/ui/stage-badge";
 import DealTimeline from "./DealTimeline";
@@ -825,7 +825,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       actions={(
         <>
-          {renderPrimaryCTA("px-4 py-1.5 text-sm font-bold rounded-lg shadow-sm")}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -1721,12 +1720,23 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       aside={(
         <>
-          {/* NextStepCard — single source of truth for stage transitions.
-              Merges what was previously "Deal Status" + "Next Stage Checklist"
-              + "Change Stage popover" (UX_AUDIT_2 M1+S2+S4). */}
+          {/* Primary action — operational CTA for current stage. */}
+          {(() => {
+            const cta = renderPrimaryCTA("w-full px-4 py-2.5 text-sm font-bold rounded-lg shadow-sm");
+            if (!cta) return null;
+            return (
+              <div className="bg-card rounded-xl border border-primary/40 p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Primary action</h3>
+                {cta}
+              </div>
+            );
+          })()}
+
+          {/* Stage advance — single source of truth for stage transitions
+              (UX_AUDIT_2 M1+S2+S4). Rendered below the operational CTA so
+              the two complement each other rather than compete. */}
           {!terminal && validNext.length > 0 && (
             <NextStepCard
-              className="hidden lg:block"
               label={`Move to ${validNext[0].replace(/_/g, " ")}`}
               description={
                 stageRequirements.length > 0 && stageRequirements.some((r) => !r.uploaded)
@@ -1741,6 +1751,118 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   : undefined
               }
             />
+          )}
+
+          {/* Contact buyer — Call / WhatsApp / Email shortcuts. */}
+          {(deal.lead.phone || deal.lead.email) && (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact buyer</h3>
+                <p className="text-sm font-semibold text-foreground mt-1">{deal.lead.firstName} {deal.lead.lastName}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {deal.lead.phone && (
+                  <a
+                    href={`tel:${deal.lead.phone}`}
+                    className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+                    title={`Call ${deal.lead.phone}`}
+                  >
+                    <Phone className="size-3.5" /><span>Call</span>
+                  </a>
+                )}
+                {deal.lead.phone && (
+                  <a
+                    href={`https://wa.me/${deal.lead.phone.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-2 text-xs font-semibold border border-success/30 text-success rounded-lg hover:bg-success-soft inline-flex items-center justify-center gap-1.5"
+                  >
+                    <MessageCircle className="size-3.5" /><span>WhatsApp</span>
+                  </a>
+                )}
+                {deal.lead.email && (
+                  <a
+                    href={`mailto:${deal.lead.email}`}
+                    className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+                  >
+                    <Mail className="size-3.5" /><span>Email</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick log — note / activity / task. */}
+          <div className="bg-card rounded-xl border border-border p-4 space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick log</h3>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => setShowQuickNote(true)}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <StickyNote className="size-3.5" /><span>Note</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("activity"); setShowActivityForm(true); }}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <FileText className="size-3.5" /><span>Activity</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("tasks"); setShowAddTaskForm(true); }}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <ClipboardList className="size-3.5" /><span>Task</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Document shortcuts — generate / manage purchasers. */}
+          {deal.stage !== "CANCELLED" && (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Documents</h3>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className="text-xs text-primary hover:underline"
+                >View all →</button>
+              </div>
+              <div className="space-y-1.5">
+                {canGenerateSalesOffer && (
+                  <button
+                    onClick={() => handleGenerateDocument("SALES_OFFER")}
+                    disabled={!!generatingDoc}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-primary/40 text-primary rounded-lg hover:bg-info-soft disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    <FileText className="size-3.5" />
+                    <span>{generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleGenerateDocument("SPA")}
+                  disabled={!!generatingDoc}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>{generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft"}</span>
+                </button>
+                <button
+                  onClick={() => handleGenerateDocument("RESERVATION_FORM")}
+                  disabled={!!generatingDoc}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  <FileText className="size-3.5" />
+                  <span>{generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}</span>
+                </button>
+                <button
+                  onClick={() => setShowPurchasersModal(true)}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center gap-2"
+                >
+                  <Users className="size-3.5" />
+                  <span>Manage Purchasers</span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Oqood countdown — only render when stage cares about it (S1). */}
@@ -1796,6 +1918,19 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Broker</h3>
               <p className="text-sm font-semibold text-foreground">{deal.brokerCompany.name}</p>
               {deal.brokerAgent && <p className="text-xs text-muted-foreground mt-0.5">{deal.brokerAgent.name}</p>}
+            </div>
+          )}
+
+          {/* Danger zone — cancel deal. */}
+          {!terminal && (
+            <div className="bg-card rounded-xl border border-destructive/30 p-4">
+              <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide mb-2">Danger zone</h3>
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="w-full px-3 py-2 text-xs font-semibold border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft inline-flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="size-3.5" /><span>Cancel deal</span>
+              </button>
             </div>
           )}
         </>
