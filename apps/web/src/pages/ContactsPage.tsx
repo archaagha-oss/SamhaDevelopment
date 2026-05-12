@@ -167,7 +167,7 @@ export default function ContactsPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Contacts" }]}
         title="Contacts"
-        subtitle={`${total.toLocaleString()} contacts · address book for communication`}
+        subtitle={`${total.toLocaleString()} contacts total`}
         actions={<Button onClick={() => navigate("/contacts/new")}>Create contact</Button>}
       />
 

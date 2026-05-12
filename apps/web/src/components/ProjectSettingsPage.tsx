@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Building2 } from "lucide-react";
 import ProjectDocumentsTab from "./ProjectDocumentsTab";
+import { PageContainer, PageHeader } from "./layout";
 
 interface ProjectImage { id: string; url: string; caption?: string; sortOrder: number; }
 interface ProjectConfig {
@@ -197,48 +198,38 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Sticky header — breadcrumb · title with project context · tabs */}
-      <div className="bg-card border-b border-border flex-shrink-0">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-3">
-          {/* Breadcrumb */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-            <button onClick={() => navigate("/projects")} className="hover:text-foreground">Projects</button>
-            <span aria-hidden>/</span>
-            <button onClick={() => navigate(`/projects/${projectId}`)} className="hover:text-foreground truncate max-w-[180px]">{info.name || "…"}</button>
-            <span aria-hidden>/</span>
-            <span className="text-foreground font-medium">Settings</span>
-          </nav>
-          {/* Title + project context */}
-          <div className="flex items-baseline justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">Settings</h1>
-            <span className="text-sm text-muted-foreground truncate">{info.name}</span>
+      <PageHeader
+        crumbs={[
+          { label: "Projects", path: "/projects" },
+          { label: info.name || "Project", path: `/projects/${projectId}` },
+          { label: "Settings" },
+        ]}
+        title="Settings"
+        subtitle={info.name}
+        tabs={(
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Settings sections">
+            {tabs.map((t) => {
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => { setTab(t.key); setSaved(null); setError(null); }}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    active ? "border-primary/40 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
-        </div>
-        {/* Tab nav */}
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto" role="tablist" aria-label="Settings sections">
-          {tabs.map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => { setTab(t.key); setSaved(null); setError(null); }}
-                role="tab"
-                aria-selected={active}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        )}
+      />
 
       <div className="flex-1 overflow-auto">
-       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <PageContainer width="default" padding="default">
         {/* Feedback */}
         {error && (
           <div className="mb-4 bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-3 flex justify-between items-center">
@@ -591,7 +582,7 @@ export default function ProjectSettingsPage() {
         {tab === "documents" && projectId && (
           <ProjectDocumentsTab projectId={projectId} />
         )}
-       </div>
+      </PageContainer>
       </div>
 
       {/* Delete Project Confirmation Modal */}

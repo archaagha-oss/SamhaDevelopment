@@ -108,7 +108,7 @@ export default function RefundsPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Refunds" }]}
         title="Refunds"
-        subtitle={`${refunds.length} request${refunds.length === 1 ? "" : "s"} · open and approved refunds awaiting action`}
+        subtitle={`${refunds.length} refunds total`}
       />
       <div className="flex-1 overflow-auto">
         <PageContainer>

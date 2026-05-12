@@ -486,7 +486,7 @@ export default function BrokerPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Brokers" }]}
         title="Brokers"
-        subtitle={`${companies.length} registered companies`}
+        subtitle={`${companies.length} brokers total`}
         actions={
           <>
             <Button variant="outline" asChild>

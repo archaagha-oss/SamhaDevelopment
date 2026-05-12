@@ -99,7 +99,7 @@ export default function ReservationsPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Reservations" }]}
         title="Reservations"
-        subtitle={`${reservations.filter((r) => r.status === "ACTIVE").length} active`}
+        subtitle={`${reservations.length} reservations total`}
       />
 
       <PageContainer padding="compact" className="flex-shrink-0">

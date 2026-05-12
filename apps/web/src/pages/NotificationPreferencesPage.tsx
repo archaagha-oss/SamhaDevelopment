@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useSettings, type NotificationPrefs } from "../contexts/SettingsContext";
 import { optimisticAction } from "../lib/optimisticToast";
+import { PageContainer, PageHeader } from "../components/layout";
 
 /**
  * Per-user notification preferences. Layered on top of the org-wide defaults
@@ -144,17 +145,14 @@ export default function NotificationPreferencesPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">My Notifications</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Override the organization defaults for {me.name} ({me.email}).
-            Channels marked off by your admin can't be enabled here.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Notifications" }]}
+        title="My notifications"
+        subtitle={`${overrideCount} override${overrideCount === 1 ? "" : "s"} · ${me.email}`}
+      />
 
-      <div className="max-w-4xl mx-auto w-full px-6 py-6 space-y-5">
+      <div className="flex-1 overflow-auto">
+      <PageContainer padding="default" className="space-y-5">
         <div className="bg-info-soft border border-info-soft-foreground/20 rounded-xl px-4 py-3 text-xs text-info-soft-foreground flex items-start justify-between gap-3">
           <div>
             <p className="font-semibold mb-1">How overrides work</p>
@@ -237,6 +235,7 @@ export default function NotificationPreferencesPage() {
             {saving ? "Saving…" : "Save preferences"}
           </button>
         </div>
+      </PageContainer>
       </div>
     </div>
   );

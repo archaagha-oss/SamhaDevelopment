@@ -146,7 +146,7 @@ export default function PaymentPlansPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Payment plans" }]}
         title="Payment plans"
-        subtitle={`${plans.filter(p => p.isActive).length} active template${plans.filter(p => p.isActive).length === 1 ? "" : "s"}`}
+        subtitle={`${plans.length} payment plans total`}
         actions={<Button onClick={() => navigate("/payment-plans/new")}>Create payment plan</Button>}
       />
 

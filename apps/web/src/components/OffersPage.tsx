@@ -137,7 +137,7 @@ export default function OffersPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Offers" }]}
         title="Offers"
-        subtitle={`${offers.filter((o) => o.status === "ACTIVE").length} active`}
+        subtitle={`${offers.length} offers total`}
       />
 
       <PageContainer padding="compact" className="flex-shrink-0">

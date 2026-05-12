@@ -8,6 +8,7 @@ import {
   Avatar, inputCls,
 } from "./team/shared";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "@/components/ui/button";
 
 export default function TeamPage() {
   const navigate = useNavigate();
@@ -64,15 +65,8 @@ export default function TeamPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Team" }]}
         title="Team"
-        subtitle={`${members.length} members · roles, reporting structure, status`}
-        actions={
-          <button
-            onClick={() => navigate("/team/new")}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
-          >
-            Create member
-          </button>
-        }
+        subtitle={`${members.length} members total`}
+        actions={<Button onClick={() => navigate("/team/new")}>Create member</Button>}
       />
       <div className="flex-1 overflow-auto">
         <PageContainer>
