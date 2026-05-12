@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { toast } from "sonner";
-import { Send } from "lucide-react";
 import { formatDirham } from "@/lib/money";
 import PaymentActionModal, { PaymentAction, PaymentSummary } from "./PaymentActionModal";
 import { PageContainer, PageHeader } from "./layout";
@@ -27,18 +25,21 @@ interface CollectionsData {
   };
 }
 
-const STATUS_ORDER = ["OVERDUE", "PENDING", "PARTIAL", "PDC_PENDING", "PAID", "PDC_CLEARED", "CANCELLED", "PDC_BOUNCED", "UPCOMING"];
+const STATUS_ORDER = ["OVERDUE", "PENDING", "PARTIAL", "PDC_PENDING", "PAID", "PDC_CLEARED", "PDC_BOUNCED", "CANCELLED", "UPCOMING"] as const;
+type Status = typeof STATUS_ORDER[number];
 
-const STATUS_CONFIG: Record<string, { label: string; badge: string; kpi: string }> = {
-  OVERDUE:     { label: "Overdue",      badge: "bg-destructive-soft text-destructive",         kpi: "text-destructive" },
-  PENDING:     { label: "Pending",      badge: "bg-warning-soft text-warning",     kpi: "text-warning" },
-  PARTIAL:     { label: "Partial",      badge: "bg-info-soft text-primary",       kpi: "text-primary" },
-  PDC_PENDING: { label: "PDC Pending",  badge: "bg-warning-soft text-warning",   kpi: "text-warning" },
-  PAID:        { label: "Paid",         badge: "bg-success-soft text-success", kpi: "text-success" },
-  PDC_CLEARED: { label: "PDC Cleared",  badge: "bg-chart-5/15 text-chart-5",       kpi: "text-chart-5" },
-  PDC_BOUNCED: { label: "PDC Bounced",  badge: "bg-destructive/30 text-destructive-soft-foreground",         kpi: "text-destructive" },
-  CANCELLED:   { label: "Cancelled",    badge: "bg-muted text-muted-foreground",     kpi: "text-muted-foreground" },
-  UPCOMING:    { label: "Upcoming",     badge: "bg-info-soft text-primary",       kpi: "text-primary" },
+// Stage-style tokens so the status chips render with the same pill+dot
+// pattern as every other list page (Leads / Deals / Compliance / etc.).
+const STATUS_CONFIG: Record<Status, { label: string; chip: string; dot: string; badge: string; kpi: string }> = {
+  OVERDUE:     { label: "Overdue",     chip: "bg-stage-danger text-stage-danger-foreground",       dot: "bg-destructive",  badge: "bg-destructive-soft text-destructive",                       kpi: "text-destructive"      },
+  PENDING:     { label: "Pending",     chip: "bg-stage-attention text-stage-attention-foreground", dot: "bg-warning",      badge: "bg-warning-soft text-warning",                               kpi: "text-warning"          },
+  PARTIAL:     { label: "Partial",     chip: "bg-stage-info text-stage-info-foreground",           dot: "bg-info",         badge: "bg-info-soft text-primary",                                  kpi: "text-primary"          },
+  PDC_PENDING: { label: "PDC Pending", chip: "bg-stage-attention text-stage-attention-foreground", dot: "bg-warning",      badge: "bg-warning-soft text-warning",                               kpi: "text-warning"          },
+  PAID:        { label: "Paid",        chip: "bg-stage-success text-stage-success-foreground",     dot: "bg-success",      badge: "bg-success-soft text-success",                               kpi: "text-success"          },
+  PDC_CLEARED: { label: "PDC Cleared", chip: "bg-stage-success text-stage-success-foreground",     dot: "bg-success",      badge: "bg-chart-5/15 text-chart-5",                                 kpi: "text-success"          },
+  PDC_BOUNCED: { label: "PDC Bounced", chip: "bg-stage-danger text-stage-danger-foreground",       dot: "bg-destructive",  badge: "bg-destructive/30 text-destructive-soft-foreground",         kpi: "text-destructive"      },
+  CANCELLED:   { label: "Cancelled",   chip: "bg-stage-neutral text-stage-neutral-foreground",     dot: "bg-neutral-400",  badge: "bg-muted text-muted-foreground",                             kpi: "text-muted-foreground" },
+  UPCOMING:    { label: "Upcoming",    chip: "bg-stage-info text-stage-info-foreground",           dot: "bg-info",         badge: "bg-info-soft text-primary",                                  kpi: "text-primary"          },
 };
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" });
@@ -111,27 +112,14 @@ export default function PaymentReportPage() {
   const [report, setReport]             = useState<PaymentReport | null>(null);
   const [collections, setCollections]   = useState<CollectionsData | null>(null);
   const [loading, setLoading]           = useState(true);
-  const [activeStatus, setActiveStatus] = useState("OVERDUE");
+  const [activeStatus, setActiveStatus] = useState<Status>("OVERDUE");
   const [upcomingView, setUpcomingView] = useState<"7" | "30">("7");
   const [modal, setModal]               = useState<{ payment: Payment; action: PaymentAction } | null>(null);
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
-  const sendReminder = useCallback(async (paymentId: string) => {
-    setSendingReminder(paymentId);
-    try {
-      await axios.post(`/api/payments/${paymentId}/reminder`);
-      toast.success("Reminder sent to buyer");
-    } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 404) {
-        toast.error("Reminder endpoint not configured on the API yet.");
-      } else {
-        toast.error(err?.response?.data?.error || "Failed to send reminder");
-      }
-    } finally {
-      setSendingReminder(null);
-    }
-  }, []);
+  // On-demand "Send reminder" used to live in this table. The corresponding
+  // /api/payments/:id/reminder endpoint was never implemented — reminders
+  // are fired automatically by the job scheduler instead — so the button was
+  // promising a feature that didn't exist. Removed.
 
   const load = useCallback(() => {
     setLoading(true);
@@ -173,65 +161,86 @@ export default function PaymentReportPage() {
   const activePayments = isUpcoming ? upcomingPayments : (report.byStatus[activeStatus] || []);
   const availableActions = isUpcoming ? [] : getActions(activeStatus);
 
+  const totalPayments = Object.values(report.byStatus).reduce((s, arr) => s + arr.length, 0);
+
+  // ── Status chip strip (PageHeader.tabs, matches Leads/Deals) ──────────
+  const statusTabs = (
+    <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter payments by status">
+      {STATUS_ORDER.map((status) => {
+        const cfg = STATUS_CONFIG[status];
+        const isUpcomingTab = status === "UPCOMING";
+        const count = isUpcomingTab
+          ? (collections?.upcoming.next30Days.count ?? 0)
+          : (report.byStatus[status]?.length ?? 0);
+        const active = activeStatus === status;
+        return (
+          <button
+            key={status}
+            onClick={() => setActiveStatus(status)}
+            role="tab"
+            aria-selected={active}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+              active ? `${cfg.chip} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+            {cfg.label}
+            <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Payments" }]}
         title="Payments"
-        subtitle="Track and manage all payment milestones"
+        subtitle={`${totalPayments} payments total`}
         actions={<Button variant="outline" onClick={load}>Refresh</Button>}
+        tabs={statusTabs}
       />
 
-      <PageContainer padding="default" className="space-y-5">
-      {/* Collections overview widgets — shown on OVERDUE tab */}
-      {activeStatus === "OVERDUE" && collections && (
+      <PageContainer padding="compact" className="flex-shrink-0 space-y-3">
+      {/* KPI strip — aging breakdown when looking at OVERDUE, status totals
+          otherwise. Either way it's the 4-card Lead/Deal-pattern grid. */}
+      {activeStatus === "OVERDUE" && collections ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {collections.aging.map(({ range, count, amount }) => {
-            const colors: Record<string, string> = {
-              "0-30":  "bg-warning-soft border-warning/30 text-warning",
-              "31-60": "bg-warning-soft border-warning/30 text-warning",
-              "61-90": "bg-destructive-soft border-destructive/30 text-destructive",
-              "90+":   "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
-            };
+            const tone =
+              range === "0-30"  ? "text-warning" :
+              range === "31-60" ? "text-warning" :
+              "text-destructive";
             return (
-              <div key={range} className={`rounded-xl border p-4 ${colors[range] || "bg-muted/50 border-border text-muted-foreground"}`}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-1">{range} days overdue</p>
-                <p className="text-2xl font-bold">{count}</p>
-                <p className="text-xs mt-0.5 opacity-80">{formatDirham(amount)}</p>
+              <div key={range} className="bg-card rounded-xl border border-border p-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{range} days overdue</div>
+                <div className={`text-lg font-bold tabular-nums ${count > 0 ? tone : "text-foreground"}`}>{count}</div>
+                <div className="text-[11px] text-muted-foreground tabular-nums">{formatDirham(amount)}</div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(["PENDING", "PARTIAL", "PDC_PENDING", "PAID"] as Status[]).map((s) => {
+            const cfg = STATUS_CONFIG[s];
+            const payments = report.byStatus[s] || [];
+            const total = report.totals?.[s] ?? payments.reduce((acc, p) => acc + p.amount, 0);
+            return (
+              <div key={s} className="bg-card rounded-xl border border-border p-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{cfg.label}</div>
+                <div className={`text-lg font-bold tabular-nums ${payments.length > 0 ? cfg.kpi : "text-foreground"}`}>{payments.length}</div>
+                <div className="text-[11px] text-muted-foreground tabular-nums">{formatDirham(total)}</div>
               </div>
             );
           })}
         </div>
       )}
+      </PageContainer>
 
-      {/* KPI tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
-        {STATUS_ORDER.map((status) => {
-          const cfg = STATUS_CONFIG[status];
-          if (!cfg) return null;
-          const isUpcomingTab = status === "UPCOMING";
-          const payments = isUpcomingTab
-            ? (collections?.upcoming.next30Days.payments ?? [])
-            : (report.byStatus[status] || []);
-          const total = isUpcomingTab
-            ? (collections?.upcoming.next30Days.total ?? 0)
-            : (report.totals?.[status] ?? payments.reduce((s, p) => s + p.amount, 0));
-          const isActive = activeStatus === status;
-          return (
-            <button
-              key={status}
-              onClick={() => setActiveStatus(status)}
-              className={`rounded-xl p-3 text-left transition-all border-2 ${isActive ? "border-border bg-card shadow-sm" : "border-transparent bg-card hover:border-border"}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-[10px] font-semibold uppercase tracking-wide ${cfg.kpi}`}>{cfg.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${cfg.badge}`}>{payments.length}</span>
-              </div>
-              <p className={`text-base font-bold ${cfg.kpi}`}>{formatDirham(total)}</p>
-            </button>
-          );
-        })}
-      </div>
+      <div className="flex-1 overflow-auto">
+      <PageContainer padding="default" className="space-y-5">
 
       {/* Upcoming payments view toggle */}
       {isUpcoming && (
@@ -272,12 +281,13 @@ export default function PaymentReportPage() {
               {formatDirham(activePayments.reduce((s, p) => s + p.amount, 0))}
             </p>
             {activePayments.length > 0 && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => exportCSV(activePayments, `payments-${activeStatus.toLowerCase()}-${new Date().toISOString().slice(0,10)}.csv`)}
-                className="text-xs text-primary hover:text-primary border border-primary/40 hover:bg-info-soft rounded-lg px-3 py-1.5 transition-colors font-medium"
               >
-                ↓ Export CSV
-              </button>
+                Export CSV
+              </Button>
             )}
           </div>
         </div>
@@ -336,16 +346,6 @@ export default function PaymentReportPage() {
                       {availableActions.length > 0 && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 flex-wrap">
-                            {isOverdue && (
-                              <button
-                                onClick={() => sendReminder(p.id)}
-                                disabled={sendingReminder === p.id}
-                                title="Send a reminder to the buyer"
-                                className="text-[10px] font-semibold px-2 py-1 rounded-md border bg-warning-soft text-warning hover:bg-warning-soft border-warning/30 transition-colors disabled:opacity-50 whitespace-nowrap"
-                              >
-                                {sendingReminder === p.id ? "Sending…" : <span className="inline-flex items-center gap-1.5"><Send className="size-3.5" /> Send Reminder</span>}
-                              </button>
-                            )}
                             {availableActions.map((act) => (
                               <button
                                 key={act}
@@ -376,6 +376,7 @@ export default function PaymentReportPage() {
         />
       )}
       </PageContainer>
+      </div>
     </div>
   );
 }
