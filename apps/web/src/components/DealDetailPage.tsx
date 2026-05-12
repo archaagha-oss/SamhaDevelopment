@@ -280,7 +280,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [showPdcModal, setShowPdcModal] = useState<string | null>(null);
   const [pdcForm, setPdcForm] = useState({ pdcNumber: "", pdcBank: "", pdcDate: "" });
   const [stageRequirements, setStageRequirements] = useState<Array<{ documentType: string; label: string; required: boolean; uploaded: boolean }>>([]);
-  const [activeTab, setActiveTab] = useState<"timeline" | "payments" | "history" | "activity" | "tasks">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "payments" | "documents" | "history" | "activity" | "tasks">("timeline");
   const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -872,7 +872,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       mobileBottomBar={renderPrimaryCTA("w-full py-2.5 rounded-lg text-sm font-bold")}
       tabs={(
         <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-thin" role="tablist">
-          {(["timeline", "payments", "activity", "history"] as const).map((tab) => (
+          {(["timeline", "payments", "documents", "activity", "tasks", "history"] as const).map((tab) => (
             <button
               key={tab}
               role="tab"
@@ -884,7 +884,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : "History"}
+              {tab === "timeline"
+                ? "Timeline"
+                : tab === "payments"
+                  ? "Payments"
+                  : tab === "documents"
+                    ? "Documents"
+                    : tab === "activity"
+                      ? "Activity"
+                      : tab === "tasks"
+                        ? "Tasks"
+                        : "History"}
             </button>
           ))}
         </div>
@@ -951,7 +961,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           )}
 
           {/* ── Unit Selection ──────────────────────────────────────────────── */}
-          {/* S5 — promoted with accent border */}
+          {/* S5 — promoted with accent border. Lives inside Timeline tab. */}
+          {activeTab === "timeline" && (
           <div className="bg-card rounded-xl border-l-4 border-l-primary border-r border-y border-border p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</h3>
@@ -1041,10 +1052,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               </div>
             )}
           </div>
+          )}
 
           {/* Documents — versioned Sales Offer list + supporting docs */}
-          {/* Section order: Buyer → Unit → Documents → Notes → Tabs (per spec 8.3) */}
-          {(() => {
+          {/* Lives inside Documents tab. */}
+          {activeTab === "documents" && (() => {
             const latestVersion = salesOfferDocs[0]?.version ?? 0;
             const hasExisting   = salesOfferDocs.length > 0;
 
@@ -1201,49 +1213,54 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* ── Internal notes — collapsed by default (S3) ───────────────────── */}
-          {showNotes || (notesValue && notesValue.trim().length > 0) ? (
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal notes</h3>
-                <div className="flex items-center gap-2">
-                  {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
-                  <button onClick={() => setShowNotes(false)} className="text-xs text-muted-foreground hover:text-foreground">Hide</button>
+          {/* ── Internal notes — collapsed by default. Lives inside Timeline tab. */}
+          {activeTab === "timeline" && (
+            showNotes || (notesValue && notesValue.trim().length > 0) ? (
+              <div className="bg-card rounded-xl border border-border p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal notes</h3>
+                  <div className="flex items-center gap-2">
+                    {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
+                    <button onClick={() => setShowNotes(false)} className="text-xs text-muted-foreground hover:text-foreground">Hide</button>
+                  </div>
                 </div>
+                <textarea
+                  rows={3}
+                  value={notesValue ?? ""}
+                  onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
+                  placeholder="Internal deal notes…"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
+                />
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="mt-2 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {savingNotes ? "Saving…" : "Save notes"}
+                </button>
               </div>
-              <textarea
-                rows={3}
-                value={notesValue ?? ""}
-                onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
-                placeholder="Internal deal notes…"
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
-              />
+            ) : (
               <button
-                onClick={handleSaveNotes}
-                disabled={savingNotes}
-                className="mt-2 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                onClick={() => setShowNotes(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                {savingNotes ? "Saving…" : "Save notes"}
+                <Pencil className="size-3.5" /> Add internal notes
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowNotes(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              <Pencil className="size-3.5" /> Add internal notes
-            </button>
+            )
           )}
 
-          {/* Uploaded documents browser */}
-          <DocumentBrowser
-            key={documentKey}
-            dealId={dealId}
-            onUpload={() => setShowDocumentUploadModal(true)}
-          />
+          {/* Uploaded documents browser — lives inside Documents tab. */}
+          {activeTab === "documents" && (
+            <DocumentBrowser
+              key={documentKey}
+              dealId={dealId}
+              onUpload={() => setShowDocumentUploadModal(true)}
+            />
+          )}
 
-          {/* SPA compliance — late fees, disposal, delay compensation, LD */}
-          {dealId && <DealSpaCompliancePanel dealId={dealId} />}
+          {/* SPA compliance — late fees, disposal, delay compensation, LD.
+              Lives inside Documents tab. */}
+          {activeTab === "documents" && dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
           {/* Tab content panel — tab bar lives in PageHeader now (S6) */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -2118,60 +2135,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       )}
-
-      {/* ── Sticky bottom primary action ──────────────────────────────────── */}
-      {(() => {
-        type CTA = { label: string; Icon?: React.ComponentType<{ className?: string }>; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
-        let cta: CTA = null;
-        switch (deal.stage) {
-          case "RESERVATION_PENDING":
-            cta = { label: reserving ? "Reserving…" : "Record Reservation Fee", Icon: reserving ? undefined : Lock, onClick: handleReserveUnit, variant: "emerald" };
-            break;
-          case "RESERVATION_CONFIRMED":
-            if (canGenerateSalesOffer && salesOfferDocs.length === 0) {
-              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer", Icon: generatingDoc === "SALES_OFFER" ? undefined : FileText, onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
-            }
-            break;
-          case "SPA_PENDING":
-            cta = { label: generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft", Icon: generatingDoc === "SPA" ? undefined : FileText, onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
-            break;
-          case "SPA_SENT":
-            cta = { label: "Mark SPA Signed", Icon: Check, onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
-            break;
-          case "SPA_SIGNED":
-            cta = { label: "Submit Oqood Application", Icon: ClipboardList, onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
-            break;
-          case "OQOOD_PENDING":
-            cta = { label: "Mark Oqood Registered", Icon: Check, onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
-            break;
-          case "OQOOD_REGISTERED":
-            cta = { label: "Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
-            break;
-          case "INSTALLMENTS_ACTIVE":
-            cta = { label: "Record Next Payment", Icon: DollarSign, onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
-            break;
-          case "HANDOVER_PENDING":
-            cta = { label: "Mark Handed Over", Icon: Home, onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
-            break;
-        }
-        if (!cta) return null;
-        const tone = cta.variant === "emerald" ? "bg-success hover:bg-success/90" : cta.variant === "amber" ? "bg-warning hover:bg-warning/90" : "bg-primary hover:bg-primary/90";
-        return (
-          <div className="sticky bottom-0 left-0 right-0 -mx-6 mt-2 px-6 py-3 bg-card border-t border-border shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 z-30">
-            <div className="text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">Next step:</span> {deal.stage.replace(/_/g, " ")}
-            </div>
-            <button
-              onClick={cta.onClick}
-              disabled={reserving || !!generatingDoc || updatingStage}
-              className={`px-5 py-2.5 ${tone} text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors inline-flex items-center gap-2`}
-            >
-              {cta.Icon && <cta.Icon className="size-4" />}
-              <span>{cta.label}</span>
-            </button>
-          </div>
-        );
-      })()}
 
       {/* Restructure Schedule Modal */}
       {showRestructure && (
