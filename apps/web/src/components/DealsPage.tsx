@@ -793,7 +793,7 @@ export default function DealsPage({ onViewDeal }: Props = {}) {
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Deals" }]}
-        title="Deals Pipeline"
+        title="Deals"
         subtitle={`${total} deals total`}
         actions={<Button onClick={() => navigate("/deals/new")}>Create deal</Button>}
         tabs={stageTabs}

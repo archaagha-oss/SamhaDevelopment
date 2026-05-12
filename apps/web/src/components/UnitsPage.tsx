@@ -12,6 +12,7 @@ import EmptyState from "./EmptyState";
 import HoverPreview from "./HoverPreview";
 import { PageContainer, PageHeader } from "./layout";
 import { ActiveFilterChips, type ActiveFilterChip } from "./data";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -629,6 +630,25 @@ export default function UnitsPage() {
         crumbs={[{ label: "Home", path: "/" }, { label: "Units" }]}
         title="Units"
         subtitle={`${units.length} units total`}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>Create unit</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Pick a project
+              </DropdownMenuLabel>
+              {projects.length === 0 ? (
+                <DropdownMenuItem disabled>No projects yet</DropdownMenuItem>
+              ) : projects.map((p) => (
+                <DropdownMenuItem key={p.id} onClick={() => navigate(`/projects/${p.id}/units/new`)}>
+                  {p.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
         tabs={statusTabs}
       />
 
