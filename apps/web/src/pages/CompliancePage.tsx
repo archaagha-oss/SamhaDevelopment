@@ -120,7 +120,6 @@ function ownerHref(row: ExpiryRow): string | null {
 
 export default function CompliancePage() {
   const [rows, setRows]                 = useState<ExpiryRow[]>([]);
-  const [counts, setCounts]             = useState<Record<Severity, number> | null>(null);
   const [loading, setLoading]           = useState(true);
 
   // Filters — severity now lives in PageHeader.tabs (the primary filter),
@@ -138,18 +137,24 @@ export default function CompliancePage() {
       params.set("withinDays", String(horizon));
       params.set("minSeverity", "ATTENTION");
       if (category !== "ALL") params.set("category", category);
-      const [list, summary] = await Promise.all([
-        axios.get(`/api/compliance/expiring?${params.toString()}`),
-        axios.get("/api/compliance/expiring/counts"),
-      ]);
+      const list = await axios.get(`/api/compliance/expiring?${params.toString()}`);
       setRows(list.data?.data ?? []);
-      setCounts(summary.data ?? null);
     } finally {
       setLoading(false);
     }
   }, [category, horizon]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  // Counts derived from the same row set drive every number on the page —
+  // chips, KPI strip, and grouped section headers. This keeps every count
+  // consistent with the active category + horizon filter (the org-wide
+  // /counts endpoint did not, which made "Filter to BROKER" misleading).
+  const counts = useMemo(() => {
+    const out: Record<Severity, number> = { EXPIRED: 0, CRITICAL: 0, WARNING: 0, ATTENTION: 0, OK: 0 };
+    for (const r of rows) out[r.severity]++;
+    return out;
+  }, [rows]);
 
   // ── Client-side filter (severity chip + search) ─────────────────────────
   const visible = useMemo(() => {
@@ -217,7 +222,7 @@ export default function CompliancePage() {
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
             {cfg.label}
             <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>
-              {counts?.[s] ?? 0}
+              {counts[s]}
             </span>
           </button>
         );
@@ -302,17 +307,17 @@ export default function CompliancePage() {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="bg-card rounded-xl border border-border p-3">
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Expired</div>
-        <div className="text-lg font-bold text-destructive tabular-nums">{counts?.EXPIRED ?? "—"}</div>
+        <div className={`text-lg font-bold tabular-nums ${counts.EXPIRED > 0 ? "text-destructive" : "text-foreground"}`}>{counts.EXPIRED}</div>
         <div className="text-[11px] text-muted-foreground">need action now</div>
       </div>
       <div className="bg-card rounded-xl border border-border p-3">
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Critical (≤ 14 d)</div>
-        <div className="text-lg font-bold text-warning tabular-nums">{counts?.CRITICAL ?? "—"}</div>
+        <div className={`text-lg font-bold tabular-nums ${counts.CRITICAL > 0 ? "text-warning" : "text-foreground"}`}>{counts.CRITICAL}</div>
         <div className="text-[11px] text-muted-foreground">block OQOOD soon</div>
       </div>
       <div className="bg-card rounded-xl border border-border p-3">
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Warning (≤ 30 d)</div>
-        <div className="text-lg font-bold text-warning tabular-nums">{counts?.WARNING ?? "—"}</div>
+        <div className={`text-lg font-bold tabular-nums ${counts.WARNING > 0 ? "text-warning" : "text-foreground"}`}>{counts.WARNING}</div>
         <div className="text-[11px] text-muted-foreground">renew this month</div>
       </div>
       <div className="bg-card rounded-xl border border-border p-3">
