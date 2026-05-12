@@ -2,12 +2,18 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { Pencil, LayoutGrid, List as ListIcon, Search } from "lucide-react";
 import EmptyState from "./EmptyState";
 import Modal from "./Modal";
 import { SkeletonCard } from "./Skeleton";
 import { PageContainer, PageHeader } from "./layout";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Project {
   id: string;
@@ -32,11 +38,11 @@ const BLANK = {
   projectStatus: "ACTIVE", handoverDate: "", launchDate: "", startDate: "",
 };
 
-const STATUS_CONFIG: Record<StatusKey, { label: string; chip: string; dot: string; accent: string }> = {
-  ACTIVE:    { label: "Active",    chip: "bg-success-soft text-success", dot: "bg-success", accent: "bg-success" },
-  ON_HOLD:   { label: "On Hold",   chip: "bg-warning-soft text-warning",     dot: "bg-warning",   accent: "bg-warning" },
-  COMPLETED: { label: "Completed", chip: "bg-info-soft text-primary",       dot: "bg-primary",    accent: "bg-primary" },
-  CANCELLED: { label: "Cancelled", chip: "bg-destructive-soft text-destructive",         dot: "bg-destructive",     accent: "bg-neutral-300" },
+const STATUS_STYLE: Record<StatusKey, { header: string; dot: string; chip: string; accent: string; label: string }> = {
+  ACTIVE:    { header: "bg-stage-success text-stage-success-foreground",     dot: "bg-success",     chip: "bg-success-soft text-success",         accent: "bg-success",       label: "Active" },
+  ON_HOLD:   { header: "bg-stage-attention text-stage-attention-foreground", dot: "bg-warning",     chip: "bg-warning-soft text-warning",         accent: "bg-warning",       label: "On Hold" },
+  COMPLETED: { header: "bg-stage-info text-stage-info-foreground",           dot: "bg-primary",     chip: "bg-info-soft text-primary",            accent: "bg-primary",       label: "Completed" },
+  CANCELLED: { header: "bg-stage-danger text-stage-danger-foreground",       dot: "bg-destructive", chip: "bg-destructive-soft text-destructive", accent: "bg-neutral-300",   label: "Cancelled" },
 };
 
 const inp = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring focus:bg-card";
@@ -47,6 +53,13 @@ const fmtDate = (d: string) =>
 
 const daysUntil = (d: string) =>
   Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+const SORT_LABELS: Record<SortKey, string> = {
+  recent:   "Recent",
+  name:     "Name (A–Z)",
+  handover: "Handover (soonest)",
+  units:    "Largest first",
+};
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -137,11 +150,113 @@ export default function ProjectsPage() {
       const matchStatus = !statusFilter || p.projectStatus === statusFilter;
       return matchSearch && matchStatus;
     });
-    if (sort === "name") return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === "name")     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === "handover") return [...filtered].sort((a, b) => new Date(a.handoverDate).getTime() - new Date(b.handoverDate).getTime());
-    if (sort === "units") return [...filtered].sort((a, b) => b.totalUnits - a.totalUnits);
+    if (sort === "units")    return [...filtered].sort((a, b) => b.totalUnits - a.totalUnits);
     return filtered;
   }, [projects, search, statusFilter, sort]);
+
+  // ── Status chip strip (matches Leads / Deals tab pattern) ───────────────
+  const stageTabs = (
+    <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter projects by status">
+      {(["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const).map((s) => {
+        const active = statusFilter === s;
+        const style = STATUS_STYLE[s];
+        return (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(active ? "" : s)}
+            role="tab"
+            aria-selected={active}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+              active ? `${style.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} aria-hidden="true" />
+            {style.label}
+            <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{counts[s]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ── Compact filter zone ─────────────────────────────────────────────────
+  const filterZone = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="relative flex-1 min-w-[200px] max-w-md">
+        <Search aria-hidden className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name or location…"
+          aria-label="Search projects"
+          className="w-full h-9 pl-8 pr-3 text-sm border border-input rounded-lg bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+      <div className="flex items-center border border-border rounded-lg overflow-hidden">
+        <button
+          onClick={() => setView("grid")}
+          aria-label="Grid view"
+          aria-pressed={view === "grid"}
+          className={`h-9 px-2.5 text-sm inline-flex items-center gap-1 ${
+            view === "grid" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <LayoutGrid className="size-3.5" /> Grid
+        </button>
+        <button
+          onClick={() => setView("table")}
+          aria-label="Table view"
+          aria-pressed={view === "table"}
+          className={`h-9 px-2.5 text-sm inline-flex items-center gap-1 ${
+            view === "table" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ListIcon className="size-3.5" /> Table
+        </button>
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="h-9 px-2.5 text-xs font-medium border border-border rounded-lg bg-card text-muted-foreground hover:text-foreground">
+            Sort: {SORT_LABELS[sort]} ▾
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+            <DropdownMenuItem key={k} onClick={() => setSort(k)}>{SORT_LABELS[k]}</DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
+  // ── KPI strip ───────────────────────────────────────────────────────────
+  const kpiStrip = (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="bg-card rounded-xl border border-border p-3">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Portfolio</div>
+        <div className="text-lg font-bold text-foreground tabular-nums">{projects.length}</div>
+        <div className="text-[11px] text-muted-foreground">projects</div>
+      </div>
+      <div className="bg-card rounded-xl border border-border p-3">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Units loaded</div>
+        <div className="text-lg font-bold text-foreground tabular-nums">{totalActualUnits.toLocaleString()}</div>
+        <div className="text-[11px] text-muted-foreground">/ {totalPlannedUnits.toLocaleString()} planned</div>
+      </div>
+      <div className="bg-card rounded-xl border border-border p-3">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Active</div>
+        <div className="text-lg font-bold text-foreground tabular-nums">{counts.ACTIVE}</div>
+        <div className="text-[11px] text-muted-foreground">in pipeline</div>
+      </div>
+      <div className="bg-card rounded-xl border border-border p-3">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Handover this year</div>
+        <div className={`text-lg font-bold tabular-nums ${handoverThisYear > 0 ? "text-warning" : "text-foreground"}`}>{handoverThisYear}</div>
+        <div className="text-[11px] text-muted-foreground">due to close</div>
+      </div>
+    </div>
+  );
 
   const clearFilters = () => { setSearch(""); setStatusFilter(""); };
 
@@ -150,84 +265,14 @@ export default function ProjectsPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Projects" }]}
         title="Projects"
-        subtitle="Browse your portfolio. Open a project to manage leads, deals, units, and documents."
+        subtitle={`${projects.length} projects total`}
         actions={<Button onClick={openCreate}>Create project</Button>}
+        tabs={stageTabs}
       />
 
       <PageContainer padding="compact" className="flex-shrink-0 space-y-3">
-        {!loading && projects.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label="Portfolio" value={projects.length} suffix="projects" />
-            <KPI
-              label="Units loaded"
-              value={totalActualUnits.toLocaleString()}
-              suffix={`/ ${totalPlannedUnits.toLocaleString()} planned`}
-            />
-            <KPI label="Active" value={counts.ACTIVE} tone="emerald" />
-            <KPI label="Handover this year" value={handoverThisYear} tone="amber" />
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search by name or location…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 text-sm border border-border rounded-lg w-72 focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring bg-card"
-          />
-
-          <div className="flex gap-1">
-            <FilterPill active={!statusFilter} onClick={() => setStatusFilter("")} count={counts.all}>
-              All
-            </FilterPill>
-            {(["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const).map((s) => (
-              <FilterPill
-                key={s}
-                active={statusFilter === s}
-                onClick={() => setStatusFilter(s)}
-                count={counts[s]}
-                dotClass={STATUS_CONFIG[s].dot}
-              >
-                {STATUS_CONFIG[s].label}
-              </FilterPill>
-            ))}
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="text-sm border border-border rounded-lg px-3 py-2 bg-card focus:outline-none focus:border-ring"
-              aria-label="Sort projects"
-            >
-              <option value="recent">Recent</option>
-              <option value="name">Name (A→Z)</option>
-              <option value="handover">Handover (soonest)</option>
-              <option value="units">Largest first</option>
-            </select>
-            <div className="flex border border-border rounded-lg overflow-hidden bg-card">
-              <button
-                onClick={() => setView("grid")}
-                className={`px-3 py-2 text-sm transition-colors ${view === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
-                title="Grid view"
-                aria-label="Grid view"
-                aria-pressed={view === "grid"}
-              >
-                ⊞
-              </button>
-              <button
-                onClick={() => setView("table")}
-                className={`px-3 py-2 text-sm transition-colors ${view === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
-                title="Table view"
-                aria-label="Table view"
-                aria-pressed={view === "table"}
-              >
-                ≡
-              </button>
-            </div>
-          </div>
-        </div>
+        {!loading && projects.length > 0 && kpiStrip}
+        {filterZone}
       </PageContainer>
 
       {/* Content */}
@@ -348,64 +393,6 @@ export default function ProjectsPage() {
 
 // ─── Subcomponents ──────────────────────────────────────────────────────
 
-function KPI({
-  label,
-  value,
-  suffix,
-  tone = "slate",
-}: {
-  label: string;
-  value: number | string;
-  suffix?: string;
-  tone?: "slate" | "emerald" | "amber" | "blue";
-}) {
-  const toneCls = {
-    slate:   "bg-card border-border",
-    emerald: "bg-success-soft/60 border-success/30",
-    amber:   "bg-warning-soft/60 border-warning/30",
-    blue:    "bg-info-soft/60 border-primary/40",
-  }[tone];
-  return (
-    <div className={`rounded-lg border px-4 py-3 ${toneCls}`}>
-      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{label}</p>
-      <p className="text-2xl font-bold text-foreground mt-0.5">
-        {value}
-        {suffix && <span className="text-xs font-medium text-muted-foreground ml-1.5">{suffix}</span>}
-      </p>
-    </div>
-  );
-}
-
-function FilterPill({
-  active,
-  onClick,
-  count,
-  dotClass,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  count: number;
-  dotClass?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
-        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"
-      }`}
-    >
-      {dotClass && <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-card" : dotClass}`} />}
-      {children}
-      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${active ? "bg-white/20" : "bg-card text-muted-foreground"}`}>
-        {count}
-      </span>
-    </button>
-  );
-}
-
 function ProjectCard({
   p,
   onOpen,
@@ -417,7 +404,7 @@ function ProjectCard({
 }) {
   const days = daysUntil(p.handoverDate);
   const handoverColor = days < 0 ? "text-destructive" : days < 90 ? "text-warning" : "text-success";
-  const statusCfg = STATUS_CONFIG[p.projectStatus] || STATUS_CONFIG.ACTIVE;
+  const style = STATUS_STYLE[p.projectStatus] || STATUS_STYLE.ACTIVE;
   const handoverLabel = days < 0 ? `${Math.abs(days)} days overdue` : days === 0 ? "today" : `in ${days} day${days === 1 ? "" : "s"}`;
   const actualUnits = p._count?.units ?? 0;
   const fillPct = p.totalUnits > 0 ? Math.round((actualUnits / p.totalUnits) * 100) : 0;
@@ -430,15 +417,16 @@ function ProjectCard({
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       className="bg-card rounded-xl border border-border hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring"
     >
-      <div className={`h-1 ${statusCfg.accent}`} />
+      <div className={`h-1 ${style.accent}`} />
 
       <div className="p-5">
         <div className="flex items-start justify-between mb-2 gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-bold text-foreground group-hover:text-primary transition-colors truncate">{p.name}</h2>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide shrink-0 ${statusCfg.chip}`}>
-                {statusCfg.label}
+              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide shrink-0 ${style.chip}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} aria-hidden="true" />
+                {style.label}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">{p.location}</p>
@@ -449,7 +437,7 @@ function ProjectCard({
             title="Edit project"
             aria-label={`Edit ${p.name}`}
           >
-<Pencil className="size-3.5" />
+            <Pencil className="size-3.5" />
           </button>
         </div>
 
@@ -497,71 +485,70 @@ function ProjectTable({
   onEdit: (p: Project) => void;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b border-border">
-            <tr className="text-left text-[10px] text-muted-foreground uppercase tracking-wider">
-              <th className="px-4 py-3 font-semibold">Project</th>
-              <th className="px-4 py-3 font-semibold">Location</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Units (loaded / planned)</th>
-              <th className="px-4 py-3 font-semibold">Handover</th>
-              <th className="px-4 py-3 font-semibold w-12"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map((p) => {
-              const days = daysUntil(p.handoverDate);
-              const handoverColor = days < 0 ? "text-destructive" : days < 90 ? "text-warning" : "text-foreground";
-              const statusCfg = STATUS_CONFIG[p.projectStatus] || STATUS_CONFIG.ACTIVE;
-              const sub = days < 0 ? `${Math.abs(days)} days overdue` : days === 0 ? "today" : `in ${days} days`;
-              const actualUnits = p._count?.units ?? 0;
-              const fillPct = p.totalUnits > 0 ? Math.round((actualUnits / p.totalUnits) * 100) : 0;
-              const fillCls = fillPct >= 100 ? "bg-success" : fillPct >= 50 ? "bg-primary" : "bg-neutral-300";
-              return (
-                <tr
-                  key={p.id}
-                  onClick={() => onOpen(p)}
-                  className="hover:bg-info-soft/40 cursor-pointer transition-colors"
-                >
-                  <td className="px-4 py-3 font-semibold text-foreground">{p.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.location}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${statusCfg.chip}`}>
-                      {statusCfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground tabular-nums">{actualUnits}</span>
-                      <span className="text-muted-foreground text-xs tabular-nums">/ {p.totalUnits}</span>
-                      <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${fillCls}`} style={{ width: `${Math.min(fillPct, 100)}%` }} />
-                      </div>
-                      {p.totalFloors ? <span className="text-[11px] text-muted-foreground">· {p.totalFloors}F</span> : null}
+    <div className="overflow-auto bg-card rounded-xl border border-border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <tr>
+            <th className="px-3 py-2.5 text-left">Project</th>
+            <th className="px-3 py-2.5 text-left">Location</th>
+            <th className="px-3 py-2.5 text-left">Status</th>
+            <th className="px-3 py-2.5 text-left">Units (loaded / planned)</th>
+            <th className="px-3 py-2.5 text-left">Handover</th>
+            <th className="px-3 py-2.5 w-12"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {rows.map((p) => {
+            const days = daysUntil(p.handoverDate);
+            const handoverColor = days < 0 ? "text-destructive" : days < 90 ? "text-warning" : "text-foreground";
+            const style = STATUS_STYLE[p.projectStatus] || STATUS_STYLE.ACTIVE;
+            const sub = days < 0 ? `${Math.abs(days)} days overdue` : days === 0 ? "today" : `in ${days} days`;
+            const actualUnits = p._count?.units ?? 0;
+            const fillPct = p.totalUnits > 0 ? Math.round((actualUnits / p.totalUnits) * 100) : 0;
+            const fillCls = fillPct >= 100 ? "bg-success" : fillPct >= 50 ? "bg-primary" : "bg-neutral-300";
+            return (
+              <tr
+                key={p.id}
+                onClick={() => onOpen(p)}
+                className="hover:bg-muted/30 cursor-pointer transition-colors"
+              >
+                <td className="px-3 py-2.5 font-semibold text-foreground">{p.name}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{p.location}</td>
+                <td className="px-3 py-2.5">
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full ${style.header}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                    {style.label}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground tabular-nums">{actualUnits}</span>
+                    <span className="text-muted-foreground text-xs tabular-nums">/ {p.totalUnits}</span>
+                    <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${fillCls}`} style={{ width: `${Math.min(fillPct, 100)}%` }} />
                     </div>
-                  </td>
-                  <td className={`px-4 py-3 ${handoverColor} whitespace-nowrap`}>
-                    <div className="font-medium">{fmtDate(p.handoverDate)}</div>
-                    <div className="text-xs text-muted-foreground">{sub}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEdit(p); }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted text-sm p-1.5 rounded-md transition-colors"
-                      title="Edit project"
-                      aria-label={`Edit ${p.name}`}
-                    >
-          <Pencil className="size-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    {p.totalFloors ? <span className="text-[11px] text-muted-foreground">· {p.totalFloors}F</span> : null}
+                  </div>
+                </td>
+                <td className={`px-3 py-2.5 ${handoverColor} whitespace-nowrap`}>
+                  <div className="font-medium">{fmtDate(p.handoverDate)}</div>
+                  <div className="text-xs text-muted-foreground">{sub}</div>
+                </td>
+                <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEdit(p); }}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted text-sm p-1.5 rounded-md transition-colors"
+                    title="Edit project"
+                    aria-label={`Edit ${p.name}`}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
