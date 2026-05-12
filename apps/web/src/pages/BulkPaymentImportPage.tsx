@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { PageContainer, PageHeader } from "../components/layout";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Bulk payment import — finance/admin tool. Accepts a CSV listing payments
@@ -113,13 +114,15 @@ export default function BulkPaymentImportPage() {
   }, [file]);
 
   return (
-    <PageContainer>
+    <div className="flex flex-col h-full bg-background">
       <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Payments", path: "/payments" }, { label: "Bulk import" }]}
         title="Bulk payment import"
         subtitle="Upload a CSV to mark many payments as paid or partial in one step (finance only)."
       />
 
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto">
+      <PageContainer padding="default" className="space-y-6">
         {/* ---- File picker / drop zone ---- */}
         <div
           onDragOver={(e) => {
@@ -144,13 +147,13 @@ export default function BulkPaymentImportPage() {
           <p className="text-sm text-muted-foreground">
             Drop a CSV here, or
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="mt-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="mt-2"
           >
             Choose file
-          </button>
+          </Button>
           {file && (
             <p className="mt-3 text-sm text-foreground">
               <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
@@ -160,25 +163,24 @@ export default function BulkPaymentImportPage() {
 
         {/* ---- Submit ---- */}
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="button"
             onClick={submit}
             disabled={!file || submitting}
-            className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Importing…" : "Import payments"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={() => {
               setFile(null);
               setResult(null);
               if (inputRef.current) inputRef.current.value = "";
             }}
-            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
           >
             Reset
-          </button>
+          </Button>
         </div>
 
         {/* ---- Format help ---- */}
@@ -251,7 +253,8 @@ export default function BulkPaymentImportPage() {
             </div>
           </section>
         )}
+      </PageContainer>
       </div>
-    </PageContainer>
+    </div>
   );
 }

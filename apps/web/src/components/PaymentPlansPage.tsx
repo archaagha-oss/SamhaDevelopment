@@ -148,6 +148,32 @@ export default function PaymentPlansPage() {
         title="Payment plans"
         subtitle={`${plans.length} payment plans total`}
         actions={<Button onClick={() => navigate("/payment-plans/new")}>Create payment plan</Button>}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter payment plans by status">
+            {([
+              { key: "active",   label: "Active",   header: "bg-stage-success text-stage-success-foreground", dot: "bg-success" },
+              { key: "inactive", label: "Inactive", header: "bg-stage-neutral text-stage-neutral-foreground", dot: "bg-neutral-400" },
+            ] as const).map((s) => {
+              const active = filterActive === s.key;
+              const count = plans.filter((p) => (s.key === "active" ? p.isActive : !p.isActive)).length;
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => setFilterActive(active ? "all" : s.key)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${s.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
+                  {s.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <div className="flex-1 overflow-auto">
@@ -160,19 +186,6 @@ export default function PaymentPlansPage() {
                 placeholder: "Search plans…",
                 ariaLabel: "Search payment plans",
               }}
-              filters={[
-                {
-                  key: "active",
-                  label: "Status",
-                  value: filterActive,
-                  onChange: (v) => setFilterActive(v as "all" | "active" | "inactive"),
-                  options: [
-                    { value: "all",      label: "All statuses" },
-                    { value: "active",   label: "Active" },
-                    { value: "inactive", label: "Inactive" },
-                  ],
-                },
-              ]}
             />
 
             {loading ? (
