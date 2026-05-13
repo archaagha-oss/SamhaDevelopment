@@ -9,6 +9,12 @@ const VALID_ROLES = ["ADMIN", "MANAGER", "MEMBER", "VIEWER"] as const;
 const VALID_STATUSES = ["ACTIVE", "ON_LEAVE", "SUSPENDED", "DEACTIVATED"] as const;
 const VALID_EMPLOYMENT = ["FULL_TIME", "PART_TIME", "CONTRACT", "INTERN"] as const;
 
+// In-memory throttle for the User.lastLoginAt write triggered by /me hits.
+// Per-user, capped at one DB write per hour. Single-instance app (no Redis
+// needed); restart resets the cache, which simply produces one extra write
+// per active user on next request — harmless.
+const lastLoginStamped = new Map<string, number>();
+
 const userListSelect = {
   id: true,
   name: true,
@@ -54,6 +60,17 @@ router.get("/me", requireAuthentication, async (req, res) => {
     });
     if (!user) {
       return res.status(404).json({ error: "User account not found", code: "USER_NOT_FOUND", statusCode: 404 });
+    }
+    // Stamp lastLoginAt on each /me hit, but throttle to once per hour per
+    // user so an active SPA polling /me doesn't write a row on every render.
+    // Fire-and-forget — we don't block the response on this audit write.
+    const lastSeen = lastLoginStamped.get(user.id);
+    const now = Date.now();
+    if (!lastSeen || now - lastSeen > 60 * 60 * 1000) {
+      lastLoginStamped.set(user.id, now);
+      prisma.user
+        .update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+        .catch(() => { /* swallow — non-critical */ });
     }
     res.setHeader("Cache-Control", "no-store");
     res.json(user);
