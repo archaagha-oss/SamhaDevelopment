@@ -258,6 +258,7 @@ router.get("/collections", async (req, res) => {
 router.get("/inventory", async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
+      where: { softDeleted: false },
       select: {
         id: true, name: true,
         units: { select: { status: true, price: true } },

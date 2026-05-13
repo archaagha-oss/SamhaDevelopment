@@ -438,11 +438,17 @@ model Project {
   statusHistory      ProjectStatusHistory[]
   updates            ProjectUpdate[]
 
+  // Soft-delete flag. Mirrors Document.softDeleted — hides project from list
+  // and detail reads but keeps the row so historical Unit/Lead/Deal references
+  // remain resolvable (a sold unit on a "deleted" project still renders).
+  softDeleted Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([organizationId])
+  @@index([softDeleted])
 }
 
 model ProjectImage {

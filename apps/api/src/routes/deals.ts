@@ -380,9 +380,12 @@ router.post("/", idempotencyKey, validate(createDealSchema), async (req, res) =>
   }
 });
 
-// Update deal stage
+// Update deal stage. Idempotent: a retry with the same Idempotency-Key
+// replays the cached response instead of re-transitioning (and re-firing
+// side effects like commission unlock or unit-status flips).
 router.patch(
   "/:id/stage",
+  idempotencyKey,
   validate(updateDealStageSchema),
   async (req, res) => {
     try {
@@ -441,9 +444,13 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// Change the unit assigned to a deal (only when deal is still RESERVATION_PENDING)
-// Releases old unit → AVAILABLE, puts new unit → ON_HOLD, updates deal + logs audit
-router.patch("/:id/unit", async (req, res) => {
+// Change the unit assigned to a deal. Idempotent — a retried double-click
+// won't release-and-reacquire a unit twice.
+// Allowed while the deal is pre-SPA-signed (RESERVATION_PENDING /
+// RESERVATION_CONFIRMED / SPA_PENDING / SPA_SENT). Past SPA_SIGNED, the
+// unit is contractually committed and a swap would break the audit trail.
+// Releases old unit → AVAILABLE, puts new unit → ON_HOLD, updates deal + logs audit.
+router.patch("/:id/unit", idempotencyKey, async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
