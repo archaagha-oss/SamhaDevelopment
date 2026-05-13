@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { formatDirham } from "@/lib/money";
 import { DetailPageLayout, DetailPageNotFound } from "../components/layout";
+import { extractApiError } from "@/lib/apiError";
 
 // UnitsBulkPage — 4-step wizard for bulk-creating a floor of units at
 // /projects/:projectId/units/bulk. Replaces BulkUnitModal.
@@ -159,7 +160,7 @@ export default function UnitsBulkPage() {
       setResult({ created: r.data.created, skipped: r.data.skipped });
       setStep("result");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to create units. Check values and try again.");
+      setError(extractApiError(err, "Failed to create units. Check values and try again."));
       setStep("layout");
     } finally {
       setSubmitting(false);

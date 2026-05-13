@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { isValidPhone } from "../lib/phone";
+
+// Phone schema — accepts any string libphonenumber-js can parse to a valid
+// E.164 number (UAE default). The service layer normalizes before storing,
+// so this only needs to filter clearly-garbage input ("(((", "++", etc.)
+// that the old permissive regex let through.
+const phoneSchema = z.string().refine(isValidPhone, "Invalid phone number");
+const optionalPhoneSchema = z
+  .string()
+  .refine((v) => v === "" || isValidPhone(v), "Invalid phone number")
+  .optional();
 
 // ===== PROJECTS =====
 const PROJECT_STATUSES = ["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const;
@@ -79,7 +90,7 @@ const leadKycFields = {
 export const createLeadSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number"),
+  phone: phoneSchema,
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   nationality: z.string().optional(),
   source: z.enum(["DIRECT", "BROKER", "WEBSITE", "REFERRAL"]),
@@ -94,7 +105,7 @@ export const createLeadSchema = z.object({
 export const updateLeadSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number").optional(),
+  phone: optionalPhoneSchema,
   email: z.string().email("Invalid email").optional(),
   nationality: z.string().optional(),
   source: z.enum(["DIRECT", "BROKER", "WEBSITE", "REFERRAL"]).optional(),
@@ -194,7 +205,7 @@ export type BulkPaymentRowInput = z.infer<typeof bulkPaymentRowSchema>;
 export const createBrokerCompanySchema = z.object({
   name: z.string().min(1, "Broker name is required"),
   email: z.string().email("Invalid email").optional(),
-  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number").optional(),
+  phone: optionalPhoneSchema,
   reraLicenseNumber: z.string().optional(),
   reraLicenseExpiry: z.string().datetime().optional(),
   tradeLicenseNumber: z.string().optional(),
@@ -225,7 +236,7 @@ export const createBrokerAgentSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email("Invalid email").optional(),
-  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number").optional(),
+  phone: optionalPhoneSchema,
   reraCardNumber: z.string().optional(),
   reraCardExpiry: z.string().datetime().optional(),
   eidNo: z.string().optional(),
@@ -282,6 +293,11 @@ export const createUnitSchema = z.object({
 });
 
 export const updateUnitSchema = z.object({
+  // unitNumber is editable only while the unit has never had a deal.
+  // The route handler rejects the change with UNIT_HAS_DEALS otherwise —
+  // we accept it in the schema so we can return a useful error rather
+  // than a confusing "unknown field" 400.
+  unitNumber: z.string().min(1).optional(),
   type: z.enum(UNIT_TYPES).optional(),
   area: z.number().positive().optional(),
   price: z.number().positive().optional(),
@@ -422,7 +438,12 @@ export const createContactSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional().or(z.literal("")),
   email: z.string().email("Invalid email").optional().or(z.literal("")).or(z.null()),
-  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number").optional().or(z.literal("")).or(z.null()),
+  phone: z
+    .string()
+    .refine((v) => v === "" || v === null || isValidPhone(v), "Invalid phone number")
+    .optional()
+    .or(z.literal(""))
+    .or(z.null()),
   whatsapp: z.string().optional().or(z.literal("")).or(z.null()),
   company: z.string().optional().or(z.literal("")).or(z.null()),
   jobTitle: z.string().optional().or(z.literal("")).or(z.null()),

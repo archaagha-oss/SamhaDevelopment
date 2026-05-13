@@ -13,6 +13,7 @@ import {
   getPreference,
   type Channel,
 } from "../services/communicationPreferenceService";
+import { normalizePhone } from "../lib/phone";
 
 const router = Router();
 
@@ -412,20 +413,29 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
       // stage is intentionally excluded — use PATCH /:id/stage
     } = req.body;
 
-    // Duplicate phone check
-    if (phone) {
+    // Normalize phone to E.164 before the uniqueness check + write, so a
+    // raw-digit and a formatted variant of the same number collide rather
+    // than silently coexisting.
+    let normalizedPhone: string | undefined;
+    if (phone !== undefined) {
+      const e164 = normalizePhone(phone);
+      if (!e164) {
+        return res.status(400).json({ error: "Invalid phone number", code: "INVALID_PHONE", statusCode: 400 });
+      }
+      normalizedPhone = e164;
+
       const existing = await prisma.lead.findFirst({
-        where: { phone, NOT: { id: req.params.id } },
+        where: { phone: normalizedPhone, NOT: { id: req.params.id } },
       });
       if (existing) {
-        return res.status(409).json({ error: "Phone already in use by another lead", code: "DUPLICATE_PHONE", statusCode: 409 });
+        return res.status(409).json({ error: "Phone already in use by another lead", code: "DUPLICATE_PHONE", statusCode: 409, existingId: existing.id });
       }
     }
 
     const data: any = {};
     if (firstName        !== undefined) data.firstName        = firstName;
     if (lastName         !== undefined) data.lastName         = lastName;
-    if (phone            !== undefined) data.phone            = phone;
+    if (normalizedPhone  !== undefined) data.phone            = normalizedPhone;
     if (email            !== undefined) data.email            = email || null;
     if (nationality      !== undefined) data.nationality      = nationality || null;
     if (source           !== undefined) data.source           = source;

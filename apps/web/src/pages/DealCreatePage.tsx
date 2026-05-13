@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { extractApiError } from "@/lib/apiError";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { formatDirham } from "@/lib/money";
@@ -279,7 +280,7 @@ export default function DealCreatePage() {
       toast.success("Deal created");
       navigate(newId ? `/deals/${newId}` : "/deals");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to create deal");
+      setError(extractApiError(err, "Failed to create deal"));
     } finally {
       setSubmitting(false);
     }

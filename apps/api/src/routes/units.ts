@@ -315,6 +315,10 @@ router.get("/:id", async (req, res) => {
         deals: { where: { isActive: true }, include: { lead: true }, take: 1 },
         reservations: { where: { status: "ACTIVE" }, include: { lead: true }, take: 1 },
         images: { orderBy: { sortOrder: "asc" } },
+        // _count.deals (ALL deals, active or cancelled) gates whether the
+        // unitNumber can still be edited. Zero deals = identity still
+        // mutable so a typo can be fixed without a delete + recreate.
+        _count: { select: { deals: true } },
       },
     });
 
@@ -396,6 +400,7 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
     }
 
     const {
+      unitNumber,
       type, area, price, view, floor, assignedAgentId,
       bathrooms, parkingSpaces, internalArea, externalArea,
       blockExpiresAt, internalNotes, tags, paymentPlan,
@@ -417,7 +422,36 @@ router.patch("/:id", validate(updateUnitSchema), async (req, res) => {
       });
     }
 
+    // unitNumber is the operator-facing identity used on the SPA and on
+    // every audit-log row. Once any deal (active or cancelled) references
+    // this unit, the number is frozen — otherwise reading old documents
+    // becomes ambiguous. Editing a typo at creation time, before any deal,
+    // remains legitimate and is supported.
+    if (unitNumber !== undefined && unitNumber !== unit.unitNumber) {
+      const dealCount = await prisma.deal.count({ where: { unitId: req.params.id } });
+      if (dealCount > 0) {
+        return res.status(409).json({
+          error: "Unit number is locked after the first deal is created on this unit",
+          code: "UNIT_NUMBER_LOCKED",
+          statusCode: 409,
+        });
+      }
+      // The DB has a (projectId, unitNumber) unique constraint. Catch up-front
+      // to return a friendlier message than a raw P2002 collision.
+      const clash = await prisma.unit.findFirst({
+        where: { projectId: unit.projectId, unitNumber, NOT: { id: unit.id } },
+      });
+      if (clash) {
+        return res.status(409).json({
+          error: `Unit number "${unitNumber}" already exists in this project`,
+          code: "UNIT_NUMBER_TAKEN",
+          statusCode: 409,
+        });
+      }
+    }
+
     const data: any = {};
+    if (unitNumber !== undefined && unitNumber !== unit.unitNumber) data.unitNumber = unitNumber;
     if (type !== undefined) data.type = type;
     if (area !== undefined) data.area = area;
     if (view !== undefined) data.view = view;

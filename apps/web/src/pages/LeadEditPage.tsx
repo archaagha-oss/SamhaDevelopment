@@ -8,6 +8,7 @@ import {
 } from "../components/layout";
 import { useAgents } from "../hooks/useAgents";
 import EmiratesIdScan from "../components/EmiratesIdScan";
+import { extractApiError } from "@/lib/apiError";
 import UnitInterestPicker from "../components/UnitInterestPicker";
 import type { EmiratesIdFields } from "../utils/emiratesIdOcr";
 
@@ -271,7 +272,7 @@ export default function LeadEditPage() {
         navigate(newId ? `/leads/${newId}` : "/leads");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save lead");
+      setError(extractApiError(err, "Failed to save lead"));
     } finally {
       setSubmitting(false);
     }
@@ -312,7 +313,7 @@ export default function LeadEditPage() {
       );
       toast.success("Unit interests updated");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to update interests");
+      toast.error(extractApiError(err, "Failed to update interests"));
     }
   }
 

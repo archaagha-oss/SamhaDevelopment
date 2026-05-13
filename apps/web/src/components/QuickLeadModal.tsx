@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useAgents } from "../hooks/useAgents";
+import { extractApiError } from "@/lib/apiError";
 
 interface Props {
   onClose: () => void;
@@ -50,7 +51,7 @@ export default function QuickLeadModal({ onClose, onCreated }: Props) {
       onCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to create lead");
+      setError(extractApiError(err, "Failed to create lead"));
     } finally {
       setSubmitting(false);
     }

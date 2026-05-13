@@ -7,6 +7,7 @@ import EmptyState from "./EmptyState";
 import Modal from "./Modal";
 import { SkeletonCard } from "./Skeleton";
 import { PageContainer, PageHeader } from "./layout";
+import { extractApiError } from "@/lib/apiError";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -78,7 +79,7 @@ export default function ProjectsPage() {
     setLoading(true);
     axios.get("/api/projects")
       .then((r) => setProjects(r.data.data || r.data || []))
-      .catch((err) => toast.error(err?.response?.data?.error || "Failed to load projects"))
+      .catch((err) => toast.error(extractApiError(err, "Failed to load projects")))
       .finally(() => setLoading(false));
   };
 
@@ -115,7 +116,7 @@ export default function ProjectsPage() {
       setShowForm(false);
       load();
     } catch (err: any) {
-      setFormError(err.response?.data?.error || "Failed to save project");
+      setFormError(extractApiError(err, "Failed to save project"));
     } finally {
       setSubmitting(false);
     }
