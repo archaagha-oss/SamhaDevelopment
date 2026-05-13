@@ -22,6 +22,7 @@ import {
   Circle,
 } from "lucide-react";
 import { formatArea } from "../utils/formatArea";
+import { useCurrentRole } from "../hooks/useCurrentUser";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
 import DealPurchasersModal from "./DealPurchasersModal";
@@ -118,6 +119,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const dealId = dealIdProp ?? params.dealId ?? "";
   const handleBack = onBack ?? (() => navigate("/deals"));
   const handoverEnabled = useFeatureFlag("handoverChecklist");
+
+  // Role-based gating. Server still enforces all of these via
+  // requireFinanceAccess + role-checked routes; hiding here keeps
+  // VIEWER / MEMBER users from clicking buttons that would only
+  // 403 them.
+  const role = useCurrentRole();
+  const canWrite        = role === "ADMIN" || role === "MANAGER" || role === "MEMBER";
+  const canFinance      = role === "ADMIN" || role === "MANAGER";
+  const canCancelDeal   = canFinance; // cancelling releases inventory + forfeits commission
+  const canChangeStage  = canWrite;
+  const canChangeUnit   = canWrite;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -840,18 +852,22 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <ClipboardList className="size-3.5 mr-2" /> Handover…
                 </DropdownMenuItem>
               )}
-              {validNext.length > 0 && (
+              {validNext.length > 0 && canChangeStage && (
                 <DropdownMenuItem onClick={() => setShowStageSelect(true)}>
                   <FileSignature className="size-3.5 mr-2" /> Change stage…
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setShowCancelModal(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-3.5 mr-2" /> Delete deal
-              </DropdownMenuItem>
+              {canCancelDeal && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowCancelModal(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="size-3.5 mr-2" /> Delete deal
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </>
@@ -953,7 +969,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           <div className="bg-card rounded-xl border-l-4 border-l-primary border-r border-y border-border p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</h3>
-              {deal.stage === "RESERVATION_PENDING" ? (
+              {(["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT"].includes(deal.stage) && canChangeUnit) ? (
                 <button
                   onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
                   className="text-xs text-primary font-semibold hover:underline"
@@ -1896,7 +1912,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* Danger zone — delete deal (lead is preserved). */}
+          {/* Danger zone — delete deal (lead is preserved). Finance-only. */}
+          {canCancelDeal && (
           <div className="bg-card rounded-xl border border-destructive/30 p-4">
             <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide mb-1">Danger zone</h3>
             <p className="text-xs text-muted-foreground mb-2">Removes the deal record. The lead is preserved.</p>
@@ -1907,6 +1924,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               <Trash2 className="size-3.5" /><span>Delete deal</span>
             </button>
           </div>
+          )}
         </>
       )}
     >

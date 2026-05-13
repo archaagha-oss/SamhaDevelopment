@@ -19,6 +19,7 @@ import { resolveJobQueueBackend } from "./events/jobs/queueBackend";
 import { releaseExpiredHolds } from "./services/unitService";
 import { checkAndExpireReservations } from "./services/reservationService";
 import { sweepComplianceNotifications } from "./services/complianceNotificationService";
+import { sweepOverdueLeadTasks } from "./services/leadSlaService";
 
 // Import routes
 import projectRoutes from "./routes/projects";
@@ -124,6 +125,22 @@ setInterval(() => {
 setTimeout(() => {
   sweepComplianceNotifications().catch(() => {});
 }, 60_000).unref?.();
+
+// Lead-task SLA sweep — every 15 minutes scan for PENDING tasks whose
+// dueDate has elapsed and escalate them to OVERDUE, with a notification
+// for the assigned agent and (if higher priority) their manager. Closes
+// the "first-contact in 24h" SLA gap surfaced in the audit.
+setInterval(() => {
+  sweepOverdueLeadTasks()
+    .then((r) => {
+      if (r.escalated > 0) {
+        logger.info(`[Cron] lead-SLA sweep: ${r.escalated} overdue, ${r.notificationsSent} notifications`);
+      }
+    })
+    .catch((err: unknown) => {
+      console.error("[Cron] lead-SLA sweep error:", err);
+    });
+}, 15 * 60 * 1000);
 
 const app = express();
 const PORT = process.env.PORT || 3000;

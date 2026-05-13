@@ -10,7 +10,7 @@ import {
   updateDealStage,
   getStageRequirements,
 } from "../services/dealService";
-import { addCustomMilestone, restructureSchedule } from "../services/paymentService";
+import { addCustomMilestone, restructureSchedule, generatePaymentSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
 import { calculateDealSpaRules } from "../services/spaRulesService";
@@ -456,27 +456,49 @@ router.patch("/:id/unit", idempotencyKey, async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
-    const { unitId } = req.body;
+    const { unitId, salePrice: bodySalePrice } = req.body;
     if (!unitId) {
       return res.status(400).json({ error: "unitId is required", code: "MISSING_UNIT", statusCode: 400 });
     }
 
     const deal = await prisma.deal.findUnique({
       where: { id: req.params.id },
-      include: { unit: true },
+      include: {
+        unit: true,
+        payments: { select: { id: true, status: true } },
+        paymentPlan: { include: { milestones: { orderBy: { sortOrder: "asc" } } } },
+      },
     });
     if (!deal) {
       return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
     }
-    if (deal.stage !== "RESERVATION_PENDING") {
+    // Swap is legitimate only while the deal hasn't bound the buyer to the
+    // specific unit on paper. Past SPA_SIGNED the unit is contractually
+    // committed and a swap would invalidate signed documents.
+    const SWAP_ALLOWED_STAGES = ["RESERVATION_PENDING", "RESERVATION_CONFIRMED", "SPA_PENDING", "SPA_SENT"];
+    if (!SWAP_ALLOWED_STAGES.includes(deal.stage)) {
       return res.status(400).json({
-        error: "Unit can only be changed while the deal is in RESERVATION_PENDING stage.",
+        error: `Unit can only be changed before the SPA is signed (current stage: ${deal.stage}).`,
         code: "WRONG_STAGE",
         statusCode: 400,
       });
     }
     if (deal.unitId === unitId) {
       return res.json(deal);
+    }
+
+    // Block when any payment has already moved past PENDING. Once money has
+    // been booked against the old unit, regenerating the schedule would
+    // either lose receipts or produce an inconsistent ledger. Operator
+    // must waive/refund the paid rows first, or cancel + recreate the deal.
+    const lockedStatuses = ["PAID", "PARTIAL", "PDC_CLEARED", "WAIVED"];
+    const blockingPayments = deal.payments.filter((p) => lockedStatuses.includes(p.status));
+    if (blockingPayments.length > 0) {
+      return res.status(409).json({
+        error: `${blockingPayments.length} payment(s) on this deal have been received or waived. Refund/clear them before swapping units, or cancel this deal and create a new one.`,
+        code: "DEAL_HAS_RECEIVED_PAYMENTS",
+        statusCode: 409,
+      });
     }
 
     const newUnit = await prisma.unit.findUnique({ where: { id: unitId } });
@@ -491,7 +513,16 @@ router.patch("/:id/unit", idempotencyKey, async (req, res) => {
       });
     }
 
-    // Atomic swap: release old unit, hold new unit, update deal
+    // Resolve effective sale price for the new unit. The operator can pass
+    // an explicit salePrice (negotiated number); otherwise we fall back to
+    // the new unit's list price. This matters because the payment schedule
+    // is regenerated against this value.
+    const newSalePrice = typeof bodySalePrice === "number" && bodySalePrice > 0
+      ? bodySalePrice
+      : newUnit.price;
+
+    // Atomic swap: release old unit, hold new unit, regenerate payment
+    // schedule against the new sale price, update the deal.
     const updated = await prisma.$transaction(async (tx) => {
       // Release old unit back to AVAILABLE
       await tx.unit.update({ where: { id: deal.unitId }, data: { status: "AVAILABLE", holdExpiresAt: null } });
@@ -518,20 +549,43 @@ router.patch("/:id/unit", idempotencyKey, async (req, res) => {
         },
       });
 
-      // Update deal: new unit + price from the new unit
+      // Drop the existing PENDING payment rows so the schedule can be
+      // regenerated against the new sale price. We already proved upstream
+      // that no row is PAID/PARTIAL/PDC_CLEARED/WAIVED.
+      await tx.payment.deleteMany({
+        where: { dealId: req.params.id, status: { in: ["PENDING", "CANCELLED", "PDC_PENDING", "PDC_BOUNCED", "OVERDUE"] } },
+      });
+
+      // Update deal: new unit + recomputed sale price
       return tx.deal.update({
         where: { id: req.params.id },
-        data:  { unitId, salePrice: newUnit.price },
-        include: { lead: true, unit: true },
+        data:  { unitId, salePrice: newSalePrice },
+        include: { lead: true, unit: true, paymentPlan: { include: { milestones: true } } },
       });
     });
 
+    // Regenerate payment schedule outside the swap transaction. generatePaymentSchedule
+    // uses its own $transaction; nesting would re-enter the prisma engine.
+    if (deal.paymentPlan?.milestones?.length) {
+      await generatePaymentSchedule(
+        deal.id,
+        deal.paymentPlan.milestones as any,
+        newSalePrice,
+        deal.dldFee,
+        deal.adminFee,
+        deal.reservationDate,
+        { dldPaidBy: deal.dldPaidBy as "BUYER" | "DEVELOPER", adminFeeWaived: deal.adminFeeWaived },
+      );
+    }
+
     // Audit activity
+    const priceDelta = newSalePrice - deal.salePrice;
+    const priceNote = priceDelta === 0 ? "" : ` (price ${priceDelta > 0 ? "+" : ""}AED ${priceDelta.toLocaleString()})`;
     await prisma.activity.create({
       data: {
         dealId:    req.params.id,
         type:      "NOTE",
-        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}`,
+        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}${priceNote}. Payment schedule regenerated.`,
         createdBy: req.auth.userId,
       },
     });

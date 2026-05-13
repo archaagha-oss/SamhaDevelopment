@@ -359,6 +359,7 @@ enum NotificationType {
   OQOOD_DEADLINE
   DEAL_STAGE_CHANGED
   NEW_LEAD_ASSIGNED
+  LEAD_TASK_OVERDUE    // first-contact SLA breach (or any lead task)
   GENERAL
 }
 
