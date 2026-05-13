@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Building2 } from "lucide-react";
 import ProjectDocumentsTab from "./ProjectDocumentsTab";
+import { PageContainer, PageHeader } from "./layout";
 
 interface ProjectImage { id: string; url: string; caption?: string; sortOrder: number; }
 interface ProjectConfig {
@@ -42,6 +43,10 @@ export default function ProjectSettingsPage() {
     name: "", location: "", description: "", totalFloors: "",
     projectStatus: "ACTIVE", handoverDate: "", launchDate: "", startDate: "",
     completionStatus: "OFF_PLAN", purpose: "SALE", furnishing: "UNFURNISHED",
+    // Arabic legal copies — fed into the bilingual SPA generator. Blank is
+    // OK; the SPA preview surfaces missingArabic[] so the operator knows
+    // which fields still need translation before finalizing the document.
+    nameAr: "", locationAr: "", developerNameAr: "", developerAddressAr: "",
   });
   const [actualUnits, setActualUnits] = useState(0);
   const [config, setConfig] = useState({
@@ -74,6 +79,10 @@ export default function ProjectSettingsPage() {
         completionStatus: p.completionStatus || "OFF_PLAN",
         purpose: p.purpose || "SALE",
         furnishing: p.furnishing || "UNFURNISHED",
+        nameAr:             (p as any).nameAr             ?? "",
+        locationAr:         (p as any).locationAr         ?? "",
+        developerNameAr:    (p as any).developerNameAr    ?? "",
+        developerAddressAr: (p as any).developerAddressAr ?? "",
       });
       setActualUnits(p.units?.length ?? 0);
       setImages(p.images || []);
@@ -110,6 +119,12 @@ export default function ProjectSettingsPage() {
         completionStatus: info.completionStatus,
         purpose: info.purpose,
         furnishing: info.furnishing,
+        // Empty strings collapse to null so a blank field doesn't get stored
+        // as " " and bypass the bilingual SPA's missingArabic detector.
+        nameAr:             info.nameAr             || null,
+        locationAr:         info.locationAr         || null,
+        developerNameAr:    info.developerNameAr    || null,
+        developerAddressAr: info.developerAddressAr || null,
       });
       setSaved("Project info saved.");
     } catch (e: any) {
@@ -197,48 +212,38 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Sticky header — breadcrumb · title with project context · tabs */}
-      <div className="bg-card border-b border-border flex-shrink-0">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-3">
-          {/* Breadcrumb */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-            <button onClick={() => navigate("/projects")} className="hover:text-foreground">Projects</button>
-            <span aria-hidden>/</span>
-            <button onClick={() => navigate(`/projects/${projectId}`)} className="hover:text-foreground truncate max-w-[180px]">{info.name || "…"}</button>
-            <span aria-hidden>/</span>
-            <span className="text-foreground font-medium">Settings</span>
-          </nav>
-          {/* Title + project context */}
-          <div className="flex items-baseline justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">Settings</h1>
-            <span className="text-sm text-muted-foreground truncate">{info.name}</span>
+      <PageHeader
+        crumbs={[
+          { label: "Projects", path: "/projects" },
+          { label: info.name || "Project", path: `/projects/${projectId}` },
+          { label: "Settings" },
+        ]}
+        title="Settings"
+        subtitle={info.name}
+        tabs={(
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Settings sections">
+            {tabs.map((t) => {
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => { setTab(t.key); setSaved(null); setError(null); }}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    active ? "border-primary/40 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
-        </div>
-        {/* Tab nav */}
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto" role="tablist" aria-label="Settings sections">
-          {tabs.map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => { setTab(t.key); setSaved(null); setError(null); }}
-                role="tab"
-                aria-selected={active}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        )}
+      />
 
       <div className="flex-1 overflow-auto">
-       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <PageContainer width="default" padding="default">
         {/* Feedback */}
         {error && (
           <div className="mb-4 bg-destructive-soft border border-destructive/30 rounded-lg px-4 py-3 flex justify-between items-center">
@@ -276,6 +281,61 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
             </section>
+
+            {/* § Arabic / SPA particulars — used by the bilingual SPA renderer.
+                Leave blank for projects that won't generate Arabic-side SPAs. */}
+            <details className="bg-card rounded-lg border border-border overflow-hidden">
+              <summary className="px-6 py-4 cursor-pointer select-none">
+                <span className="text-sm font-semibold text-foreground">Arabic / SPA particulars</span>
+                <p className="text-xs text-muted-foreground mt-1">Right-to-left Arabic copies of the project + developer identity. Used only by the bilingual SPA template.</p>
+              </summary>
+              <div className="px-6 pb-6 grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className={lbl}>Project name (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.nameAr}
+                    onChange={(e) => setInfo({ ...info, nameAr: e.target.value })}
+                    placeholder="اسم المشروع"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Location (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.locationAr}
+                    onChange={(e) => setInfo({ ...info, locationAr: e.target.value })}
+                    placeholder="الموقع"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Developer name (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.developerNameAr}
+                    onChange={(e) => setInfo({ ...info, developerNameAr: e.target.value })}
+                    placeholder="اسم المطور"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Developer address (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.developerAddressAr}
+                    onChange={(e) => setInfo({ ...info, developerAddressAr: e.target.value })}
+                    placeholder="عنوان المطور"
+                  />
+                </div>
+              </div>
+            </details>
 
             {/* § Schedule */}
             <section className="bg-card rounded-lg border border-border p-6 space-y-4">
@@ -591,7 +651,7 @@ export default function ProjectSettingsPage() {
         {tab === "documents" && projectId && (
           <ProjectDocumentsTab projectId={projectId} />
         )}
-       </div>
+      </PageContainer>
       </div>
 
       {/* Delete Project Confirmation Modal */}

@@ -127,7 +127,7 @@ router.post(
       }
 
       const {
-        name, email, phone,
+        name, nameAr, email, phone,
         reraLicenseNumber, reraLicenseExpiry, tradeLicenseNumber,
         tradeLicenseCopyUrl, vatCertificateNo, vatCertificateUrl,
         corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
@@ -139,7 +139,7 @@ router.post(
 
       const company = await prisma.brokerCompany.create({
         data: {
-          name, email, phone,
+          name, nameAr: nameAr || null, email, phone,
           reraLicenseNumber,
           reraLicenseExpiry: reraLicenseExpiry ? new Date(reraLicenseExpiry) : null,
           tradeLicenseNumber, tradeLicenseCopyUrl,
@@ -221,7 +221,7 @@ router.post(
       }
 
       const {
-        companyId, name, firstName, lastName, email, phone,
+        companyId, name, nameAr, firstName, lastName, email, phone,
         reraCardNumber, reraCardExpiry,
         eidNo, eidExpiry, eidFrontUrl, eidBackUrl, acceptedConsent,
       } = req.body;
@@ -232,6 +232,7 @@ router.post(
         data: {
           companyId,
           name: displayName,
+          nameAr: nameAr || null,
           firstName: firstName || null,
           lastName: lastName || null,
           email,
@@ -306,7 +307,7 @@ router.patch("/companies/:id", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
     const {
-      name, email, phone, commissionRate,
+      name, nameAr, email, phone, commissionRate,
       reraLicenseNumber, reraLicenseExpiry, tradeLicenseNumber,
       tradeLicenseCopyUrl, vatCertificateNo, vatCertificateUrl,
       corporateTaxCertUrl, officeRegistrationNo, ornCertificateUrl,
@@ -316,6 +317,7 @@ router.patch("/companies/:id", async (req, res) => {
     } = req.body;
     const data: any = {};
     if (name !== undefined) data.name = name;
+    if (nameAr !== undefined) data.nameAr = nameAr || null;
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
     if (commissionRate !== undefined) data.commissionRate = parseFloat(commissionRate);
@@ -380,7 +382,7 @@ router.patch("/agents/:id", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
     const {
-      name, firstName, lastName, email, phone,
+      name, nameAr, firstName, lastName, email, phone,
       reraCardNumber, reraCardExpiry,
       eidNo, eidExpiry, eidFrontUrl, eidBackUrl, acceptedConsent,
     } = req.body;
@@ -390,6 +392,7 @@ router.patch("/agents/:id", async (req, res) => {
     if (firstName !== undefined || lastName !== undefined || name !== undefined) {
       data.name = [firstName, lastName].filter(Boolean).join(" ") || name || undefined;
     }
+    if (nameAr !== undefined) data.nameAr = nameAr || null;
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
     if (reraCardNumber !== undefined) data.reraCardNumber = reraCardNumber || null;

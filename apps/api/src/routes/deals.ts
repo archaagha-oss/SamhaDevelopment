@@ -10,9 +10,11 @@ import {
   updateDealStage,
   getStageRequirements,
 } from "../services/dealService";
-import { addCustomMilestone, restructureSchedule } from "../services/paymentService";
+import { addCustomMilestone, restructureSchedule, generatePaymentSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
+import { renderBilingualSpaHtml, collectMissingArabic } from "../services/spa/bilingualTemplate";
+import { renderSpaPdf } from "../services/spa/pdfRenderer";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess } from "../middleware/auth";
@@ -208,6 +210,86 @@ router.get("/:id/spa-snapshot", async (req, res) => {
   }
 });
 
+// ── Bilingual SPA preview (Phase 4b) ───────────────────────────────────────
+// POST /api/deals/:id/spa/preview
+// Returns { html, missingArabic } where `html` is a full, browser-renderable
+// document the operator can open in a tab to eyeball the bilingual layout,
+// and `missingArabic` is the list of tokens (e.g. "buyer.nameAr") that
+// still need an Arabic value. This is preview-only and does NOT touch the
+// existing /generate-document pipeline — PDF rendering ships separately.
+router.post("/:id/spa/preview", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    const missingArabic = collectMissingArabic(snapshot).map((m) => m.token);
+    res.json({ html, missingArabic });
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({
+      error: "Failed to build SPA preview",
+      code: "SPA_PREVIEW_ERROR",
+      statusCode: 500,
+    });
+  }
+});
+
+// GET /api/deals/:id/spa/print
+// Serves the bilingual SPA as a full HTML document so a browser tab can
+// render it and the operator can use the browser's native "Save as PDF".
+// Always available — works on every host including cPanel shared hosting.
+// Query: ?print=auto fires window.print() on load (template-level).
+router.get("/:id/spa/print", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(html);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).send("Deal not found");
+    }
+    res.status(500).send("Failed to build SPA print preview");
+  }
+});
+
+// GET /api/deals/:id/spa/pdf
+// Server-renders the bilingual SPA to PDF via headless Chromium so the
+// operator can download a final, immutable artifact without going
+// through the browser's print dialog. Requires Chromium on the host —
+// returns 503 on cPanel-style environments where the launch fails; the
+// /spa/print HTML route remains as the fallback in that case.
+router.get("/:id/spa/pdf", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    let pdf: Buffer;
+    try {
+      pdf = await renderSpaPdf(html);
+    } catch (renderErr: any) {
+      // Most common failure: Chromium not installed on the host.
+      return res.status(503).json({
+        error: "PDF rendering is not available on this server. Use the browser print path (Save as PDF) from /spa/print instead.",
+        code: "PDF_ENGINE_UNAVAILABLE",
+        detail: renderErr?.message ?? null,
+        statusCode: 503,
+      });
+    }
+    const filename = `SPA-${snapshot.deal.dealNumber}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(pdf);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({ error: "Failed to render SPA PDF", code: "SPA_PDF_ERROR", statusCode: 500 });
+  }
+});
+
 // ----- Deal purchasers (joint purchasers, SPA Particulars Item II) ---------
 
 router.get("/:id/purchasers", async (req, res) => {
@@ -380,9 +462,12 @@ router.post("/", idempotencyKey, validate(createDealSchema), async (req, res) =>
   }
 });
 
-// Update deal stage
+// Update deal stage. Idempotent: a retry with the same Idempotency-Key
+// replays the cached response instead of re-transitioning (and re-firing
+// side effects like commission unlock or unit-status flips).
 router.patch(
   "/:id/stage",
+  idempotencyKey,
   validate(updateDealStageSchema),
   async (req, res) => {
     try {
@@ -441,35 +526,61 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// Change the unit assigned to a deal (only when deal is still RESERVATION_PENDING)
-// Releases old unit → AVAILABLE, puts new unit → ON_HOLD, updates deal + logs audit
-router.patch("/:id/unit", async (req, res) => {
+// Change the unit assigned to a deal. Idempotent — a retried double-click
+// won't release-and-reacquire a unit twice.
+// Allowed while the deal is pre-SPA-signed (RESERVATION_PENDING /
+// RESERVATION_CONFIRMED / SPA_PENDING / SPA_SENT). Past SPA_SIGNED, the
+// unit is contractually committed and a swap would break the audit trail.
+// Releases old unit → AVAILABLE, puts new unit → ON_HOLD, updates deal + logs audit.
+router.patch("/:id/unit", idempotencyKey, async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
 
-    const { unitId } = req.body;
+    const { unitId, salePrice: bodySalePrice } = req.body;
     if (!unitId) {
       return res.status(400).json({ error: "unitId is required", code: "MISSING_UNIT", statusCode: 400 });
     }
 
     const deal = await prisma.deal.findUnique({
       where: { id: req.params.id },
-      include: { unit: true },
+      include: {
+        unit: true,
+        payments: { select: { id: true, status: true } },
+        paymentPlan: { include: { milestones: { orderBy: { sortOrder: "asc" } } } },
+      },
     });
     if (!deal) {
       return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
     }
-    if (deal.stage !== "RESERVATION_PENDING") {
+    // Swap is legitimate only while the deal hasn't bound the buyer to the
+    // specific unit on paper. Past SPA_SIGNED the unit is contractually
+    // committed and a swap would invalidate signed documents.
+    const SWAP_ALLOWED_STAGES = ["RESERVATION_PENDING", "RESERVATION_CONFIRMED", "SPA_PENDING", "SPA_SENT"];
+    if (!SWAP_ALLOWED_STAGES.includes(deal.stage)) {
       return res.status(400).json({
-        error: "Unit can only be changed while the deal is in RESERVATION_PENDING stage.",
+        error: `Unit can only be changed before the SPA is signed (current stage: ${deal.stage}).`,
         code: "WRONG_STAGE",
         statusCode: 400,
       });
     }
     if (deal.unitId === unitId) {
       return res.json(deal);
+    }
+
+    // Block when any payment has already moved past PENDING. Once money has
+    // been booked against the old unit, regenerating the schedule would
+    // either lose receipts or produce an inconsistent ledger. Operator
+    // must waive/refund the paid rows first, or cancel + recreate the deal.
+    const lockedStatuses = ["PAID", "PARTIAL", "PDC_CLEARED", "WAIVED"];
+    const blockingPayments = deal.payments.filter((p) => lockedStatuses.includes(p.status));
+    if (blockingPayments.length > 0) {
+      return res.status(409).json({
+        error: `${blockingPayments.length} payment(s) on this deal have been received or waived. Refund/clear them before swapping units, or cancel this deal and create a new one.`,
+        code: "DEAL_HAS_RECEIVED_PAYMENTS",
+        statusCode: 409,
+      });
     }
 
     const newUnit = await prisma.unit.findUnique({ where: { id: unitId } });
@@ -484,7 +595,16 @@ router.patch("/:id/unit", async (req, res) => {
       });
     }
 
-    // Atomic swap: release old unit, hold new unit, update deal
+    // Resolve effective sale price for the new unit. The operator can pass
+    // an explicit salePrice (negotiated number); otherwise we fall back to
+    // the new unit's list price. This matters because the payment schedule
+    // is regenerated against this value.
+    const newSalePrice = typeof bodySalePrice === "number" && bodySalePrice > 0
+      ? bodySalePrice
+      : newUnit.price;
+
+    // Atomic swap: release old unit, hold new unit, regenerate payment
+    // schedule against the new sale price, update the deal.
     const updated = await prisma.$transaction(async (tx) => {
       // Release old unit back to AVAILABLE
       await tx.unit.update({ where: { id: deal.unitId }, data: { status: "AVAILABLE", holdExpiresAt: null } });
@@ -511,20 +631,43 @@ router.patch("/:id/unit", async (req, res) => {
         },
       });
 
-      // Update deal: new unit + price from the new unit
+      // Drop the existing PENDING payment rows so the schedule can be
+      // regenerated against the new sale price. We already proved upstream
+      // that no row is PAID/PARTIAL/PDC_CLEARED/WAIVED.
+      await tx.payment.deleteMany({
+        where: { dealId: req.params.id, status: { in: ["PENDING", "CANCELLED", "PDC_PENDING", "PDC_BOUNCED", "OVERDUE"] } },
+      });
+
+      // Update deal: new unit + recomputed sale price
       return tx.deal.update({
         where: { id: req.params.id },
-        data:  { unitId, salePrice: newUnit.price },
-        include: { lead: true, unit: true },
+        data:  { unitId, salePrice: newSalePrice },
+        include: { lead: true, unit: true, paymentPlan: { include: { milestones: true } } },
       });
     });
 
+    // Regenerate payment schedule outside the swap transaction. generatePaymentSchedule
+    // uses its own $transaction; nesting would re-enter the prisma engine.
+    if (deal.paymentPlan?.milestones?.length) {
+      await generatePaymentSchedule(
+        deal.id,
+        deal.paymentPlan.milestones as any,
+        newSalePrice,
+        deal.dldFee,
+        deal.adminFee,
+        deal.reservationDate,
+        { dldPaidBy: deal.dldPaidBy as "BUYER" | "DEVELOPER", adminFeeWaived: deal.adminFeeWaived },
+      );
+    }
+
     // Audit activity
+    const priceDelta = newSalePrice - deal.salePrice;
+    const priceNote = priceDelta === 0 ? "" : ` (price ${priceDelta > 0 ? "+" : ""}AED ${priceDelta.toLocaleString()})`;
     await prisma.activity.create({
       data: {
         dealId:    req.params.id,
         type:      "NOTE",
-        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}`,
+        summary:   `Unit changed from ${deal.unit.unitNumber} to ${newUnit.unitNumber}${priceNote}. Payment schedule regenerated.`,
         createdBy: req.auth.userId,
       },
     });

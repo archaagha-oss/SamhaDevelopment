@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { validate } from "../middleware/validation";
 import { createLeadSchema, updateLeadSchema, logActivitySchema } from "../schemas/validation";
 import { prisma } from "../lib/prisma";
@@ -13,6 +14,8 @@ import {
   getPreference,
   type Channel,
 } from "../services/communicationPreferenceService";
+import { normalizePhone } from "../lib/phone";
+import { parseCsv, rowsToObjects } from "../lib/csv";
 
 const router = Router();
 
@@ -184,6 +187,229 @@ router.post("/", validate(createLeadSchema), async (req, res) => {
     });
   }
 });
+
+// ─── Bulk import leads from CSV ───────────────────────────────────────────────
+// POST /api/leads/import
+// multipart/form-data, field "file" — .csv, max 5 MB, capped at 1000 rows.
+// Columns (case-insensitive): firstName, lastName, phone, email, source,
+// assignedAgentEmail, notes. Each row is routed through the existing
+// createLead service so phone normalization, duplicate-phone, and stage-history
+// behaviour stay consistent with the manual create path. One bad row never
+// aborts the rest.
+
+const MAX_IMPORT_ROWS = 1000;
+const REQUIRED_HEADERS = ["firstName", "lastName", "phone", "source", "assignedAgentEmail"] as const;
+const OPTIONAL_HEADERS = ["email", "notes"] as const;
+const VALID_SOURCES = new Set(["DIRECT", "BROKER", "WEBSITE", "REFERRAL"]);
+
+const leadImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["text/csv", "application/vnd.ms-excel", "text/plain"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Invalid file type. Allowed: CSV (text/csv, application/vnd.ms-excel, text/plain)"));
+    }
+    cb(null, true);
+  },
+});
+
+interface ImportRowError {
+  row: number;
+  field?: string;
+  message: string;
+  existingId?: string;
+}
+
+/** Build a case-insensitive header → original-name map, so the CSV writer can
+ *  use "FirstName" or "firstname" interchangeably with the canonical names. */
+function buildHeaderMap(headers: string[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const h of headers) {
+    map[h.toLowerCase()] = h;
+  }
+  return map;
+}
+
+function pick(row: Record<string, string>, headerMap: Record<string, string>, key: string): string {
+  const actual = headerMap[key.toLowerCase()];
+  return actual ? (row[actual] ?? "").trim() : "";
+}
+
+router.post(
+  "/import",
+  (req, res, next) => {
+    leadImportUpload.single("file")(req, res, (err: any) => {
+      if (err) {
+        const isSize = err.code === "LIMIT_FILE_SIZE";
+        return res.status(400).json({
+          error: err.message || "File upload failed",
+          code: isSize ? "FILE_TOO_LARGE" : "UPLOAD_ERROR",
+          statusCode: 400,
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (!req.auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
+      }
+      if (!req.file) {
+        return res.status(400).json({
+          error: "No file provided. Upload a CSV under field name 'file'.",
+          code: "NO_FILE",
+          statusCode: 400,
+        });
+      }
+
+      let parsed;
+      try {
+        parsed = parseCsv(req.file.buffer.toString("utf8"));
+      } catch (err: any) {
+        return res.status(400).json({
+          error: `Malformed CSV: ${err?.message ?? "could not parse"}`,
+          code: "CSV_PARSE_ERROR",
+          statusCode: 400,
+        });
+      }
+
+      if (parsed.header.length === 0) {
+        return res.status(400).json({
+          error: "CSV is empty or missing a header row",
+          code: "CSV_EMPTY",
+          statusCode: 400,
+        });
+      }
+
+      const headerMap = buildHeaderMap(parsed.header);
+      const missing = REQUIRED_HEADERS.filter((h) => !(h.toLowerCase() in headerMap));
+      if (missing.length > 0) {
+        return res.status(400).json({
+          error: `Missing required column(s): ${missing.join(", ")}`,
+          code: "CSV_MISSING_COLUMNS",
+          statusCode: 400,
+        });
+      }
+
+      const objects = rowsToObjects(parsed);
+      if (objects.length === 0) {
+        return res.json({ imported: 0, skipped: 0, errors: [] });
+      }
+      if (objects.length > MAX_IMPORT_ROWS) {
+        return res.status(400).json({
+          error: `Too many rows: ${objects.length}. Maximum ${MAX_IMPORT_ROWS} per upload.`,
+          code: "CSV_TOO_MANY_ROWS",
+          statusCode: 400,
+        });
+      }
+
+      // Cache agent lookups so a 200-row upload assigning to two agents
+      // doesn't fire 200 DB queries.
+      const agentByEmail = new Map<string, { id: string } | null>();
+      async function resolveAgent(email: string): Promise<{ id: string } | null> {
+        const key = email.toLowerCase();
+        if (agentByEmail.has(key)) return agentByEmail.get(key)!;
+        const user = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+        agentByEmail.set(key, user ?? null);
+        return user ?? null;
+      }
+
+      let imported = 0;
+      let skipped = 0;
+      const errors: ImportRowError[] = [];
+
+      for (let i = 0; i < objects.length; i++) {
+        // Data row 0 = file row 2 (row 1 is the header).
+        const rowNum = i + 2;
+        const raw = objects[i];
+
+        const firstName          = pick(raw, headerMap, "firstName");
+        const lastName           = pick(raw, headerMap, "lastName");
+        const phone              = pick(raw, headerMap, "phone");
+        const email              = pick(raw, headerMap, "email");
+        const source             = pick(raw, headerMap, "source").toUpperCase();
+        const assignedAgentEmail = pick(raw, headerMap, "assignedAgentEmail");
+        const notes              = pick(raw, headerMap, "notes");
+
+        // Skip wholly blank rows silently (Excel often appends trailing empties).
+        if (!firstName && !lastName && !phone && !email && !source && !assignedAgentEmail) {
+          continue;
+        }
+
+        if (!firstName) {
+          skipped++;
+          errors.push({ row: rowNum, field: "firstName", message: "firstName is required" });
+          continue;
+        }
+        if (!lastName) {
+          skipped++;
+          errors.push({ row: rowNum, field: "lastName", message: "lastName is required" });
+          continue;
+        }
+        if (!phone) {
+          skipped++;
+          errors.push({ row: rowNum, field: "phone", message: "phone is required" });
+          continue;
+        }
+        if (!source) {
+          skipped++;
+          errors.push({ row: rowNum, field: "source", message: "source is required" });
+          continue;
+        }
+        if (!VALID_SOURCES.has(source)) {
+          skipped++;
+          errors.push({ row: rowNum, field: "source", message: `Unknown source "${source}". Allowed: DIRECT, BROKER, WEBSITE, REFERRAL` });
+          continue;
+        }
+        if (!assignedAgentEmail) {
+          skipped++;
+          errors.push({ row: rowNum, field: "assignedAgentEmail", message: "assignedAgentEmail is required" });
+          continue;
+        }
+
+        const agent = await resolveAgent(assignedAgentEmail);
+        if (!agent) {
+          skipped++;
+          errors.push({ row: rowNum, field: "assignedAgentEmail", message: `Agent not found: ${assignedAgentEmail}` });
+          continue;
+        }
+
+        try {
+          await createLead({
+            firstName,
+            lastName,
+            phone,
+            email: email || undefined,
+            source,
+            assignedAgentId: agent.id,
+            notes: notes || undefined,
+            createdBy: req.auth.userId,
+          });
+          imported++;
+        } catch (err: any) {
+          skipped++;
+          const message: string = err?.message || "Failed to create lead";
+          const field =
+            err?.code === "DUPLICATE_PHONE" || err?.code === "INVALID_PHONE" ? "phone" : undefined;
+          const entry: ImportRowError = { row: rowNum, message };
+          if (field) entry.field = field;
+          if (err?.existingId) entry.existingId = err.existingId;
+          errors.push(entry);
+        }
+      }
+
+      res.json({ imported, skipped, errors });
+    } catch (error: any) {
+      res.status(500).json({
+        error: error?.message || "Lead import failed",
+        code: "LEAD_IMPORT_ERROR",
+        statusCode: 500,
+      });
+    }
+  }
+);
 
 // ─── Update lead stage (state machine enforced) ───────────────────────────────
 
@@ -409,23 +635,34 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
       authorizedSignatory, sourceOfFunds,
       // KYC / AML profile fields (per-person)
       dateOfBirth, pepFlag, riskRating, occupation, residencyStatus,
+      // Arabic legal names (Phase 4a) — surfaced in the bilingual SPA.
+      firstNameAr, lastNameAr,
       // stage is intentionally excluded — use PATCH /:id/stage
     } = req.body;
 
-    // Duplicate phone check
-    if (phone) {
+    // Normalize phone to E.164 before the uniqueness check + write, so a
+    // raw-digit and a formatted variant of the same number collide rather
+    // than silently coexisting.
+    let normalizedPhone: string | undefined;
+    if (phone !== undefined) {
+      const e164 = normalizePhone(phone);
+      if (!e164) {
+        return res.status(400).json({ error: "Invalid phone number", code: "INVALID_PHONE", statusCode: 400 });
+      }
+      normalizedPhone = e164;
+
       const existing = await prisma.lead.findFirst({
-        where: { phone, NOT: { id: req.params.id } },
+        where: { phone: normalizedPhone, NOT: { id: req.params.id } },
       });
       if (existing) {
-        return res.status(409).json({ error: "Phone already in use by another lead", code: "DUPLICATE_PHONE", statusCode: 409 });
+        return res.status(409).json({ error: "Phone already in use by another lead", code: "DUPLICATE_PHONE", statusCode: 409, existingId: existing.id });
       }
     }
 
     const data: any = {};
     if (firstName        !== undefined) data.firstName        = firstName;
     if (lastName         !== undefined) data.lastName         = lastName;
-    if (phone            !== undefined) data.phone            = phone;
+    if (normalizedPhone  !== undefined) data.phone            = normalizedPhone;
     if (email            !== undefined) data.email            = email || null;
     if (nationality      !== undefined) data.nationality      = nationality || null;
     if (source           !== undefined) data.source           = source;
@@ -445,6 +682,8 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
     if (riskRating      !== undefined) data.riskRating      = riskRating || null;
     if (occupation      !== undefined) data.occupation      = occupation || null;
     if (residencyStatus !== undefined) data.residencyStatus = residencyStatus || null;
+    if (firstNameAr     !== undefined) data.firstNameAr     = firstNameAr || null;
+    if (lastNameAr      !== undefined) data.lastNameAr      = lastNameAr  || null;
 
     const lead = await prisma.lead.update({
       where: { id: req.params.id },

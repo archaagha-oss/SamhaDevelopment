@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { PageContainer, PageHeader } from "../components/layout";
 
 /**
  * Manager-facing leaderboard backed by GET /api/reports/agents/leaderboard.
@@ -69,41 +70,40 @@ export default function AgentLeaderboardPage() {
   });
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Agent Leaderboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Performance ranking across active sales staff. Window:{" "}
-            <span className="font-medium">last {days} days</span>.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <select
-            className="border rounded px-2 py-1 text-sm bg-background"
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            aria-label="Time window"
-          >
-            {WINDOWS.map((w) => (
-              <option key={w.days} value={w.days}>{w.label}</option>
-            ))}
-          </select>
-          <select
-            className="border rounded px-2 py-1 text-sm bg-background"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            aria-label="Sort by"
-          >
-            <option value="salesValueClosed">Sort: Sales value</option>
-            <option value="conversionRate">Sort: Conversion %</option>
-            <option value="dealsClosedInWindow">Sort: Deals closed</option>
-            <option value="activitiesInWindow">Sort: Activities</option>
-            <option value="newLeadsInWindow">Sort: New leads</option>
-          </select>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full bg-background">
+      <PageHeader
+        crumbs={[{ label: "Home", path: "/" }, { label: "Agent leaderboard" }]}
+        title="Agent leaderboard"
+        subtitle={`${data?.rows.length ?? 0} agents · last ${days} days`}
+        actions={(
+          <div className="flex gap-2">
+            <select
+              className="h-9 px-2.5 text-sm border border-input rounded-lg bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              aria-label="Time window"
+            >
+              {WINDOWS.map((w) => (
+                <option key={w.days} value={w.days}>{w.label}</option>
+              ))}
+            </select>
+            <select
+              className="h-9 px-2.5 text-sm border border-input rounded-lg bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Sort by"
+            >
+              <option value="salesValueClosed">Sort: Sales value</option>
+              <option value="conversionRate">Sort: Conversion %</option>
+              <option value="dealsClosedInWindow">Sort: Deals closed</option>
+              <option value="activitiesInWindow">Sort: Activities</option>
+              <option value="newLeadsInWindow">Sort: New leads</option>
+            </select>
+          </div>
+        )}
+      />
+      <div className="flex-1 overflow-auto">
+      <PageContainer padding="default" className="space-y-4">
       {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
       {isError && <div className="text-sm text-destructive">Failed to load leaderboard.</div>}
 
@@ -155,6 +155,8 @@ export default function AgentLeaderboardPage() {
         tracked directly today (Commission rows are broker-keyed); see
         LAUNCH_READINESS_AUDIT.md for follow-up.
       </p>
+      </PageContainer>
+      </div>
     </div>
   );
 }

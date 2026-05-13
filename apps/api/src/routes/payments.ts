@@ -94,9 +94,12 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Mark payment as paid — FINANCE or ADMIN only
+// Mark payment as paid — FINANCE or ADMIN only.
+// Idempotent so a double-click on flaky office Wi-Fi can't book the same
+// receipt twice or fire two PaymentAuditLog rows.
 router.patch(
   "/:id/paid",
+  idempotencyKey,
   requireFinanceAccess,
   validate(markPaymentPaidSchema),
   async (req, res) => {

@@ -359,6 +359,7 @@ enum NotificationType {
   OQOOD_DEADLINE
   DEAL_STAGE_CHANGED
   NEW_LEAD_ASSIGNED
+  LEAD_TASK_OVERDUE    // first-contact SLA breach (or any lead task)
   GENERAL
 }
 
@@ -393,7 +394,10 @@ model Organization {
 model Project {
   id            String        @id @default(cuid())
   name          String        @unique
+  // Arabic project name (Phase 4a). Optional — surfaces in the bilingual SPA.
+  nameAr        String?
   location      String
+  locationAr    String?
   description   String?       @db.Text
   totalUnits    Int
   totalFloors   Int?
@@ -412,6 +416,9 @@ model Project {
   commercialLicense String? // e.g. "958954"
   developerNumber   String? // RERA developer registration number (e.g. "2216")
   developerAddress  String?
+  // Arabic developer identity (Phase 4a) — used in bilingual SPA particulars.
+  developerNameAr    String?
+  developerAddressAr String?
   developerPhone    String?
   developerEmail    String?
   plotNumber        String? // e.g. "JVC10EMRH005"
@@ -438,11 +445,17 @@ model Project {
   statusHistory      ProjectStatusHistory[]
   updates            ProjectUpdate[]
 
+  // Soft-delete flag. Mirrors Document.softDeleted — hides project from list
+  // and detail reads but keeps the row so historical Unit/Lead/Deal references
+  // remain resolvable (a sold unit on a "deleted" project still renders).
+  softDeleted Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([organizationId])
+  @@index([softDeleted])
 }
 
 model ProjectImage {
@@ -719,6 +732,10 @@ model Lead {
   id          String  @id @default(cuid())
   firstName   String
   lastName    String
+  // Arabic legal names (Phase 4a). Optional — only required when the
+  // bilingual SPA is generated. Validation gate lives in Phase 4c.
+  firstNameAr String?
+  lastNameAr  String?
   phone       String  @unique
   email       String?
   nationality String?
@@ -912,6 +929,8 @@ model Notification {
 model BrokerCompany {
   id    String  @id @default(cuid())
   name  String
+  // Arabic company name (Phase 4a) — surfaces in bilingual SPA broker block.
+  nameAr String?
   email String?
   phone String?
 
@@ -959,6 +978,8 @@ model BrokerAgent {
   company   BrokerCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   name      String
+  // Arabic agent name (Phase 4a) — surfaces in bilingual SPA broker block.
+  nameAr    String?
   firstName String?
   lastName  String?
   email     String?

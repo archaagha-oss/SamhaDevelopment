@@ -36,6 +36,7 @@ interface BrokerAgent {
 interface BrokerCompany {
   id: string;
   name: string;
+  nameAr?: string | null;
   status?: "ACTIVE" | "INACTIVE" | "PENDING_APPROVAL";
   email?: string;
   phone?: string;
@@ -74,7 +75,7 @@ const SECTION_CLS = "border-t border-border pt-4 mt-4";
 const SECTION_TITLE_CLS = "text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3";
 
 const emptyCompanyForm = () => ({
-  name: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
+  name: "", nameAr: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
   reraLicenseNumber: "", reraLicenseExpiry: "", tradeLicenseNumber: "",
   tradeLicenseCopyUrl: "", vatCertificateNo: "", vatCertificateUrl: "",
   corporateTaxCertUrl: "", officeRegistrationNo: "", ornCertificateUrl: "",
@@ -85,7 +86,7 @@ const emptyCompanyForm = () => ({
 });
 
 const emptyAgentForm = () => ({
-  firstName: "", lastName: "", email: "", phone: "",
+  firstName: "", lastName: "", nameAr: "", email: "", phone: "",
   reraCardNumber: "", reraCardExpiry: "",
   eidNo: "", eidExpiry: "", eidFrontUrl: "", eidBackUrl: "",
   acceptedConsent: false,
@@ -217,6 +218,7 @@ export default function BrokerPage() {
     if (!selected) return;
     setEditForm({
       name: selected.name,
+      nameAr: (selected as any).nameAr ?? "",
       status: selected.status ?? "PENDING_APPROVAL",
       email: selected.email ?? "",
       phone: selected.phone ?? "",
@@ -339,6 +341,10 @@ export default function BrokerPage() {
         <div>
           <label className={LABEL_CLS}>Company Name *</label>
           <input required placeholder="Company Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div>
+          <label className={LABEL_CLS}>Company Name (Arabic)</label>
+          <input dir="rtl" lang="ar" placeholder="اسم الشركة" value={f.nameAr} onChange={(e) => setF({ ...f, nameAr: e.target.value })} className={INPUT_CLS} />
         </div>
         <div>
           <label className={LABEL_CLS}>Status</label>
@@ -486,7 +492,7 @@ export default function BrokerPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Brokers" }]}
         title="Brokers"
-        subtitle={`${companies.length} registered companies`}
+        subtitle={`${companies.length} brokers total`}
         actions={
           <>
             <Button variant="outline" asChild>
@@ -495,6 +501,30 @@ export default function BrokerPage() {
             <Button onClick={() => setShowForm(true)}>Add company</Button>
           </>
         }
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter brokers by status">
+            {(["ACTIVE", "PENDING_APPROVAL", "INACTIVE"] as const).map((s) => {
+              const active = statusFilter === s;
+              const c = getBrokerStatusColor(s);
+              const count = companies.filter((co) => (co.status || "PENDING_APPROVAL") === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(active ? "ALL" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${c.badge} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} aria-hidden="true" />
+                  {BROKER_STATUS_LABELS[s]}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <PageContainer padding="default" className="space-y-5">
@@ -504,17 +534,6 @@ export default function BrokerPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="text-sm border border-border rounded-lg px-3 py-1.5 w-60 focus:outline-none focus:border-ring bg-card"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:border-ring"
-          aria-label="Filter by status"
-        >
-          <option value="ALL">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="PENDING_APPROVAL">Pending Approval</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
       </div>
 
       {loading ? (
@@ -795,6 +814,17 @@ export default function BrokerPage() {
                     <label className={LABEL_CLS}>Last Name</label>
                     <input placeholder="Last Name" value={agentForm.lastName} onChange={(e) => setAgentForm({ ...agentForm, lastName: e.target.value })} className={INPUT_CLS} />
                   </div>
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Full Name (Arabic)</label>
+                  <input
+                    dir="rtl"
+                    lang="ar"
+                    placeholder="الاسم الكامل"
+                    value={agentForm.nameAr}
+                    onChange={(e) => setAgentForm({ ...agentForm, nameAr: e.target.value })}
+                    className={INPUT_CLS}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -236,6 +236,42 @@ export default function ExecutiveDashboard(): React.ReactNode {
   );
   if (!overview || !leadsReport || !collections) return null;
 
+  // Onboarding coaching — when the tenant has no projects yet, the KPI
+  // strip is a row of zeros and every chart is empty. Show a guided
+  // first-run card instead so a brand-new admin knows where to start.
+  if (projects.length === 0) {
+    return (
+      <PageContainer>
+        <PageHeader title="Welcome to Samha" subtitle="A few setup steps and the dashboard fills itself." />
+        <div className="bg-card border border-border rounded-2xl p-8 max-w-2xl">
+          <h3 className="text-lg font-semibold">Get started in 4 steps</h3>
+          <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
+            <li className="flex gap-3">
+              <span className="flex-none w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center">1</span>
+              <span><strong className="text-foreground">Create a project</strong> — the container for all units, leads, and deals.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-none w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-semibold flex items-center justify-center">2</span>
+              <span><strong className="text-foreground">Add units</strong> in bulk per floor, then release them so agents can see inventory.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-none w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-semibold flex items-center justify-center">3</span>
+              <span><strong className="text-foreground">Capture leads</strong> via the quick-add form or the inbound webhooks.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-none w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-semibold flex items-center justify-center">4</span>
+              <span><strong className="text-foreground">Create deals</strong> from a qualified lead — the dashboard tracks them through SPA, OQOOD, and handover.</span>
+            </li>
+          </ol>
+          <div className="mt-6 flex gap-3">
+            <Button onClick={() => navigate("/projects")}>Create your first project</Button>
+            <Button variant="outline" onClick={() => navigate("/leads")}>Skip to leads</Button>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   // ===== KPIs (top strip) =====
   const kpis = [
     {

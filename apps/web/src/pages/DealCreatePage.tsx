@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { extractApiError } from "@/lib/apiError";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { formatDirham } from "@/lib/money";
@@ -11,8 +12,21 @@ import { Button } from "@/components/ui/button";
 // DealCreatePage — 4-step wizard for creating a deal at /deals/new.
 // Replaces DealFormModal. Same logic, same step gating, just on a real route.
 //
-// Pre-select a lead via ?leadId=... — preserves the defaultLeadId behavior the
-// modal had via its prop, but works as a deep link from anywhere in the app.
+// Pre-select via URL params — works as a deep link from anywhere in the app:
+//   ?leadId=...   pre-selects the lead (e.g. from a lead profile).
+//   ?unitId=...   pre-selects the unit, derives the project, and auto-fills
+//                 the sale price from unit.price.
+//
+// Workflow shortcuts (Option A "smart wizard"):
+//   - Smart initial step: when prefill makes earlier steps complete, the
+//     wizard opens on the first INCOMPLETE step. ?leadId+?unitId lands on
+//     step 2 (Payment Plan).
+//   - Smart Next: clicking Next skips steps whose canAdvance gate is
+//     already satisfied, so a user picking a lead with unit prefilled
+//     jumps from step 0 -> step 2 in one click.
+//   - localStorage drafts: every state change writes to a single draft
+//     key; reload / accidental nav restores the in-progress wizard.
+//     Submit clears the draft.
 
 interface Lead    { id: string; firstName: string; lastName: string; phone: string }
 interface Project { id: string; name: string }
@@ -30,29 +44,83 @@ const fmtArea = (a: number) => `${a.toLocaleString()} sqft`;
 
 const dealsCrumbs = [{ label: "Home", path: "/" }, { label: "Deals", path: "/deals" }];
 
+// localStorage key for in-progress wizard state. Bump the version suffix if
+// the shape of WizardDraft changes so old drafts get discarded cleanly.
+const DRAFT_KEY = "samha.dealCreate.draft.v1";
+
+interface WizardDraft {
+  leadId: string;
+  projectId: string;
+  unitId: string;
+  salePrice: string;
+  discount: string;
+  paymentPlanId: string;
+  brokerCompanyId: string;
+  brokerAgentId: string;
+  commissionRateOverride: string;
+  adminFeeWaived: boolean;
+  adminFeeWaivedReason: string;
+  dldPaidBy: "BUYER" | "DEVELOPER";
+  dldWaivedReason: string;
+}
+
+function loadDraft(): Partial<WizardDraft> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearDraft() {
+  try { window.localStorage.removeItem(DRAFT_KEY); } catch {/* ignore */}
+}
+
 export default function DealCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultLeadId = searchParams.get("leadId") ?? "";
+  const defaultUnitId = searchParams.get("unitId") ?? "";
 
-  const [step, setStep] = useState(0);
+  // URL params take priority over saved drafts so a fresh "Create deal from
+  // unit X" deep-link always starts fresh on that unit.
+  const initial = (() => {
+    const draft = (defaultLeadId || defaultUnitId) ? null : loadDraft();
+    return draft ?? {};
+  })();
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [leadId,                 setLeadId]                 = useState(defaultLeadId);
+  const [leadId,                 setLeadId]                 = useState<string>(defaultLeadId || initial.leadId || "");
   const [leadSearch,             setLeadSearch]             = useState("");
-  const [projectId,              setProjectId]              = useState("");
-  const [unitId,                 setUnitId]                 = useState("");
-  const [salePrice,              setSalePrice]              = useState("");
-  const [discount,               setDiscount]               = useState("");
-  const [paymentPlanId,          setPaymentPlanId]          = useState("");
-  const [brokerCompanyId,        setBrokerCompanyId]        = useState("");
-  const [brokerAgentId,          setBrokerAgentId]          = useState("");
-  const [commissionRateOverride, setCommissionRateOverride] = useState("");
-  const [adminFeeWaived,         setAdminFeeWaived]         = useState(false);
-  const [adminFeeWaivedReason,   setAdminFeeWaivedReason]   = useState("");
-  const [dldPaidBy,              setDldPaidBy]              = useState<"BUYER" | "DEVELOPER">("BUYER");
-  const [dldWaivedReason,        setDldWaivedReason]        = useState("");
+  const [projectId,              setProjectId]              = useState<string>(initial.projectId || "");
+  const [unitId,                 setUnitId]                 = useState<string>(initial.unitId || "");
+  const [salePrice,              setSalePrice]              = useState<string>(initial.salePrice || "");
+  const [discount,               setDiscount]               = useState<string>(initial.discount || "");
+  const [paymentPlanId,          setPaymentPlanId]          = useState<string>(initial.paymentPlanId || "");
+  const [brokerCompanyId,        setBrokerCompanyId]        = useState<string>(initial.brokerCompanyId || "");
+  const [brokerAgentId,          setBrokerAgentId]          = useState<string>(initial.brokerAgentId || "");
+  const [commissionRateOverride, setCommissionRateOverride] = useState<string>(initial.commissionRateOverride || "");
+  const [adminFeeWaived,         setAdminFeeWaived]         = useState<boolean>(initial.adminFeeWaived ?? false);
+  const [adminFeeWaivedReason,   setAdminFeeWaivedReason]   = useState<string>(initial.adminFeeWaivedReason || "");
+  const [dldPaidBy,              setDldPaidBy]              = useState<"BUYER" | "DEVELOPER">((initial.dldPaidBy as "BUYER" | "DEVELOPER") || "BUYER");
+  const [dldWaivedReason,        setDldWaivedReason]        = useState<string>(initial.dldWaivedReason || "");
+
+  const restoredFromDraft = !!(initial && Object.keys(initial).length > 0);
+  const [draftBannerOpen, setDraftBannerOpen] = useState<boolean>(restoredFromDraft);
+
+  // Smart initial step — open on the first step whose data isn't yet valid.
+  // ?leadId+?unitId -> step 2 (Payment Plan). Draft with everything filled
+  // through step 2 -> step 3 (Broker review).
+  const [step, setStep] = useState<number>(() => {
+    const hasLead = !!(defaultLeadId || initial.leadId);
+    const hasUnit = !!(defaultUnitId || initial.unitId) && parseFloat(initial.salePrice || "0") > 0;
+    const hasPlan = !!initial.paymentPlanId;
+    if (hasLead && hasUnit && hasPlan) return 3;
+    if (hasLead && hasUnit)            return 2;
+    if (hasLead)                       return 1;
+    return 0;
+  });
 
   const [leads,           setLeads]           = useState<Lead[]>([]);
   const [projects,        setProjects]        = useState<Project[]>([]);
@@ -60,6 +128,12 @@ export default function DealCreatePage() {
   const [paymentPlans,    setPaymentPlans]    = useState<PaymentPlan[]>([]);
   const [brokerCompanies, setBrokerCompanies] = useState<BrokerCompany[]>([]);
   const [loadingUnits,    setLoadingUnits]    = useState(false);
+
+  // When ?unitId= points at a unit that isn't in the AVAILABLE list (the
+  // /api/units fetch is filtered to AVAILABLE), the unit picker will never
+  // show it as selected. Stash the prefetched data so step 1 can still
+  // confirm "you came in with this unit selected".
+  const [prefilledUnit, setPrefilledUnit] = useState<Unit | null>(null);
 
   const firstFieldRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
@@ -70,6 +144,29 @@ export default function DealCreatePage() {
     axios.get("/api/brokers/companies").then((r) => setBrokerCompanies(r.data || [])).catch(() => {});
   }, []);
 
+  // Prefill from ?unitId= — fetch the unit, derive the project, set the
+  // sale price. The units list effect below picks up the projectId change
+  // and loads the project's available units (which will include this one
+  // when AVAILABLE), so the unit picker shows it selected. If the unit
+  // isn't AVAILABLE, we still stash it in prefilledUnit so step 1 can
+  // confirm the selection without depending on the picker.
+  useEffect(() => {
+    if (!defaultUnitId) return;
+    axios.get(`/api/units/${defaultUnitId}`)
+      .then((r) => {
+        const u = r.data?.data ?? r.data;
+        if (!u) return;
+        setPrefilledUnit(u as Unit);
+        if (u.projectId) setProjectId(u.projectId);
+        setUnitId(defaultUnitId);
+        if (u.price) setSalePrice(String(u.price));
+      })
+      .catch(() => {
+        // Unit not found — leave defaults so the user can pick another.
+        // No toast: this is a soft prefill.
+      });
+  }, [defaultUnitId]);
+
   useEffect(() => {
     if (!projectId) { setUnits([]); setUnitId(""); return; }
     setLoadingUnits(true);
@@ -79,7 +176,12 @@ export default function DealCreatePage() {
       .finally(() => setLoadingUnits(false));
   }, [projectId]);
 
-  const selectedUnit = units.find((u) => u.id === unitId);
+  // selectedUnit prefers the AVAILABLE list (fresh data), falls back to the
+  // prefilledUnit so the summary keeps working even when the unit isn't
+  // AVAILABLE anymore (e.g. URL points at a now-RESERVED unit).
+  const selectedUnit =
+    units.find((u) => u.id === unitId) ||
+    (prefilledUnit?.id === unitId ? prefilledUnit : null);
   useEffect(() => {
     if (selectedUnit && !salePrice) setSalePrice(String(selectedUnit.price));
   }, [selectedUnit]);
@@ -88,7 +190,14 @@ export default function DealCreatePage() {
   const selectedPlan    = paymentPlans.find((p) => p.id === paymentPlanId);
   const selectedCompany = brokerCompanies.find((c) => c.id === brokerCompanyId);
   const brokerAgents    = selectedCompany?.agents ?? [];
-  const netPrice        = (parseFloat(salePrice) || 0) - (parseFloat(discount) || 0);
+
+  // Clamp discount to salePrice so net never goes negative — the input
+  // accepts any number, but downstream calculations and the summary use
+  // the clamped value.
+  const salePriceNum  = parseFloat(salePrice) || 0;
+  const discountNum   = Math.max(0, Math.min(parseFloat(discount) || 0, salePriceNum));
+  const discountOver  = (parseFloat(discount) || 0) > salePriceNum && salePriceNum > 0;
+  const netPrice      = salePriceNum - discountNum;
 
   const filteredLeads = leads.filter((l) => {
     if (!leadSearch) return true;
@@ -103,6 +212,51 @@ export default function DealCreatePage() {
     true,
   ];
 
+  // Persist every state change as a draft. Reload / accidental nav restores.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const draft: WizardDraft = {
+      leadId, projectId, unitId, salePrice, discount,
+      paymentPlanId, brokerCompanyId, brokerAgentId,
+      commissionRateOverride, adminFeeWaived, adminFeeWaivedReason,
+      dldPaidBy, dldWaivedReason,
+    };
+    try { window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {/* ignore */}
+  }, [
+    leadId, projectId, unitId, salePrice, discount,
+    paymentPlanId, brokerCompanyId, brokerAgentId,
+    commissionRateOverride, adminFeeWaived, adminFeeWaivedReason,
+    dldPaidBy, dldWaivedReason,
+  ]);
+
+  // Smart "Next →" — skip over steps whose canAdvance gate is already
+  // satisfied. Lets a user with ?leadId+?unitId prefilled jump from the
+  // Lead step straight to Payment Plan in a single click.
+  const smartNext = () => {
+    let next = step + 1;
+    while (next < STEPS.length - 1 && canAdvance[next]) next++;
+    setStep(Math.min(next, STEPS.length - 1));
+  };
+
+  const discardDraft = () => {
+    clearDraft();
+    setDraftBannerOpen(false);
+    setLeadId(defaultLeadId);
+    setProjectId("");
+    setUnitId(defaultUnitId);
+    setSalePrice("");
+    setDiscount("");
+    setPaymentPlanId("");
+    setBrokerCompanyId("");
+    setBrokerAgentId("");
+    setCommissionRateOverride("");
+    setAdminFeeWaived(false);
+    setAdminFeeWaivedReason("");
+    setDldPaidBy("BUYER");
+    setDldWaivedReason("");
+    setStep(defaultLeadId && defaultUnitId ? 2 : defaultLeadId ? 1 : 0);
+  };
+
   async function submit() {
     setError(null);
     setSubmitting(true);
@@ -110,8 +264,8 @@ export default function DealCreatePage() {
       const r = await axios.post("/api/deals", {
         leadId,
         unitId,
-        salePrice:              parseFloat(salePrice),
-        discount:               parseFloat(discount) || 0,
+        salePrice:              salePriceNum,
+        discount:               discountNum,
         paymentPlanId,
         brokerCompanyId:        brokerCompanyId || undefined,
         brokerAgentId:          brokerAgentId || undefined,
@@ -122,10 +276,11 @@ export default function DealCreatePage() {
         dldWaivedReason:        dldPaidBy === "DEVELOPER" ? dldWaivedReason || undefined : undefined,
       });
       const newId = r.data?.id;
+      clearDraft();
       toast.success("Deal created");
       navigate(newId ? `/deals/${newId}` : "/deals");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to create deal");
+      setError(extractApiError(err, "Failed to create deal"));
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +304,7 @@ export default function DealCreatePage() {
           {step < STEPS.length - 1 ? (
             <Button
               type="button"
-              onClick={() => setStep((s) => s + 1)}
+              onClick={smartNext}
               disabled={!canAdvance[step]}
             >
               Next →
@@ -172,23 +327,33 @@ export default function DealCreatePage() {
             {STEPS.map((label, i) => {
               const done    = i < step;
               const current = i === step;
+              // Forward jumps are allowed as long as every step before the
+              // target one is valid (canAdvance gates). Backward jumps to
+              // any completed step always work. Disabled otherwise.
+              const reachable = i === step
+                ? true
+                : i < step
+                  ? true
+                  : canAdvance.slice(0, i).every(Boolean);
               return (
                 <div key={i} className="flex items-center flex-1 last:flex-none">
                   <button
                     type="button"
-                    onClick={() => done && setStep(i)}
-                    disabled={!done}
+                    onClick={() => reachable && setStep(i)}
+                    disabled={!reachable}
+                    aria-current={current ? "step" : undefined}
                     className="flex flex-col items-center gap-1 group disabled:cursor-default"
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border-2 ${
                       done    ? "bg-primary border-primary text-primary-foreground" :
                       current ? "bg-background border-primary text-primary" :
-                                "bg-muted border-border text-muted-foreground"
+                      reachable ? "bg-background border-primary/40 text-primary group-hover:border-primary" :
+                                  "bg-muted border-border text-muted-foreground"
                     }`}>
                       {done ? <Check className="size-4" /> : i + 1}
                     </div>
                     <span className={`text-[10px] font-semibold whitespace-nowrap ${
-                      current ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"
+                      current ? "text-primary" : done ? "text-primary/70" : reachable ? "text-primary/60" : "text-muted-foreground"
                     }`}>
                       {label}
                     </span>
@@ -204,6 +369,31 @@ export default function DealCreatePage() {
       }
       main={
         <>
+          {/* Draft-restored banner — only shown when the wizard mounted with
+              state restored from localStorage (no URL-supplied IDs). Lets
+              the operator discard mid-flow work if they want a clean slate. */}
+          {draftBannerOpen && (
+            <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
+              <span className="text-info-soft-foreground">
+                Restored your draft from earlier. Pick up where you left off, or start fresh.
+              </span>
+              <button
+                type="button"
+                onClick={() => setDraftBannerOpen(false)}
+                className="ml-auto text-xs text-primary hover:underline"
+              >
+                Keep draft
+              </button>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-xs text-destructive hover:underline"
+              >
+                Start fresh
+              </button>
+            </div>
+          )}
+
           {/* Step 0 — Lead */}
           {step === 0 && (
             <div className="bg-card rounded-xl border border-border p-5 space-y-4">
@@ -225,7 +415,16 @@ export default function DealCreatePage() {
               </div>
               <div className="border border-border rounded-xl overflow-hidden max-h-72 overflow-y-auto">
                 {filteredLeads.length === 0 ? (
-                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">No leads found</p>
+                  <div className="px-4 py-8 text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {leads.length === 0 ? "No leads in the system yet" : "No leads match your search"}
+                    </p>
+                    {leads.length === 0 && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => navigate("/leads")}>
+                        Go to Leads → create one
+                      </Button>
+                    )}
+                  </div>
                 ) : filteredLeads.map((l) => (
                   <button
                     key={l.id}
@@ -270,6 +469,35 @@ export default function DealCreatePage() {
                 <p className="text-sm font-semibold text-foreground mb-1">Which unit?</p>
                 <p className="text-xs text-muted-foreground">Select a project, then pick an available unit.</p>
               </div>
+
+              {/* If we arrived via ?unitId=X and the unit isn't AVAILABLE,
+                  the picker would render empty without confirming the
+                  selection. Show a compact "pre-selected" card so the
+                  operator can see what they came in with. */}
+              {prefilledUnit && unitId === prefilledUnit.id && !units.some((u) => u.id === prefilledUnit.id) && (
+                <div className="bg-info-soft border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {prefilledUnit.unitNumber}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-info-soft-foreground">
+                      Pre-selected: Unit {prefilledUnit.unitNumber}
+                      <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-soft text-warning">
+                        Not in AVAILABLE list
+                      </span>
+                    </p>
+                    <p className="text-xs text-primary">
+                      {prefilledUnit.type.replace(/_/g, " ")} · Floor {prefilledUnit.floor} · {formatDirham(prefilledUnit.price)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setUnitId(""); setSalePrice(""); }}
+                    className="text-primary hover:text-primary/80 text-lg leading-none flex-shrink-0"
+                    aria-label="Clear pre-selected unit"
+                  >×</button>
+                </div>
+              )}
               <div>
                 <label className={lbl}>Project</label>
                 <select
@@ -349,23 +577,28 @@ export default function DealCreatePage() {
                       onChange={(e) => setDiscount(e.target.value)}
                       className={inp}
                     />
+                    {discountOver && (
+                      <p className="text-xs text-destructive mt-1">
+                        Discount can't exceed the sale price. Capped at {formatDirham(salePriceNum)}.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {unitId && parseFloat(salePrice) > 0 && (
+              {unitId && salePriceNum > 0 && (
                 <div className="bg-muted/50 border border-border rounded-xl px-4 py-3 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Sale Price</p>
-                    <p className="font-bold text-foreground tabular-nums">{formatDirham(parseFloat(salePrice) || 0)}</p>
+                    <p className="font-bold text-foreground tabular-nums">{formatDirham(salePriceNum)}</p>
                   </div>
-                  {parseFloat(discount) > 0 && (
+                  {discountNum > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Discount</p>
-                      <p className="font-bold text-success tabular-nums">− {formatDirham(parseFloat(discount) || 0)}</p>
+                      <p className="font-bold text-success tabular-nums">− {formatDirham(discountNum)}</p>
                     </div>
                   )}
-                  <div className={parseFloat(discount) > 0 ? "" : "col-span-2"}>
+                  <div className={discountNum > 0 ? "" : "col-span-2"}>
                     <p className="text-xs text-muted-foreground mb-0.5">Net Price</p>
                     <p className="font-bold text-primary text-base tabular-nums">{formatDirham(netPrice)}</p>
                   </div>

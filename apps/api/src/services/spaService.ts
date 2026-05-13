@@ -27,12 +27,16 @@ export interface SpaSnapshot {
   project: {
     id: string;
     name: string;
+    nameAr: string | null;
     location: string;
+    locationAr: string | null;
     description: string | null;
     handoverDate: string;
     commercialLicense: string | null;
     developerNumber: string | null;
     developerAddress: string | null;
+    developerAddressAr: string | null;
+    developerNameAr: string | null;
     developerPhone: string | null;
     developerEmail: string | null;
     plotNumber: string | null;
@@ -59,6 +63,10 @@ export interface SpaSnapshot {
   };
   purchasers: Array<{
     name: string;
+    // Arabic legal name composed from Lead.firstNameAr + Lead.lastNameAr.
+    // Null when either part is missing — the bilingual template falls back
+    // to "—" and the preview route reports it in `missingArabic`.
+    nameAr: string | null;
     ownershipPercentage: number;
     address: string | null;
     phone: string | null;
@@ -171,9 +179,19 @@ export async function buildSpaSnapshot(dealId: string): Promise<SpaSnapshot> {
 
   // Purchaser list: prefer DealPurchaser rows. Fall back to deal.lead so the
   // SPA always renders something even before joint-purchaser data is captured.
+  // Compose the Arabic full name only when both parts are present — a partial
+  // Arabic name renders worse than no name at all in legal documents.
+  const leadNameAr =
+    deal.lead.firstNameAr && deal.lead.lastNameAr
+      ? `${deal.lead.firstNameAr} ${deal.lead.lastNameAr}`
+      : null;
+
   const purchasers = deal.purchasers.length
     ? deal.purchasers.map((p) => ({
         name: p.name,
+        // DealPurchaser doesn't carry an Arabic name yet; surface the lead's
+        // Arabic name on the primary purchaser as the best-effort fallback.
+        nameAr: p.isPrimary ? leadNameAr : null,
         ownershipPercentage: p.ownershipPercentage,
         address: p.address,
         phone: p.phone,
@@ -189,6 +207,7 @@ export async function buildSpaSnapshot(dealId: string): Promise<SpaSnapshot> {
     : [
         {
           name: `${deal.lead.firstName} ${deal.lead.lastName}`,
+          nameAr: leadNameAr,
           ownershipPercentage: 100,
           address: deal.lead.address,
           phone: deal.lead.phone,
@@ -236,12 +255,16 @@ export async function buildSpaSnapshot(dealId: string): Promise<SpaSnapshot> {
     project: {
       id: project.id,
       name: project.name,
+      nameAr: project.nameAr,
       location: project.location,
+      locationAr: project.locationAr,
       description: project.description,
       handoverDate: project.handoverDate.toISOString(),
       commercialLicense: project.commercialLicense,
       developerNumber: project.developerNumber,
       developerAddress: project.developerAddress,
+      developerAddressAr: project.developerAddressAr,
+      developerNameAr: project.developerNameAr,
       developerPhone: project.developerPhone,
       developerEmail: project.developerEmail,
       plotNumber: project.plotNumber,

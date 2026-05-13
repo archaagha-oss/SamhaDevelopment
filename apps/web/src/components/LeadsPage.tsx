@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatDirham } from "@/lib/money";
+import { extractApiError } from "@/lib/apiError";
 import { useAgents } from "../hooks/useAgents";
 import QuickLeadModal from "./QuickLeadModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -127,7 +128,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
         setAllLeads(Array.isArray(data) ? data : []);
         setTotal(r.data.pagination?.total ?? (Array.isArray(data) ? data.length : 0));
       })
-      .catch((err) => setError(err.response?.data?.error || "Failed to load leads"))
+      .catch((err) => setError(extractApiError(err, "Failed to load leads")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -166,7 +167,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       fetchLeads(search, stageFilter);
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to delete lead");
+      toast.error(extractApiError(err, "Failed to delete lead"));
     }
   };
 
@@ -245,7 +246,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
     } catch (err: any) {
       // Rollback
       setAllLeads((prev) => prev.map((l) => l.id === id ? { ...l, stage: lead.stage } : l));
-      toast.error(err.response?.data?.error || "Failed to change stage");
+      toast.error(extractApiError(err, "Failed to change stage"));
     }
   };
 
@@ -272,7 +273,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       clearSelection();
       fetchLeads(search, stageFilter);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Bulk reassign failed");
+      toast.error(extractApiError(err, "Bulk reassign failed"));
     } finally {
       setBulkBusy(false);
     }
@@ -287,7 +288,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       clearSelection();
       fetchLeads(search, stageFilter);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Bulk stage change failed");
+      toast.error(extractApiError(err, "Bulk stage change failed"));
     } finally {
       setBulkBusy(false);
     }
@@ -301,7 +302,7 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
       clearSelection();
       fetchLeads(search, stageFilter);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Bulk delete failed");
+      toast.error(extractApiError(err, "Bulk delete failed"));
     } finally {
       setBulkBusy(false);
     }
@@ -760,9 +761,14 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
     <div className="flex flex-col h-full bg-background">
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Leads" }]}
-        title="Leads Pipeline"
+        title="Leads"
         subtitle={`${total} leads total`}
-        actions={<Button onClick={() => setShowForm(true)}>Create lead</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/leads/import")}>Import CSV</Button>
+            <Button onClick={() => setShowForm(true)}>Create lead</Button>
+          </div>
+        }
         tabs={stageTabs}
       />
 

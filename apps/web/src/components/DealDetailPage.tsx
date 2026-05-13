@@ -22,6 +22,7 @@ import {
   Circle,
 } from "lucide-react";
 import { formatArea } from "../utils/formatArea";
+import { useCurrentRole } from "../hooks/useCurrentUser";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DocumentBrowser from "./DocumentBrowser";
 import DealPurchasersModal from "./DealPurchasersModal";
@@ -32,7 +33,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MoreHorizontal, Trash2, StickyNote, FileSignature, Users } from "lucide-react";
+import { MoreHorizontal, Trash2, StickyNote, FileSignature, Users, Mail, MessageCircle } from "lucide-react";
 import NextStepCard from "@/components/ui/NextStepCard";
 import { StageBadge } from "@/components/ui/stage-badge";
 import DealTimeline from "./DealTimeline";
@@ -118,6 +119,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const dealId = dealIdProp ?? params.dealId ?? "";
   const handleBack = onBack ?? (() => navigate("/deals"));
   const handoverEnabled = useFeatureFlag("handoverChecklist");
+
+  // Role-based gating. Server still enforces all of these via
+  // requireFinanceAccess + role-checked routes; hiding here keeps
+  // VIEWER / MEMBER users from clicking buttons that would only
+  // 403 them.
+  const role = useCurrentRole();
+  const canWrite        = role === "ADMIN" || role === "MANAGER" || role === "MEMBER";
+  const canFinance      = role === "ADMIN" || role === "MANAGER";
+  const canCancelDeal   = canFinance; // cancelling releases inventory + forfeits commission
+  const canChangeStage  = canWrite;
+  const canChangeUnit   = canWrite;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -280,7 +292,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
   const [showPdcModal, setShowPdcModal] = useState<string | null>(null);
   const [pdcForm, setPdcForm] = useState({ pdcNumber: "", pdcBank: "", pdcDate: "" });
   const [stageRequirements, setStageRequirements] = useState<Array<{ documentType: string; label: string; required: boolean; uploaded: boolean }>>([]);
-  const [activeTab, setActiveTab] = useState<"timeline" | "payments" | "history" | "activity" | "tasks">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "payments" | "documents" | "history" | "activity" | "tasks">("timeline");
   const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -482,13 +494,19 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
     if (!deal || !cancelReason.trim()) return;
     setCancelling(true);
     try {
-      await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: "CANCELLED", reason: cancelReason });
+      // API only allows DELETE on RESERVATION_PENDING or CANCELLED; cancel
+      // first if we're past that, so the reason is captured in stage history
+      // before the deal is removed. Lead is on a separate table — preserved.
+      if (deal.stage !== "RESERVATION_PENDING" && deal.stage !== "CANCELLED") {
+        await axios.patch(`/api/deals/${deal.id}/stage`, { newStage: "CANCELLED", reason: cancelReason });
+      }
+      await axios.delete(`/api/deals/${deal.id}`);
+      toast.success("Deal deleted. Lead preserved.");
       setShowCancelModal(false);
       setCancelReason("");
-      loadDeal();
+      navigate(`/leads/${deal.lead.id}`);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to cancel deal");
-    } finally {
+      toast.error(err.response?.data?.error || "Failed to delete deal");
       setCancelling(false);
     }
   };
@@ -797,7 +815,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       ]}
       title={`${deal.lead.firstName} ${deal.lead.lastName}`}
       subtitle={(
-        <span className="inline-flex items-center gap-2 flex-wrap text-xs">
+        <span className="inline-flex items-center gap-2 flex-wrap">
           <button
             onClick={copyDealId}
             className="inline-flex items-center gap-1 font-mono text-muted-foreground hover:text-foreground"
@@ -806,26 +824,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             {deal.dealNumber}
             {copiedDealId ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
           </button>
-          <span className="text-muted-foreground/50">·</span>
-          <span className="tabular-nums text-muted-foreground">{deal.lead.phone}</span>
           <StageBadge kind="deal" stage={deal.stage} />
-          {deal.reservationDate && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span className="text-muted-foreground">Reserved {fmtDate(deal.reservationDate)}</span>
-            </>
-          )}
-          {deal.paymentPlan && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span className="text-muted-foreground">Plan: <span className="font-medium text-foreground">{deal.paymentPlan.name}</span></span>
-            </>
-          )}
         </span>
       )}
       actions={(
         <>
-          {renderPrimaryCTA("px-4 py-1.5 text-sm font-bold rounded-lg shadow-sm")}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -849,19 +852,19 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <ClipboardList className="size-3.5 mr-2" /> Handover…
                 </DropdownMenuItem>
               )}
-              {validNext.length > 0 && (
+              {validNext.length > 0 && canChangeStage && (
                 <DropdownMenuItem onClick={() => setShowStageSelect(true)}>
                   <FileSignature className="size-3.5 mr-2" /> Change stage…
                 </DropdownMenuItem>
               )}
-              {!terminal && (
+              {canCancelDeal && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => setShowCancelModal(true)}
                     className="text-destructive focus:text-destructive"
                   >
-                    <Trash2 className="size-3.5 mr-2" /> Cancel deal
+                    <Trash2 className="size-3.5 mr-2" /> Delete deal
                   </DropdownMenuItem>
                 </>
               )}
@@ -871,8 +874,8 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       mobileBottomBar={renderPrimaryCTA("w-full py-2.5 rounded-lg text-sm font-bold")}
       tabs={(
-        <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-thin" role="tablist">
-          {(["timeline", "payments", "activity", "history"] as const).map((tab) => (
+        <div className="border-b border-border flex items-center gap-1 overflow-x-auto scrollbar-thin" role="tablist">
+          {(["timeline", "payments", "documents", "activity", "tasks", "history"] as const).map((tab) => (
             <button
               key={tab}
               role="tab"
@@ -884,7 +887,17 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab === "timeline" ? "Timeline" : tab === "payments" ? "Payments" : tab === "activity" ? "Activity" : "History"}
+              {tab === "timeline"
+                ? "Timeline"
+                : tab === "payments"
+                  ? "Payments"
+                  : tab === "documents"
+                    ? "Documents"
+                    : tab === "activity"
+                      ? "Activity"
+                      : tab === "tasks"
+                        ? "Tasks"
+                        : "History"}
             </button>
           ))}
         </div>
@@ -951,11 +964,12 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           )}
 
           {/* ── Unit Selection ──────────────────────────────────────────────── */}
-          {/* S5 — promoted with accent border */}
+          {/* S5 — promoted with accent border. Lives inside Timeline tab. */}
+          {activeTab === "timeline" && (
           <div className="bg-card rounded-xl border-l-4 border-l-primary border-r border-y border-border p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Unit</h3>
-              {deal.stage === "RESERVATION_PENDING" ? (
+              {(["RESERVATION_PENDING","RESERVATION_CONFIRMED","SPA_PENDING","SPA_SENT"].includes(deal.stage) && canChangeUnit) ? (
                 <button
                   onClick={() => showChangeUnit ? setShowChangeUnit(false) : openChangeUnit()}
                   className="text-xs text-primary font-semibold hover:underline"
@@ -1041,10 +1055,11 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               </div>
             )}
           </div>
+          )}
 
           {/* Documents — versioned Sales Offer list + supporting docs */}
-          {/* Section order: Buyer → Unit → Documents → Notes → Tabs (per spec 8.3) */}
-          {(() => {
+          {/* Lives inside Documents tab. */}
+          {activeTab === "documents" && (() => {
             const latestVersion = salesOfferDocs[0]?.version ?? 0;
             const hasExisting   = salesOfferDocs.length > 0;
 
@@ -1201,49 +1216,54 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
             </div>
           )}
 
-          {/* ── Internal notes — collapsed by default (S3) ───────────────────── */}
-          {showNotes || (notesValue && notesValue.trim().length > 0) ? (
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal notes</h3>
-                <div className="flex items-center gap-2">
-                  {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
-                  <button onClick={() => setShowNotes(false)} className="text-xs text-muted-foreground hover:text-foreground">Hide</button>
+          {/* ── Internal notes — collapsed by default. Lives inside Timeline tab. */}
+          {activeTab === "timeline" && (
+            showNotes || (notesValue && notesValue.trim().length > 0) ? (
+              <div className="bg-card rounded-xl border border-border p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Internal notes</h3>
+                  <div className="flex items-center gap-2">
+                    {notesSaved && <span className="text-xs text-success font-medium inline-flex items-center gap-1">Saved <Check className="size-3" /></span>}
+                    <button onClick={() => setShowNotes(false)} className="text-xs text-muted-foreground hover:text-foreground">Hide</button>
+                  </div>
                 </div>
+                <textarea
+                  rows={3}
+                  value={notesValue ?? ""}
+                  onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
+                  placeholder="Internal deal notes…"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
+                />
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="mt-2 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {savingNotes ? "Saving…" : "Save notes"}
+                </button>
               </div>
-              <textarea
-                rows={3}
-                value={notesValue ?? ""}
-                onChange={(e) => { setNotesValue(e.target.value); setNotesSaved(false); }}
-                placeholder="Internal deal notes…"
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 focus:outline-none focus:border-ring resize-none"
-              />
+            ) : (
               <button
-                onClick={handleSaveNotes}
-                disabled={savingNotes}
-                className="mt-2 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                onClick={() => setShowNotes(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                {savingNotes ? "Saving…" : "Save notes"}
+                <Pencil className="size-3.5" /> Add internal notes
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowNotes(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              <Pencil className="size-3.5" /> Add internal notes
-            </button>
+            )
           )}
 
-          {/* Uploaded documents browser */}
-          <DocumentBrowser
-            key={documentKey}
-            dealId={dealId}
-            onUpload={() => setShowDocumentUploadModal(true)}
-          />
+          {/* Uploaded documents browser — lives inside Documents tab. */}
+          {activeTab === "documents" && (
+            <DocumentBrowser
+              key={documentKey}
+              dealId={dealId}
+              onUpload={() => setShowDocumentUploadModal(true)}
+            />
+          )}
 
-          {/* SPA compliance — late fees, disposal, delay compensation, LD */}
-          {dealId && <DealSpaCompliancePanel dealId={dealId} />}
+          {/* SPA compliance — late fees, disposal, delay compensation, LD.
+              Lives inside Documents tab. */}
+          {activeTab === "documents" && dealId && <DealSpaCompliancePanel dealId={dealId} />}
 
           {/* Tab content panel — tab bar lives in PageHeader now (S6) */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -1704,12 +1724,10 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
       )}
       aside={(
         <>
-          {/* NextStepCard — single source of truth for stage transitions.
-              Merges what was previously "Deal Status" + "Next Stage Checklist"
-              + "Change Stage popover" (UX_AUDIT_2 M1+S2+S4). */}
+          {/* Stage advance — single source of truth for stage transitions
+              (UX_AUDIT_2 M1+S2+S4). */}
           {!terminal && validNext.length > 0 && (
             <NextStepCard
-              className="hidden lg:block"
               label={`Move to ${validNext[0].replace(/_/g, " ")}`}
               description={
                 stageRequirements.length > 0 && stageRequirements.some((r) => !r.uploaded)
@@ -1724,6 +1742,149 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   : undefined
               }
             />
+          )}
+
+          {/* Contact buyer — Call / WhatsApp / Email shortcuts. */}
+          {(deal.lead.phone || deal.lead.email) && (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact buyer</h3>
+                <p className="text-sm font-semibold text-foreground mt-1">{deal.lead.firstName} {deal.lead.lastName}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {deal.lead.phone && (
+                  <a
+                    href={`tel:${deal.lead.phone}`}
+                    className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+                    title={`Call ${deal.lead.phone}`}
+                  >
+                    <Phone className="size-3.5" /><span>Call</span>
+                  </a>
+                )}
+                {deal.lead.phone && (
+                  <a
+                    href={`https://wa.me/${deal.lead.phone.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-2 text-xs font-semibold border border-success/30 text-success rounded-lg hover:bg-success-soft inline-flex items-center justify-center gap-1.5"
+                  >
+                    <MessageCircle className="size-3.5" /><span>WhatsApp</span>
+                  </a>
+                )}
+                {deal.lead.email && (
+                  <a
+                    href={`mailto:${deal.lead.email}`}
+                    className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+                  >
+                    <Mail className="size-3.5" /><span>Email</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick log — note / activity / task. */}
+          <div className="bg-card rounded-xl border border-border p-4 space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick log</h3>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => setShowQuickNote(true)}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <StickyNote className="size-3.5" /><span>Note</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("activity"); setShowActivityForm(true); }}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <FileText className="size-3.5" /><span>Activity</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("tasks"); setShowAddTaskForm(true); }}
+                className="px-2 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center justify-center gap-1.5"
+              >
+                <ClipboardList className="size-3.5" /><span>Task</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Document shortcuts — generate / manage purchasers. */}
+          {deal.stage !== "CANCELLED" && (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Documents</h3>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className="text-xs text-primary hover:underline"
+                >View all →</button>
+              </div>
+              <div className="space-y-1.5">
+                {canGenerateSalesOffer && (
+                  <button
+                    onClick={() => handleGenerateDocument("SALES_OFFER")}
+                    disabled={!!generatingDoc}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-primary/40 text-primary rounded-lg hover:bg-info-soft disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    <FileText className="size-3.5" />
+                    <span>{generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer"}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleGenerateDocument("SPA")}
+                  disabled={!!generatingDoc}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>{generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft"}</span>
+                </button>
+                {/* Bilingual EN/AR SPA. Two paths:
+                    1. "Download PDF" hits the server-side renderer
+                       (headless Chromium → application/pdf). Preferred
+                       when available; produces an immutable file.
+                    2. "Open / print" serves the same HTML in a new tab
+                       so the operator can use the browser's Save-as-PDF.
+                       Always available — fallback for cPanel-style hosts
+                       where Chromium can't run. */}
+                <button
+                  onClick={() => {
+                    const base = (import.meta as any).env?.VITE_API_URL ?? "";
+                    // window.open hits the download endpoint; the browser
+                    // honors Content-Disposition: attachment and triggers a
+                    // save dialog without leaving the deal page.
+                    window.open(`${base}/api/deals/${dealId}/spa/pdf`, "_blank", "noopener,noreferrer");
+                  }}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-primary/40 text-primary bg-info-soft rounded-lg hover:bg-info-soft/80 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>Download bilingual SPA (PDF)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const base = (import.meta as any).env?.VITE_API_URL ?? "";
+                    window.open(`${base}/api/deals/${dealId}/spa/print`, "_blank", "noopener,noreferrer");
+                  }}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>Bilingual SPA — open / print</span>
+                </button>
+                <button
+                  onClick={() => handleGenerateDocument("RESERVATION_FORM")}
+                  disabled={!!generatingDoc}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  <FileText className="size-3.5" />
+                  <span>{generatingDoc === "RESERVATION_FORM" ? "Generating…" : "Reservation Form"}</span>
+                </button>
+                <button
+                  onClick={() => setShowPurchasersModal(true)}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center gap-2"
+                >
+                  <Users className="size-3.5" />
+                  <span>Manage Purchasers</span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Oqood countdown — only render when stage cares about it (S1). */}
@@ -1781,6 +1942,20 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
               {deal.brokerAgent && <p className="text-xs text-muted-foreground mt-0.5">{deal.brokerAgent.name}</p>}
             </div>
           )}
+
+          {/* Danger zone — delete deal (lead is preserved). Finance-only. */}
+          {canCancelDeal && (
+          <div className="bg-card rounded-xl border border-destructive/30 p-4">
+            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide mb-1">Danger zone</h3>
+            <p className="text-xs text-muted-foreground mb-2">Removes the deal record. The lead is preserved.</p>
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="w-full px-3 py-2 text-xs font-semibold border border-destructive/30 text-destructive rounded-lg hover:bg-destructive-soft inline-flex items-center justify-center gap-1.5"
+            >
+              <Trash2 className="size-3.5" /><span>Delete deal</span>
+            </button>
+          </div>
+          )}
         </>
       )}
     >
@@ -1832,13 +2007,13 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
         </div>
       )}
 
-      {/* Cancel Deal Modal */}
+      {/* Delete Deal Modal — removes the deal record. Lead is preserved. */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-bold text-foreground">Cancel Deal</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">This will release the unit back to available.</p>
+              <h3 className="font-bold text-foreground">Delete Deal</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Removes the deal record and releases the unit. The lead is kept.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div>
@@ -1861,7 +2036,7 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                 disabled={!cancelReason.trim() || cancelling}
                 className="flex-1 py-2.5 bg-destructive text-white font-semibold rounded-lg hover:bg-destructive/90 text-sm disabled:opacity-50"
               >
-                {cancelling ? "Cancelling…" : "Cancel Deal"}
+                {cancelling ? "Deleting…" : "Delete Deal"}
               </button>
             </div>
           </div>
@@ -2118,60 +2293,6 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
           </div>
         </div>
       )}
-
-      {/* ── Sticky bottom primary action ──────────────────────────────────── */}
-      {(() => {
-        type CTA = { label: string; Icon?: React.ComponentType<{ className?: string }>; onClick: () => void; variant: "emerald" | "blue" | "amber" } | null;
-        let cta: CTA = null;
-        switch (deal.stage) {
-          case "RESERVATION_PENDING":
-            cta = { label: reserving ? "Reserving…" : "Record Reservation Fee", Icon: reserving ? undefined : Lock, onClick: handleReserveUnit, variant: "emerald" };
-            break;
-          case "RESERVATION_CONFIRMED":
-            if (canGenerateSalesOffer && salesOfferDocs.length === 0) {
-              cta = { label: generatingDoc === "SALES_OFFER" ? "Generating…" : "Generate Sales Offer", Icon: generatingDoc === "SALES_OFFER" ? undefined : FileText, onClick: () => handleGenerateDocument("SALES_OFFER"), variant: "blue" };
-            }
-            break;
-          case "SPA_PENDING":
-            cta = { label: generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft", Icon: generatingDoc === "SPA" ? undefined : FileText, onClick: () => handleGenerateDocument("SPA"), variant: "blue" };
-            break;
-          case "SPA_SENT":
-            cta = { label: "Mark SPA Signed", Icon: Check, onClick: () => handleStageChange("SPA_SIGNED"), variant: "blue" };
-            break;
-          case "SPA_SIGNED":
-            cta = { label: "Submit Oqood Application", Icon: ClipboardList, onClick: () => handleStageChange("OQOOD_PENDING"), variant: "amber" };
-            break;
-          case "OQOOD_PENDING":
-            cta = { label: "Mark Oqood Registered", Icon: Check, onClick: () => handleStageChange("OQOOD_REGISTERED"), variant: "emerald" };
-            break;
-          case "OQOOD_REGISTERED":
-            cta = { label: "Begin Installments", onClick: () => handleStageChange("INSTALLMENTS_ACTIVE"), variant: "blue" };
-            break;
-          case "INSTALLMENTS_ACTIVE":
-            cta = { label: "Record Next Payment", Icon: DollarSign, onClick: () => { document.getElementById("payments-section")?.scrollIntoView({ behavior: "smooth" }); }, variant: "emerald" };
-            break;
-          case "HANDOVER_PENDING":
-            cta = { label: "Mark Handed Over", Icon: Home, onClick: () => handleStageChange("COMPLETED"), variant: "emerald" };
-            break;
-        }
-        if (!cta) return null;
-        const tone = cta.variant === "emerald" ? "bg-success hover:bg-success/90" : cta.variant === "amber" ? "bg-warning hover:bg-warning/90" : "bg-primary hover:bg-primary/90";
-        return (
-          <div className="sticky bottom-0 left-0 right-0 -mx-6 mt-2 px-6 py-3 bg-card border-t border-border shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 z-30">
-            <div className="text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">Next step:</span> {deal.stage.replace(/_/g, " ")}
-            </div>
-            <button
-              onClick={cta.onClick}
-              disabled={reserving || !!generatingDoc || updatingStage}
-              className={`px-5 py-2.5 ${tone} text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors inline-flex items-center gap-2`}
-            >
-              {cta.Icon && <cta.Icon className="size-4" />}
-              <span>{cta.label}</span>
-            </button>
-          </div>
-        );
-      })()}
 
       {/* Restructure Schedule Modal */}
       {showRestructure && (

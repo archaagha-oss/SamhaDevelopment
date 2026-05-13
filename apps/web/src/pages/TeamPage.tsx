@@ -8,6 +8,7 @@ import {
   Avatar, inputCls,
 } from "./team/shared";
 import { PageHeader, PageContainer } from "../components/layout";
+import { Button } from "@/components/ui/button";
 
 export default function TeamPage() {
   const navigate = useNavigate();
@@ -64,15 +65,32 @@ export default function TeamPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Team" }]}
         title="Team"
-        subtitle={`${members.length} members · roles, reporting structure, status`}
-        actions={
-          <button
-            onClick={() => navigate("/team/new")}
-            className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors"
-          >
-            Create member
-          </button>
-        }
+        subtitle={`${members.length} members total`}
+        actions={<Button onClick={() => navigate("/team/new")}>Create member</Button>}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter team by status">
+            {(Object.keys(STATUS_CFG) as Status[]).map((s) => {
+              const active = filterStatus === s;
+              const cfg = STATUS_CFG[s];
+              const count = members.filter((m) => m.status === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(active ? "" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${cfg.chip} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+                  {cfg.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
       <div className="flex-1 overflow-auto">
         <PageContainer>

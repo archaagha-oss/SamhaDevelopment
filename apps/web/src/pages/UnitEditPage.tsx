@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import {
   DetailPageLayout, DetailPageLoading, DetailPageNotFound,
 } from "../components/layout";
+import { extractApiError } from "@/lib/apiError";
 
 // UnitEditPage — handles both create and edit:
 //   /projects/:projectId/units/new                 → create
@@ -32,6 +33,10 @@ interface Unit {
   ratePerSqft?: number | null;
   smartHome?: boolean | null;
   anticipatedCompletionDate?: string | null;
+  // _count.deals is used to decide whether unitNumber is still editable.
+  // Server adds it to GET /:id. Zero deals (active OR cancelled) = identity
+  // still mutable so a typo at creation can be fixed without delete+recreate.
+  _count?: { deals: number };
 }
 
 const UNIT_TYPES = ["STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "FOUR_BR", "COMMERCIAL"];
@@ -53,6 +58,7 @@ const BLANK = {
 export default function UnitEditPage() {
   const { projectId, unitId } = useParams<{ projectId: string; unitId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEdit = !!unitId;
 
   const [projectName, setProjectName] = useState<string>("");
@@ -60,7 +66,19 @@ export default function UnitEditPage() {
   const [loading,     setLoading]     = useState(isEdit);
   const [loadError,   setLoadError]   = useState(false);
 
-  const [form, setForm] = useState(BLANK);
+  // Prefill from query string when duplicating from another unit's detail
+  // page. Type/view/area/price/floor carry over; unitNumber stays blank
+  // so the operator must pick a fresh identifier.
+  const prefilled = isEdit ? BLANK : {
+    ...BLANK,
+    type:  searchParams.get("type")  || BLANK.type,
+    view:  searchParams.get("view")  || BLANK.view,
+    area:  searchParams.get("area")  || "",
+    price: searchParams.get("price") || "",
+    floor: searchParams.get("floor") || "",
+  };
+
+  const [form, setForm] = useState(prefilled);
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
 
@@ -114,6 +132,9 @@ export default function UnitEditPage() {
   const set = (k: keyof typeof BLANK, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const isLocked = !!unit && LOCKED_STATUSES.includes(unit.status);
+  // unitNumber is locked once the unit has any deal history (active or
+  // cancelled). Before that, the operator can fix typos in place.
+  const unitNumberLocked = isEdit && !!unit && (unit._count?.deals ?? 0) > 0;
   const cancelTo = isEdit && projectId && unitId
     ? `/projects/${projectId}/units/${unitId}`
     : projectId
@@ -145,6 +166,12 @@ export default function UnitEditPage() {
       if (form.anticipatedCompletionDate) payload.anticipatedCompletionDate = form.anticipatedCompletionDate;
 
       if (isEdit && unitId) {
+        // Include unitNumber only when changed AND still editable. Sending
+        // it unchanged would trigger no-op writes; sending it when locked
+        // would be rejected by the server with UNIT_NUMBER_LOCKED.
+        if (!unitNumberLocked && form.unitNumber && form.unitNumber !== unit?.unitNumber) {
+          payload.unitNumber = form.unitNumber;
+        }
         await axios.patch(`/api/units/${unitId}`, payload);
         toast.success(`Unit ${unit?.unitNumber ?? unitId.slice(0, 6)} updated`);
         navigate(`/projects/${projectId}/units/${unitId}`);
@@ -157,7 +184,7 @@ export default function UnitEditPage() {
         navigate(newId ? `/projects/${projectId}/units/${newId}` : `/projects/${projectId}`);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save unit");
+      setError(extractApiError(err, "Failed to save unit"));
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +256,7 @@ export default function UnitEditPage() {
         <>
           {isLocked && (
             <div className="bg-warning-soft border border-warning/30 rounded-lg px-4 py-2.5 text-xs text-warning">
-              This unit has an active deal — price, type, and area are locked. Only floor and view can be edited.
+              This unit has an active deal — type, area, price, suite area, and balcony area are locked. Only floor and view can be edited.
             </div>
           )}
 
@@ -244,10 +271,19 @@ export default function UnitEditPage() {
                   value={form.unitNumber}
                   onChange={(e) => set("unitNumber", e.target.value)}
                   placeholder="e.g. 3-02"
-                  disabled={isEdit}
+                  disabled={unitNumberLocked}
                   className={inp}
                 />
-                {isEdit && <p className="text-[10px] text-muted-foreground mt-1">Unit number is immutable after creation.</p>}
+                {isEdit && unitNumberLocked && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Locked — a deal references this unit. Typos can no longer be fixed in place.
+                  </p>
+                )}
+                {isEdit && !unitNumberLocked && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Editable until the first deal is created on this unit.
+                  </p>
+                )}
               </div>
               <div>
                 <label className={lbl}>Floor *</label>

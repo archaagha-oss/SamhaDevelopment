@@ -50,6 +50,15 @@ const STATUS_COLORS: Record<string, string> = {
   WITHDRAWN: "bg-warning-soft text-warning",
 };
 
+const STATUS_STYLE: Record<string, { label: string; header: string; dot: string }> = {
+  ACTIVE:    { label: "Active",    header: "bg-stage-success text-stage-success-foreground",     dot: "bg-success"     },
+  ACCEPTED:  { label: "Accepted",  header: "bg-stage-info text-stage-info-foreground",           dot: "bg-info"         },
+  REJECTED:  { label: "Rejected",  header: "bg-stage-danger text-stage-danger-foreground",       dot: "bg-destructive"  },
+  EXPIRED:   { label: "Expired",   header: "bg-stage-neutral text-stage-neutral-foreground",     dot: "bg-neutral-400"  },
+  WITHDRAWN: { label: "Withdrawn", header: "bg-stage-attention text-stage-attention-foreground", dot: "bg-warning"      },
+};
+const OFFER_STATUS_ORDER = ["ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED", "WITHDRAWN"] as const;
+
 function fmtAED(n: number) {
   return `AED ${n.toLocaleString("en-AE", { maximumFractionDigits: 0 })}`;
 }
@@ -137,7 +146,31 @@ export default function OffersPage() {
       <PageHeader
         crumbs={[{ label: "Home", path: "/" }, { label: "Offers" }]}
         title="Offers"
-        subtitle={`${offers.filter((o) => o.status === "ACTIVE").length} active`}
+        subtitle={`${offers.length} offers total`}
+        tabs={(
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Filter offers by status">
+            {OFFER_STATUS_ORDER.map((s) => {
+              const active = filter === s;
+              const cfg = STATUS_STYLE[s];
+              const count = offers.filter((o) => o.status === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilter(active ? "ALL" : s)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all shrink-0 ${
+                    active ? `${cfg.header} border-current shadow-sm` : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} aria-hidden="true" />
+                  {cfg.label}
+                  <span className={`ml-0.5 text-[10px] tabular-nums ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       />
 
       <PageContainer padding="compact" className="flex-shrink-0">
@@ -150,15 +183,7 @@ export default function OffersPage() {
             className="text-sm border border-border rounded-lg px-3 py-1.5 w-60 focus:outline-none focus:border-ring bg-card"
           />
           <div className="flex gap-1">
-            {(["ALL", "ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
-                  filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted"
-                }`}
-              >{s.toLowerCase()}</button>
-            ))}
+            {/* Status chips moved into PageHeader.tabs */}
           </div>
         </div>
       </PageContainer>

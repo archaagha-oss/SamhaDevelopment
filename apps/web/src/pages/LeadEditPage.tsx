@@ -8,6 +8,7 @@ import {
 } from "../components/layout";
 import { useAgents } from "../hooks/useAgents";
 import EmiratesIdScan from "../components/EmiratesIdScan";
+import { extractApiError } from "@/lib/apiError";
 import UnitInterestPicker from "../components/UnitInterestPicker";
 import type { EmiratesIdFields } from "../utils/emiratesIdOcr";
 
@@ -41,6 +42,8 @@ interface Lead {
   companyRegistrationNumber?: string | null;
   authorizedSignatory?: string | null;
   sourceOfFunds?: string | null;
+  firstNameAr?: string | null;
+  lastNameAr?: string | null;
   interests?: Array<{ id: string; unitId: string; isPrimary: boolean; unit: { unitNumber: string } }>;
 }
 
@@ -59,6 +62,7 @@ const BLANK = {
   brokerCompanyId: "", brokerAgentId: "",
   address: "", emiratesId: "", passportNumber: "",
   companyRegistrationNumber: "", authorizedSignatory: "", sourceOfFunds: "",
+  firstNameAr: "", lastNameAr: "",
 };
 
 const leadsCrumbs = [{ label: "Home", path: "/" }, { label: "Leads", path: "/leads" }];
@@ -140,6 +144,8 @@ export default function LeadEditPage() {
           companyRegistrationNumber: l.companyRegistrationNumber ?? "",
           authorizedSignatory:       l.authorizedSignatory ?? "",
           sourceOfFunds:             l.sourceOfFunds ?? "",
+          firstNameAr:               l.firstNameAr ?? "",
+          lastNameAr:                l.lastNameAr ?? "",
         });
         const ids = new Set((l.interests ?? []).map((i) => i.unitId));
         setSelectedUnitIds(ids);
@@ -203,6 +209,8 @@ export default function LeadEditPage() {
     cmp("companyRegistrationNumber", lead.companyRegistrationNumber);
     cmp("authorizedSignatory",       lead.authorizedSignatory);
     cmp("sourceOfFunds",             lead.sourceOfFunds);
+    cmp("firstNameAr",                lead.firstNameAr);
+    cmp("lastNameAr",                 lead.lastNameAr);
     return payload;
   }
 
@@ -252,6 +260,8 @@ export default function LeadEditPage() {
           companyRegistrationNumber: form.companyRegistrationNumber || null,
           authorizedSignatory:       form.authorizedSignatory || null,
           sourceOfFunds:             form.sourceOfFunds || null,
+          firstNameAr:               form.firstNameAr || null,
+          lastNameAr:                form.lastNameAr || null,
         });
         const newId = r.data?.id;
 
@@ -271,7 +281,7 @@ export default function LeadEditPage() {
         navigate(newId ? `/leads/${newId}` : "/leads");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save lead");
+      setError(extractApiError(err, "Failed to save lead"));
     } finally {
       setSubmitting(false);
     }
@@ -312,7 +322,7 @@ export default function LeadEditPage() {
       );
       toast.success("Unit interests updated");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to update interests");
+      toast.error(extractApiError(err, "Failed to update interests"));
     }
   }
 
@@ -592,6 +602,49 @@ export default function LeadEditPage() {
                     placeholder="e.g. Salary, Inheritance"
                     className={inp}
                   />
+                </div>
+              </div>
+            </details>
+
+            {/* Arabic legal name — required by Dubai SPAs but captured separately
+                so it stays out of the QuickLeadModal critical path. Only appears
+                on the full edit page; left blank for English-only contacts. */}
+            <details
+              className="bg-card rounded-xl border border-border"
+              open={isEdit && !!(lead?.firstNameAr || lead?.lastNameAr)}
+            >
+              <summary className="px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground cursor-pointer select-none">
+                Arabic legal name (for SPA)
+              </summary>
+              <div className="px-5 pb-5 pt-1 space-y-3 border-t border-border">
+                <p className="text-xs text-muted-foreground">
+                  Used in the bilingual SPA. Leave blank if not yet collected — the
+                  document generator will flag missing values before producing the
+                  Arabic column.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>First name (Arabic)</label>
+                    <input
+                      value={form.firstNameAr}
+                      onChange={(e) => set({ firstNameAr: e.target.value })}
+                      placeholder="الاسم الأول"
+                      dir="rtl"
+                      lang="ar"
+                      className={inp + " text-right"}
+                    />
+                  </div>
+                  <div>
+                    <label className={lbl}>Last name (Arabic)</label>
+                    <input
+                      value={form.lastNameAr}
+                      onChange={(e) => set({ lastNameAr: e.target.value })}
+                      placeholder="اسم العائلة"
+                      dir="rtl"
+                      lang="ar"
+                      className={inp + " text-right"}
+                    />
+                  </div>
                 </div>
               </div>
             </details>

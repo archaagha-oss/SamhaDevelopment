@@ -1,12 +1,11 @@
 import { useState } from "react";
 import axios from "axios";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useUnit } from "../hooks/useUnit";
 import { useUpdateUnit, useDeleteUnit } from "../hooks/useUpdateUnit";
 import { formatArea } from "../utils/formatArea";
 import { useAgents } from "../hooks/useAgents";
-import UnitHeader from "./UnitHeader";
 import UnitStatusActions from "./UnitStatusActions";
 import UnitCommercialPanel from "./UnitCommercialPanel";
 import UnitHistory from "./UnitHistory";
@@ -19,11 +18,24 @@ import PaymentPlanCard from "./PaymentPlanCard";
 import UnitShareLinkPanel from "./UnitShareLinkPanel";
 import { useUnitDocuments } from "../hooks/useUnitDocuments";
 import ShareUnitModal from "./ShareUnitModal";
-import { Camera, Ruler, MessageCircle, AlertTriangle, MapPin, X } from "lucide-react";
+import { Camera, Ruler, MessageCircle, AlertTriangle, MapPin, X, Pencil, Trash2, MoreHorizontal, Copy } from "lucide-react";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 import { DirhamSign } from "@/components/ui/DirhamSign";
 import { formatDirham } from "@/lib/money";
+import { getStatusColor } from "../utils/statusColors";
+import { DetailPageLayout, DetailPageLoading, DetailPageNotFound } from "./layout";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+
+const STATUS_LABELS: Record<string, string> = {
+  NOT_RELEASED: "Not Released", AVAILABLE: "Available", ON_HOLD: "On Hold",
+  RESERVED: "Reserved", BOOKED: "Booked", SOLD: "Sold",
+  BLOCKED: "Blocked", HANDED_OVER: "Handed Over",
+};
 
 const DELETE_BLOCKING_STATUSES = ["ON_HOLD", "RESERVED", "BOOKED", "SOLD", "HANDED_OVER"] as const;
 
@@ -54,24 +66,24 @@ export default function UnitDetailPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteAck, setDeleteAck]               = useState("");
 
+  const baseCrumbs = [
+    { label: "Projects", path: "/projects" },
+  ];
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <DetailPageLoading crumbs={baseCrumbs} title="Loading unit…" />;
   }
 
   if (queryError || !unit) {
     return (
-      <div className="p-6">
-        <button onClick={() => navigate(`/projects/${projectId}`)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-          ← Back to Project
-        </button>
-        <div className="bg-destructive-soft border border-destructive/30 rounded-xl p-6 text-center">
-          <p className="text-destructive font-medium">{queryError instanceof Error ? queryError.message : "Unit not found"}</p>
-        </div>
-      </div>
+      <DetailPageNotFound
+        crumbs={baseCrumbs}
+        title="Unit not found"
+        message={queryError instanceof Error ? queryError.message : "This unit could not be loaded."}
+        backHref={`/projects/${projectId}`}
+        backLabel="Back to project"
+        onBack={() => navigate(`/projects/${projectId}`)}
+      />
     );
   }
 
@@ -139,41 +151,83 @@ export default function UnitDetailPage() {
                      || (unit.reservations?.length ?? 0) > 0;
 
   return (
-    <div className="flex flex-col min-h-full bg-background">
-      <UnitHeader
-        unitNumber={unit.unitNumber}
-        status={unit.status}
-        projectId={projectId!}
-        projectName={unit.project?.name}
-      />
-
-      {/* Error Banner */}
-      {apiError && (
-        <div className="max-w-7xl mx-auto px-6 pt-4">
-          <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3 flex items-center justify-between">
-            <p className="text-destructive text-sm">{apiError.message}</p>
-            <button onClick={() => setApiError(null)} className="text-destructive hover:text-destructive text-lg leading-none ml-4">×</button>
-          </div>
-        </div>
+    <DetailPageLayout
+      crumbs={[
+        { label: "Projects", path: "/projects" },
+        { label: unit.project?.name ?? "Project", path: `/projects/${projectId}` },
+        { label: `Unit ${unit.unitNumber}` },
+      ]}
+      title={`Unit ${unit.unitNumber}`}
+      subtitle={(() => {
+        const c = getStatusColor(unit.status);
+        return (
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-semibold ${c.bg} ${c.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} aria-hidden="true" />
+              {STATUS_LABELS[unit.status] || unit.status}
+            </span>
+          </span>
+        );
+      })()}
+      actions={(
+        <>
+          <Button onClick={() => setShowShareModal(true)} variant="secondary" className="bg-success text-white hover:bg-success/90">
+            <MessageCircle className="size-3.5 mr-1.5" /> Share
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                aria-label="More actions"
+                className="p-1.5 text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted/50"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate(`/projects/${unit.projectId}/units/${unit.id}/edit`)}>
+                <Pencil className="size-3.5 mr-2" /> Edit unit
+              </DropdownMenuItem>
+              {/* Duplicate — opens the create form with type/area/price/view
+                  prefilled and an empty unitNumber. Designed for similar
+                  units on adjacent floors that the bulk-floor wizard would
+                  be overkill for. */}
+              <DropdownMenuItem
+                onClick={() => navigate(
+                  `/projects/${unit.projectId}/units/new` +
+                  `?type=${encodeURIComponent(unit.type)}` +
+                  `&view=${encodeURIComponent(unit.view)}` +
+                  `&area=${encodeURIComponent(String(unit.area))}` +
+                  `&price=${encodeURIComponent(String(unit.price))}` +
+                  `&floor=${encodeURIComponent(String(unit.floor))}`
+                )}
+              >
+                <Copy className="size-3.5 mr-2" /> Duplicate unit
+              </DropdownMenuItem>
+              {snagListEnabled && unitId && (
+                <DropdownMenuItem onClick={() => navigate(`/units/${unitId}/snags`)}>
+                  Snags
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { setConfirmingDelete(true); setDeleteAck(""); }}
+                disabled={deleteBlocked || deleteUnit.isPending}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-3.5 mr-2" /> Delete unit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
       )}
-
-      <div className="max-w-7xl mx-auto px-6 py-5">
-        {snagListEnabled && unitId && (
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">More sections</span>
-            <Link
-              to={`/units/${unitId}/snags`}
-              className="px-3 py-1 text-xs font-semibold border border-border rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              Snags →
-            </Link>
-          </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-5">
-
-          {/* ── LEFT COLUMN (2/3) ── */}
-          <div className="col-span-2 space-y-4">
+      main={(
+        <>
+          {apiError && (
+            <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3 flex items-center justify-between">
+              <p className="text-destructive text-sm">{apiError.message}</p>
+              <button onClick={() => setApiError(null)} className="text-destructive hover:text-destructive text-lg leading-none ml-4">×</button>
+            </div>
+          )}
 
             {/* 1. Active deal / reservation / interest summary — top-of-page primary context */}
             <ActiveDealSummaryCard unit={unit} />
@@ -485,10 +539,10 @@ export default function UnitDetailPage() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* ── RIGHT COLUMN (1/3) ── */}
-          <div className="space-y-4">
+        </>
+      )}
+      aside={(
+        <>
 
             {/* 0. Share with client */}
             <div className="bg-card rounded-lg border border-border p-4">
@@ -596,10 +650,9 @@ export default function UnitDetailPage() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Last Updated</p>
               <p className="text-sm text-foreground mt-2">{new Date(unit.updatedAt).toLocaleDateString("en-AE")}</p>
             </div>
-          </div>
-        </div>
-      </div>
-
+        </>
+      )}
+    >
       {showUploadModal && (
         <ImageUploadModal
           unitId={unitId!}
@@ -706,6 +759,6 @@ export default function UnitDetailPage() {
           onClose={() => setShowShareModal(false)}
         />
       )}
-    </div>
+    </DetailPageLayout>
   );
 }

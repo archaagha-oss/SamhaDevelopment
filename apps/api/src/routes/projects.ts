@@ -12,6 +12,8 @@ import { prisma } from "../lib/prisma";
 import { documentService } from "../services/documentService";
 
 // Whitelist of SPA-particulars columns that pass through create/update.
+// Arabic-name fields (Phase 4a) ride alongside their English counterparts so
+// the bilingual SPA can render both columns without a second round-trip.
 const SPA_PROJECT_FIELDS = [
   "commercialLicense",
   "developerNumber",
@@ -24,6 +26,10 @@ const SPA_PROJECT_FIELDS = [
   "masterDeveloper",
   "masterCommunity",
   "permittedUse",
+  "nameAr",
+  "locationAr",
+  "developerNameAr",
+  "developerAddressAr",
 ] as const;
 
 function pickSpaFields(body: any): Record<string, string | null> {
@@ -83,10 +89,11 @@ const projectUpload = multer({
   limits: { fileSize: 15 * 1024 * 1024 },
 });
 
-// Get all projects
+// Get all projects (excludes soft-deleted).
 router.get("/", async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
+      where: { softDeleted: false },
       include: { _count: { select: { units: true } } },
       orderBy: { createdAt: "desc" },
     });
@@ -96,7 +103,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get project with units
+// Get project with units. Returns 404 on soft-deleted rows so deep-links
+// to a deleted project don't quietly resurface stale data.
 router.get("/:id", async (req, res) => {
   try {
     const project = await prisma.project.findUnique({
@@ -107,7 +115,7 @@ router.get("/:id", async (req, res) => {
         config: true,
       },
     });
-    if (!project) {
+    if (!project || project.softDeleted) {
       return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
     }
     res.json(project);
@@ -261,7 +269,7 @@ router.post("/:id/clone", async (req, res) => {
       where: { id: req.params.id },
       include: { config: true, units: true },
     });
-    if (!source) {
+    if (!source || source.softDeleted) {
       return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
     }
 
@@ -868,20 +876,33 @@ router.delete("/:id/updates/:updateId/media/:mediaId", async (req, res) => {
   }
 });
 
-// Also include images in project GET /:id
+// Soft-delete a project. Sets softDeleted=true rather than removing the row
+// so the audit trail survives. Still blocked while units exist — the caller
+// must clean up inventory first (intentional friction; we don't want one
+// click to orphan dozens of units).
 router.delete("/:id", async (req, res) => {
   try {
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized", code: "UNAUTHENTICATED", statusCode: 401 });
     }
     const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { units: true } });
-    if (!project) {
+    if (!project || project.softDeleted) {
       return res.status(404).json({ error: "Project not found", code: "NOT_FOUND", statusCode: 404 });
     }
     if (project.units.length > 0) {
       return res.status(400).json({ error: "Cannot delete project with units", code: "PROJECT_HAS_UNITS", statusCode: 400 });
     }
-    await prisma.project.delete({ where: { id: req.params.id } });
+    // Name is @unique. Suffix the soft-deleted row so the original name is
+    // free for a brand-new project. The original is preserved in the audit
+    // log via the suffix itself ("Marina Tower (deleted 2026-05-13)").
+    const suffix = ` (deleted ${new Date().toISOString().slice(0, 10)})`;
+    await prisma.project.update({
+      where: { id: req.params.id },
+      data:  {
+        softDeleted: true,
+        name: project.name.endsWith(suffix) ? project.name : project.name + suffix,
+      },
+    });
     res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to delete project", code: "PROJECT_DELETE_ERROR", statusCode: 400 });

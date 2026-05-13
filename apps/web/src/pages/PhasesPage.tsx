@@ -76,7 +76,7 @@ export default function PhasesPage() {
           { label: "Phases" },
         ]}
         title="Phases"
-        subtitle={`${phases.length} phase${phases.length === 1 ? "" : "s"} · floor ranges, release stages, public launch dates`}
+        subtitle={`${phases.length} phases total`}
       />
       <div className="flex-1 overflow-auto">
         <PageContainer>
