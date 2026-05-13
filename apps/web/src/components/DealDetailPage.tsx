@@ -1837,6 +1837,22 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <FileSignature className="size-3.5" />
                   <span>{generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft"}</span>
                 </button>
+                {/* Bilingual EN/AR SPA — opens the print-ready HTML in a new
+                    tab; the operator uses the browser's Save-as-PDF for the
+                    final artifact. Avoids hosting headless Chromium on the
+                    cPanel target. */}
+                <button
+                  onClick={() => {
+                    // Respect VITE_API_URL when the API is cross-origin; fall
+                    // back to same-origin so the Clerk session cookie travels.
+                    const base = (import.meta as any).env?.VITE_API_URL ?? "";
+                    window.open(`${base}/api/deals/${dealId}/spa/print`, "_blank", "noopener,noreferrer");
+                  }}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>Bilingual SPA (EN/AR) — print to PDF</span>
+                </button>
                 <button
                   onClick={() => handleGenerateDocument("RESERVATION_FORM")}
                   disabled={!!generatingDoc}

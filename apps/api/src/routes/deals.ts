@@ -234,6 +234,31 @@ router.post("/:id/spa/preview", async (req, res) => {
   }
 });
 
+// GET /api/deals/:id/spa/print
+// Serves the bilingual SPA as a full HTML document so a browser tab can
+// render it and the operator can use the browser's native "Save as PDF"
+// (Cmd/Ctrl+P). This is intentionally the PDF generation path — the
+// deployment target is cPanel shared hosting where running headless
+// Chromium for server-side PDF generation isn't viable, and the browser's
+// built-in print pipeline gives perfect Arabic font rendering using the
+// operator's system fonts.
+//
+// Query: ?print=auto fires window.print() on load (template-level).
+router.get("/:id/spa/print", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(html);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).send("Deal not found");
+    }
+    res.status(500).send("Failed to build SPA print preview");
+  }
+});
+
 // ----- Deal purchasers (joint purchasers, SPA Particulars Item II) ---------
 
 router.get("/:id/purchasers", async (req, res) => {

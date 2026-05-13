@@ -122,6 +122,53 @@ export function renderBilingualSpaHtml(snapshot: SpaSnapshot): string {
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
       padding: 32px 24px 48px;
     }
+
+    /* Print path. The browser's native "Save as PDF" is our PDF generator
+       — no server-side Puppeteer required, which matters on the cPanel
+       deployment target (shared hosting can't run headless Chrome). A4
+       portrait, 18mm margins, page-break-inside avoided per column so the
+       EN / AR halves stay aligned across page breaks. */
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm;
+    }
+    @media print {
+      html, body { background: #fff; }
+      .page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      .columns { gap: 12mm; }
+      .col { break-inside: avoid; }
+      .note, .print-toolbar { display: none !important; }
+    }
+    /* Always-visible "Save as PDF" button at the top of the on-screen
+       preview — invisible in print output (toolbar class above). */
+    .print-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #1f2937;
+      color: #fff;
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .print-toolbar button {
+      background: #fff;
+      color: #1f2937;
+      border: 0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .print-toolbar button:hover { background: #e5e7eb; }
     .page h1 {
       font-size: 18px;
       margin: 0 0 4px;
@@ -196,6 +243,21 @@ export function renderBilingualSpaHtml(snapshot: SpaSnapshot): string {
 <style>${css}</style>
 </head>
 <body>
+  <!-- On-screen toolbar — stripped from the printed output. ?print=auto
+       fires window.print() on load so the operator can click "Save as
+       PDF" from the print dialog directly. -->
+  <div class="print-toolbar">
+    <span>Bilingual SPA preview — Deal ${esc(snapshot.deal.dealNumber)}</span>
+    <span style="flex:1"></span>
+    <button type="button" onclick="window.print()">Save as PDF / Print</button>
+    <button type="button" onclick="window.close()">Close</button>
+  </div>
+  <script>
+    if (new URLSearchParams(location.search).get('print') === 'auto') {
+      // Defer so fonts/layout settle before the print dialog opens.
+      window.addEventListener('load', () => setTimeout(() => window.print(), 250));
+    }
+  </script>
   <div class="page">
     <h1>Sale &amp; Purchase Agreement — Bilingual preview</h1>
     <div class="deal-meta">
