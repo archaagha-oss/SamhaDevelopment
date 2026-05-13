@@ -107,6 +107,14 @@ export default function UnitsTable({ projectId }: Props) {
   const [editingPrice, setEditingPrice] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
 
+  // Phase 2c — "release unreleased" banner. Operators frequently arrive
+  // on this page wondering why agents can't see any inventory. Show a
+  // one-click release prompt whenever the loaded set still has units
+  // sitting in NOT_RELEASED. Dismissed for the current session via
+  // bannerDismissed; recurs on a fresh load if any remain.
+  const [releasingAll, setReleasingAll] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   // Selection + bulk ops
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -293,6 +301,31 @@ export default function UnitsTable({ projectId }: Props) {
     }
   };
 
+  const notReleasedUnits = useMemo(
+    () => units.filter((u) => u.status === "NOT_RELEASED"),
+    [units],
+  );
+
+  const releaseAllNotReleased = async () => {
+    if (notReleasedUnits.length === 0 || releasingAll) return;
+    setReleasingAll(true);
+    try {
+      const r = await axios.post("/api/units/bulk-ops", {
+        unitIds:  notReleasedUnits.map((u) => u.id),
+        operation: "RELEASE",
+        reason:   "Released from inventory list",
+      });
+      const succeeded = r.data?.succeeded ?? 0;
+      if (succeeded > 0) toast.success(`Released ${succeeded} unit${succeeded === 1 ? "" : "s"}`);
+      else toast.error("No units could be released");
+      load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to release units");
+    } finally {
+      setReleasingAll(false);
+    }
+  };
+
   const savePrice = async (unitId: string, newPrice: number) => {
     setSavingPrice(true);
     try {
@@ -332,6 +365,34 @@ export default function UnitsTable({ projectId }: Props) {
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* "Unreleased inventory" banner — only when there are units still
+          in NOT_RELEASED that the user can see. Hidden once dismissed for
+          this session OR when the user is explicitly filtering for that
+          status (they're already looking at them on purpose). */}
+      {notReleasedUnits.length > 0 && !bannerDismissed && filterStatus !== "NOT_RELEASED" && (
+        <div className="flex items-center gap-3 px-6 py-2.5 bg-info-soft border-b border-primary/30 text-sm">
+          <span className="text-info-soft-foreground">
+            <strong className="font-semibold">{notReleasedUnits.length} unit{notReleasedUnits.length === 1 ? " is" : "s are"} in NOT_RELEASED</strong> — agents can't see {notReleasedUnits.length === 1 ? "it" : "them"} yet.
+          </span>
+          <button
+            type="button"
+            onClick={releaseAllNotReleased}
+            disabled={releasingAll}
+            className="ml-auto text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-md px-3 py-1.5 disabled:opacity-50"
+          >
+            {releasingAll ? "Releasing…" : `Release all ${notReleasedUnits.length}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setBannerDismissed(true)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            title="Dismiss for this session"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Action bar ── */}
       <div className="flex items-center gap-2 px-6 py-3 bg-card border-b border-border flex-shrink-0 flex-wrap">

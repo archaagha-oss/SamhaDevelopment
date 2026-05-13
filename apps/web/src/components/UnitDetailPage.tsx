@@ -18,7 +18,7 @@ import PaymentPlanCard from "./PaymentPlanCard";
 import UnitShareLinkPanel from "./UnitShareLinkPanel";
 import { useUnitDocuments } from "../hooks/useUnitDocuments";
 import ShareUnitModal from "./ShareUnitModal";
-import { Camera, Ruler, MessageCircle, AlertTriangle, MapPin, X, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Camera, Ruler, MessageCircle, AlertTriangle, MapPin, X, Pencil, Trash2, MoreHorizontal, Copy } from "lucide-react";
 import { ApiError, ErrorType } from "../types/errors";
 import { UnitImage } from "../types";
 import { DirhamSign } from "@/components/ui/DirhamSign";
@@ -186,6 +186,22 @@ export default function UnitDetailPage() {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate(`/projects/${unit.projectId}/units/${unit.id}/edit`)}>
                 <Pencil className="size-3.5 mr-2" /> Edit unit
+              </DropdownMenuItem>
+              {/* Duplicate — opens the create form with type/area/price/view
+                  prefilled and an empty unitNumber. Designed for similar
+                  units on adjacent floors that the bulk-floor wizard would
+                  be overkill for. */}
+              <DropdownMenuItem
+                onClick={() => navigate(
+                  `/projects/${unit.projectId}/units/new` +
+                  `?type=${encodeURIComponent(unit.type)}` +
+                  `&view=${encodeURIComponent(unit.view)}` +
+                  `&area=${encodeURIComponent(String(unit.area))}` +
+                  `&price=${encodeURIComponent(String(unit.price))}` +
+                  `&floor=${encodeURIComponent(String(unit.floor))}`
+                )}
+              >
+                <Copy className="size-3.5 mr-2" /> Duplicate unit
               </DropdownMenuItem>
               {snagListEnabled && unitId && (
                 <DropdownMenuItem onClick={() => navigate(`/units/${unitId}/snags`)}>

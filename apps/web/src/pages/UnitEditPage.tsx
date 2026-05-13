@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -58,6 +58,7 @@ const BLANK = {
 export default function UnitEditPage() {
   const { projectId, unitId } = useParams<{ projectId: string; unitId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEdit = !!unitId;
 
   const [projectName, setProjectName] = useState<string>("");
@@ -65,7 +66,19 @@ export default function UnitEditPage() {
   const [loading,     setLoading]     = useState(isEdit);
   const [loadError,   setLoadError]   = useState(false);
 
-  const [form, setForm] = useState(BLANK);
+  // Prefill from query string when duplicating from another unit's detail
+  // page. Type/view/area/price/floor carry over; unitNumber stays blank
+  // so the operator must pick a fresh identifier.
+  const prefilled = isEdit ? BLANK : {
+    ...BLANK,
+    type:  searchParams.get("type")  || BLANK.type,
+    view:  searchParams.get("view")  || BLANK.view,
+    area:  searchParams.get("area")  || "",
+    price: searchParams.get("price") || "",
+    floor: searchParams.get("floor") || "",
+  };
+
+  const [form, setForm] = useState(prefilled);
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
 

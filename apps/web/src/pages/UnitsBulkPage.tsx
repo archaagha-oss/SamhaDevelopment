@@ -57,6 +57,11 @@ export default function UnitsBulkPage() {
 
   const [rows,       setRows]       = useState<UnitRow[]>([]);
   const [step,       setStep]       = useState<Step>("config");
+  // IDs of units created by this wizard run, used by the post-create
+  // "Release now" shortcut. Cleared on Cancel/Close.
+  const [createdUnitIds, setCreatedUnitIds] = useState<string[]>([]);
+  const [releasing,      setReleasing]      = useState(false);
+  const [releaseResult,  setReleaseResult]  = useState<{ released: number; failed: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
   const [result,     setResult]     = useState<{ created: number; skipped: number } | null>(null);
@@ -139,6 +144,32 @@ export default function UnitsBulkPage() {
     setStep("preview");
   };
 
+  // Phase 2a — Bulk RELEASE shortcut. Units created here default to
+  // NOT_RELEASED so an admin can review/adjust before exposing to agents,
+  // but the most common path is "yep, release them now." This button
+  // does that in one click so new operators don't get stuck wondering
+  // why agents can't see any inventory.
+  const releaseNow = async () => {
+    if (createdUnitIds.length === 0 || releasing) return;
+    setReleasing(true);
+    try {
+      const r = await axios.post("/api/units/bulk-ops", {
+        unitIds:  createdUnitIds,
+        operation: "RELEASE",
+      });
+      const results: { success: boolean }[] = r.data?.results ?? [];
+      const released = results.filter((x) => x.success).length;
+      const failed   = results.length - released;
+      setReleaseResult({ released, failed });
+      if (released > 0) toast.success(`Released ${released} unit${released === 1 ? "" : "s"}`);
+      if (failed   > 0) toast.error(`${failed} unit${failed === 1 ? " was" : "s were"} skipped (already released or invalid status)`);
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Failed to release units"));
+    } finally {
+      setReleasing(false);
+    }
+  };
+
   const submit = async () => {
     if (!projectId) return;
     const toCreate = rows.filter((r) => r.include);
@@ -158,6 +189,15 @@ export default function UnitsBulkPage() {
         })),
       });
       setResult({ created: r.data.created, skipped: r.data.skipped });
+      // The bulk endpoint returns the full set of unit rows that match the
+      // submitted unitNumbers (created + already-existing). We only want the
+      // ones it actually created, in NOT_RELEASED status, for the release
+      // shortcut — otherwise the shortcut would "release" units it skipped.
+      const created: { id: string; status: string }[] = (r.data.units ?? []).filter(
+        (u: { status: string }) => u.status === "NOT_RELEASED",
+      );
+      setCreatedUnitIds(created.map((u) => u.id));
+      setReleaseResult(null);
       setStep("result");
     } catch (err: any) {
       setError(extractApiError(err, "Failed to create units. Check values and try again."));
@@ -592,6 +632,43 @@ export default function UnitsBulkPage() {
                   </div>
                 )}
               </div>
+
+              {/* Release prompt — only when new units exist AND haven't been
+                  released yet via this prompt. Solves the "agents see no
+                  inventory" trap that a brand-new admin always hits. */}
+              {createdUnitIds.length > 0 && !releaseResult && (
+                <div className="bg-info-soft border border-primary/40 rounded-xl p-4 flex items-start gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-info-soft-foreground">
+                      {createdUnitIds.length} unit{createdUnitIds.length === 1 ? " is" : "s are"} in NOT_RELEASED status
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Agents can't see or reserve them yet. Release now to make them AVAILABLE, or release per-floor later from the Units page.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={releaseNow}
+                    disabled={releasing}
+                    className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2 transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {releasing ? "Releasing…" : `Release all ${createdUnitIds.length} now`}
+                  </button>
+                </div>
+              )}
+
+              {releaseResult && (
+                <div className="bg-success-soft border border-success/30 rounded-xl p-4 text-sm">
+                  <p className="font-semibold text-success">
+                    Released {releaseResult.released} unit{releaseResult.released === 1 ? "" : "s"}.
+                  </p>
+                  {releaseResult.failed > 0 && (
+                    <p className="text-xs text-warning mt-1">
+                      {releaseResult.failed} skipped (probably no longer in NOT_RELEASED).
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
