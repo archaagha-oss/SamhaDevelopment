@@ -763,7 +763,12 @@ export default function LeadsPage({ onViewLead }: Props = {}) {
         crumbs={[{ label: "Home", path: "/" }, { label: "Leads" }]}
         title="Leads"
         subtitle={`${total} leads total`}
-        actions={<Button onClick={() => setShowForm(true)}>Create lead</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/leads/import")}>Import CSV</Button>
+            <Button onClick={() => setShowForm(true)}>Create lead</Button>
+          </div>
+        }
         tabs={stageTabs}
       />
 

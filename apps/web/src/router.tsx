@@ -64,6 +64,7 @@ const HotInboxPage                  = lazy(() => import("./pages/HotInboxPage"))
 const CompliancePage                = lazy(() => import("./pages/CompliancePage"));
 const NotificationPreferencesPage   = lazy(() => import("./pages/NotificationPreferencesPage"));
 const BulkPaymentImportPage         = lazy(() => import("./pages/BulkPaymentImportPage"));
+const LeadsImportPage               = lazy(() => import("./pages/LeadsImportPage"));
 
 // FeatureFlagGate stays eager — it's tiny and used inline below.
 import FeatureFlagGate from "./components/FeatureFlagGate";
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
       { path: "projects/:projectId/units/:unitId/edit",   element: <UnitEditPage /> },
       { path: "units",                                    element: <UnitsPage /> },
       { path: "leads",                                    element: <LeadsPage /> },
+      { path: "leads/import",                             element: <LeadsImportPage /> },
       { path: "leads/new",                                element: <LeadEditPage /> },
       { path: "leads/:leadId",                            element: <LeadProfilePage /> },
       { path: "leads/:leadId/edit",                       element: <LeadEditPage /> },
