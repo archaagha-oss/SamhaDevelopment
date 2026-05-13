@@ -13,6 +13,7 @@ import {
 import { addCustomMilestone, restructureSchedule, generatePaymentSchedule } from "../services/paymentService";
 import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
+import { renderBilingualSpaHtml, collectMissingArabic } from "../services/spa/bilingualTemplate";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess } from "../middleware/auth";
@@ -203,6 +204,31 @@ router.get("/:id/spa-snapshot", async (req, res) => {
     res.status(500).json({
       error: "Failed to build SPA snapshot",
       code: "SPA_SNAPSHOT_ERROR",
+      statusCode: 500,
+    });
+  }
+});
+
+// ── Bilingual SPA preview (Phase 4b) ───────────────────────────────────────
+// POST /api/deals/:id/spa/preview
+// Returns { html, missingArabic } where `html` is a full, browser-renderable
+// document the operator can open in a tab to eyeball the bilingual layout,
+// and `missingArabic` is the list of tokens (e.g. "buyer.nameAr") that
+// still need an Arabic value. This is preview-only and does NOT touch the
+// existing /generate-document pipeline — PDF rendering ships separately.
+router.post("/:id/spa/preview", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    const missingArabic = collectMissingArabic(snapshot).map((m) => m.token);
+    res.json({ html, missingArabic });
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({
+      error: "Failed to build SPA preview",
+      code: "SPA_PREVIEW_ERROR",
       statusCode: 500,
     });
   }
