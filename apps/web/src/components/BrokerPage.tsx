@@ -36,6 +36,7 @@ interface BrokerAgent {
 interface BrokerCompany {
   id: string;
   name: string;
+  nameAr?: string | null;
   status?: "ACTIVE" | "INACTIVE" | "PENDING_APPROVAL";
   email?: string;
   phone?: string;
@@ -74,7 +75,7 @@ const SECTION_CLS = "border-t border-border pt-4 mt-4";
 const SECTION_TITLE_CLS = "text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3";
 
 const emptyCompanyForm = () => ({
-  name: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
+  name: "", nameAr: "", email: "", phone: "", commissionRate: "4", status: "PENDING_APPROVAL",
   reraLicenseNumber: "", reraLicenseExpiry: "", tradeLicenseNumber: "",
   tradeLicenseCopyUrl: "", vatCertificateNo: "", vatCertificateUrl: "",
   corporateTaxCertUrl: "", officeRegistrationNo: "", ornCertificateUrl: "",
@@ -85,7 +86,7 @@ const emptyCompanyForm = () => ({
 });
 
 const emptyAgentForm = () => ({
-  firstName: "", lastName: "", email: "", phone: "",
+  firstName: "", lastName: "", nameAr: "", email: "", phone: "",
   reraCardNumber: "", reraCardExpiry: "",
   eidNo: "", eidExpiry: "", eidFrontUrl: "", eidBackUrl: "",
   acceptedConsent: false,
@@ -217,6 +218,7 @@ export default function BrokerPage() {
     if (!selected) return;
     setEditForm({
       name: selected.name,
+      nameAr: (selected as any).nameAr ?? "",
       status: selected.status ?? "PENDING_APPROVAL",
       email: selected.email ?? "",
       phone: selected.phone ?? "",
@@ -339,6 +341,10 @@ export default function BrokerPage() {
         <div>
           <label className={LABEL_CLS}>Company Name *</label>
           <input required placeholder="Company Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div>
+          <label className={LABEL_CLS}>Company Name (Arabic)</label>
+          <input dir="rtl" lang="ar" placeholder="اسم الشركة" value={f.nameAr} onChange={(e) => setF({ ...f, nameAr: e.target.value })} className={INPUT_CLS} />
         </div>
         <div>
           <label className={LABEL_CLS}>Status</label>
@@ -808,6 +814,17 @@ export default function BrokerPage() {
                     <label className={LABEL_CLS}>Last Name</label>
                     <input placeholder="Last Name" value={agentForm.lastName} onChange={(e) => setAgentForm({ ...agentForm, lastName: e.target.value })} className={INPUT_CLS} />
                   </div>
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Full Name (Arabic)</label>
+                  <input
+                    dir="rtl"
+                    lang="ar"
+                    placeholder="الاسم الكامل"
+                    value={agentForm.nameAr}
+                    onChange={(e) => setAgentForm({ ...agentForm, nameAr: e.target.value })}
+                    className={INPUT_CLS}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

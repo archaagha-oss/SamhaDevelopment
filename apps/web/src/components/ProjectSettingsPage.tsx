@@ -43,6 +43,10 @@ export default function ProjectSettingsPage() {
     name: "", location: "", description: "", totalFloors: "",
     projectStatus: "ACTIVE", handoverDate: "", launchDate: "", startDate: "",
     completionStatus: "OFF_PLAN", purpose: "SALE", furnishing: "UNFURNISHED",
+    // Arabic legal copies — fed into the bilingual SPA generator. Blank is
+    // OK; the SPA preview surfaces missingArabic[] so the operator knows
+    // which fields still need translation before finalizing the document.
+    nameAr: "", locationAr: "", developerNameAr: "", developerAddressAr: "",
   });
   const [actualUnits, setActualUnits] = useState(0);
   const [config, setConfig] = useState({
@@ -75,6 +79,10 @@ export default function ProjectSettingsPage() {
         completionStatus: p.completionStatus || "OFF_PLAN",
         purpose: p.purpose || "SALE",
         furnishing: p.furnishing || "UNFURNISHED",
+        nameAr:             (p as any).nameAr             ?? "",
+        locationAr:         (p as any).locationAr         ?? "",
+        developerNameAr:    (p as any).developerNameAr    ?? "",
+        developerAddressAr: (p as any).developerAddressAr ?? "",
       });
       setActualUnits(p.units?.length ?? 0);
       setImages(p.images || []);
@@ -111,6 +119,12 @@ export default function ProjectSettingsPage() {
         completionStatus: info.completionStatus,
         purpose: info.purpose,
         furnishing: info.furnishing,
+        // Empty strings collapse to null so a blank field doesn't get stored
+        // as " " and bypass the bilingual SPA's missingArabic detector.
+        nameAr:             info.nameAr             || null,
+        locationAr:         info.locationAr         || null,
+        developerNameAr:    info.developerNameAr    || null,
+        developerAddressAr: info.developerAddressAr || null,
       });
       setSaved("Project info saved.");
     } catch (e: any) {
@@ -267,6 +281,61 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
             </section>
+
+            {/* § Arabic / SPA particulars — used by the bilingual SPA renderer.
+                Leave blank for projects that won't generate Arabic-side SPAs. */}
+            <details className="bg-card rounded-lg border border-border overflow-hidden">
+              <summary className="px-6 py-4 cursor-pointer select-none">
+                <span className="text-sm font-semibold text-foreground">Arabic / SPA particulars</span>
+                <p className="text-xs text-muted-foreground mt-1">Right-to-left Arabic copies of the project + developer identity. Used only by the bilingual SPA template.</p>
+              </summary>
+              <div className="px-6 pb-6 grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className={lbl}>Project name (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.nameAr}
+                    onChange={(e) => setInfo({ ...info, nameAr: e.target.value })}
+                    placeholder="اسم المشروع"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Location (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.locationAr}
+                    onChange={(e) => setInfo({ ...info, locationAr: e.target.value })}
+                    placeholder="الموقع"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Developer name (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.developerNameAr}
+                    onChange={(e) => setInfo({ ...info, developerNameAr: e.target.value })}
+                    placeholder="اسم المطور"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={lbl}>Developer address (Arabic)</label>
+                  <input
+                    className={inp}
+                    dir="rtl"
+                    lang="ar"
+                    value={info.developerAddressAr}
+                    onChange={(e) => setInfo({ ...info, developerAddressAr: e.target.value })}
+                    placeholder="عنوان المطور"
+                  />
+                </div>
+              </div>
+            </details>
 
             {/* § Schedule */}
             <section className="bg-card rounded-lg border border-border p-6 space-y-4">
