@@ -28,6 +28,12 @@ const projectSpaParticulars = {
   masterDeveloper: z.string().optional().nullable(),
   masterCommunity: z.string().optional().nullable(),
   permittedUse: z.string().optional().nullable(),
+  // Arabic project / developer identity (Phase 4a). Surfaced in the bilingual
+  // SPA; optional so existing projects can be edited without filling them.
+  nameAr: z.string().optional().nullable(),
+  locationAr: z.string().optional().nullable(),
+  developerNameAr: z.string().optional().nullable(),
+  developerAddressAr: z.string().optional().nullable(),
 };
 
 export const createProjectSchema = z.object({
@@ -85,6 +91,11 @@ const leadKycFields = {
   riskRating: z.enum(["LOW", "MEDIUM", "HIGH"]).optional().nullable(),
   occupation: z.string().optional().nullable(),
   residencyStatus: z.enum(["CITIZEN", "RESIDENT", "NON_RESIDENT"]).optional().nullable(),
+  // Arabic legal names (Phase 4a) — required for the bilingual SPA but kept
+  // optional at the schema layer so existing forms keep working. Empty
+  // strings are accepted and normalised to null by the route/service layer.
+  firstNameAr: z.string().optional().nullable(),
+  lastNameAr: z.string().optional().nullable(),
 };
 
 export const createLeadSchema = z.object({
@@ -204,6 +215,8 @@ export type BulkPaymentRowInput = z.infer<typeof bulkPaymentRowSchema>;
 // ===== BROKERS =====
 export const createBrokerCompanySchema = z.object({
   name: z.string().min(1, "Broker name is required"),
+  // Arabic broker company name (Phase 4a) — optional; surfaces in bilingual SPA.
+  nameAr: z.string().optional().nullable(),
   email: z.string().email("Invalid email").optional(),
   phone: optionalPhoneSchema,
   reraLicenseNumber: z.string().optional(),
@@ -233,6 +246,8 @@ export const createBrokerCompanySchema = z.object({
 export const createBrokerAgentSchema = z.object({
   companyId: z.string().min(1, "Company ID is required"),
   name: z.string().optional(),
+  // Arabic broker agent name (Phase 4a) — optional; surfaces in bilingual SPA.
+  nameAr: z.string().optional().nullable(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email("Invalid email").optional(),

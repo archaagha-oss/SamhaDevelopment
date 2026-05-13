@@ -12,6 +12,8 @@ import { prisma } from "../lib/prisma";
 import { documentService } from "../services/documentService";
 
 // Whitelist of SPA-particulars columns that pass through create/update.
+// Arabic-name fields (Phase 4a) ride alongside their English counterparts so
+// the bilingual SPA can render both columns without a second round-trip.
 const SPA_PROJECT_FIELDS = [
   "commercialLicense",
   "developerNumber",
@@ -24,6 +26,10 @@ const SPA_PROJECT_FIELDS = [
   "masterDeveloper",
   "masterCommunity",
   "permittedUse",
+  "nameAr",
+  "locationAr",
+  "developerNameAr",
+  "developerAddressAr",
 ] as const;
 
 function pickSpaFields(body: any): Record<string, string | null> {

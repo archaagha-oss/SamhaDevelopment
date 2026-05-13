@@ -635,6 +635,8 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
       authorizedSignatory, sourceOfFunds,
       // KYC / AML profile fields (per-person)
       dateOfBirth, pepFlag, riskRating, occupation, residencyStatus,
+      // Arabic legal names (Phase 4a) — surfaced in the bilingual SPA.
+      firstNameAr, lastNameAr,
       // stage is intentionally excluded — use PATCH /:id/stage
     } = req.body;
 
@@ -680,6 +682,8 @@ router.patch("/:id", validate(updateLeadSchema), async (req, res) => {
     if (riskRating      !== undefined) data.riskRating      = riskRating || null;
     if (occupation      !== undefined) data.occupation      = occupation || null;
     if (residencyStatus !== undefined) data.residencyStatus = residencyStatus || null;
+    if (firstNameAr     !== undefined) data.firstNameAr     = firstNameAr || null;
+    if (lastNameAr      !== undefined) data.lastNameAr      = lastNameAr  || null;
 
     const lead = await prisma.lead.update({
       where: { id: req.params.id },

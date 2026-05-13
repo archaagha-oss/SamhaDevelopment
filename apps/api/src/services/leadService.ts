@@ -89,6 +89,11 @@ export interface CreateLeadInput {
   companyRegistrationNumber?: string | null;
   authorizedSignatory?: string | null;
   sourceOfFunds?: string | null;
+  // Arabic legal names — required for the bilingual SPA (Phase 4a).
+  // Stored as nullable so legacy leads keep working until SPA generation
+  // gates on them in Phase 4c.
+  firstNameAr?: string | null;
+  lastNameAr?: string | null;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -134,6 +139,10 @@ export async function createLead(input: CreateLeadInput) {
       companyRegistrationNumber: input.companyRegistrationNumber ?? null,
       authorizedSignatory:       input.authorizedSignatory ?? null,
       sourceOfFunds:             input.sourceOfFunds ?? null,
+      // Empty strings collapse to null so an Arabic-name input left blank
+      // doesn't trip the SPA validation gate with whitespace.
+      firstNameAr:               input.firstNameAr ? input.firstNameAr : null,
+      lastNameAr:                input.lastNameAr ? input.lastNameAr : null,
     },
     include: {
       assignedAgent: true,
