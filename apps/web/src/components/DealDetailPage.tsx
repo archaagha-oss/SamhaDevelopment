@@ -1837,21 +1837,36 @@ export default function DealDetailPage({ dealId: dealIdProp, onBack }: Props) {
                   <FileSignature className="size-3.5" />
                   <span>{generatingDoc === "SPA" ? "Generating…" : "Generate SPA Draft"}</span>
                 </button>
-                {/* Bilingual EN/AR SPA — opens the print-ready HTML in a new
-                    tab; the operator uses the browser's Save-as-PDF for the
-                    final artifact. Avoids hosting headless Chromium on the
-                    cPanel target. */}
+                {/* Bilingual EN/AR SPA. Two paths:
+                    1. "Download PDF" hits the server-side renderer
+                       (headless Chromium → application/pdf). Preferred
+                       when available; produces an immutable file.
+                    2. "Open / print" serves the same HTML in a new tab
+                       so the operator can use the browser's Save-as-PDF.
+                       Always available — fallback for cPanel-style hosts
+                       where Chromium can't run. */}
                 <button
                   onClick={() => {
-                    // Respect VITE_API_URL when the API is cross-origin; fall
-                    // back to same-origin so the Clerk session cookie travels.
+                    const base = (import.meta as any).env?.VITE_API_URL ?? "";
+                    // window.open hits the download endpoint; the browser
+                    // honors Content-Disposition: attachment and triggers a
+                    // save dialog without leaving the deal page.
+                    window.open(`${base}/api/deals/${dealId}/spa/pdf`, "_blank", "noopener,noreferrer");
+                  }}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-primary/40 text-primary bg-info-soft rounded-lg hover:bg-info-soft/80 inline-flex items-center gap-2"
+                >
+                  <FileSignature className="size-3.5" />
+                  <span>Download bilingual SPA (PDF)</span>
+                </button>
+                <button
+                  onClick={() => {
                     const base = (import.meta as any).env?.VITE_API_URL ?? "";
                     window.open(`${base}/api/deals/${dealId}/spa/print`, "_blank", "noopener,noreferrer");
                   }}
                   className="w-full px-3 py-2 text-xs font-semibold border border-border text-foreground rounded-lg hover:bg-muted/50 inline-flex items-center gap-2"
                 >
                   <FileSignature className="size-3.5" />
-                  <span>Bilingual SPA (EN/AR) — print to PDF</span>
+                  <span>Bilingual SPA — open / print</span>
                 </button>
                 <button
                   onClick={() => handleGenerateDocument("RESERVATION_FORM")}

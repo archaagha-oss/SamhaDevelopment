@@ -14,6 +14,7 @@ import { addCustomMilestone, restructureSchedule, generatePaymentSchedule } from
 import { createGeneratedDocument } from "../services/documentService";
 import { buildSpaSnapshot } from "../services/spaService";
 import { renderBilingualSpaHtml, collectMissingArabic } from "../services/spa/bilingualTemplate";
+import { renderSpaPdf } from "../services/spa/pdfRenderer";
 import { calculateDealSpaRules } from "../services/spaRulesService";
 import { prisma } from "../lib/prisma";
 import { requireFinanceAccess } from "../middleware/auth";
@@ -236,13 +237,8 @@ router.post("/:id/spa/preview", async (req, res) => {
 
 // GET /api/deals/:id/spa/print
 // Serves the bilingual SPA as a full HTML document so a browser tab can
-// render it and the operator can use the browser's native "Save as PDF"
-// (Cmd/Ctrl+P). This is intentionally the PDF generation path — the
-// deployment target is cPanel shared hosting where running headless
-// Chromium for server-side PDF generation isn't viable, and the browser's
-// built-in print pipeline gives perfect Arabic font rendering using the
-// operator's system fonts.
-//
+// render it and the operator can use the browser's native "Save as PDF".
+// Always available — works on every host including cPanel shared hosting.
 // Query: ?print=auto fires window.print() on load (template-level).
 router.get("/:id/spa/print", async (req, res) => {
   try {
@@ -256,6 +252,41 @@ router.get("/:id/spa/print", async (req, res) => {
       return res.status(404).send("Deal not found");
     }
     res.status(500).send("Failed to build SPA print preview");
+  }
+});
+
+// GET /api/deals/:id/spa/pdf
+// Server-renders the bilingual SPA to PDF via headless Chromium so the
+// operator can download a final, immutable artifact without going
+// through the browser's print dialog. Requires Chromium on the host —
+// returns 503 on cPanel-style environments where the launch fails; the
+// /spa/print HTML route remains as the fallback in that case.
+router.get("/:id/spa/pdf", async (req, res) => {
+  try {
+    const snapshot = await buildSpaSnapshot(req.params.id);
+    const html = renderBilingualSpaHtml(snapshot);
+    let pdf: Buffer;
+    try {
+      pdf = await renderSpaPdf(html);
+    } catch (renderErr: any) {
+      // Most common failure: Chromium not installed on the host.
+      return res.status(503).json({
+        error: "PDF rendering is not available on this server. Use the browser print path (Save as PDF) from /spa/print instead.",
+        code: "PDF_ENGINE_UNAVAILABLE",
+        detail: renderErr?.message ?? null,
+        statusCode: 503,
+      });
+    }
+    const filename = `SPA-${snapshot.deal.dealNumber}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(pdf);
+  } catch (error: any) {
+    if (error.message?.includes("not found")) {
+      return res.status(404).json({ error: "Deal not found", code: "NOT_FOUND", statusCode: 404 });
+    }
+    res.status(500).json({ error: "Failed to render SPA PDF", code: "SPA_PDF_ERROR", statusCode: 500 });
   }
 });
 
