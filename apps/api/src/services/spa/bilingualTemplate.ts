@@ -24,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 import type { SpaSnapshot } from "../spaService";
+import { aedInWordsEn, aedInWordsAr } from "../../lib/numberToWords";
 
 /** Em-dash placeholder used whenever an Arabic value is missing. Mirrors
  *  the dash used in the existing English-only renderer for empty strings. */
@@ -101,14 +102,10 @@ export function renderBilingualSpaHtml(snapshot: SpaSnapshot): string {
   const projectNameEn = esc(snapshot.project.name);
   const projectNameAr = ar(snapshot.project.nameAr);
 
-  const salePriceDigits = aedDigits(snapshot.deal.netSalePrice || snapshot.deal.salePrice);
-
-  // TODO(phase-4c): integrate an English number-to-words helper here.
-  // For now we emit a clearly-stubbed placeholder so the layout is testable.
-  const salePriceWordsEn = "[number-to-words EN pending Phase 4c]";
-  // TODO(phase-4c): plug in an Arabic number-to-words helper (e.g. a small
-  // hand-rolled module — out of scope for this commit; no new deps allowed).
-  const salePriceWordsAr = "[التحويل إلى كلمات قيد التنفيذ]";
+  const salePriceAmount = snapshot.deal.netSalePrice || snapshot.deal.salePrice;
+  const salePriceDigits = aedDigits(salePriceAmount);
+  const salePriceWordsEn = aedInWordsEn(salePriceAmount);
+  const salePriceWordsAr = aedInWordsAr(salePriceAmount);
 
   const css = `
     *,*::before,*::after { box-sizing: border-box; }
